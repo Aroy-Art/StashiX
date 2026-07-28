@@ -36,6 +36,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const p = await userApi.profile()
       set({
+        isAdmin: p.is_admin,
         profile: {
           username: p.username,
           email: p.email,
@@ -55,6 +56,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const p = await userApi.profile()
       set({
+        isAdmin: p.is_admin,
         profile: {
           username: p.username,
           email: p.email,

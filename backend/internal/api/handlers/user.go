@@ -24,6 +24,7 @@ type profileOutput struct {
 		FirstName string `json:"first_name"`
 		LastName  string `json:"last_name"`
 		IsStaff   bool   `json:"is_staff"`
+		IsAdmin   bool   `json:"is_admin"`
 	}
 }
 
@@ -54,6 +55,7 @@ func (h *UserHandler) profile(ctx context.Context, _ *struct{}) (*profileOutput,
 	out.Body.FirstName = row.FirstName
 	out.Body.LastName = row.LastName
 	out.Body.IsStaff = row.Role == "admin"
+	out.Body.IsAdmin = row.Role == "admin"
 	return out, nil
 }
 

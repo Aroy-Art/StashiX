@@ -68,7 +68,7 @@ export const books = {
 }
 
 export const user = {
-  async profile(): Promise<{ username: string; email: string; first_name: string; last_name: string; is_staff: boolean }> {
+  async profile(): Promise<{ username: string; email: string; first_name: string; last_name: string; is_staff: boolean; is_admin: boolean }> {
     const { data } = await http.get('/user/profile')
     return data
   },
