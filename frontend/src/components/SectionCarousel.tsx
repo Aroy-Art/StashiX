@@ -25,13 +25,11 @@ export function SectionCarousel({
   function scroll(dir: 'left' | 'right') {
     const el = scrollRef.current
     if (!el) return
-    const amount = el.clientWidth * 0.7
-    el.scrollBy({ left: dir === 'left' ? -amount : amount, behavior: 'smooth' })
+    el.scrollBy({ left: dir === 'left' ? -(el.clientWidth * 0.7) : el.clientWidth * 0.7, behavior: 'smooth' })
   }
 
   return (
     <section className={cn('py-6', className)}>
-      {/* Header */}
       <div className="flex items-center justify-between px-6 mb-4">
         <div className="flex items-center gap-2.5">
           <div
@@ -42,39 +40,25 @@ export function SectionCarousel({
                 : 'bg-volt-2 shadow-[0_0_8px_rgba(139,92,246,0.6)]'
             )}
           />
-          <h2 className="font-display font-bold text-lg text-prose tracking-tight">
+          <h2 className="font-display font-bold text-lg text-foreground tracking-tight">
             {title}
           </h2>
         </div>
-
         {!isEmpty && (
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => scroll('left')}
-              aria-label="Scroll left"
-            >
+            <Button variant="ghost" size="icon-sm" onClick={() => scroll('left')} aria-label="Scroll left">
               <ChevronLeft className="w-4 h-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={() => scroll('right')}
-              aria-label="Scroll right"
-            >
+            <Button variant="ghost" size="icon-sm" onClick={() => scroll('right')} aria-label="Scroll right">
               <ChevronRight className="w-4 h-4" />
             </Button>
           </div>
         )}
       </div>
 
-      {/* Scroll row */}
       {isEmpty ? (
         <div className="px-6">
-          {empty ?? (
-            <p className="text-sm text-muted py-4">Nothing here yet.</p>
-          )}
+          {empty ?? <p className="text-sm text-muted-foreground py-4">Nothing here yet.</p>}
         </div>
       ) : (
         <div

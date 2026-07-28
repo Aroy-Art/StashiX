@@ -15,33 +15,33 @@ export default function SetupPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-6"
       style={{
-        background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.12) 0%, transparent 70%), var(--color-void)',
+        background: 'radial-gradient(ellipse 80% 60% at 50% 0%, rgba(124,58,237,0.12) 0%, transparent 70%)',
       }}
+      className="min-h-screen flex items-center justify-center p-6 bg-background relative overflow-hidden"
     >
       <div
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0 opacity-[0.04] dark:opacity-[0.03]"
         style={{
-          backgroundImage: 'linear-gradient(var(--color-rim) 1px, transparent 1px), linear-gradient(90deg, var(--color-rim) 1px, transparent 1px)',
+          backgroundImage: 'linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px)',
           backgroundSize: '48px 48px',
         }}
       />
 
       <div className="relative w-full max-w-md animate-fade-in-up">
-        <div className="rounded-2xl border border-rim-2 bg-surface-1/60 backdrop-blur-xl p-8 shadow-[0_24px_80px_rgba(0,0,0,0.6),0_0_0_1px_rgba(124,58,237,0.08)]">
+        <div className="rounded-2xl border border-border bg-card/80 backdrop-blur-xl p-8 shadow-xl">
           {/* Header */}
           <div className="flex items-center gap-3 mb-2">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-volt/20 border border-volt/40 glow-volt">
               <Zap className="w-5 h-5 text-volt-3" />
             </div>
             <div>
-              <h1 className="font-display font-bold text-xl text-prose tracking-tight">Stashix</h1>
-              <p className="text-xs text-muted">Initial setup</p>
+              <h1 className="font-display font-bold text-xl text-foreground tracking-tight">Stashix</h1>
+              <p className="text-xs text-muted-foreground">Initial setup</p>
             </div>
           </div>
 
-          <p className="text-sm text-muted mt-1 mb-6">
+          <p className="text-sm text-muted-foreground mt-1 mb-6">
             {step === 'account'
               ? 'Create your admin account to get started.'
               : 'Add your first library folder.'}
@@ -74,15 +74,15 @@ function StepIndicator({ current }: { current: Step }) {
         return (
           <div key={s.key} className="flex items-center gap-2">
             {i > 0 && (
-              <div className={cn('flex-1 h-px w-8', done ? 'bg-volt-3' : 'bg-rim')} />
+              <div className={cn('flex-1 h-px w-8', done ? 'bg-volt-3' : 'bg-border')} />
             )}
             <div className="flex items-center gap-1.5">
               <div
                 className={cn(
                   'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 transition-all duration-300',
-                  done && 'bg-volt-3 text-void',
+                  done && 'bg-volt-3 text-background',
                   active && 'bg-volt text-white shadow-[0_0_10px_rgba(124,58,237,0.5)]',
-                  !done && !active && 'bg-surface-3 text-muted border border-rim'
+                  !done && !active && 'bg-muted text-muted-foreground border border-border'
                 )}
               >
                 {done ? <CheckCircle2 className="w-3 h-3" /> : i + 1}
@@ -90,7 +90,7 @@ function StepIndicator({ current }: { current: Step }) {
               <span
                 className={cn(
                   'text-xs',
-                  active ? 'text-prose font-medium' : 'text-muted'
+                  active ? 'text-foreground font-medium' : 'text-muted-foreground'
                 )}
               >
                 {s.label}
@@ -114,9 +114,9 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-xs font-medium text-muted uppercase tracking-wider">{label}</label>
+      <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{label}</label>
       {children}
-      {hint && <p className="text-[11px] text-muted/70">{hint}</p>}
+      {hint && <p className="text-[11px] text-muted-foreground/70">{hint}</p>}
     </div>
   )
 }
@@ -175,7 +175,7 @@ function AccountStep({ onDone }: { onDone: (token: string) => void }) {
       </Field>
 
       {error && (
-        <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
           {error}
         </p>
       )}
@@ -249,7 +249,7 @@ function LibraryStep({ token }: { token: string }) {
       </Field>
 
       {error && (
-        <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-md px-3 py-2">
+        <p className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-3 py-2">
           {error}
         </p>
       )}

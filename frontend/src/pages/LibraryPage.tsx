@@ -42,15 +42,15 @@ export default function LibraryPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link
           to="/"
-          className="flex items-center gap-1 text-sm text-muted hover:text-prose transition-colors"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Libraries
         </Link>
         {library && (
           <>
-            <span className="text-rim-2">/</span>
-            <span className="text-sm font-medium text-prose">{library.name}</span>
+            <span className="text-border">/</span>
+            <span className="text-sm font-medium text-foreground">{library.name}</span>
           </>
         )}
       </div>
@@ -58,11 +58,11 @@ export default function LibraryPage() {
       {/* Header */}
       <div className="flex items-end gap-4 mb-8">
         <div>
-          <h1 className="font-display font-bold text-2xl text-prose tracking-tight">
+          <h1 className="font-display font-bold text-2xl text-foreground tracking-tight">
             {library?.name ?? 'Library'}
           </h1>
           {library && (
-            <p className="text-xs text-muted mt-1 font-mono">{library.root_path}</p>
+            <p className="text-xs text-muted-foreground mt-1 font-mono">{library.root_path}</p>
           )}
         </div>
         {bookList.length > 0 && (
@@ -82,10 +82,10 @@ export default function LibraryPage() {
       {/* Empty */}
       {!loading && bookList.length === 0 && (
         <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
-          <div className="w-12 h-12 rounded-xl bg-surface-2 border border-rim flex items-center justify-center">
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
             <span className="text-2xl">📚</span>
           </div>
-          <p className="text-sm text-muted">No books scanned yet. Trigger a scan from the home page.</p>
+          <p className="text-sm text-muted-foreground">No books scanned yet. Trigger a scan from the home page.</p>
         </div>
       )}
 

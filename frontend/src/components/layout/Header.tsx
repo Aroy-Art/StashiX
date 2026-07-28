@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Settings } from 'lucide-react'
+import { Search, Settings, Sun, Moon } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/store/auth'
+import { useThemeStore } from '@/store/theme'
 
 function initials(firstName: string, lastName: string, username: string): string {
   if (firstName || lastName) {
@@ -29,6 +30,7 @@ export function Header() {
   const profile = useAuthStore((s) => s.profile)
   const fetchProfile = useAuthStore((s) => s.fetchProfile)
   const token = useAuthStore((s) => s.token)
+  const { theme, toggleTheme } = useThemeStore()
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -116,8 +118,15 @@ export function Header() {
               )}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={toggleTheme}>
+              {theme === 'dark'
+                ? <><Sun className="w-3.5 h-3.5" /> Switch to light</>
+                : <><Moon className="w-3.5 h-3.5" /> Switch to dark</>
+              }
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
+              className="text-destructive focus:text-destructive focus:bg-destructive/10"
               onClick={handleLogout}
             >
               Sign out

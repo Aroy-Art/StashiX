@@ -49,7 +49,7 @@ export default function ReaderPage() {
 
   if (!book) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-void">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-7 h-7 rounded-full border-2 border-volt-2 border-t-transparent animate-spin" />
       </div>
     )
@@ -57,7 +57,7 @@ export default function ReaderPage() {
 
   if (book.format === 'epub' || book.format === 'pdf') {
     return (
-      <div className="h-screen flex flex-col bg-void">
+      <div className="h-screen flex flex-col bg-background">
         <ReaderBar book={book} page={0} total={0} />
         <iframe
           src={booksApi.fileUrl(book.id)}
@@ -94,16 +94,16 @@ export default function ReaderPage() {
 
 function ReaderBar({ book, page, total }: { book: Book; page: number; total: number }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 bg-void/90 backdrop-blur-md border-b border-rim z-10">
+    <div className="flex items-center justify-between px-4 py-2.5 bg-background/90 backdrop-blur-md border-b border-border z-10">
       <Link
         to={`/library/${book.library_id}`}
-        className="flex items-center gap-1 text-sm text-muted hover:text-prose transition-colors"
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         ← Back
       </Link>
-      <span className="text-sm font-medium text-prose truncate max-w-xs">{book.title}</span>
+      <span className="text-sm font-medium text-foreground truncate max-w-xs">{book.title}</span>
       {total > 0 && (
-        <span className="text-sm text-muted font-mono shrink-0">
+        <span className="text-sm text-muted-foreground font-mono shrink-0">
           {page + 1} / {total}
         </span>
       )}

@@ -48,25 +48,25 @@ export default function SearchPage() {
       <div className="flex items-center gap-2 mb-6">
         <Link
           to="/"
-          className="flex items-center gap-1 text-sm text-muted hover:text-prose transition-colors"
+          className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-3.5 h-3.5" />
           Home
         </Link>
-        <span className="text-rim-2">/</span>
-        <span className="text-sm font-medium text-prose">Search</span>
+        <span className="text-border">/</span>
+        <span className="text-sm font-medium text-foreground">Search</span>
       </div>
 
       {/* Search header */}
       <div className="mb-8">
         <div className="flex items-center gap-2.5 mb-5">
           <div className="w-1.5 h-5 rounded-full bg-plasma shadow-[0_0_8px_rgba(232,121,249,0.6)]" />
-          <h1 className="font-display font-bold text-2xl text-prose tracking-tight">Search</h1>
+          <h1 className="font-display font-bold text-2xl text-foreground tracking-tight">Search</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-xl">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               ref={inputRef}
               value={query}
@@ -91,7 +91,7 @@ export default function SearchPage() {
       {/* Results */}
       {!loading && results.length > 0 && (
         <div>
-          <p className="text-xs text-muted mb-4">
+          <p className="text-xs text-muted-foreground mb-4">
             {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{params.get('q')}&rdquo;
           </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4">
@@ -111,10 +111,10 @@ export default function SearchPage() {
       {/* Empty state */}
       {!loading && results.length === 0 && hasQuery && (
         <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
-          <div className="w-12 h-12 rounded-xl bg-surface-2 border border-rim flex items-center justify-center">
-            <Search className="w-5 h-5 text-muted" />
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
+            <Search className="w-5 h-5 text-muted-foreground" />
           </div>
-          <p className="text-sm text-muted">
+          <p className="text-sm text-muted-foreground">
             No results for &ldquo;{params.get('q')}&rdquo;
           </p>
         </div>
@@ -126,7 +126,7 @@ export default function SearchPage() {
           <div className="w-12 h-12 rounded-xl bg-plasma/10 border border-plasma/20 flex items-center justify-center glow-plasma">
             <Search className="w-5 h-5 text-plasma/70" />
           </div>
-          <p className="text-sm text-muted">Type something to search your collection.</p>
+          <p className="text-sm text-muted-foreground">Type something to search your collection.</p>
         </div>
       )}
     </div>

@@ -100,7 +100,7 @@ export default function LibrariesPage() {
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-full border-2 border-volt-2 border-t-transparent animate-spin" />
-          <p className="text-sm text-muted">Loading libraries…</p>
+          <p className="text-sm text-muted-foreground">Loading libraries…</p>
         </div>
       </div>
     )
@@ -113,8 +113,8 @@ export default function LibrariesPage() {
           <Library className="w-8 h-8 text-volt-3" />
         </div>
         <div>
-          <h2 className="font-display font-bold text-xl text-prose mb-1">No libraries yet</h2>
-          <p className="text-sm text-muted">Add a library to start scanning your collection.</p>
+          <h2 className="font-display font-bold text-xl text-foreground mb-1">No libraries yet</h2>
+          <p className="text-sm text-muted-foreground">Add a library to start scanning your collection.</p>
         </div>
       </div>
     )
@@ -126,7 +126,7 @@ export default function LibrariesPage() {
       <div className="px-6 pt-6 pb-2">
         <div className="flex items-center gap-2.5 mb-5">
           <div className="w-1.5 h-5 rounded-full bg-volt-2 shadow-[0_0_8px_rgba(139,92,246,0.6)]" />
-          <h2 className="font-display font-bold text-lg text-prose tracking-tight">Libraries</h2>
+          <h2 className="font-display font-bold text-lg text-foreground tracking-tight">Libraries</h2>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -140,11 +140,11 @@ export default function LibrariesPage() {
             return (
               <div
                 key={lib.id}
-                className="relative group rounded-xl bg-surface-1 border border-rim hover:border-rim-2 transition-all duration-200 overflow-hidden"
+                className="relative group rounded-xl bg-card border border-border hover:border-ring/50 transition-all duration-200 overflow-hidden"
               >
                 {/* Preview strip — first 5 covers */}
                 {lib.recentBooks.length > 0 && (
-                  <div className="relative flex h-20 overflow-hidden border-b border-rim">
+                  <div className="relative flex h-20 overflow-hidden border-b border-border">
                     {lib.recentBooks.slice(0, 5).map((book) => (
                       <img
                         key={book.id}
@@ -157,17 +157,17 @@ export default function LibrariesPage() {
                         }}
                       />
                     ))}
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-surface-1 pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card pointer-events-none" />
                   </div>
                 )}
 
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-display font-bold text-base text-prose truncate">
+                      <h3 className="font-display font-bold text-base text-foreground truncate">
                         {lib.name}
                       </h3>
-                      <p className="text-xs text-muted truncate mt-0.5">{lib.root_path}</p>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5">{lib.root_path}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {lib.recentBooks.length > 0 && (
@@ -197,11 +197,11 @@ export default function LibrariesPage() {
                   {/* Scan progress */}
                   {pct !== null && (
                     <div className="mt-3">
-                      <div className="flex justify-between text-[11px] text-muted mb-1">
+                      <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
                         <span>Scanning…</span>
                         <span className="text-volt-3 font-mono">{pct}%</span>
                       </div>
-                      <div className="h-1 rounded-full bg-rim overflow-hidden">
+                      <div className="h-1 rounded-full bg-border overflow-hidden">
                         <div
                           className="h-full rounded-full shimmer-bar transition-all duration-300"
                           style={{ width: `${pct}%` }}
