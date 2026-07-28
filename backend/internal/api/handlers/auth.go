@@ -1,10 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/aroy/stashix/internal/auth"
@@ -19,61 +19,76 @@ func NewAuthHandler(db *pgxpool.Pool, secret string) *AuthHandler {
 	return &AuthHandler{db: db, secret: secret}
 }
 
-type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+type tokenPairOutput struct {
+	Body *auth.TokenPair
 }
 
-func (h *AuthHandler) Login(c *gin.Context) {
-	var req loginRequest
-	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return
+type loginInput struct {
+	Body struct {
+		Email    string `json:"email" required:"true"`
+		Password string `json:"password" required:"true"`
 	}
+}
 
+func (h *AuthHandler) login(ctx context.Context, input *loginInput) (*tokenPairOutput, error) {
 	var userID, passwordHash, role string
-	err := h.db.QueryRow(c.Request.Context(),
-		`SELECT id, password_hash, role FROM users WHERE email=$1`, req.Email,
+	err := h.db.QueryRow(ctx,
+		`SELECT id, password_hash, role FROM users WHERE email=$1`, input.Body.Email,
 	).Scan(&userID, &passwordHash, &role)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
-		return
+		return nil, huma.NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(req.Password)); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
-		return
+	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(input.Body.Password)); err != nil {
+		return nil, huma.NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
 	pair, err := auth.IssueTokenPair(userID, role, h.secret)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "token error"})
-		return
+		return nil, huma.NewError(http.StatusInternalServerError, "token error")
 	}
 
-	c.JSON(http.StatusOK, pair)
+	return &tokenPairOutput{Body: pair}, nil
 }
 
-func (h *AuthHandler) Refresh(c *gin.Context) {
-	var body struct {
-		RefreshToken string `json:"refresh_token"`
+type refreshInput struct {
+	Body struct {
+		RefreshToken string `json:"refresh_token" required:"true"`
 	}
-	if err := json.NewDecoder(c.Request.Body).Decode(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
-		return
-	}
+}
 
-	claims, err := auth.Validate(body.RefreshToken, h.secret)
+func (h *AuthHandler) refresh(ctx context.Context, input *refreshInput) (*tokenPairOutput, error) {
+	claims, err := auth.Validate(input.Body.RefreshToken, h.secret)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid refresh token"})
-		return
+		return nil, huma.NewError(http.StatusUnauthorized, "invalid refresh token")
 	}
 
 	pair, err := auth.IssueTokenPair(claims.UserID, claims.Role, h.secret)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "token error"})
-		return
+		return nil, huma.NewError(http.StatusInternalServerError, "token error")
 	}
 
-	c.JSON(http.StatusOK, pair)
+	return &tokenPairOutput{Body: pair}, nil
+}
+
+func (h *AuthHandler) Register(api huma.API) {
+	noSec := []map[string][]string{}
+
+	huma.Register(api, huma.Operation{
+		OperationID: "login",
+		Method:      http.MethodPost,
+		Path:        "/api/auth/login",
+		Tags:        []string{"Auth"},
+		Summary:     "Authenticate with email and password",
+		Security:    noSec,
+	}, h.login)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "refreshToken",
+		Method:      http.MethodPost,
+		Path:        "/api/auth/refresh",
+		Tags:        []string{"Auth"},
+		Summary:     "Refresh an expired access token",
+		Security:    noSec,
+	}, h.refresh)
 }

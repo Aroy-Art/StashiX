@@ -1,0 +1,49 @@
+package models
+
+import "time"
+
+type Library struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	RootPath  string    `json:"root_path"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type BookSummary struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Series      *string `json:"series,omitempty"`
+	IssueNumber *string `json:"issue_number,omitempty"`
+	Year        *int    `json:"year,omitempty"`
+	Format      string  `json:"format"`
+	PageCount   int     `json:"page_count"`
+	AgeRating   string  `json:"age_rating"`
+}
+
+type Book struct {
+	ID          string    `json:"id"`
+	LibraryID   string    `json:"library_id"`
+	Path        string    `json:"path"`
+	Title       string    `json:"title"`
+	Series      *string   `json:"series,omitempty"`
+	IssueNumber *string   `json:"issue_number,omitempty"`
+	Volume      *int      `json:"volume,omitempty"`
+	Year        *int      `json:"year,omitempty"`
+	Publisher   *string   `json:"publisher,omitempty"`
+	Format      string    `json:"format"`
+	PageCount   int       `json:"page_count"`
+	FileSize    int64     `json:"file_size"`
+	AgeRating   string    `json:"age_rating"`
+	Language    *string   `json:"language,omitempty"`
+	Summary     *string   `json:"summary,omitempty"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type User struct {
+	ID        string     `json:"id"`
+	Email     string     `json:"email"`
+	Username  string     `json:"username"`
+	Role      string     `json:"role"`
+	BirthDate *time.Time `json:"birth_date,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+}

@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/danielgtaylor/huma/v2"
+	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -28,62 +31,62 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 		MaxAge:           300 * time.Second,
 	}))
 
-	authH := handlers.NewAuthHandler(db, jwtSecret)
-	libH := handlers.NewLibraryHandler(db, scanner, hub)
-	booksH := handlers.NewBooksHandler(db)
-	searchH := handlers.NewSearchHandler(db)
-	adminH := handlers.NewAdminHandler(db)
-	setupH := handlers.NewSetupHandler(db, jwtSecret)
+	// Auth middleware: skip docs/openapi/public API paths; require JWT for everything else
+	publicPaths := map[string]struct{}{
+		"/api/auth/login":    {},
+		"/api/auth/refresh":  {},
+		"/api/setup":         {},
+		"/api/setup/status":  {},
+	}
+	ginAuth := auth.GinMiddleware(jwtSecret)
+	r.Use(func(c *gin.Context) {
+		p := c.Request.URL.Path
+		if strings.HasPrefix(p, "/docs") ||
+			strings.HasPrefix(p, "/openapi") ||
+			strings.HasPrefix(p, "/schemas") {
+			c.Next()
+			return
+		}
+		if _, ok := publicPaths[p]; ok {
+			c.Next()
+			return
+		}
+		ginAuth(c)
+	})
 
+	// Huma API
+	config := huma.DefaultConfig("Stashix API", "1.0.0")
+	config.Info.Description = "Comic and book library management API."
+	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
+		"bearerAuth": {Type: "http", Scheme: "bearer", BearerFormat: "JWT"},
+	}
+	config.Security = []map[string][]string{{"bearerAuth": {}}}
+
+	api := humagin.New(r, config)
+
+	// WebSocket — plain gin (auth middleware already applied above)
 	wsRouter := ws.NewRouter(hub)
 	registerWSHandlers(wsRouter, db)
+	r.GET("/ws", gin.WrapH(wsRouter))
 
-	registerDocs(r)
+	// Binary streaming endpoints — plain gin (auth middleware already applied above)
+	booksH := handlers.NewBooksHandler(db)
+	r.GET("/api/books/:id/page/:n", booksH.Page)
+	r.GET("/api/books/:id/cover", booksH.Cover)
+	r.GET("/api/books/:id/file", booksH.File)
 
-	// public
-	r.GET("/api/setup/status", setupH.Status)
-	r.POST("/api/setup", setupH.Run)
-	r.POST("/api/auth/login", authH.Login)
-	r.POST("/api/auth/refresh", authH.Refresh)
-
-	// authenticated
-	authed := r.Group("")
-	authed.Use(auth.GinMiddleware(jwtSecret))
-	{
-		authed.GET("/ws", gin.WrapH(wsRouter))
-
-		authed.GET("/api/libraries", libH.List)
-		authed.GET("/api/tasks", libH.Tasks)
-
-		authed.GET("/api/libraries/:id/books", booksH.ListByLibrary)
-		authed.GET("/api/books/:id", booksH.Get)
-		authed.GET("/api/books/:id/pages", booksH.Pages)
-		authed.GET("/api/books/:id/page/:n", booksH.Page)
-		authed.GET("/api/books/:id/file", booksH.File)
-		authed.GET("/api/books/:id/cover", booksH.Cover)
-		authed.PUT("/api/books/:id/progress", booksH.UpdateProgress)
-
-		authed.GET("/api/search", searchH.Search)
-
-		// admin only
-		admin := authed.Group("")
-		admin.Use(auth.GinAdminOnly())
-		{
-			admin.GET("/api/admin/users", adminH.ListUsers)
-			admin.POST("/api/admin/users", adminH.CreateUser)
-			admin.PATCH("/api/admin/users/:id/permissions", adminH.SetPermissions)
-			admin.POST("/api/libraries", libH.Create)
-			admin.POST("/api/libraries/:id/scan", libH.Scan)
-		}
-	}
+	// Huma (typed, JSON) endpoints
+	handlers.NewAuthHandler(db, jwtSecret).Register(api)
+	handlers.NewSetupHandler(db, jwtSecret).Register(api)
+	handlers.NewLibraryHandler(db, scanner, hub).Register(api)
+	booksH.Register(api)
+	handlers.NewSearchHandler(db).Register(api)
+	handlers.NewAdminHandler(db).Register(api)
 
 	return r
 }
 
-// registerWSHandlers wires WS message types to their handler funcs.
-// Each handler mirrors its REST counterpart — same logic, WS transport.
 func registerWSHandlers(r *ws.Router, db *pgxpool.Pool) {
-	// progress sync — client sends page update over WS
 	r.Handle("update_progress", func(ctx context.Context, userID string, payload json.RawMessage) (any, error) {
 		var body struct {
 			BookID string `json:"book_id"`

@@ -1,14 +1,16 @@
 package handlers
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"strconv"
 
+	"github.com/danielgtaylor/huma/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/aroy/stashix/internal/auth"
 	"github.com/aroy/stashix/internal/media"
+	"github.com/aroy/stashix/internal/models"
 )
 
 type BooksHandler struct {
@@ -19,65 +21,153 @@ func NewBooksHandler(db *pgxpool.Pool) *BooksHandler {
 	return &BooksHandler{db: db}
 }
 
-func (h *BooksHandler) Get(c *gin.Context) {
-	id := c.Param("id")
-	claims := auth.ClaimsFromCtx(c.Request.Context())
+// ─── huma handlers (JSON) ────────────────────────────────────────────────────
 
-	row, err := h.db.Query(c.Request.Context(), `
+type getBookInput struct {
+	ID string `path:"id"`
+}
+
+type getBookOutput struct {
+	Body *models.Book
+}
+
+func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOutput, error) {
+	claims := auth.ClaimsFromCtx(ctx)
+
+	var b models.Book
+	err := h.db.QueryRow(ctx, `
 		SELECT b.id, b.library_id, b.path, b.title, b.series, b.issue_number,
 		       b.volume, b.year, b.publisher, b.format, b.page_count, b.file_size,
 		       b.age_rating, b.language, b.summary, b.created_at
 		FROM books b
 		JOIN library_permissions lp ON lp.library_id = b.library_id
 		WHERE b.id=$1 AND (lp.user_id=$2 OR $3='admin')
-		LIMIT 1`, id, claims.UserID, claims.Role)
+		LIMIT 1`, input.ID, claims.UserID, claims.Role,
+	).Scan(
+		&b.ID, &b.LibraryID, &b.Path, &b.Title,
+		&b.Series, &b.IssueNumber, &b.Volume, &b.Year,
+		&b.Publisher, &b.Format, &b.PageCount, &b.FileSize,
+		&b.AgeRating, &b.Language, &b.Summary, &b.CreatedAt,
+	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
-		return
+		return nil, huma.NewError(http.StatusNotFound, "book not found")
 	}
-	defer row.Close()
-
-	if !row.Next() {
-		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
-		return
-	}
-	vals, _ := row.Values()
-	descs := row.FieldDescriptions()
-	result := make(map[string]any, len(descs))
-	for i, d := range descs {
-		result[string(d.Name)] = vals[i]
-	}
-	c.JSON(http.StatusOK, result)
+	return &getBookOutput{Body: &b}, nil
 }
 
-func (h *BooksHandler) Pages(c *gin.Context) {
-	id := c.Param("id")
+type listByLibraryInput struct {
+	ID     string `path:"id"`
+	Limit  int    `query:"limit" minimum:"1" maximum:"100" default:"50"`
+	Offset int    `query:"offset" minimum:"0" default:"0"`
+}
 
+type bookListOutput struct {
+	Body []models.BookSummary
+}
+
+func (h *BooksHandler) listByLibrary(ctx context.Context, input *listByLibraryInput) (*bookListOutput, error) {
+	claims := auth.ClaimsFromCtx(ctx)
+
+	limit := input.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+
+	rows, err := h.db.Query(ctx, `
+		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.page_count, b.age_rating
+		FROM books b
+		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=$2
+		WHERE b.library_id=$1
+		  AND ($3='admin' OR lp.can_read=TRUE)
+		ORDER BY b.series NULLS LAST, b.issue_number
+		LIMIT $4 OFFSET $5`,
+		input.ID, claims.UserID, claims.Role, limit, input.Offset,
+	)
+	if err != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
+	defer rows.Close()
+
+	books := []models.BookSummary{}
+	for rows.Next() {
+		var b models.BookSummary
+		if err := rows.Scan(&b.ID, &b.Title, &b.Series, &b.IssueNumber, &b.Year, &b.Format, &b.PageCount, &b.AgeRating); err != nil {
+			return nil, huma.NewError(http.StatusInternalServerError, "db error")
+		}
+		books = append(books, b)
+	}
+	return &bookListOutput{Body: books}, nil
+}
+
+type pagesInput struct {
+	ID string `path:"id"`
+}
+
+type pagesOutput struct {
+	Body struct {
+		Count int      `json:"count"`
+		Pages []string `json:"pages"`
+	}
+}
+
+func (h *BooksHandler) pages(ctx context.Context, input *pagesInput) (*pagesOutput, error) {
 	var path, format string
-	err := h.db.QueryRow(c.Request.Context(), `SELECT path, format FROM books WHERE id=$1`, id).Scan(&path, &format)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
-		return
+	if err := h.db.QueryRow(ctx, `SELECT path, format FROM books WHERE id=$1`, input.ID).Scan(&path, &format); err != nil {
+		return nil, huma.NewError(http.StatusNotFound, "book not found")
 	}
 
-	fmt := media.Format(format)
-	pages, err := media.PageList(path, fmt)
+	pageList, err := media.PageList(path, media.Format(format))
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "could not read archive"})
-		return
+		return nil, huma.NewError(http.StatusInternalServerError, "could not read archive")
 	}
 
-	urls := make([]string, len(pages))
-	for i := range pages {
-		urls[i] = "/api/books/" + id + "/page/" + strconv.Itoa(i)
+	urls := make([]string, len(pageList))
+	for i := range pageList {
+		urls[i] = "/api/books/" + input.ID + "/page/" + strconv.Itoa(i)
 	}
-	c.JSON(http.StatusOK, map[string]any{"count": len(pages), "pages": urls})
+
+	out := &pagesOutput{}
+	out.Body.Count = len(pageList)
+	out.Body.Pages = urls
+	return out, nil
 }
+
+type updateProgressInput struct {
+	ID   string `path:"id"`
+	Body struct {
+		Page int `json:"page" minimum:"0" required:"true"`
+	}
+}
+
+type updateProgressOutput struct {
+	Body struct {
+		Page int `json:"page"`
+	}
+}
+
+func (h *BooksHandler) updateProgress(ctx context.Context, input *updateProgressInput) (*updateProgressOutput, error) {
+	claims := auth.ClaimsFromCtx(ctx)
+
+	_, err := h.db.Exec(ctx, `
+		INSERT INTO reading_progress (user_id, book_id, current_page)
+		VALUES ($1,$2,$3)
+		ON CONFLICT (user_id, book_id) DO UPDATE SET current_page=$3, updated_at=NOW()`,
+		claims.UserID, input.ID, input.Body.Page,
+	)
+	if err != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
+
+	out := &updateProgressOutput{}
+	out.Body.Page = input.Body.Page
+	return out, nil
+}
+
+// ─── gin handlers (binary streams) ───────────────────────────────────────────
 
 func (h *BooksHandler) Page(c *gin.Context) {
 	id := c.Param("id")
-	pageStr := c.Param("n")
-	pageIdx, err := strconv.Atoi(pageStr)
+	pageIdx, err := strconv.Atoi(c.Param("n"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid page number"})
 		return
@@ -101,29 +191,11 @@ func (h *BooksHandler) Page(c *gin.Context) {
 	})
 }
 
-func (h *BooksHandler) File(c *gin.Context) {
-	id := c.Param("id")
-
-	var path, format string
-	if err := h.db.QueryRow(c.Request.Context(), `SELECT path, format FROM books WHERE id=$1`, id).Scan(&path, &format); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
-		return
-	}
-
-	if format != "epub" && format != "pdf" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "file endpoint only for epub/pdf"})
-		return
-	}
-
-	c.File(path)
-}
-
 func (h *BooksHandler) Cover(c *gin.Context) {
 	id := c.Param("id")
 
 	var coverPath string
-	err := h.db.QueryRow(c.Request.Context(), `SELECT path FROM book_covers WHERE book_id=$1`, id).Scan(&coverPath)
-	if err == nil && coverPath != "" {
+	if err := h.db.QueryRow(c.Request.Context(), `SELECT path FROM book_covers WHERE book_id=$1`, id).Scan(&coverPath); err == nil && coverPath != "" {
 		c.File(coverPath)
 		return
 	}
@@ -151,70 +223,53 @@ func (h *BooksHandler) Cover(c *gin.Context) {
 	})
 }
 
-func (h *BooksHandler) UpdateProgress(c *gin.Context) {
+func (h *BooksHandler) File(c *gin.Context) {
 	id := c.Param("id")
-	claims := auth.ClaimsFromCtx(c.Request.Context())
 
-	var body struct {
-		Page int `json:"page"`
-	}
-	if err := json.NewDecoder(c.Request.Body).Decode(&body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid body"})
+	var path, format string
+	if err := h.db.QueryRow(c.Request.Context(), `SELECT path, format FROM books WHERE id=$1`, id).Scan(&path, &format); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "book not found"})
 		return
 	}
 
-	_, err := h.db.Exec(c.Request.Context(), `
-		INSERT INTO reading_progress (user_id, book_id, current_page)
-		VALUES ($1,$2,$3)
-		ON CONFLICT (user_id, book_id) DO UPDATE SET current_page=$3, updated_at=NOW()`,
-		claims.UserID, id, body.Page,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+	if format != "epub" && format != "pdf" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "file endpoint only for epub/pdf"})
 		return
 	}
 
-	c.JSON(http.StatusOK, map[string]any{"page": body.Page})
+	c.File(path)
 }
 
-func (h *BooksHandler) ListByLibrary(c *gin.Context) {
-	libID := c.Param("id")
-	claims := auth.ClaimsFromCtx(c.Request.Context())
+func (h *BooksHandler) Register(api huma.API) {
+	huma.Register(api, huma.Operation{
+		OperationID: "getBook",
+		Method:      http.MethodGet,
+		Path:        "/api/books/{id}",
+		Tags:        []string{"Books"},
+		Summary:     "Get full book metadata",
+	}, h.get)
 
-	limit, _ := strconv.Atoi(c.Query("limit"))
-	offset, _ := strconv.Atoi(c.Query("offset"))
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
+	huma.Register(api, huma.Operation{
+		OperationID: "listBooksByLibrary",
+		Method:      http.MethodGet,
+		Path:        "/api/libraries/{id}/books",
+		Tags:        []string{"Books"},
+		Summary:     "List books in a library with pagination",
+	}, h.listByLibrary)
 
-	rows, err := h.db.Query(c.Request.Context(), `
-		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.page_count, b.age_rating
-		FROM books b
-		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=$2
-		WHERE b.library_id=$1
-		  AND ($3='admin' OR lp.can_read=TRUE)
-		ORDER BY b.series NULLS LAST, b.issue_number
-		LIMIT $4 OFFSET $5`,
-		libID, claims.UserID, claims.Role, limit, offset,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
-		return
-	}
-	defer rows.Close()
+	huma.Register(api, huma.Operation{
+		OperationID: "getBookPages",
+		Method:      http.MethodGet,
+		Path:        "/api/books/{id}/pages",
+		Tags:        []string{"Books"},
+		Summary:     "Get page count and URL list",
+	}, h.pages)
 
-	var results []map[string]any
-	for rows.Next() {
-		vals, _ := rows.Values()
-		descs := rows.FieldDescriptions()
-		row := make(map[string]any, len(descs))
-		for i, d := range descs {
-			row[string(d.Name)] = vals[i]
-		}
-		results = append(results, row)
-	}
-	if results == nil {
-		results = []map[string]any{}
-	}
-	c.JSON(http.StatusOK, results)
+	huma.Register(api, huma.Operation{
+		OperationID: "updateProgress",
+		Method:      http.MethodPut,
+		Path:        "/api/books/{id}/progress",
+		Tags:        []string{"Books"},
+		Summary:     "Update reading progress for the current user",
+	}, h.updateProgress)
 }
