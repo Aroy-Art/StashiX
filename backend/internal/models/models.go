@@ -63,6 +63,8 @@ type User struct {
 	ID        string     `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Email     string     `json:"email"`
 	Username  string     `json:"username"`
+	FirstName string     `json:"first_name"`
+	LastName  string     `json:"last_name"`
 	Role      string     `json:"role"`
 	BirthDate *time.Time `json:"birth_date,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`

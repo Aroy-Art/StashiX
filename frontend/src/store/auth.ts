@@ -1,12 +1,21 @@
 import { create } from 'zustand'
-import { auth as authApi } from '../api/client'
+import { auth as authApi, user as userApi } from '../api/client'
+
+interface UserProfile {
+  username: string
+  email: string
+  firstName: string
+  lastName: string
+}
 
 interface AuthState {
   token: string | null
   isAdmin: boolean
+  profile: UserProfile | null
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   restore: () => void
+  fetchProfile: () => Promise<void>
 }
 
 function parseRole(token: string): string {
@@ -21,16 +30,46 @@ function parseRole(token: string): string {
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isAdmin: false,
+  profile: null,
+
+  async fetchProfile() {
+    try {
+      const p = await userApi.profile()
+      set({
+        profile: {
+          username: p.username,
+          email: p.email,
+          firstName: p.first_name,
+          lastName: p.last_name,
+        },
+      })
+    } catch {
+      // profile fetch is best-effort
+    }
+  },
 
   async login(email, password) {
     const pair = await authApi.login(email, password)
     const role = parseRole(pair.access_token)
     set({ token: pair.access_token, isAdmin: role === 'admin' })
+    try {
+      const p = await userApi.profile()
+      set({
+        profile: {
+          username: p.username,
+          email: p.email,
+          firstName: p.first_name,
+          lastName: p.last_name,
+        },
+      })
+    } catch {
+      // profile fetch is best-effort
+    }
   },
 
   logout() {
     authApi.logout()
-    set({ token: null, isAdmin: false })
+    set({ token: null, isAdmin: false, profile: null })
   },
 
   restore() {

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Settings } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
@@ -15,11 +15,25 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { useAuthStore } from '@/store/auth'
 
+function initials(firstName: string, lastName: string, username: string): string {
+  if (firstName || lastName) {
+    return ((firstName[0] ?? '') + (lastName[0] ?? '')).toUpperCase() || username[0]?.toUpperCase() || 'U'
+  }
+  return username.slice(0, 2).toUpperCase() || 'U'
+}
+
 export function Header() {
   const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)
   const isAdmin = useAuthStore((s) => s.isAdmin)
+  const profile = useAuthStore((s) => s.profile)
+  const fetchProfile = useAuthStore((s) => s.fetchProfile)
+  const token = useAuthStore((s) => s.token)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (token && !profile) fetchProfile()
+  }, [token, profile, fetchProfile])
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -31,6 +45,10 @@ export function Header() {
     logout()
     navigate('/login')
   }
+
+  const avatarInitials = profile
+    ? initials(profile.firstName, profile.lastName, profile.username)
+    : 'U'
 
   return (
     <header className="flex shrink-0 items-center gap-2 px-4 h-12 border-b border-border bg-background/80 backdrop-blur-md">
@@ -74,12 +92,17 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <button className="focus:outline-none rounded-full focus:ring-2 focus:ring-ring/50 ml-1">
               <Avatar className="h-6 w-6 cursor-pointer ring-1 ring-border hover:ring-ring transition-all duration-200">
-                <AvatarFallback className="text-[10px]">U</AvatarFallback>
+                <AvatarFallback className="text-[10px]">{avatarInitials}</AvatarFallback>
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-40">
-            <DropdownMenuLabel>My account</DropdownMenuLabel>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel className="font-normal">
+              <p className="text-sm font-medium leading-none">{profile?.username ?? 'Account'}</p>
+              {profile?.email && (
+                <p className="text-xs text-muted-foreground mt-1 truncate">{profile.email}</p>
+              )}
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

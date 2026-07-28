@@ -77,6 +77,7 @@ func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret str
 	booksH.Register(api)
 	handlers.NewSearchHandler(db).Register(api)
 	handlers.NewAdminHandler(db).Register(api)
+	handlers.NewUserHandler(db).Register(api)
 
 	return r
 }
