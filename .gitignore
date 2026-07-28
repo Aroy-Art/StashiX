@@ -1,0 +1,20 @@
+# env
+.env
+
+# Go
+backend/vendor/
+backend/tmp/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Build
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tmp files and folders
+tmp/

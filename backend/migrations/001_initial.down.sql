@@ -1,0 +1,11 @@
+DROP TRIGGER IF EXISTS books_search_vec_trigger ON books;
+DROP FUNCTION IF EXISTS books_search_vec_update();
+DROP TABLE IF EXISTS reading_progress;
+DROP TABLE IF EXISTS book_covers;
+DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS library_permissions;
+DROP TABLE IF EXISTS libraries;
+DROP TABLE IF EXISTS users;
+DROP TYPE IF EXISTS age_rating;
+DROP TYPE IF EXISTS book_format;
+DROP TYPE IF EXISTS user_role;
