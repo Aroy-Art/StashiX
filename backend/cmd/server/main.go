@@ -27,17 +27,18 @@ func main() {
 		log.Fatalf("migrate: %v", err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	gormDB, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("db: %v", err)
 	}
-	defer pool.Close()
+	sqlDB, err := gormDB.DB()
+	if err != nil {
+		log.Fatalf("db.DB(): %v", err)
+	}
+	defer sqlDB.Close()
 
 	hub := ws.NewHub()
-	scanner := library.NewScanner(pool, hub)
+	scanner := library.NewScanner(gormDB, hub)
 
 	fw, err := watcher.New(scanner)
 	if err != nil {
@@ -45,27 +46,31 @@ func main() {
 	}
 	defer fw.Close()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// load watched libraries
-	rows, err := pool.Query(ctx, `SELECT id, root_path FROM libraries`)
-	if err == nil {
-		libMap := make(map[string]string)
-		for rows.Next() {
-			var id, path string
-			rows.Scan(&id, &path)
-			fw.Add(id, path)
-			libMap[path] = id
+	var libs []struct {
+		ID       string
+		RootPath string
+	}
+	gormDB.WithContext(ctx).Raw(`SELECT id::text AS id, root_path FROM libraries`).Scan(&libs)
+	if len(libs) > 0 {
+		libMap := make(map[string]string, len(libs))
+		for _, l := range libs {
+			fw.Add(l.ID, l.RootPath)
+			libMap[l.RootPath] = l.ID
 		}
-		rows.Close()
 		go fw.Run(ctx, libMap)
 	}
 
-	router := api.NewRouter(pool, hub, scanner, cfg.JWTSecret)
+	router := api.NewRouter(gormDB, hub, scanner, cfg.JWTSecret)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,
 		Handler:      router,
 		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 0, // streaming
+		WriteTimeout: 0,
 		IdleTimeout:  120 * time.Second,
 	}
 

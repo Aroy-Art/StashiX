@@ -3,7 +3,7 @@ package models
 import "time"
 
 type Library struct {
-	ID        string    `json:"id"`
+	ID        string    `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Name      string    `json:"name"`
 	RootPath  string    `json:"root_path"`
 	CreatedAt time.Time `json:"created_at"`
@@ -21,8 +21,8 @@ type BookSummary struct {
 }
 
 type Book struct {
-	ID          string    `json:"id"`
-	LibraryID   string    `json:"library_id"`
+	ID          string    `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	LibraryID   string    `json:"library_id" gorm:"type:uuid"`
 	Path        string    `json:"path"`
 	Title       string    `json:"title"`
 	Series      *string   `json:"series,omitempty"`
@@ -40,7 +40,7 @@ type Book struct {
 }
 
 type User struct {
-	ID        string     `json:"id"`
+	ID        string     `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	Email     string     `json:"email"`
 	Username  string     `json:"username"`
 	Role      string     `json:"role"`

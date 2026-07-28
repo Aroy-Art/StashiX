@@ -5,16 +5,16 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/auth"
 	"github.com/aroy/stashix/internal/models"
 )
 
 type SearchHandler struct {
-	db *pgxpool.Pool
+	db *gorm.DB
 }
 
-func NewSearchHandler(db *pgxpool.Pool) *SearchHandler {
+func NewSearchHandler(db *gorm.DB) *SearchHandler {
 	return &SearchHandler{db: db}
 }
 
@@ -42,37 +42,40 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 		limit = 50
 	}
 
-	rows, err := h.db.Query(ctx, `
+	var results []struct {
+		models.BookSummary
+		Rank float64
+	}
+	result := h.db.WithContext(ctx).Raw(`
 		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.age_rating,
 		       ts_rank(b.search_vec, query) AS rank, b.page_count
 		FROM books b,
-		     plainto_tsquery('english', $1) query
-		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=$2
-		WHERE ($1 = '' OR b.search_vec @@ query)
-		  AND ($3 = '' OR b.library_id::text = $3)
-		  AND ($4 = '' OR b.age_rating = $4::age_rating)
-		  AND ($5 = 'admin' OR lp.can_read = TRUE)
+		     plainto_tsquery('english', ?) query
+		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
+		WHERE (? = '' OR b.search_vec @@ query)
+		  AND (? = '' OR b.library_id::text = ?)
+		  AND (? = '' OR b.age_rating = ?::age_rating)
+		  AND (? = 'admin' OR lp.can_read = TRUE)
 		ORDER BY rank DESC, b.title
-		LIMIT $6 OFFSET $7`,
-		input.Q, claims.UserID, input.LibraryID, input.AgeRating, claims.Role, limit, input.Offset,
-	)
-	if err != nil {
+		LIMIT ? OFFSET ?`,
+		input.Q, claims.UserID,
+		input.Q,
+		input.LibraryID, input.LibraryID,
+		input.AgeRating, input.AgeRating,
+		claims.Role,
+		limit, input.Offset,
+	).Scan(&results)
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "search error")
 	}
-	defer rows.Close()
 
 	out := &searchOutput{}
 	out.Body.Results = []models.BookSummary{}
 	out.Body.Offset = input.Offset
 	out.Body.Limit = limit
 
-	for rows.Next() {
-		var b models.BookSummary
-		var rank float64
-		if err := rows.Scan(&b.ID, &b.Title, &b.Series, &b.IssueNumber, &b.Year, &b.Format, &b.AgeRating, &rank, &b.PageCount); err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "db error")
-		}
-		out.Body.Results = append(out.Body.Results, b)
+	for _, r := range results {
+		out.Body.Results = append(out.Body.Results, r.BookSummary)
 	}
 	return out, nil
 }

@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/auth"
 	"github.com/aroy/stashix/internal/library"
 	"github.com/aroy/stashix/internal/models"
@@ -13,12 +13,12 @@ import (
 )
 
 type LibraryHandler struct {
-	db      *pgxpool.Pool
+	db      *gorm.DB
 	scanner *library.Scanner
 	hub     *ws.Hub
 }
 
-func NewLibraryHandler(db *pgxpool.Pool, scanner *library.Scanner, hub *ws.Hub) *LibraryHandler {
+func NewLibraryHandler(db *gorm.DB, scanner *library.Scanner, hub *ws.Hub) *LibraryHandler {
 	return &LibraryHandler{db: db, scanner: scanner, hub: hub}
 }
 
@@ -29,33 +29,26 @@ type libraryListOutput struct {
 func (h *LibraryHandler) list(ctx context.Context, _ *struct{}) (*libraryListOutput, error) {
 	claims := auth.ClaimsFromCtx(ctx)
 
-	var query string
-	var args []any
+	var libs []models.Library
+	var result *gorm.DB
 	if claims.Role == "admin" {
-		query = `SELECT id::text, name, root_path, created_at FROM libraries ORDER BY name`
+		result = h.db.WithContext(ctx).Raw(
+			`SELECT id::text, name, root_path, created_at FROM libraries ORDER BY name`,
+		).Scan(&libs)
 	} else {
-		query = `
+		result = h.db.WithContext(ctx).Raw(`
 			SELECT l.id::text, l.name, l.root_path, l.created_at
 			FROM libraries l
 			JOIN library_permissions lp ON lp.library_id = l.id
-			WHERE lp.user_id = $1 AND lp.can_read = TRUE
-			ORDER BY l.name`
-		args = []any{claims.UserID}
+			WHERE lp.user_id = ? AND lp.can_read = TRUE
+			ORDER BY l.name`, claims.UserID,
+		).Scan(&libs)
 	}
-
-	rows, err := h.db.Query(ctx, query, args...)
-	if err != nil {
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
 	}
-	defer rows.Close()
-
-	libs := []models.Library{}
-	for rows.Next() {
-		var l models.Library
-		if err := rows.Scan(&l.ID, &l.Name, &l.RootPath, &l.CreatedAt); err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "db error")
-		}
-		libs = append(libs, l)
+	if libs == nil {
+		libs = []models.Library{}
 	}
 	return &libraryListOutput{Body: libs}, nil
 }
@@ -79,11 +72,11 @@ func (h *LibraryHandler) create(ctx context.Context, input *createLibraryInput) 
 	}
 
 	var id string
-	err := h.db.QueryRow(ctx,
-		`INSERT INTO libraries (name, root_path) VALUES ($1,$2) RETURNING id`,
+	result := h.db.WithContext(ctx).Raw(
+		`INSERT INTO libraries (name, root_path) VALUES (?,?) RETURNING id`,
 		input.Body.Name, input.Body.RootPath,
 	).Scan(&id)
-	if err != nil {
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
 	}
 
@@ -110,8 +103,10 @@ func (h *LibraryHandler) scan(ctx context.Context, input *scanLibraryInput) (*sc
 	}
 
 	var rootPath string
-	err := h.db.QueryRow(ctx, `SELECT root_path FROM libraries WHERE id=$1`, input.ID).Scan(&rootPath)
-	if err != nil {
+	result := h.db.WithContext(ctx).Raw(
+		`SELECT root_path FROM libraries WHERE id = ?`, input.ID,
+	).Scan(&rootPath)
+	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, huma.NewError(http.StatusNotFound, "library not found")
 	}
 

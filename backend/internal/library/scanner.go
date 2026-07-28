@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/media"
 	"github.com/aroy/stashix/internal/metadata"
 	"github.com/aroy/stashix/internal/ws"
@@ -23,17 +23,16 @@ type ScanProgress struct {
 }
 
 type Scanner struct {
-	db    *pgxpool.Pool
+	db    *gorm.DB
 	hub   *ws.Hub
 	mu    sync.RWMutex
-	tasks map[string]ScanProgress // libraryID → current progress
+	tasks map[string]ScanProgress
 }
 
-func NewScanner(db *pgxpool.Pool, hub *ws.Hub) *Scanner {
+func NewScanner(db *gorm.DB, hub *ws.Hub) *Scanner {
 	return &Scanner{db: db, hub: hub, tasks: make(map[string]ScanProgress)}
 }
 
-// ActiveTasks returns a snapshot of all currently running scans.
 func (s *Scanner) ActiveTasks() []ScanProgress {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -44,20 +43,17 @@ func (s *Scanner) ActiveTasks() []ScanProgress {
 	return out
 }
 
-// seriesContext holds directory-derived metadata for all books in a series folder.
 type seriesContext struct {
 	publisher string
 	series    string
 	year      int
-	indexMeta *metadata.BookMeta // from index.json, nil if absent
-	coverPath string             // path to cover image, "" if absent
+	indexMeta *metadata.BookMeta
+	coverPath string
 }
 
 func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string) {
-	// Resolve the library's true root path so we can compute relative directory depths
-	// even when scanRoot is a subdirectory (e.g., called from the file watcher).
 	var libraryRoot string
-	_ = s.db.QueryRow(ctx, `SELECT root_path FROM libraries WHERE id=$1`, libraryID).Scan(&libraryRoot)
+	s.db.WithContext(ctx).Raw(`SELECT root_path FROM libraries WHERE id = ?`, libraryID).Scan(&libraryRoot)
 	if libraryRoot == "" {
 		libraryRoot = scanRoot
 	}
@@ -104,8 +100,6 @@ func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string) {
 	}
 }
 
-// buildSeriesContexts inspects each unique directory containing files and collects
-// publisher/series names from the path hierarchy, index.json, and cover images.
 func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesContext {
 	seenDirs := make(map[string]bool, len(paths))
 	for _, p := range paths {
@@ -120,25 +114,21 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 			parts := strings.Split(rel, string(os.PathSeparator))
 			switch {
 			case len(parts) >= 2:
-				// publisher/series/… layout
 				sc.publisher = parts[0]
 				sm := metadata.ParseSeriesDir(parts[1])
 				sc.series = sm.Series
 				sc.year = sm.Year
 			case len(parts) == 1:
-				// files sit directly in a single subdirectory
 				sm := metadata.ParseSeriesDir(parts[0])
 				sc.series = sm.Series
 				sc.year = sm.Year
 			}
 		}
 
-		// Load index.json if present
 		if m, err := metadata.ParseIndexJSON(filepath.Join(dir, "index.json")); err == nil {
 			sc.indexMeta = m
 		}
 
-		// Find cover image (cover.jpg, cover.png, etc.)
 		for _, name := range []string{"cover.jpg", "cover.jpeg", "cover.png", "cover.webp"} {
 			cp := filepath.Join(dir, name)
 			if _, err := os.Stat(cp); err == nil {
@@ -158,9 +148,10 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		return err
 	}
 
-	var exists bool
-	if err := s.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM books WHERE path=$1)`, path).Scan(&exists); err != nil || exists {
-		return err
+	var count int64
+	s.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM books WHERE path = ?`, path).Scan(&count)
+	if count > 0 {
+		return nil
 	}
 
 	info, err := os.Stat(path)
@@ -180,30 +171,30 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		pageCount = meta.PageCount
 	}
 
-	_, err = s.db.Exec(ctx, `
+	result := s.db.WithContext(ctx).Exec(`
 		INSERT INTO books (library_id, path, title, series, issue_number, volume, year, publisher,
 		                   format, page_count, file_size, age_rating, language, summary)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		ON CONFLICT (path) DO NOTHING`,
 		libraryID, path, meta.Title, meta.Series, meta.IssueNumber, nullInt(meta.Volume),
 		nullInt(meta.Year), meta.Publisher, string(format), pageCount,
 		info.Size(), coalesceString(meta.AgeRating, "unknown"), meta.Language, meta.Summary,
 	)
-	if err != nil {
-		return err
+	if result.Error != nil {
+		return result.Error
 	}
 
 	var bookID string
-	s.db.QueryRow(ctx, `SELECT id FROM books WHERE path=$1`, path).Scan(&bookID)
+	s.db.WithContext(ctx).Raw(`SELECT id FROM books WHERE path = ?`, path).Scan(&bookID)
 	if bookID == "" {
 		return nil
 	}
 
 	if sc != nil && sc.coverPath != "" {
-		_, _ = s.db.Exec(ctx, `
+		s.db.WithContext(ctx).Exec(`
 			INSERT INTO book_covers (book_id, path)
-			VALUES ($1, $2)
-			ON CONFLICT (book_id) DO UPDATE SET path=$2, updated_at=NOW()`,
+			VALUES (?,?)
+			ON CONFLICT (book_id) DO UPDATE SET path=EXCLUDED.path, updated_at=NOW()`,
 			bookID, sc.coverPath)
 	}
 
@@ -213,24 +204,19 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 	return nil
 }
 
-// buildMeta constructs the final BookMeta for a file by merging sources in
-// priority order: directory structure → index.json → filename → archive XML.
 func buildMeta(_ context.Context, format media.Format, path string, sc *seriesContext) *metadata.BookMeta {
 	meta := &metadata.BookMeta{}
 
-	// 1. Directory structure (lowest priority)
 	if sc != nil {
 		meta.Publisher = sc.publisher
 		meta.Series = sc.series
 		meta.Year = sc.year
 	}
 
-	// 2. index.json — series-level sidecar (refines publisher/series/summary/rating)
 	if sc != nil && sc.indexMeta != nil {
 		applySeriesMeta(meta, sc.indexMeta)
 	}
 
-	// 3. Archive embedded XML (ComicInfo / MetronInfo) — highest priority
 	if format == media.FormatCBZ || format == media.FormatEPUB {
 		if archMeta, err := metadata.ParseZipArchive(path); err == nil && archMeta.Title != "" {
 			applyAllMeta(meta, archMeta)
@@ -238,7 +224,6 @@ func buildMeta(_ context.Context, format media.Format, path string, sc *seriesCo
 		}
 	}
 
-	// 4. Filename parsing — fills per-book fields not covered by context
 	applyFileMeta(meta, metadata.ParseFilename(path))
 
 done:
@@ -248,8 +233,6 @@ done:
 	return meta
 }
 
-// applySeriesMeta copies series-level fields (non-per-book) from src to dst,
-// overriding empty strings but not non-empty values already set.
 func applySeriesMeta(dst, src *metadata.BookMeta) {
 	if src.Series != "" {
 		dst.Series = src.Series
@@ -271,7 +254,6 @@ func applySeriesMeta(dst, src *metadata.BookMeta) {
 	}
 }
 
-// applyAllMeta copies all fields from src, overriding dst (archive XML wins).
 func applyAllMeta(dst, src *metadata.BookMeta) {
 	if src.Title != "" {
 		dst.Title = src.Title
@@ -305,8 +287,6 @@ func applyAllMeta(dst, src *metadata.BookMeta) {
 	}
 }
 
-// applyFileMeta applies per-book fields from filename parsing without overriding
-// series/publisher already resolved from directory context.
 func applyFileMeta(dst, src *metadata.BookMeta) {
 	if src.Title != "" {
 		dst.Title = src.Title
@@ -320,7 +300,6 @@ func applyFileMeta(dst, src *metadata.BookMeta) {
 	if src.Year != 0 && dst.Year == 0 {
 		dst.Year = src.Year
 	}
-	// Only apply series/publisher from filename if context didn't provide them
 	if dst.Series == "" && src.Series != "" {
 		dst.Series = src.Series
 	}
@@ -347,13 +326,6 @@ func collectFiles(root string) ([]string, error) {
 
 func nullInt(v int) any {
 	if v == 0 {
-		return nil
-	}
-	return v
-}
-
-func nullString(v string) any {
-	if v == "" {
 		return nil
 	}
 	return v

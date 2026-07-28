@@ -11,14 +11,14 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humagin"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/api/handlers"
 	"github.com/aroy/stashix/internal/auth"
 	"github.com/aroy/stashix/internal/library"
 	"github.com/aroy/stashix/internal/ws"
 )
 
-func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecret string) http.Handler {
+func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret string) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -31,12 +31,11 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 		MaxAge:           300 * time.Second,
 	}))
 
-	// Auth middleware: skip docs/openapi/public API paths; require JWT for everything else
 	publicPaths := map[string]struct{}{
-		"/api/auth/login":    {},
-		"/api/auth/refresh":  {},
-		"/api/setup":         {},
-		"/api/setup/status":  {},
+		"/api/auth/login":   {},
+		"/api/auth/refresh": {},
+		"/api/setup":        {},
+		"/api/setup/status": {},
 	}
 	ginAuth := auth.GinMiddleware(jwtSecret)
 	r.Use(func(c *gin.Context) {
@@ -54,7 +53,6 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 		ginAuth(c)
 	})
 
-	// Huma API
 	config := huma.DefaultConfig("Stashix API", "1.0.0")
 	config.Info.Description = "Comic and book library management API."
 	config.Components.SecuritySchemes = map[string]*huma.SecurityScheme{
@@ -64,18 +62,15 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 
 	api := humagin.New(r, config)
 
-	// WebSocket — plain gin (auth middleware already applied above)
 	wsRouter := ws.NewRouter(hub)
 	registerWSHandlers(wsRouter, db)
 	r.GET("/ws", gin.WrapH(wsRouter))
 
-	// Binary streaming endpoints — plain gin (auth middleware already applied above)
 	booksH := handlers.NewBooksHandler(db)
 	r.GET("/api/books/:id/page/:n", booksH.Page)
 	r.GET("/api/books/:id/cover", booksH.Cover)
 	r.GET("/api/books/:id/file", booksH.File)
 
-	// Huma (typed, JSON) endpoints
 	handlers.NewAuthHandler(db, jwtSecret).Register(api)
 	handlers.NewSetupHandler(db, jwtSecret).Register(api)
 	handlers.NewLibraryHandler(db, scanner, hub).Register(api)
@@ -86,7 +81,7 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 	return r
 }
 
-func registerWSHandlers(r *ws.Router, db *pgxpool.Pool) {
+func registerWSHandlers(r *ws.Router, db *gorm.DB) {
 	r.Handle("update_progress", func(ctx context.Context, userID string, payload json.RawMessage) (any, error) {
 		var body struct {
 			BookID string `json:"book_id"`
@@ -95,12 +90,12 @@ func registerWSHandlers(r *ws.Router, db *pgxpool.Pool) {
 		if err := json.Unmarshal(payload, &body); err != nil {
 			return nil, err
 		}
-		_, err := db.Exec(ctx, `
+		result := db.WithContext(ctx).Exec(`
 			INSERT INTO reading_progress (user_id, book_id, current_page)
-			VALUES ($1,$2,$3)
-			ON CONFLICT (user_id, book_id) DO UPDATE SET current_page=$3, updated_at=NOW()`,
+			VALUES (?,?,?)
+			ON CONFLICT (user_id, book_id) DO UPDATE SET current_page=EXCLUDED.current_page, updated_at=NOW()`,
 			userID, body.BookID, body.Page,
 		)
-		return map[string]any{"page": body.Page}, err
+		return map[string]any{"page": body.Page}, result.Error
 	})
 }

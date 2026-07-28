@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/aroy/stashix/internal/auth"
 )
 
 type AuthHandler struct {
-	db     *pgxpool.Pool
+	db     *gorm.DB
 	secret string
 }
 
-func NewAuthHandler(db *pgxpool.Pool, secret string) *AuthHandler {
+func NewAuthHandler(db *gorm.DB, secret string) *AuthHandler {
 	return &AuthHandler{db: db, secret: secret}
 }
 
@@ -31,19 +31,23 @@ type loginInput struct {
 }
 
 func (h *AuthHandler) login(ctx context.Context, input *loginInput) (*tokenPairOutput, error) {
-	var userID, passwordHash, role string
-	err := h.db.QueryRow(ctx,
-		`SELECT id, password_hash, role FROM users WHERE email=$1`, input.Body.Email,
-	).Scan(&userID, &passwordHash, &role)
-	if err != nil {
+	var row struct {
+		ID           string
+		PasswordHash string
+		Role         string
+	}
+	result := h.db.WithContext(ctx).Raw(
+		`SELECT id, password_hash, role FROM users WHERE email = ?`, input.Body.Email,
+	).Scan(&row)
+	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, huma.NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(passwordHash), []byte(input.Body.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(row.PasswordHash), []byte(input.Body.Password)); err != nil {
 		return nil, huma.NewError(http.StatusUnauthorized, "invalid credentials")
 	}
 
-	pair, err := auth.IssueTokenPair(userID, role, h.secret)
+	pair, err := auth.IssueTokenPair(row.ID, row.Role, h.secret)
 	if err != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "token error")
 	}

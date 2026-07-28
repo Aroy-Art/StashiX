@@ -5,16 +5,16 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/aroy/stashix/internal/models"
 )
 
 type AdminHandler struct {
-	db *pgxpool.Pool
+	db *gorm.DB
 }
 
-func NewAdminHandler(db *pgxpool.Pool) *AdminHandler {
+func NewAdminHandler(db *gorm.DB) *AdminHandler {
 	return &AdminHandler{db: db}
 }
 
@@ -27,20 +27,12 @@ func (h *AdminHandler) listUsers(ctx context.Context, _ *struct{}) (*userListOut
 		return nil, err
 	}
 
-	rows, err := h.db.Query(ctx,
-		`SELECT id, email, username, role, birth_date, created_at FROM users ORDER BY created_at DESC`)
-	if err != nil {
+	var users []models.User
+	result := h.db.WithContext(ctx).Raw(
+		`SELECT id, email, username, role, birth_date, created_at FROM users ORDER BY created_at DESC`,
+	).Scan(&users)
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
-	}
-	defer rows.Close()
-
-	users := []models.User{}
-	for rows.Next() {
-		var u models.User
-		if err := rows.Scan(&u.ID, &u.Email, &u.Username, &u.Role, &u.BirthDate, &u.CreatedAt); err != nil {
-			return nil, huma.NewError(http.StatusInternalServerError, "db error")
-		}
-		users = append(users, u)
 	}
 	return &userListOutput{Body: users}, nil
 }
@@ -77,13 +69,13 @@ func (h *AdminHandler) createUser(ctx context.Context, input *createUserInput) (
 	}
 
 	var id string
-	err = h.db.QueryRow(ctx, `
+	result := h.db.WithContext(ctx).Raw(`
 		INSERT INTO users (email, username, password_hash, role, birth_date)
-		VALUES ($1,$2,$3,$4,NULLIF($5,'')::DATE)
+		VALUES (?,?,?,?,NULLIF(?,'')::DATE)
 		RETURNING id`,
 		input.Body.Email, input.Body.Username, string(hash), role, input.Body.BirthDate,
 	).Scan(&id)
-	if err != nil {
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusConflict, "user already exists or invalid data")
 	}
 
@@ -112,14 +104,14 @@ func (h *AdminHandler) setPermissions(ctx context.Context, input *setPermissions
 		return nil, err
 	}
 
-	_, err := h.db.Exec(ctx, `
+	result := h.db.WithContext(ctx).Exec(`
 		INSERT INTO library_permissions (user_id, library_id, can_read, max_age_rating)
-		VALUES ($1,$2,$3,$4::age_rating)
+		VALUES (?,?,?,?::age_rating)
 		ON CONFLICT (user_id, library_id) DO UPDATE
-		  SET can_read=$3, max_age_rating=$4::age_rating`,
+		  SET can_read=EXCLUDED.can_read, max_age_rating=EXCLUDED.max_age_rating`,
 		input.ID, input.Body.LibraryID, input.Body.CanRead, input.Body.MaxAgeRating,
 	)
-	if err != nil {
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
 	}
 

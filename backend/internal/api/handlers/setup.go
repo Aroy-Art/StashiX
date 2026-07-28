@@ -5,17 +5,17 @@ import (
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/aroy/stashix/internal/auth"
 )
 
 type SetupHandler struct {
-	db     *pgxpool.Pool
+	db     *gorm.DB
 	secret string
 }
 
-func NewSetupHandler(db *pgxpool.Pool, secret string) *SetupHandler {
+func NewSetupHandler(db *gorm.DB, secret string) *SetupHandler {
 	return &SetupHandler{db: db, secret: secret}
 }
 
@@ -26,8 +26,8 @@ type setupStatusOutput struct {
 }
 
 func (h *SetupHandler) status(ctx context.Context, _ *struct{}) (*setupStatusOutput, error) {
-	var count int
-	h.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&count)
+	var count int64
+	h.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM users`).Scan(&count)
 	out := &setupStatusOutput{}
 	out.Body.NeedsSetup = count == 0
 	return out, nil
@@ -42,8 +42,8 @@ type setupRunInput struct {
 }
 
 func (h *SetupHandler) run(ctx context.Context, input *setupRunInput) (*tokenPairOutput, error) {
-	var count int
-	h.db.QueryRow(ctx, `SELECT COUNT(*) FROM users`).Scan(&count)
+	var count int64
+	h.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM users`).Scan(&count)
 	if count > 0 {
 		return nil, huma.NewError(http.StatusForbidden, "setup already complete")
 	}
@@ -54,13 +54,13 @@ func (h *SetupHandler) run(ctx context.Context, input *setupRunInput) (*tokenPai
 	}
 
 	var userID string
-	err = h.db.QueryRow(ctx, `
+	result := h.db.WithContext(ctx).Raw(`
 		INSERT INTO users (email, username, password_hash, role)
-		VALUES ($1, $2, $3, 'admin')
+		VALUES (?, ?, ?, 'admin')
 		RETURNING id`,
 		input.Body.Email, input.Body.Username, string(hash),
 	).Scan(&userID)
-	if err != nil {
+	if result.Error != nil {
 		return nil, huma.NewError(http.StatusConflict, "could not create user")
 	}
 
