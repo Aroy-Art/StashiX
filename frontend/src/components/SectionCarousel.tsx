@@ -63,7 +63,7 @@ export function SectionCarousel({
       ) : (
         <div
           ref={scrollRef}
-          className="flex gap-3 overflow-x-auto scroll-smooth px-6 pb-2"
+          className="flex gap-3 overflow-x-auto overflow-y-visible scroll-smooth px-6 pb-2 pt-2"
           style={{ scrollbarWidth: 'none' }}
         >
           {children}
