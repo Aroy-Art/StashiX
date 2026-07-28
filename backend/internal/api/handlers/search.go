@@ -48,18 +48,17 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 	}
 	result := h.db.WithContext(ctx).Raw(`
 		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.age_rating,
-		       ts_rank(b.search_vec, query) AS rank, b.page_count
-		FROM books b,
-		     plainto_tsquery('english', ?) query
+		       ts_rank(b.search_vec, plainto_tsquery('english', ?)) AS rank, b.page_count
+		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
-		WHERE (? = '' OR b.search_vec @@ query)
+		WHERE (? = '' OR b.search_vec @@ plainto_tsquery('english', ?))
 		  AND (? = '' OR b.library_id::text = ?)
 		  AND (? = '' OR b.age_rating = ?::age_rating)
 		  AND (? = 'admin' OR lp.can_read = TRUE)
 		ORDER BY rank DESC, b.title
 		LIMIT ? OFFSET ?`,
 		input.Q, claims.UserID,
-		input.Q,
+		input.Q, input.Q,
 		input.LibraryID, input.LibraryID,
 		input.AgeRating, input.AgeRating,
 		claims.Role,
