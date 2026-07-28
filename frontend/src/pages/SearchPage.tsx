@@ -1,13 +1,18 @@
-import { useState, FormEvent, useEffect } from 'react'
+import { useState, FormEvent, useEffect, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { search as searchApi, books as booksApi } from '../api/client'
-import type { SearchResult } from '../types'
+import { search as searchApi } from '@/api/client'
+import { BookCard } from '@/components/BookCard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { ChevronLeft, Search } from 'lucide-react'
+import type { SearchResult } from '@/types'
 
 export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const [query, setQuery] = useState(params.get('q') ?? '')
   const [results, setResults] = useState<SearchResult[]>([])
   const [loading, setLoading] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   async function doSearch(q: string) {
     if (!q.trim()) return
@@ -22,7 +27,11 @@ export default function SearchPage() {
 
   useEffect(() => {
     const q = params.get('q')
-    if (q) doSearch(q)
+    if (q) {
+      setQuery(q)
+      doSearch(q)
+    }
+    setTimeout(() => inputRef.current?.focus(), 50)
   }, [])
 
   function handleSubmit(e: FormEvent) {
@@ -31,52 +40,94 @@ export default function SearchPage() {
     doSearch(query)
   }
 
+  const hasQuery = !!params.get('q')
+
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1rem' }}>
-      <div style={{ marginBottom: '1rem' }}>
-        <Link to="/" style={{ color: 'var(--text-muted)', fontSize: 13 }}>← Libraries</Link>
+    <div className="min-h-full px-6 py-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-6">
+        <Link
+          to="/"
+          className="flex items-center gap-1 text-sm text-muted hover:text-prose transition-colors"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Home
+        </Link>
+        <span className="text-rim-2">/</span>
+        <span className="text-sm font-medium text-prose">Search</span>
       </div>
-      <form onSubmit={handleSubmit} style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search titles, series, publisher…"
-          autoFocus
-        />
-        <button type="submit" disabled={loading} style={{ whiteSpace: 'nowrap' }}>
-          {loading ? '…' : 'Search'}
-        </button>
-      </form>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 16 }}>
-        {results.map((book) => (
-          <Link key={book.id} to={`/read/${book.id}`} style={{ color: 'var(--text)' }}>
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              overflow: 'hidden',
-            }}>
-              <img
-                src={booksApi.coverUrl(book.id)}
-                alt={book.title}
-                style={{ width: '100%', aspectRatio: '2/3', objectFit: 'cover', display: 'block' }}
-                loading="lazy"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <div style={{ padding: '0.6rem' }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{book.series ?? book.title}</div>
-                {book.issue_number && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>#{book.issue_number}</div>
-                )}
+      {/* Search header */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2.5 mb-5">
+          <div className="w-1.5 h-5 rounded-full bg-plasma shadow-[0_0_8px_rgba(232,121,249,0.6)]" />
+          <h1 className="font-display font-bold text-2xl text-prose tracking-tight">Search</h1>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex gap-2 max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+            <Input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Titles, series, publishers…"
+              className="pl-9 h-10"
+            />
+          </div>
+          <Button type="submit" disabled={loading} className="shrink-0">
+            {loading ? 'Searching…' : 'Search'}
+          </Button>
+        </form>
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center h-48">
+          <div className="w-7 h-7 rounded-full border-2 border-plasma border-t-transparent animate-spin" />
+        </div>
+      )}
+
+      {/* Results */}
+      {!loading && results.length > 0 && (
+        <div>
+          <p className="text-xs text-muted mb-4">
+            {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{params.get('q')}&rdquo;
+          </p>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4">
+            {results.map((book, i) => (
+              <div
+                key={book.id}
+                className="animate-fade-in-up"
+                style={{ animationDelay: `${Math.min(i * 25, 250)}ms` }}
+              >
+                <BookCard book={book} />
               </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {!loading && results.length === 0 && params.get('q') && (
-        <p style={{ color: 'var(--text-muted)' }}>No results for "{params.get('q')}"</p>
+      {/* Empty state */}
+      {!loading && results.length === 0 && hasQuery && (
+        <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+          <div className="w-12 h-12 rounded-xl bg-surface-2 border border-rim flex items-center justify-center">
+            <Search className="w-5 h-5 text-muted" />
+          </div>
+          <p className="text-sm text-muted">
+            No results for &ldquo;{params.get('q')}&rdquo;
+          </p>
+        </div>
+      )}
+
+      {/* Idle state */}
+      {!loading && !hasQuery && (
+        <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+          <div className="w-12 h-12 rounded-xl bg-plasma/10 border border-plasma/20 flex items-center justify-center glow-plasma">
+            <Search className="w-5 h-5 text-plasma/70" />
+          </div>
+          <p className="text-sm text-muted">Type something to search your collection.</p>
+        </div>
       )}
     </div>
   )

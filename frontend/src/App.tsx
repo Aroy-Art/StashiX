@@ -1,17 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
-import { useAuthStore } from './store/auth'
-import LoginPage from './pages/LoginPage'
-import SetupPage from './pages/SetupPage'
-import LibrariesPage from './pages/LibrariesPage'
-import LibraryPage from './pages/LibraryPage'
-import ReaderPage from './pages/ReaderPage'
-import SearchPage from './pages/SearchPage'
+import { useAuthStore } from '@/store/auth'
+import { AppLayout } from '@/components/layout/AppLayout'
+import LoginPage from '@/pages/LoginPage'
+import SetupPage from '@/pages/SetupPage'
+import LibrariesPage from '@/pages/LibrariesPage'
+import LibraryPage from '@/pages/LibraryPage'
+import ReaderPage from '@/pages/ReaderPage'
+import SearchPage from '@/pages/SearchPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   if (!token) return <Navigate to="/login" replace />
   return <>{children}</>
+}
+
+function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <RequireAuth>
+      <AppLayout>{children}</AppLayout>
+    </RequireAuth>
+  )
 }
 
 function AppRoutes() {
@@ -35,7 +44,15 @@ function AppRoutes() {
       .finally(() => setChecking(false))
   }, [navigate, restore])
 
-  if (checking) return null
+  if (checking) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-void">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-volt-2 border-t-transparent animate-spin" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <Routes>
@@ -44,17 +61,17 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          <RequireAuth>
+          <AuthLayout>
             <LibrariesPage />
-          </RequireAuth>
+          </AuthLayout>
         }
       />
       <Route
         path="/library/:id"
         element={
-          <RequireAuth>
+          <AuthLayout>
             <LibraryPage />
-          </RequireAuth>
+          </AuthLayout>
         }
       />
       <Route
@@ -68,9 +85,9 @@ function AppRoutes() {
       <Route
         path="/search"
         element={
-          <RequireAuth>
+          <AuthLayout>
             <SearchPage />
-          </RequireAuth>
+          </AuthLayout>
         }
       />
     </Routes>

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { transport } from './transport'
-import type { Book, Library, SearchResult, TokenPair } from '../types'
+import type { Book, Library, ScanTask, SearchResult, TokenPair } from '../types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -33,6 +33,16 @@ export const auth = {
 export const libraries = {
   list(): Promise<Library[]> {
     return transport.send('get_libraries')
+  },
+  async scan(libraryId: string): Promise<void> {
+    await http.post(`/libraries/${libraryId}/scan`)
+  },
+}
+
+export const tasks = {
+  async list(): Promise<ScanTask[]> {
+    const { data } = await http.get<ScanTask[]>('/tasks')
+    return data
   },
 }
 

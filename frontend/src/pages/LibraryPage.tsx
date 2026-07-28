@@ -1,19 +1,31 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { books as booksApi } from '../api/client'
-import { transport } from '../api/transport'
-import type { Book } from '../types'
+import { books as booksApi, libraries as librariesApi } from '@/api/client'
+import { transport } from '@/api/transport'
+import { BookCard } from '@/components/BookCard'
+import { Badge } from '@/components/ui/badge'
+import { ChevronLeft } from 'lucide-react'
+import type { Book, Library } from '@/types'
 
 export default function LibraryPage() {
   const { id } = useParams<{ id: string }>()
+  const [library, setLibrary] = useState<Library | null>(null)
   const [bookList, setBookList] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!id) return
-    booksApi.listByLibrary(id).then(setBookList).finally(() => setLoading(false))
 
-    // live: append newly added books
+    Promise.all([
+      librariesApi.list().then((libs) => libs?.find((l) => l.id === id) ?? null),
+      booksApi.listByLibrary(id),
+    ])
+      .then(([lib, books]) => {
+        setLibrary(lib)
+        setBookList(books)
+      })
+      .finally(() => setLoading(false))
+
     const off = transport.on('book_added', (payload) => {
       const p = payload as { book_id: string; library_id: string }
       if (p.library_id !== id) return
@@ -25,53 +37,71 @@ export default function LibraryPage() {
   }, [id])
 
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1rem' }}>
-      <div style={{ marginBottom: '1.5rem' }}>
-        <Link to="/" style={{ color: 'var(--text-muted)', fontSize: 13 }}>← Libraries</Link>
+    <div className="min-h-full px-6 py-6">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-6">
+        <Link
+          to="/"
+          className="flex items-center gap-1 text-sm text-muted hover:text-prose transition-colors"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+          Libraries
+        </Link>
+        {library && (
+          <>
+            <span className="text-rim-2">/</span>
+            <span className="text-sm font-medium text-prose">{library.name}</span>
+          </>
+        )}
       </div>
 
-      {loading && <p style={{ color: 'var(--text-muted)' }}>Loading…</p>}
+      {/* Header */}
+      <div className="flex items-end gap-4 mb-8">
+        <div>
+          <h1 className="font-display font-bold text-2xl text-prose tracking-tight">
+            {library?.name ?? 'Library'}
+          </h1>
+          {library && (
+            <p className="text-xs text-muted mt-1 font-mono">{library.root_path}</p>
+          )}
+        </div>
+        {bookList.length > 0 && (
+          <Badge variant="outline" className="mb-0.5">
+            {bookList.length} books
+          </Badge>
+        )}
+      </div>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-        gap: 16,
-      }}>
-        {bookList.map((book) => (
-          <Link
-            key={book.id}
-            to={`/read/${book.id}`}
-            style={{ display: 'block', color: 'var(--text)' }}
-          >
-            <div style={{
-              background: 'var(--surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              overflow: 'hidden',
-              transition: 'border-color 0.15s',
-            }}>
-              <img
-                src={booksApi.coverUrl(book.id)}
-                alt={book.title}
-                style={{ width: '100%', aspectRatio: '2/3', objectFit: 'cover', display: 'block' }}
-                loading="lazy"
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <div style={{ padding: '0.6rem' }}>
-                <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3, marginBottom: 2 }}>
-                  {book.series ?? book.title}
-                </div>
-                {book.issue_number && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>#{book.issue_number}</div>
-                )}
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, textTransform: 'uppercase' }}>
-                  {book.format}
-                </div>
-              </div>
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center h-48">
+          <div className="w-7 h-7 rounded-full border-2 border-volt-2 border-t-transparent animate-spin" />
+        </div>
+      )}
+
+      {/* Empty */}
+      {!loading && bookList.length === 0 && (
+        <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+          <div className="w-12 h-12 rounded-xl bg-surface-2 border border-rim flex items-center justify-center">
+            <span className="text-2xl">📚</span>
+          </div>
+          <p className="text-sm text-muted">No books scanned yet. Trigger a scan from the home page.</p>
+        </div>
+      )}
+
+      {/* Grid */}
+      {!loading && bookList.length > 0 && (
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4">
+          {bookList.map((book, i) => (
+            <div
+              key={book.id}
+              style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
+            >
+              <BookCard book={book} />
             </div>
-          </Link>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

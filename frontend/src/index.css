@@ -1,48 +1,218 @@
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
 
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─── Our custom palette tokens ─────────────────────────────────────────── */
+@theme {
+  --font-display: "Syne", sans-serif;
+  --font-sans: "DM Sans", sans-serif;
+
+  --color-void:      #04040c;
+  --color-surface-1: #0a0a1a;
+  --color-surface-2: #101028;
+  --color-surface-3: #161638;
+  --color-rim:       #1e1e40;
+  --color-rim-2:     #2a2a58;
+  --color-prose:     #ddd8ff;
+  --color-muted:     #7070a0;
+  --color-volt:      #7c3aed;
+  --color-volt-2:    #8b5cf6;
+  --color-volt-3:    #a78bfa;
+  --color-volt-4:    #c4b5fd;
+  --color-plasma:    #e879f9;
+  --color-danger:    #ef4444;
+  --color-success:   #22c55e;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+/* ─── shadcn design tokens (dark-first — html.dark is always on) ─────────── */
 :root {
-  --bg: #0f0f11;
-  --surface: #1a1a1f;
-  --border: #2a2a32;
-  --text: #e8e8f0;
-  --text-muted: #7a7a8c;
-  --accent: #7c5cfc;
-  --accent-hover: #9070ff;
-  --danger: #e05252;
+  /* Base */
+  --background:           oklch(0.06 0.025 270);   /* void */
+  --foreground:           oklch(0.90 0.05 280);     /* prose */
+  --card:                 oklch(0.10 0.03 270);     /* surface-1 */
+  --card-foreground:      oklch(0.90 0.05 280);
+  --popover:              oklch(0.10 0.03 270);
+  --popover-foreground:   oklch(0.90 0.05 280);
+  --primary:              oklch(0.52 0.28 295);     /* volt */
+  --primary-foreground:   oklch(0.98 0 0);
+  --secondary:            oklch(0.13 0.04 270);     /* surface-2 */
+  --secondary-foreground: oklch(0.90 0.05 280);
+  --muted:                oklch(0.16 0.05 270);     /* surface-3 */
+  --muted-foreground:     oklch(0.55 0.06 270);     /* muted text */
+  --accent:               oklch(0.13 0.04 270);
+  --accent-foreground:    oklch(0.90 0.05 280);
+  --destructive:          oklch(0.60 0.21 25);
+  --border:               oklch(0.20 0.06 270);     /* rim */
+  --input:                oklch(0.20 0.06 270);
+  --ring:                 oklch(0.57 0.24 295);     /* volt-2 */
+  --radius:               0.625rem;
+
+  /* Sidebar */
+  --sidebar:                    oklch(0.09 0.03 270);   /* surface-1 */
+  --sidebar-foreground:         oklch(0.90 0.05 280);   /* prose */
+  --sidebar-primary:            oklch(0.52 0.28 295);   /* volt */
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent:             oklch(0.13 0.04 270);   /* surface-2 hover */
+  --sidebar-accent-foreground:  oklch(0.90 0.05 280);
+  --sidebar-border:             oklch(0.20 0.06 270);   /* rim */
+  --sidebar-ring:               oklch(0.57 0.24 295);   /* volt-2 */
 }
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
+/* dark class is always active (html.dark) — mirrors :root values */
+.dark {
+  --background:           oklch(0.06 0.025 270);
+  --foreground:           oklch(0.90 0.05 280);
+  --card:                 oklch(0.10 0.03 270);
+  --card-foreground:      oklch(0.90 0.05 280);
+  --popover:              oklch(0.10 0.03 270);
+  --popover-foreground:   oklch(0.90 0.05 280);
+  --primary:              oklch(0.52 0.28 295);
+  --primary-foreground:   oklch(0.98 0 0);
+  --secondary:            oklch(0.13 0.04 270);
+  --secondary-foreground: oklch(0.90 0.05 280);
+  --muted:                oklch(0.16 0.05 270);
+  --muted-foreground:     oklch(0.55 0.06 270);
+  --accent:               oklch(0.13 0.04 270);
+  --accent-foreground:    oklch(0.90 0.05 280);
+  --destructive:          oklch(0.60 0.21 25);
+  --border:               oklch(0.20 0.06 270);
+  --input:                oklch(0.20 0.06 270);
+  --ring:                 oklch(0.57 0.24 295);
+
+  --sidebar:                    oklch(0.09 0.03 270);
+  --sidebar-foreground:         oklch(0.90 0.05 280);
+  --sidebar-primary:            oklch(0.52 0.28 295);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent:             oklch(0.13 0.04 270);
+  --sidebar-accent-foreground:  oklch(0.90 0.05 280);
+  --sidebar-border:             oklch(0.20 0.06 270);
+  --sidebar-ring:               oklch(0.57 0.24 295);
 }
 
-a { color: var(--accent); text-decoration: none; }
-a:hover { color: var(--accent-hover); }
+/* ─── shadcn theme inline (maps CSS vars → Tailwind tokens) ─────────────── */
+@theme inline {
+  /* Use our Syne + DM Sans, not shadcn defaults */
+  --font-sans: "DM Sans", sans-serif;
+  --font-heading: "Syne", sans-serif;
 
-button {
-  cursor: pointer;
-  border: none;
-  background: var(--accent);
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  font-size: 14px;
-  transition: background 0.15s;
-}
-button:hover { background: var(--accent-hover); }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
+  --color-background:           var(--background);
+  --color-foreground:           var(--foreground);
+  --color-card:                 var(--card);
+  --color-card-foreground:      var(--card-foreground);
+  --color-popover:              var(--popover);
+  --color-popover-foreground:   var(--popover-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-foreground:   var(--primary-foreground);
+  --color-secondary:            var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:                var(--muted);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-accent:               var(--accent);
+  --color-accent-foreground:    var(--accent-foreground);
+  --color-destructive:          var(--destructive);
+  --color-border:               var(--border);
+  --color-input:                var(--input);
+  --color-ring:                 var(--ring);
 
-input, select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 0.5rem 0.75rem;
-  border-radius: 6px;
-  font-size: 14px;
-  width: 100%;
-  outline: none;
+  --color-sidebar:                    var(--sidebar);
+  --color-sidebar-foreground:         var(--sidebar-foreground);
+  --color-sidebar-primary:            var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent:             var(--sidebar-accent);
+  --color-sidebar-accent-foreground:  var(--sidebar-accent-foreground);
+  --color-sidebar-border:             var(--sidebar-border);
+  --color-sidebar-ring:               var(--sidebar-ring);
+
+  --radius-sm:  calc(var(--radius) * 0.6);
+  --radius-md:  calc(var(--radius) * 0.8);
+  --radius-lg:  var(--radius);
+  --radius-xl:  calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
 }
-input:focus, select:focus { border-color: var(--accent); }
+
+/* ─── Base layer ─────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  html {
+    color-scheme: dark;
+  }
+}
+
+/* ─── Scrollbar ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--color-rim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-volt-2); }
+
+/* ─── Animations ──────────────────────────────────────────────────────────── */
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(124, 58, 237, 0.3); }
+  50%       { box-shadow: 0 0 20px rgba(124, 58, 237, 0.6); }
+}
+
+@keyframes scan-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Utility classes ─────────────────────────────────────────────────────── */
+.animate-fade-in-up {
+  animation: fade-in-up 0.3s ease forwards;
+}
+
+.glow-volt {
+  box-shadow: 0 0 14px rgba(124, 58, 237, 0.35), 0 0 36px rgba(124, 58, 237, 0.12);
+}
+
+.glow-plasma {
+  box-shadow: 0 0 14px rgba(232, 121, 249, 0.35), 0 0 36px rgba(232, 121, 249, 0.1);
+}
+
+/* Active sidebar item: electric left border + subtle glow fill */
+.sidebar-active-glow {
+  background: linear-gradient(90deg, rgba(124,58,237,0.15) 0%, rgba(124,58,237,0.04) 100%);
+  box-shadow: inset 2px 0 0 var(--color-volt-2);
+}
+
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(124, 58, 237, 0.22), 0 0 0 1px rgba(139, 92, 246, 0.35);
+}
+
+.shimmer-bar {
+  background: linear-gradient(
+    90deg,
+    var(--color-rim) 25%,
+    rgba(139, 92, 246, 0.45) 50%,
+    var(--color-rim) 75%
+  );
+  background-size: 200% 100%;
+  animation: scan-shimmer 1.8s infinite linear;
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }

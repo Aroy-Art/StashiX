@@ -50,3 +50,10 @@ export interface TokenPair {
 export interface SearchResult extends Omit<Book, 'file_size' | 'language' | 'summary' | 'created_at'> {
   rank: number
 }
+
+export interface ScanTask {
+  library_id: string
+  scanned: number
+  total: number
+  done: boolean
+}
