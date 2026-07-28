@@ -6,6 +6,8 @@ interface UserProfile {
   email: string
   firstName: string
   lastName: string
+  isAdmin: boolean
+  isStaff: boolean
 }
 
 interface AuthState {
@@ -42,6 +44,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           email: p.email,
           firstName: p.first_name,
           lastName: p.last_name,
+          isAdmin: p.is_admin,
+          isStaff: p.is_staff,
         },
       })
     } catch {
@@ -62,6 +66,8 @@ export const useAuthStore = create<AuthState>((set) => ({
           email: p.email,
           firstName: p.first_name,
           lastName: p.last_name,
+          isAdmin: p.is_admin,
+          isStaff: p.is_staff,
         },
       })
     } catch {

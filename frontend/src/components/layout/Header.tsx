@@ -98,7 +98,19 @@ export function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="font-normal">
-              <p className="text-sm font-medium leading-none">{profile?.username ?? 'Account'}</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-medium leading-none">{profile?.username ?? 'Account'}</p>
+                {profile?.isAdmin && (
+                  <span className="inline-flex items-center rounded-sm bg-violet-500/15 px-1.5 py-0.5 text-[10px] font-medium text-violet-400 ring-1 ring-inset ring-violet-500/30">
+                    Admin
+                  </span>
+                )}
+                {!profile?.isAdmin && profile?.isStaff && (
+                  <span className="inline-flex items-center rounded-sm bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium text-sky-400 ring-1 ring-inset ring-sky-500/30">
+                    Staff
+                  </span>
+                )}
+              </div>
               {profile?.email && (
                 <p className="text-xs text-muted-foreground mt-1 truncate">{profile.email}</p>
               )}
