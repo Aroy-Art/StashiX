@@ -38,6 +38,8 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 	wsRouter := ws.NewRouter(hub)
 	registerWSHandlers(wsRouter, db)
 
+	registerDocs(r)
+
 	// public
 	r.GET("/api/setup/status", setupH.Status)
 	r.POST("/api/setup", setupH.Run)
@@ -51,6 +53,7 @@ func NewRouter(db *pgxpool.Pool, hub *ws.Hub, scanner *library.Scanner, jwtSecre
 		authed.GET("/ws", gin.WrapH(wsRouter))
 
 		authed.GET("/api/libraries", libH.List)
+		authed.GET("/api/tasks", libH.Tasks)
 
 		authed.GET("/api/libraries/:id/books", booksH.ListByLibrary)
 		authed.GET("/api/books/:id", booksH.Get)

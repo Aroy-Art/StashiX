@@ -1,0 +1,740 @@
+openapi: 3.1.0
+info:
+  title: Stashix API
+  version: 1.0.0
+  description: Comic and book library management API.
+
+servers:
+  - url: /api
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    TokenPair:
+      type: object
+      required: [access_token, refresh_token]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+
+    Library:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        root_path:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    BookSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        series:
+          type: string
+          nullable: true
+        issue_number:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        format:
+          type: string
+          enum: [cbz, cbr, cb7, epub, pdf]
+        page_count:
+          type: integer
+        age_rating:
+          type: string
+
+    Book:
+      allOf:
+        - $ref: '#/components/schemas/BookSummary'
+        - type: object
+          properties:
+            library_id:
+              type: string
+            path:
+              type: string
+            volume:
+              type: integer
+              nullable: true
+            publisher:
+              type: string
+              nullable: true
+            language:
+              type: string
+              nullable: true
+            summary:
+              type: string
+              nullable: true
+            file_size:
+              type: integer
+            created_at:
+              type: string
+              format: date-time
+
+    ScanProgress:
+      type: object
+      required: [library_id, scanned, total, done]
+      properties:
+        library_id:
+          type: string
+        scanned:
+          type: integer
+        total:
+          type: integer
+        done:
+          type: boolean
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, user]
+        birth_date:
+          type: string
+          format: date
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    PageList:
+      type: object
+      required: [count, pages]
+      properties:
+        count:
+          type: integer
+        pages:
+          type: array
+          items:
+            type: string
+
+    SearchResults:
+      type: object
+      required: [results, offset, limit]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/BookSummary'
+        offset:
+          type: integer
+        limit:
+          type: integer
+
+tags:
+  - name: Setup
+    description: Initial server setup
+  - name: Auth
+    description: Authentication and token management
+  - name: Libraries
+    description: Library management and scanning
+  - name: Books
+    description: Book access and reading progress
+  - name: Search
+    description: Full-text search
+  - name: Admin
+    description: User and permission management (admin only)
+
+paths:
+  /setup/status:
+    get:
+      operationId: getSetupStatus
+      tags: [Setup]
+      summary: Check if initial setup is required
+      security: []
+      responses:
+        '200':
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [needs_setup]
+                properties:
+                  needs_setup:
+                    type: boolean
+
+  /setup:
+    post:
+      operationId: runSetup
+      tags: [Setup]
+      summary: Create initial admin user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        '201':
+          description: Admin created, tokens returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Setup already complete
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Authenticate with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [Auth]
+      summary: Refresh an expired access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /libraries:
+    get:
+      operationId: listLibraries
+      tags: [Libraries]
+      summary: List libraries accessible to the current user
+      responses:
+        '200':
+          description: Library list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Library'
+    post:
+      operationId: createLibrary
+      tags: [Libraries]
+      summary: Create a new library and trigger initial scan (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, root_path]
+              properties:
+                name:
+                  type: string
+                root_path:
+                  type: string
+      responses:
+        '201':
+          description: Library created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '400':
+          description: Invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /libraries/{id}/scan:
+    post:
+      operationId: scanLibrary
+      tags: [Libraries]
+      summary: Trigger a rescan of a library (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Scan started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: scanning
+        '404':
+          description: Library not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /libraries/{id}/books:
+    get:
+      operationId: listBooksByLibrary
+      tags: [Books]
+      summary: List books in a library with pagination
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Book list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookSummary'
+
+  /tasks:
+    get:
+      operationId: listTasks
+      tags: [Libraries]
+      summary: Get currently active library scan tasks
+      responses:
+        '200':
+          description: Active tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ScanProgress'
+
+  /books/{id}:
+    get:
+      operationId: getBook
+      tags: [Books]
+      summary: Get full book metadata
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Not found or access denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /books/{id}/pages:
+    get:
+      operationId: getBookPages
+      tags: [Books]
+      summary: Get page count and page URL list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Page list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageList'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /books/{id}/page/{n}:
+    get:
+      operationId: getBookPage
+      tags: [Books]
+      summary: Stream a single page image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: 'n'
+          in: path
+          required: true
+          description: Zero-based page index
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: Page image (cached 24 h)
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /books/{id}/cover:
+    get:
+      operationId: getBookCover
+      tags: [Books]
+      summary: Get book cover image (cached 7 days)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cover image
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: No cover available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /books/{id}/file:
+    get:
+      operationId: downloadBook
+      tags: [Books]
+      summary: Download the original book file (EPUB and PDF only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Book file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Format not downloadable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /books/{id}/progress:
+    put:
+      operationId: updateProgress
+      tags: [Books]
+      summary: Update reading progress for the current user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [page]
+              properties:
+                page:
+                  type: integer
+                  minimum: 0
+      responses:
+        '200':
+          description: Progress saved
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [page]
+                properties:
+                  page:
+                    type: integer
+
+  /search:
+    get:
+      operationId: search
+      tags: [Search]
+      summary: Full-text search across books
+      parameters:
+        - name: q
+          in: query
+          description: Search query (empty returns all)
+          schema:
+            type: string
+        - name: library_id
+          in: query
+          schema:
+            type: string
+        - name: age_rating
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResults'
+
+  /admin/users:
+    get:
+      operationId: listUsers
+      tags: [Admin]
+      summary: List all users
+      responses:
+        '200':
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+    post:
+      operationId: createUser
+      tags: [Admin]
+      summary: Create a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                username:
+                  type: string
+                password:
+                  type: string
+                role:
+                  type: string
+                  enum: [admin, user]
+                  default: user
+                birth_date:
+                  type: string
+                  format: date
+      responses:
+        '201':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/permissions:
+    patch:
+      operationId: setPermissions
+      tags: [Admin]
+      summary: Set a user's library permissions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [library_id, can_read]
+              properties:
+                library_id:
+                  type: string
+                can_read:
+                  type: boolean
+                max_age_rating:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Permissions updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
