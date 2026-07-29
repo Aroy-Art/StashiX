@@ -32,12 +32,19 @@ func (h *LibraryHandler) list(ctx context.Context, _ *struct{}) (*libraryListOut
 	var libs []models.Library
 	var result *gorm.DB
 	if claims.Role == "admin" {
-		result = h.db.WithContext(ctx).Raw(
-			`SELECT id::text, name, root_path, created_at FROM libraries ORDER BY name`,
+		result = h.db.WithContext(ctx).Raw(`
+			SELECT id::text, name, root_path, created_at,
+				(SELECT COUNT(*) FROM books b WHERE b.library_id = libraries.id AND b.type = 'standalone') AS book_count,
+				(SELECT COUNT(*) FROM books b WHERE b.library_id = libraries.id AND b.type = 'issue') AS issue_count,
+				(SELECT COUNT(*) FROM series s WHERE s.library_id = libraries.id) AS series_count
+			FROM libraries ORDER BY name`,
 		).Scan(&libs)
 	} else {
 		result = h.db.WithContext(ctx).Raw(`
-			SELECT l.id::text, l.name, l.root_path, l.created_at
+			SELECT l.id::text, l.name, l.root_path, l.created_at,
+				(SELECT COUNT(*) FROM books b WHERE b.library_id = l.id AND b.type = 'standalone') AS book_count,
+				(SELECT COUNT(*) FROM books b WHERE b.library_id = l.id AND b.type = 'issue') AS issue_count,
+				(SELECT COUNT(*) FROM series s WHERE s.library_id = l.id) AS series_count
 			FROM libraries l
 			JOIN library_permissions lp ON lp.library_id = l.id
 			WHERE lp.user_id = ? AND lp.can_read = TRUE

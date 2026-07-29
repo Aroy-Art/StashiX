@@ -182,11 +182,19 @@ export default function LibrariesPage() {
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{lib.root_path}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {(lib.recentBooks.length > 0 || lib.recentSeries.length > 0) && (
+                      {(lib.book_count ?? 0) > 0 && (
                         <Badge variant="aqua" className="text-[10px]">
-                          {lib.recentSeries.length > 0
-                            ? `${lib.recentSeries.length} series`
-                            : `${lib.recentBooks.length}+ books`}
+                          {lib.book_count} {lib.book_count === 1 ? 'book' : 'books'}
+                        </Badge>
+                      )}
+                      {(lib.issue_count ?? 0) > 0 && (
+                        <Badge variant="plasma" className="text-[10px]">
+                          {lib.issue_count} {lib.issue_count === 1 ? 'issue' : 'issues'}
+                        </Badge>
+                      )}
+                      {(lib.series_count ?? 0) > 0 && (
+                        <Badge variant="default" className="text-[10px]">
+                          {lib.series_count} {lib.series_count === 1 ? 'series' : 'series'}
                         </Badge>
                       )}
                       {isAdmin && (

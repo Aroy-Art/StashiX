@@ -16,6 +16,9 @@ export interface Library {
   name: string
   root_path: string
   created_at: string
+  book_count?: number
+  issue_count?: number
+  series_count?: number
 }
 
 export interface Book {
