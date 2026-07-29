@@ -23,7 +23,14 @@ const WS_TYPES = new Set(['update_progress'])
 const REST_FALLBACKS: Record<string, RestFallback> = {
   get_books: {
     method: 'GET',
-    url: (p) => `/api/libraries/${p.library_id}/books?limit=${p.limit ?? 50}&offset=${p.offset ?? 0}`,
+    url: (p) => {
+      const params = new URLSearchParams()
+      params.set('limit', String(p.limit ?? 50))
+      params.set('offset', String(p.offset ?? 0))
+      if (p.sort) params.set('sort', String(p.sort))
+      if (p.type) params.set('type', String(p.type))
+      return `/api/libraries/${p.library_id}/books?${params}`
+    },
   },
   get_book: {
     method: 'GET',

@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { transport } from './transport'
-import type { Book, Library, ScanTask, SearchResult, TokenPair } from '../types'
+import type { Book, Library, ScanTask, SearchResult, Series, SeriesDetail, TokenPair } from '../types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -34,8 +34,9 @@ export const libraries = {
   list(): Promise<Library[]> {
     return transport.send('get_libraries')
   },
-  async scan(libraryId: string): Promise<void> {
-    await http.post(`/libraries/${libraryId}/scan`)
+  async scan(libraryId: string, force = false): Promise<void> {
+    const params = force ? '?force=true' : ''
+    await http.post(`/libraries/${libraryId}/scan${params}`)
   },
 }
 
@@ -47,8 +48,19 @@ export const tasks = {
 }
 
 export const books = {
-  listByLibrary(libraryId: string, offset = 0, limit = 50): Promise<Book[]> {
-    return transport.send('get_books', { library_id: libraryId, offset, limit })
+  listByLibrary(
+    libraryId: string,
+    offset = 0,
+    limit = 50,
+    opts: { sort?: 'series' | 'recent'; type?: 'all' | 'standalone' | 'issues' } = {}
+  ): Promise<Book[]> {
+    return transport.send('get_books', {
+      library_id: libraryId,
+      offset,
+      limit,
+      sort: opts.sort ?? 'series',
+      type: opts.type ?? 'all',
+    })
   },
   get(bookId: string): Promise<Book> {
     return transport.send('get_book', { book_id: bookId })
@@ -60,10 +72,26 @@ export const books = {
     return transport.send('update_progress', { book_id: bookId, page })
   },
   coverUrl(bookId: string) {
-    return `/api/books/${bookId}/cover`
+    const token = localStorage.getItem('access_token')
+    return `/api/books/${bookId}/cover${token ? `?token=${encodeURIComponent(token)}` : ''}`
   },
   fileUrl(bookId: string) {
     return `/api/books/${bookId}/file`
+  },
+}
+
+export const series = {
+  async get(id: string): Promise<SeriesDetail> {
+    const { data } = await http.get<SeriesDetail>(`/series/${id}`)
+    return data
+  },
+  async listByLibrary(libraryId: string): Promise<Series[]> {
+    const { data } = await http.get<Series[]>(`/libraries/${libraryId}/series`)
+    return data
+  },
+  coverUrl(seriesId: string) {
+    const token = localStorage.getItem('access_token')
+    return `/api/series/${seriesId}/cover${token ? `?token=${encodeURIComponent(token)}` : ''}`
   },
 }
 

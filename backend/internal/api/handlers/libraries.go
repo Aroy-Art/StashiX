@@ -80,7 +80,7 @@ func (h *LibraryHandler) create(ctx context.Context, input *createLibraryInput) 
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
 	}
 
-	go h.scanner.Scan(context.Background(), id, input.Body.RootPath)
+	go h.scanner.Scan(context.Background(), id, input.Body.RootPath, false)
 
 	out := &createLibraryOutput{}
 	out.Body.ID = id
@@ -88,7 +88,8 @@ func (h *LibraryHandler) create(ctx context.Context, input *createLibraryInput) 
 }
 
 type scanLibraryInput struct {
-	ID string `path:"id"`
+	ID    string `path:"id"`
+	Force bool   `query:"force"`
 }
 
 type scanLibraryOutput struct {
@@ -110,7 +111,7 @@ func (h *LibraryHandler) scan(ctx context.Context, input *scanLibraryInput) (*sc
 		return nil, huma.NewError(http.StatusNotFound, "library not found")
 	}
 
-	go h.scanner.Scan(context.Background(), input.ID, rootPath)
+	go h.scanner.Scan(context.Background(), input.ID, rootPath, input.Force)
 
 	out := &scanLibraryOutput{}
 	out.Body.Status = "scanning"

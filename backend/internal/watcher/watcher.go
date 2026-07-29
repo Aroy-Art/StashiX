@@ -47,7 +47,7 @@ func (w *Watcher) Run(ctx context.Context, libraryMap map[string]string) {
 
 	flush := func() {
 		for path, libID := range pending {
-			go w.scanner.Scan(ctx, libID, filepath.Dir(path))
+			go w.scanner.Scan(ctx, libID, filepath.Dir(path), false)
 		}
 		pending = make(map[string]string)
 	}
