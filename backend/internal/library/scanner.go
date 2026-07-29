@@ -47,24 +47,29 @@ type seriesContext struct {
 	publisher string
 	series    string
 	year      int
+	endYear   int
+	ongoing   bool
 	indexMeta *metadata.BookMeta
 	coverPath string
 }
 
-func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string) {
+func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bool) {
 	var libraryRoot string
 	s.db.WithContext(ctx).Raw(`SELECT root_path FROM libraries WHERE id = ?`, libraryID).Scan(&libraryRoot)
 	if libraryRoot == "" {
 		libraryRoot = scanRoot
 	}
 
+	log.Printf("[scan] start libraryID=%s root=%s force=%v", libraryID, scanRoot, force)
+
 	paths, err := collectFiles(scanRoot)
 	if err != nil {
-		log.Printf("scan %s: %v", scanRoot, err)
+		log.Printf("[scan] collectFiles error: %v", err)
 		return
 	}
 
 	total := len(paths)
+	log.Printf("[scan] found %d files", total)
 
 	s.mu.Lock()
 	s.tasks[libraryID] = ScanProgress{LibraryID: libraryID, Scanned: 0, Total: total, Done: false}
@@ -93,7 +98,7 @@ func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string) {
 			return
 		}
 		sc := contexts[filepath.Dir(path)]
-		if err := s.importBook(ctx, libraryID, path, sc); err != nil {
+		if err := s.importBook(ctx, libraryID, path, sc, force); err != nil {
 			log.Printf("import %s: %v", path, err)
 		}
 		broadcast(i+1, i+1 == total)
@@ -116,12 +121,19 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 			case len(parts) >= 2:
 				sc.publisher = parts[0]
 				sm := metadata.ParseSeriesDir(parts[1])
-				sc.series = sm.Series
-				sc.year = sm.Year
+				// dirs without a year are category containers (e.g. "One-Shot"), not series
+				if sm.Year != 0 {
+					sc.series = sm.Series
+					sc.year = sm.Year
+					sc.endYear = sm.EndYear
+					sc.ongoing = sm.Ongoing
+				}
 			case len(parts) == 1:
 				sm := metadata.ParseSeriesDir(parts[0])
 				sc.series = sm.Series
 				sc.year = sm.Year
+				sc.endYear = sm.EndYear
+				sc.ongoing = sm.Ongoing
 			}
 		}
 
@@ -137,21 +149,26 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 			}
 		}
 
+		log.Printf("[scan] dir=%s publisher=%q series=%q year=%d cover=%v indexMeta=%v",
+			dir, sc.publisher, sc.series, sc.year, sc.coverPath != "", sc.indexMeta != nil)
 		contexts[dir] = sc
 	}
 	return contexts
 }
 
-func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *seriesContext) error {
+func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *seriesContext, force bool) error {
 	format, err := media.DetectFormat(path)
 	if err != nil {
 		return err
 	}
 
-	var count int64
-	s.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM books WHERE path = ?`, path).Scan(&count)
-	if count > 0 {
-		return nil
+	if !force {
+		var count int64
+		s.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM books WHERE path = ?`, path).Scan(&count)
+		if count > 0 {
+			log.Printf("[scan] skip already-exists path=%s", path)
+			return nil
+		}
 	}
 
 	info, err := os.Stat(path)
@@ -171,18 +188,50 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		pageCount = meta.PageCount
 	}
 
+	bookType := "issue"
+	if meta.Series == "" {
+		bookType = "standalone"
+	}
+
+	log.Printf("[scan] import path=%s title=%q type=%s series=%q volume=%d issue=%q year=%d publisher=%q",
+		path, meta.Title, bookType, meta.Series, meta.Volume, meta.IssueNumber, meta.Year, meta.Publisher)
+
+	var startYear, endYear int
+	var ongoing bool
+	if sc != nil {
+		startYear = sc.year
+		endYear = sc.endYear
+		ongoing = sc.ongoing
+	}
+	seriesID := s.upsertSeries(ctx, libraryID, meta.Series, meta.Publisher, startYear, endYear, ongoing)
+	if seriesID != "" && sc != nil && sc.coverPath != "" {
+		s.upsertSeriesCover(ctx, seriesID, sc.coverPath)
+	}
+
+	onConflict := `ON CONFLICT (path) DO NOTHING`
+	if force {
+		onConflict = `ON CONFLICT (path) DO UPDATE SET
+			title=EXCLUDED.title, type=EXCLUDED.type, series=EXCLUDED.series, series_id=EXCLUDED.series_id,
+			issue_number=EXCLUDED.issue_number, volume=EXCLUDED.volume, year=EXCLUDED.year,
+			publisher=EXCLUDED.publisher, format=EXCLUDED.format, page_count=EXCLUDED.page_count,
+			file_size=EXCLUDED.file_size, age_rating=EXCLUDED.age_rating,
+			language=EXCLUDED.language, summary=EXCLUDED.summary, updated_at=NOW()`
+	}
 	result := s.db.WithContext(ctx).Exec(`
-		INSERT INTO books (library_id, path, title, series, issue_number, volume, year, publisher,
+		INSERT INTO books (library_id, path, title, type, series, series_id, issue_number, volume, year, publisher,
 		                   format, page_count, file_size, age_rating, language, summary)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-		ON CONFLICT (path) DO NOTHING`,
-		libraryID, path, meta.Title, meta.Series, meta.IssueNumber, nullInt(meta.Volume),
-		nullInt(meta.Year), meta.Publisher, string(format), pageCount,
-		info.Size(), coalesceString(meta.AgeRating, "unknown"), meta.Language, meta.Summary,
+		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+		`+onConflict,
+		libraryID, path, meta.Title, bookType, meta.Series, nullString(seriesID),
+		meta.IssueNumber, nullInt(meta.Volume), nullInt(meta.Year), meta.Publisher,
+		string(format), pageCount, info.Size(),
+		coalesceString(meta.AgeRating, "unknown"), meta.Language, meta.Summary,
 	)
 	if result.Error != nil {
+		log.Printf("[scan] INSERT books error path=%s: %v", path, result.Error)
 		return result.Error
 	}
+	log.Printf("[scan] INSERT books rows=%d path=%s", result.RowsAffected, path)
 
 	var bookID string
 	s.db.WithContext(ctx).Raw(`SELECT id FROM books WHERE path = ?`, path).Scan(&bookID)
@@ -190,12 +239,18 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		return nil
 	}
 
-	if sc != nil && sc.coverPath != "" {
+	coverPath := bookCoverImage(path)
+	if coverPath != "" {
+		log.Printf("[scan] cover sidecar=%s", coverPath)
+	} else {
+		log.Printf("[scan] cover none path=%s", path)
+	}
+	if coverPath != "" {
 		s.db.WithContext(ctx).Exec(`
 			INSERT INTO book_covers (book_id, path)
 			VALUES (?,?)
 			ON CONFLICT (book_id) DO UPDATE SET path=EXCLUDED.path, updated_at=NOW()`,
-			bookID, sc.coverPath)
+			bookID, coverPath)
 	}
 
 	p, _ := json.Marshal(map[string]string{"book_id": bookID, "library_id": libraryID})
@@ -308,24 +363,87 @@ func applyFileMeta(dst, src *metadata.BookMeta) {
 	}
 }
 
+// bookCoverImage returns a sidecar image path for a book file (same basename, image ext), or "".
+func bookCoverImage(bookPath string) string {
+	base := strings.TrimSuffix(bookPath, filepath.Ext(bookPath))
+	for _, ext := range []string{".jpg", ".jpeg", ".png", ".webp"} {
+		p := base + ext
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
 func collectFiles(root string) ([]string, error) {
 	var paths []string
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
-		if err != nil || d.IsDir() {
+		if err != nil {
+			log.Printf("[scan] walk error path=%s: %v", path, err)
 			return err
+		}
+		if d.IsDir() {
+			log.Printf("[scan] enter dir=%s", path)
+			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".cbz", ".cbr", ".cb7", ".epub", ".pdf":
+			log.Printf("[scan] found file=%s", path)
 			paths = append(paths, path)
+		default:
+			log.Printf("[scan] skip file=%s (not a book format)", path)
 		}
 		return nil
 	})
 	return paths, err
 }
 
+// upsertSeries inserts or updates a series record and returns its ID.
+// Returns "" if seriesName is empty.
+func (s *Scanner) upsertSeries(ctx context.Context, libraryID, seriesName, publisher string, startYear, endYear int, ongoing bool) string {
+	if seriesName == "" {
+		return ""
+	}
+	var id string
+	res := s.db.WithContext(ctx).Raw(`
+		INSERT INTO series (library_id, name, publisher, start_year, end_year, ongoing)
+		VALUES (?, ?, ?, ?, ?, ?)
+		ON CONFLICT (library_id, name) DO UPDATE SET
+			publisher  = EXCLUDED.publisher,
+			start_year = EXCLUDED.start_year,
+			end_year   = EXCLUDED.end_year,
+			ongoing    = EXCLUDED.ongoing
+		RETURNING id`,
+		libraryID, seriesName, nullString(publisher), nullInt(startYear), nullInt(endYear), ongoing,
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertSeries error name=%q: %v", seriesName, res.Error)
+	}
+	return id
+}
+
+
+func (s *Scanner) upsertSeriesCover(ctx context.Context, seriesID, coverPath string) {
+	res := s.db.WithContext(ctx).Exec(`
+		INSERT INTO series_covers (series_id, path)
+		VALUES (?, ?)
+		ON CONFLICT (series_id) DO UPDATE SET path=EXCLUDED.path, updated_at=NOW()`,
+		seriesID, coverPath)
+	if res.Error != nil {
+		log.Printf("[scan] upsertSeriesCover error seriesID=%s: %v", seriesID, res.Error)
+	}
+}
+
 func nullInt(v int) any {
 	if v == 0 {
+		return nil
+	}
+	return v
+}
+
+func nullString(v string) any {
+	if v == "" {
 		return nil
 	}
 	return v

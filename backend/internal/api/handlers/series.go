@@ -106,16 +106,35 @@ func (h *SeriesHandler) Cover(c *gin.Context) {
 		return
 	}
 
-	var coverBookID string
-	r1 := h.db.WithContext(c.Request.Context()).Raw(`
-		SELECT b.id FROM books b
-		JOIN series s ON s.id = b.series_id
+	// permission check: series must be accessible to this user
+	var seriesLibraryID string
+	rPerm := h.db.WithContext(c.Request.Context()).Raw(`
+		SELECT s.library_id FROM series s
 		WHERE s.id = ?
 		  AND (? = 'admin' OR EXISTS (
 		    SELECT 1 FROM library_permissions lp
 		    WHERE lp.library_id = s.library_id AND lp.user_id = ? AND lp.can_read = TRUE
-		  ))
-		ORDER BY b.created_at ASC LIMIT 1`, id, claims.Role, claims.UserID,
+		  ))`, id, claims.Role, claims.UserID,
+	).Scan(&seriesLibraryID)
+	if rPerm.Error != nil || rPerm.RowsAffected == 0 || seriesLibraryID == "" {
+		c.JSON(http.StatusNotFound, gin.H{"error": "no cover available"})
+		return
+	}
+
+	// prefer dedicated series cover file
+	var seriesCoverPath string
+	rSC := h.db.WithContext(c.Request.Context()).Raw(
+		`SELECT path FROM series_covers WHERE series_id=?`, id,
+	).Scan(&seriesCoverPath)
+	if rSC.Error == nil && rSC.RowsAffected > 0 && seriesCoverPath != "" {
+		c.File(seriesCoverPath)
+		return
+	}
+
+	// fall back: use cover from first book in series
+	var coverBookID string
+	r1 := h.db.WithContext(c.Request.Context()).Raw(`
+		SELECT id FROM books WHERE series_id = ? ORDER BY created_at ASC LIMIT 1`, id,
 	).Scan(&coverBookID)
 	if r1.Error != nil || r1.RowsAffected == 0 || coverBookID == "" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no cover available"})
