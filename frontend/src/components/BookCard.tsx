@@ -1,22 +1,35 @@
 import { Link } from 'react-router-dom'
 import { books as booksApi } from '@/api/client'
 import { cn } from '@/lib/utils'
-import type { Book, SearchResult } from '@/types'
 
-type BookLike = Book | SearchResult
+interface BookLike {
+  id: string
+  title: string
+  type?: string
+  series?: string
+  series_id?: string
+  issue_number?: string
+  year?: number
+  format: string
+  page_count: number
+  age_rating: string
+  current_page?: number
+}
 
 interface BookCardProps {
   book: BookLike
   className?: string
+  to?: string
 }
 
 const FORMAT_LABELS: Record<string, string> = {
   cbz: 'CBZ', cbr: 'CBR', cb7: 'CB7', epub: 'EPUB', pdf: 'PDF',
 }
 
-export function BookCard({ book, className }: BookCardProps) {
+export function BookCard({ book, className, to }: BookCardProps) {
+  const href = to ?? (book.series_id ? `/series/${book.series_id}` : `/book/${book.id}`)
   return (
-    <Link to={`/read/${book.id}`} className={cn('group block', className)}>
+    <Link to={href} className={cn('group block', className)}>
       <div className="card-hover rounded-lg overflow-hidden border border-border bg-card">
         {/* Cover */}
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
@@ -54,12 +67,21 @@ export function BookCard({ book, className }: BookCardProps) {
           </div>
           {/* Purple glow on hover */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-volt/12 to-transparent pointer-events-none" />
+          {/* Reading progress bar */}
+          {book.current_page != null && book.current_page > 0 && book.page_count > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/40">
+              <div
+                className="h-full bg-volt-2"
+                style={{ width: `${Math.min(100, Math.round((book.current_page / book.page_count) * 100))}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Info */}
         <div className="p-2">
           <p className="text-[13px] font-semibold text-card-foreground leading-tight line-clamp-2">
-            {book.series ?? book.title}
+            {book.title ?? book.series}
           </p>
           {book.issue_number && (
             <p className="text-[11px] text-muted-foreground mt-0.5">#{book.issue_number}</p>

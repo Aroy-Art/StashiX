@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -34,13 +35,15 @@ func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOu
 
 	var b models.Book
 	result := h.db.WithContext(ctx).Raw(`
-		SELECT b.id, b.library_id, b.path, b.title, b.series, b.issue_number,
-		       b.volume, b.year, b.publisher, b.format, b.page_count, b.file_size,
-		       b.age_rating, b.language, b.summary, b.created_at
+		SELECT b.id, b.library_id, b.path, b.title, b.type, b.series_id, b.series,
+		       b.issue_number, b.volume, b.year, b.publisher, b.format, b.page_count,
+		       b.file_size, b.age_rating, b.language, b.summary, b.created_at,
+		       rp.current_page
 		FROM books b
-		JOIN library_permissions lp ON lp.library_id = b.library_id
-		WHERE b.id=? AND (lp.user_id=? OR ?='admin')
-		LIMIT 1`, input.ID, claims.UserID, claims.Role,
+		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
+		LEFT JOIN reading_progress rp ON rp.book_id = b.id AND rp.user_id=?
+		WHERE b.id=? AND (?='admin' OR lp.can_read=TRUE)
+		LIMIT 1`, claims.UserID, claims.UserID, input.ID, claims.Role,
 	).Scan(&b)
 	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, huma.NewError(http.StatusNotFound, "book not found")
@@ -52,6 +55,8 @@ type listByLibraryInput struct {
 	ID     string `path:"id"`
 	Limit  int    `query:"limit" minimum:"1" maximum:"100" default:"50"`
 	Offset int    `query:"offset" minimum:"0" default:"0"`
+	Sort   string `query:"sort" enum:"series,recent" default:"series"`
+	Type   string `query:"type" enum:"all,standalone,issues" default:"all"`
 }
 
 type bookListOutput struct {
@@ -66,15 +71,30 @@ func (h *BooksHandler) listByLibrary(ctx context.Context, input *listByLibraryIn
 		limit = 50
 	}
 
-	var books []models.BookSummary
-	result := h.db.WithContext(ctx).Raw(`
-		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.page_count, b.age_rating
+	typeFilter := ""
+	switch input.Type {
+	case "standalone":
+		typeFilter = " AND b.type = 'standalone'"
+	case "issues":
+		typeFilter = " AND b.type = 'issue'"
+	}
+
+	orderBy := "ORDER BY b.series NULLS LAST, b.issue_number"
+	if input.Sort == "recent" {
+		orderBy = "ORDER BY b.created_at DESC"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.age_rating
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE b.library_id=?
-		  AND (?='admin' OR lp.can_read=TRUE)
-		ORDER BY b.series NULLS LAST, b.issue_number
-		LIMIT ? OFFSET ?`,
+		  AND (?='admin' OR lp.can_read=TRUE)%s
+		%s
+		LIMIT ? OFFSET ?`, typeFilter, orderBy)
+
+	var books []models.BookSummary
+	result := h.db.WithContext(ctx).Raw(query,
 		claims.UserID, input.ID, claims.Role, limit, input.Offset,
 	).Scan(&books)
 	if result.Error != nil {

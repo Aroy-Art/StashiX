@@ -12,21 +12,28 @@ type Library struct {
 type BookSummary struct {
 	ID          string  `json:"id"`
 	Title       string  `json:"title"`
+	Type        string  `json:"type"`
 	Series      *string `json:"series,omitempty"`
 	IssueNumber *string `json:"issue_number,omitempty"`
 	Year        *int    `json:"year,omitempty"`
 	Format      string  `json:"format"`
 	PageCount   int     `json:"page_count"`
 	AgeRating   string  `json:"age_rating"`
+	CurrentPage *int    `json:"current_page,omitempty"`
 }
 
 type Series struct {
-	ID        string         `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	LibraryID string         `json:"library_id" gorm:"type:uuid;not null"`
-	Name      string         `json:"name"`
-	Publisher *string        `json:"publisher,omitempty"`
-	CreatedAt time.Time      `json:"created_at"`
-	Volumes   []SeriesVolume `json:"volumes,omitempty" gorm:"foreignKey:SeriesID"`
+	ID          string         `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	LibraryID   string         `json:"library_id" gorm:"type:uuid;not null"`
+	Name        string         `json:"name"`
+	Publisher   *string        `json:"publisher,omitempty"`
+	StartYear   *int           `json:"start_year,omitempty"`
+	EndYear     *int           `json:"end_year,omitempty"`
+	Ongoing     bool           `json:"ongoing"`
+	CreatedAt   time.Time      `json:"created_at"`
+	Volumes     []SeriesVolume `json:"volumes,omitempty" gorm:"foreignKey:SeriesID"`
+	CoverBookID *string        `json:"cover_book_id,omitempty" gorm:"-"`
+	BookCount   int            `json:"book_count,omitempty" gorm:"-"`
 }
 
 type SeriesVolume struct {
@@ -41,10 +48,10 @@ type SeriesVolume struct {
 type Book struct {
 	ID          string    `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	LibraryID   string    `json:"library_id" gorm:"type:uuid"`
-	SeriesID    *string   `json:"series_id,omitempty" gorm:"type:uuid"`
-	VolumeID    *string   `json:"volume_id,omitempty" gorm:"type:uuid"`
 	Path        string    `json:"path"`
 	Title       string    `json:"title"`
+	Type        string    `json:"type"` // "issue" | "standalone"
+	SeriesID    *string   `json:"series_id,omitempty" gorm:"type:uuid"`
 	Series      *string   `json:"series,omitempty"`
 	IssueNumber *string   `json:"issue_number,omitempty"`
 	Volume      *int      `json:"volume,omitempty"`
@@ -56,6 +63,7 @@ type Book struct {
 	AgeRating   string    `json:"age_rating"`
 	Language    *string   `json:"language,omitempty"`
 	Summary     *string   `json:"summary,omitempty"`
+	CurrentPage *int      `json:"current_page,omitempty" gorm:"-"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 

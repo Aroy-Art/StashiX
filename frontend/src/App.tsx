@@ -8,6 +8,8 @@ import LibrariesPage from '@/pages/LibrariesPage'
 import LibraryPage from '@/pages/LibraryPage'
 import ReaderPage from '@/pages/ReaderPage'
 import SearchPage from '@/pages/SearchPage'
+import SeriesPage from '@/pages/SeriesPage'
+import BookPage from '@/pages/BookPage'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -87,6 +89,30 @@ function AppRoutes() {
         element={
           <AuthLayout>
             <SearchPage />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/series/:id"
+        element={
+          <AuthLayout>
+            <SeriesPage />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/book/:id"
+        element={
+          <AuthLayout>
+            <BookPage />
+          </AuthLayout>
+        }
+      />
+      <Route
+        path="/issue/:id"
+        element={
+          <AuthLayout>
+            <BookPage />
           </AuthLayout>
         }
       />

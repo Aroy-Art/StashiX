@@ -1,23 +1,27 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { libraries as librariesApi, tasks as tasksApi, books as booksApi } from '@/api/client'
+import { libraries as librariesApi, tasks as tasksApi, books as booksApi, series as seriesApi } from '@/api/client'
 import { transport } from '@/api/transport'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { SectionCarousel } from '@/components/SectionCarousel'
 import { BookCard } from '@/components/BookCard'
-import { ScanLine, Library, FolderPlus, RefreshCw } from 'lucide-react'
+import { SeriesCard } from '@/components/SeriesCard'
+import { ScanLine, Library, FolderPlus, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Library as LibraryType, ScanTask, Book } from '@/types'
+import type { Library as LibraryType, ScanTask, Book, Series } from '@/types'
 
-interface LibraryWithBooks extends LibraryType {
+interface LibraryWithContent extends LibraryType {
   recentBooks: Book[]
+  recentSeries: Series[]
+  recentIssues: Book[]
+  previewBooks: Book[]
   loading: boolean
 }
 
 export default function LibrariesPage() {
-  const [libs, setLibs] = useState<LibraryWithBooks[]>([])
+  const [libs, setLibs] = useState<LibraryWithContent[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTasks, setActiveTasks] = useState<Record<string, ScanTask>>({})
   const [scanning, setScanning] = useState<Set<string>>(new Set())
@@ -38,18 +42,27 @@ export default function LibrariesPage() {
         const withPlaceholders = (libsData ?? []).map((l) => ({
           ...l,
           recentBooks: [],
+          recentSeries: [],
+          recentIssues: [],
+          previewBooks: [],
           loading: true,
         }))
         setLibs(withPlaceholders)
         setLoading(false)
 
-        // Load books for each library
         for (const lib of withPlaceholders) {
-          booksApi.listByLibrary(lib.id, 0, 20)
-            .then((books) => {
+          Promise.all([
+            booksApi.listByLibrary(lib.id, 0, 20, { sort: 'recent', type: 'standalone' }),
+            seriesApi.listByLibrary(lib.id),
+            booksApi.listByLibrary(lib.id, 0, 20, { sort: 'recent', type: 'issues' }),
+            booksApi.listByLibrary(lib.id, 0, 5, { sort: 'recent' }),
+          ])
+            .then(([recentBooks, recentSeries, recentIssues, previewBooks]) => {
               setLibs((prev) =>
                 prev.map((l) =>
-                  l.id === lib.id ? { ...l, recentBooks: books, loading: false } : l
+                  l.id === lib.id
+                    ? { ...l, recentBooks, recentSeries, recentIssues, previewBooks, loading: false }
+                    : l
                 )
               )
             })
@@ -80,12 +93,12 @@ export default function LibrariesPage() {
     })
   }, [])
 
-  const handleScan = async (libId: string) => {
+  const handleScan = async (libId: string, force = false) => {
     setScanning((s) => new Set(s).add(libId))
     try {
-      await librariesApi.scan(libId)
+      await librariesApi.scan(libId, force)
     } catch {
-      // progress will come via WS
+      // progress via WS
     } finally {
       setScanning((s) => {
         const next = new Set(s)
@@ -142,10 +155,9 @@ export default function LibrariesPage() {
                 key={lib.id}
                 className="relative group rounded-xl bg-card border border-border hover:border-ring/50 transition-all duration-200 overflow-hidden"
               >
-                {/* Preview strip — first 5 covers */}
-                {lib.recentBooks.length > 0 && (
+                {lib.previewBooks.length > 0 && (
                   <div className="relative flex h-20 overflow-hidden border-b border-border">
-                    {lib.recentBooks.slice(0, 5).map((book) => (
+                    {lib.previewBooks.slice(0, 5).map((book) => (
                       <img
                         key={book.id}
                         src={booksApi.coverUrl(book.id)}
@@ -170,31 +182,45 @@ export default function LibrariesPage() {
                       <p className="text-xs text-muted-foreground truncate mt-0.5">{lib.root_path}</p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {lib.recentBooks.length > 0 && (
+                      {(lib.recentBooks.length > 0 || lib.recentSeries.length > 0) && (
                         <Badge variant="outline" className="text-[10px]">
-                          {lib.recentBooks.length}+
+                          {lib.recentSeries.length > 0
+                            ? `${lib.recentSeries.length} series`
+                            : `${lib.recentBooks.length}+ books`}
                         </Badge>
                       )}
                       {isAdmin && (
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleScan(lib.id)}
-                          disabled={isScanning}
-                          aria-label="Scan library"
-                          className={cn(isScanning && 'animate-pulse')}
-                        >
-                          {isScanning ? (
-                            <ScanLine className="w-3.5 h-3.5 text-plasma" />
-                          ) : (
-                            <RefreshCw className="w-3.5 h-3.5" />
-                          )}
-                        </Button>
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleScan(lib.id)}
+                            disabled={isScanning}
+                            aria-label="Scan library"
+                            title="Scan for new files"
+                            className={cn(isScanning && 'animate-pulse')}
+                          >
+                            {isScanning ? (
+                              <ScanLine className="w-3.5 h-3.5 text-plasma" />
+                            ) : (
+                              <RefreshCw className="w-3.5 h-3.5" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleScan(lib.id, true)}
+                            disabled={isScanning}
+                            aria-label="Force rescan library"
+                            title="Force rescan (re-imports all files)"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   </div>
 
-                  {/* Scan progress */}
                   {pct !== null && (
                     <div className="mt-3">
                       <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
@@ -224,13 +250,14 @@ export default function LibrariesPage() {
         </div>
       </div>
 
-      {/* Per-library recent books carousels */}
+      {/* Per-library carousels */}
       {libs.map((lib) => (
-        lib.recentBooks.length > 0 && (
+        <div key={lib.id}>
+          {/* Recent Books */}
           <SectionCarousel
-            key={lib.id}
-            title={`${lib.name} — Recent`}
+            title={`${lib.name} — Recent Books`}
             accentColor="volt"
+            isEmpty={!lib.loading && lib.recentBooks.length === 0}
           >
             {lib.recentBooks.map((book) => (
               <div key={book.id} className="shrink-0 w-[140px]">
@@ -238,7 +265,37 @@ export default function LibrariesPage() {
               </div>
             ))}
           </SectionCarousel>
-        )
+
+          {/* Recent Series */}
+          {(lib.loading || lib.recentSeries.length > 0) && (
+            <SectionCarousel
+              title={`${lib.name} — Recent Series`}
+              accentColor="plasma"
+              isEmpty={!lib.loading && lib.recentSeries.length === 0}
+            >
+              {lib.recentSeries.map((s) => (
+                <div key={s.id} className="shrink-0 w-[140px]">
+                  <SeriesCard series={s} />
+                </div>
+              ))}
+            </SectionCarousel>
+          )}
+
+          {/* Recent Issues */}
+          {(lib.loading || lib.recentIssues.length > 0) && (
+            <SectionCarousel
+              title={`${lib.name} — Recent Issues`}
+              accentColor="volt"
+              isEmpty={!lib.loading && lib.recentIssues.length === 0}
+            >
+              {lib.recentIssues.map((book) => (
+                <div key={book.id} className="shrink-0 w-[140px]">
+                  <BookCard book={book} to={`/issue/${book.id}`} />
+                </div>
+              ))}
+            </SectionCarousel>
+          )}
+        </div>
       ))}
     </div>
   )
