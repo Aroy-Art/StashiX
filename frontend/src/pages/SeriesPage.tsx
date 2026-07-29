@@ -74,22 +74,24 @@ export default function SeriesPage() {
           {/* Cover */}
           <div className="shrink-0 w-36 sm:w-44">
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden border border-border bg-muted shadow-xl">
-              {firstBook ? (
-                <img
-                  src={booksApi.coverUrl(firstBook.id)}
-                  alt={data.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    const img = e.target as HTMLImageElement
+              <img
+                src={seriesApi.coverUrl(id!)}
+                alt={data.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const img = e.target as HTMLImageElement
+                  if (firstBook && img.src !== booksApi.coverUrl(firstBook.id)) {
+                    img.src = booksApi.coverUrl(firstBook.id)
+                  } else {
                     img.style.display = 'none'
                     const fb = img.nextElementSibling as HTMLElement | null
                     if (fb) fb.style.display = 'flex'
-                  }}
-                />
-              ) : null}
+                  }
+                }}
+              />
               <div
                 className="absolute inset-0 flex items-center justify-center"
-                style={{ display: firstBook ? 'none' : 'flex' }}
+                style={{ display: 'none' }}
               >
                 <Layers className="w-10 h-10 text-muted-foreground/40" />
               </div>
