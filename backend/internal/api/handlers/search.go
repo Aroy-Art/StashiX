@@ -53,14 +53,14 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE (? = '' OR b.search_vec @@ plainto_tsquery('english', ?))
 		  AND (? = '' OR b.library_id::text = ?)
-		  AND (? IS NULL OR b.age_rating = ?::age_rating)
+		  AND (? = '' OR b.age_rating::text = ?)
 		  AND (? = 'admin' OR lp.can_read = TRUE)
 		ORDER BY rank DESC, b.title
 		LIMIT ? OFFSET ?`,
 		input.Q, claims.UserID,
 		input.Q, input.Q,
 		input.LibraryID, input.LibraryID,
-		nullIfEmpty(input.AgeRating), nullIfEmpty(input.AgeRating),
+		input.AgeRating, input.AgeRating,
 		claims.Role,
 		limit, input.Offset,
 	).Scan(&results)
@@ -77,13 +77,6 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 		out.Body.Results = append(out.Body.Results, r.BookSummary)
 	}
 	return out, nil
-}
-
-func nullIfEmpty(s string) interface{} {
-	if s == "" {
-		return nil
-	}
-	return s
 }
 
 func (h *SearchHandler) Register(api huma.API) {
