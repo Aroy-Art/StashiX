@@ -19,6 +19,7 @@ export default function SeriesPage() {
     if (!id) return
     seriesApi.get(id)
       .then(setData)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [id])
 

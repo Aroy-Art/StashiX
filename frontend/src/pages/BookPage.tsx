@@ -44,6 +44,7 @@ export default function BookPage() {
     if (!id) return
     booksApi.get(id)
       .then(setBook)
+      .catch(() => {})
       .finally(() => setLoading(false))
   }, [id])
 

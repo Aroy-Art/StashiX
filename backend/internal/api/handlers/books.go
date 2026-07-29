@@ -85,7 +85,7 @@ func (h *BooksHandler) listByLibrary(ctx context.Context, input *listByLibraryIn
 	}
 
 	query := fmt.Sprintf(`
-		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.age_rating
+		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.file_size, b.age_rating
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE b.library_id=?

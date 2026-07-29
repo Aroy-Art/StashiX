@@ -52,7 +52,7 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 	}
 
 	var books []models.BookSummary
-	h.db.WithContext(ctx).Raw(`
+	r2 := h.db.WithContext(ctx).Raw(`
 		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.file_size, b.age_rating,
 		       rp.current_page
 		FROM books b
@@ -61,6 +61,9 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 		ORDER BY b.volume NULLS FIRST, b.issue_number`,
 		claims.UserID, input.ID,
 	).Scan(&books)
+	if r2.Error != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
 	if books == nil {
 		books = []models.BookSummary{}
 	}
@@ -78,9 +81,12 @@ type seriesListOutput struct {
 
 func (h *SeriesHandler) listByLibrary(ctx context.Context, input *listSeriesInput) (*seriesListOutput, error) {
 	claims := auth.ClaimsFromCtx(ctx)
+	if claims == nil {
+		return nil, huma.NewError(http.StatusUnauthorized, "unauthorized")
+	}
 
 	var seriesList []models.Series
-	h.db.WithContext(ctx).Raw(`
+	result := h.db.WithContext(ctx).Raw(`
 		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.created_at,
 		       (SELECT b.id FROM books b WHERE b.series_id = s.id ORDER BY b.created_at ASC LIMIT 1) AS cover_book_id,
 		       (SELECT COUNT(*) FROM books b WHERE b.series_id = s.id) AS book_count
@@ -91,6 +97,9 @@ func (h *SeriesHandler) listByLibrary(ctx context.Context, input *listSeriesInpu
 		ORDER BY s.created_at DESC`,
 		claims.UserID, input.ID, claims.Role,
 	).Scan(&seriesList)
+	if result.Error != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
 	if seriesList == nil {
 		seriesList = []models.Series{}
 	}

@@ -8,12 +8,15 @@ export default function ReaderPage() {
   const [book, setBook] = useState<Book | null>(null)
   const [pages, setPages] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState(0)
+  const [error, setError] = useState(false)
   const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!id) return
-    booksApi.get(id).then(setBook)
-    booksApi.pages(id).then(({ pages: p }) => setPages(p))
+    Promise.all([
+      booksApi.get(id).then(setBook),
+      booksApi.pages(id).then(({ pages: p }) => setPages(p)),
+    ]).catch(() => setError(true))
   }, [id])
 
   const savePage = useCallback(
@@ -46,6 +49,14 @@ export default function ReaderPage() {
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [currentPage, pages.length, goTo])
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Failed to load book.</p>
+      </div>
+    )
+  }
 
   if (!book) {
     return (

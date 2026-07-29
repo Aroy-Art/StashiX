@@ -12,6 +12,7 @@ export default function LibraryPage() {
   const [library, setLibrary] = useState<Library | null>(null)
   const [bookList, setBookList] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -24,6 +25,7 @@ export default function LibraryPage() {
         setLibrary(lib)
         setBookList(books)
       })
+      .catch(() => setError(true))
       .finally(() => setLoading(false))
 
     const off = transport.on('book_added', (payload) => {
@@ -79,8 +81,15 @@ export default function LibraryPage() {
         </div>
       )}
 
+      {/* Error */}
+      {!loading && error && (
+        <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
+          <p className="text-sm text-muted-foreground">Failed to load library.</p>
+        </div>
+      )}
+
       {/* Empty */}
-      {!loading && bookList.length === 0 && (
+      {!loading && !error && bookList.length === 0 && (
         <div className="flex flex-col items-center justify-center h-48 gap-3 text-center">
           <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
             <span className="text-2xl">📚</span>
@@ -90,7 +99,7 @@ export default function LibraryPage() {
       )}
 
       {/* Grid */}
-      {!loading && bookList.length > 0 && (
+      {!loading && !error && bookList.length > 0 && (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4">
           {bookList.map((book, i) => (
             <div

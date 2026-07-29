@@ -47,8 +47,8 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 		Total int
 	}
 	result := h.db.WithContext(ctx).Raw(`
-		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.age_rating,
-		       b.page_count,
+		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.age_rating,
+		       b.page_count, b.file_size,
 		       CASE WHEN ? = '' THEN 0.0
 		            ELSE ts_rank(b.search_vec, plainto_tsquery('english', ?))
 		       END AS rank,
