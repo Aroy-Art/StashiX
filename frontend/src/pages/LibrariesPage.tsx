@@ -183,7 +183,7 @@ export default function LibrariesPage() {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {(lib.recentBooks.length > 0 || lib.recentSeries.length > 0) && (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="aqua" className="text-[10px]">
                           {lib.recentSeries.length > 0
                             ? `${lib.recentSeries.length} series`
                             : `${lib.recentBooks.length}+ books`}

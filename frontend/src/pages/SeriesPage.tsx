@@ -179,7 +179,7 @@ export default function SeriesPage() {
             )}
           >
             Issues
-            <Badge variant="outline" className="ml-1.5 text-[10px] px-1.5 py-0">
+            <Badge variant="aqua" className="ml-1.5 text-[10px] px-1.5 py-0">
               {data.books.length}
             </Badge>
           </div>

@@ -149,7 +149,7 @@ export default function BookPage() {
 
             {/* Age rating badge */}
             <div className="mb-5">
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="aqua" className="text-xs">
                 {AGE_RATING_LABELS[book.age_rating] ?? book.age_rating}
               </Badge>
             </div>
@@ -179,6 +179,7 @@ export default function BookPage() {
               <MetaField label="Format" value={FORMAT_LABELS[book.format] ?? book.format} />
               <MetaField label="File Size" value={book.file_size > 0 ? formatFileSize(book.file_size) : undefined} />
               {book.language && <MetaField label="Language" value={book.language} />}
+              {book.path && <MetaField label="File Path" value={book.path} />}
             </div>
           </div>
         </div>

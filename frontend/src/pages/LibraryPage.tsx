@@ -66,7 +66,7 @@ export default function LibraryPage() {
           )}
         </div>
         {bookList.length > 0 && (
-          <Badge variant="outline" className="mb-0.5">
+          <Badge variant="aqua" className="mb-0.5">
             {bookList.length} books
           </Badge>
         )}

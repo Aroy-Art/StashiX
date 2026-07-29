@@ -18,6 +18,12 @@
   --color-volt-4:  #c4b5fd;
   --color-plasma:  #e879f9;
 
+  /* Aqua/cyan secondary highlight — identical in both modes */
+  --color-aqua:    #0891b2;
+  --color-aqua-2:  #06b6d4;
+  --color-aqua-3:  #22d3ee;
+  --color-aqua-4:  #67e8f9;
+
   /* Dark-mode surface palette (used only in dark-specific utilities) */
   --color-void:      #04040c;
   --color-surface-1: #0a0a1a;
