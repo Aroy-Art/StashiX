@@ -11,6 +11,7 @@ export default function SearchPage() {
   const [params, setParams] = useSearchParams()
   const [query, setQuery] = useState(params.get('q') ?? '')
   const [results, setResults] = useState<SearchResult[]>([])
+  const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -20,6 +21,7 @@ export default function SearchPage() {
     try {
       const data = await searchApi.query(q)
       setResults(data.results)
+      setTotal(data.total)
     } finally {
       setLoading(false)
     }
@@ -92,7 +94,7 @@ export default function SearchPage() {
       {!loading && results.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground mb-4">
-            {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{params.get('q')}&rdquo;
+            {total} result{total !== 1 ? 's' : ''} for &ldquo;{params.get('q')}&rdquo;
           </p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-4">
             {results.map((book, i) => (

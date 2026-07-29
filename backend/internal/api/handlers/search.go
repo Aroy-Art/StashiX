@@ -29,6 +29,7 @@ type searchInput struct {
 type searchOutput struct {
 	Body struct {
 		Results []models.BookSummary `json:"results"`
+		Total   int                  `json:"total"`
 		Offset  int                  `json:"offset"`
 		Limit   int                  `json:"limit"`
 	}
@@ -36,19 +37,22 @@ type searchOutput struct {
 
 func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*searchOutput, error) {
 	claims := auth.ClaimsFromCtx(ctx)
-
-	limit := input.Limit
-	if limit <= 0 {
-		limit = 50
+	if claims == nil {
+		return nil, huma.NewError(http.StatusUnauthorized, "unauthorized")
 	}
 
 	var results []struct {
 		models.BookSummary
-		Rank float64
+		Rank  float64
+		Total int
 	}
 	result := h.db.WithContext(ctx).Raw(`
 		SELECT b.id, b.title, b.series, b.issue_number, b.year, b.format, b.age_rating,
-		       ts_rank(b.search_vec, plainto_tsquery('english', ?)) AS rank, b.page_count
+		       b.page_count,
+		       CASE WHEN ? = '' THEN 0.0
+		            ELSE ts_rank(b.search_vec, plainto_tsquery('english', ?))
+		       END AS rank,
+		       COUNT(*) OVER() AS total
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE (? = '' OR b.search_vec @@ plainto_tsquery('english', ?))
@@ -57,12 +61,13 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 		  AND (? = 'admin' OR lp.can_read = TRUE)
 		ORDER BY rank DESC, b.title
 		LIMIT ? OFFSET ?`,
-		input.Q, claims.UserID,
+		input.Q, input.Q,
+		claims.UserID,
 		input.Q, input.Q,
 		input.LibraryID, input.LibraryID,
 		input.AgeRating, input.AgeRating,
 		claims.Role,
-		limit, input.Offset,
+		input.Limit, input.Offset,
 	).Scan(&results)
 	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "search error")
@@ -71,9 +76,10 @@ func (h *SearchHandler) search(ctx context.Context, input *searchInput) (*search
 	out := &searchOutput{}
 	out.Body.Results = []models.BookSummary{}
 	out.Body.Offset = input.Offset
-	out.Body.Limit = limit
+	out.Body.Limit = input.Limit
 
 	for _, r := range results {
+		out.Body.Total = r.Total
 		out.Body.Results = append(out.Body.Results, r.BookSummary)
 	}
 	return out, nil

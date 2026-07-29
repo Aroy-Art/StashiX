@@ -106,7 +106,7 @@ export const search = {
   query(
     q: string,
     opts: { libraryId?: string; ageRating?: string; limit?: number; offset?: number } = {}
-  ): Promise<{ results: SearchResult[]; offset: number; limit: number }> {
+  ): Promise<{ results: SearchResult[]; total: number; offset: number; limit: number }> {
     return transport.send('search', {
       q,
       library_id: opts.libraryId,
