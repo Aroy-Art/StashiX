@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { series as seriesApi } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { formatYears } from '@/lib/series'
+import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Layers } from 'lucide-react'
 import type { Series } from '@/types'
@@ -14,7 +15,7 @@ interface SeriesCardProps {
 export function SeriesCard({ series, className }: SeriesCardProps) {
   return (
     <Link to={`/series/${series.id}`} className={cn('group block', className)}>
-      <div className="card-hover rounded-lg overflow-hidden border border-border bg-card">
+      <Card className="card-hover p-0 gap-0">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <img
             src={seriesApi.coverUrl(series.id)}
@@ -28,6 +29,7 @@ export function SeriesCard({ series, className }: SeriesCardProps) {
               if (fb) fb.style.display = 'flex'
             }}
           />
+          {/* Fallback */}
           <div
             className="absolute inset-0 flex-col items-center justify-center gap-1.5 bg-muted"
             style={{ display: 'none' }}
@@ -49,20 +51,21 @@ export function SeriesCard({ series, className }: SeriesCardProps) {
           )}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-volt/12 to-transparent pointer-events-none" />
         </div>
-        <div className="p-2">
-          <p className="text-[13px] font-semibold text-card-foreground leading-tight line-clamp-2">
+
+        <CardContent className="p-2">
+          <CardTitle className="text-[13px] font-semibold leading-tight line-clamp-2">
             {series.name}
-          </p>
+          </CardTitle>
           {series.publisher && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">{series.publisher}</p>
+            <CardDescription className="mt-0.5">{series.publisher}</CardDescription>
           )}
           {series.start_year && (
-            <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+            <CardDescription className="mt-0.5 opacity-70">
               {formatYears(series.start_year, series.end_year, series.ongoing)}
-            </p>
+            </CardDescription>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   )
 }

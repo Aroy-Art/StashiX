@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { books as booksApi } from '@/api/client'
 import { cn } from '@/lib/utils'
+import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 
 interface BookLike {
   id: string
@@ -30,7 +32,7 @@ export function BookCard({ book, className, to }: BookCardProps) {
   const href = to ?? (book.series_id ? `/series/${book.series_id}` : `/book/${book.id}`)
   return (
     <Link to={href} className={cn('group block', className)}>
-      <div className="card-hover rounded-lg overflow-hidden border border-border bg-card">
+      <Card className="card-hover p-0 gap-0">
         {/* Cover */}
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <img
@@ -61,9 +63,9 @@ export function BookCard({ book, className, to }: BookCardProps) {
           </div>
           {/* Format badge — visible on hover */}
           <div className="absolute bottom-1.5 left-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider bg-background/80 border border-border text-muted-foreground backdrop-blur-sm">
+            <Badge variant="outline" className="text-[9px] bg-background/80 backdrop-blur-sm">
               {FORMAT_LABELS[book.format] ?? book.format}
-            </span>
+            </Badge>
           </div>
           {/* Purple glow on hover */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-t from-volt/12 to-transparent pointer-events-none" />
@@ -79,18 +81,18 @@ export function BookCard({ book, className, to }: BookCardProps) {
         </div>
 
         {/* Info */}
-        <div className="p-2">
-          <p className="text-[13px] font-semibold text-card-foreground leading-tight line-clamp-2">
+        <CardContent className="p-2">
+          <CardTitle className="text-[13px] font-semibold leading-tight line-clamp-2">
             {book.title ?? book.series}
-          </p>
+          </CardTitle>
           {book.issue_number && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">#{book.issue_number}</p>
+            <CardDescription className="mt-0.5">#{book.issue_number}</CardDescription>
           )}
           {!book.series && book.year && (
-            <p className="text-[11px] text-muted-foreground mt-0.5">{book.year}</p>
+            <CardDescription className="mt-0.5">{book.year}</CardDescription>
           )}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </Link>
   )
 }
