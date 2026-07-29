@@ -16,6 +16,10 @@ bin/
 .DS_Store
 Thumbs.db
 
+# Mutagen
+mutagen.yml
+mutagen.yml.lock
+
 # Tmp files and folders
 tmp/
 
