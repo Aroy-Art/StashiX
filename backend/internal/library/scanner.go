@@ -3,11 +3,13 @@ package library
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/media"
@@ -121,7 +123,6 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 			case len(parts) >= 2:
 				sc.publisher = parts[0]
 				sm := metadata.ParseSeriesDir(parts[1])
-				// dirs without a year are category containers (e.g. "One-Shot"), not series
 				if sm.Year != 0 {
 					sc.series = sm.Series
 					sc.year = sm.Year
@@ -196,6 +197,13 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 	log.Printf("[scan] import path=%s title=%q type=%s series=%q volume=%d issue=%q year=%d publisher=%q",
 		path, meta.Title, bookType, meta.Series, meta.Volume, meta.IssueNumber, meta.Year, meta.Publisher)
 
+	// Resolve publisher and imprint
+	publisherID := s.upsertPublisher(ctx, meta.Publisher, meta.PublisherSourceID)
+	imprintID := ""
+	if publisherID != "" && meta.ImprintName != "" {
+		imprintID = s.upsertImprint(ctx, publisherID, meta.ImprintName, meta.ImprintSourceID)
+	}
+
 	var startYear, endYear int
 	var ongoing bool
 	if sc != nil {
@@ -203,7 +211,12 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		endYear = sc.endYear
 		ongoing = sc.ongoing
 	}
-	seriesID := s.upsertSeries(ctx, libraryID, meta.Series, meta.Publisher, startYear, endYear, ongoing)
+	// Prefer MetronInfo's SeriesStartYear if available
+	if meta.SeriesStartYear != 0 {
+		startYear = meta.SeriesStartYear
+	}
+
+	seriesID := s.upsertSeries(ctx, libraryID, meta, publisherID, imprintID, startYear, endYear, ongoing)
 	if seriesID != "" && sc != nil && sc.coverPath != "" {
 		s.upsertSeriesCover(ctx, seriesID, sc.coverPath)
 	}
@@ -212,20 +225,48 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 	if force {
 		onConflict = `ON CONFLICT (path) DO UPDATE SET
 			title=EXCLUDED.title, type=EXCLUDED.type, series=EXCLUDED.series, series_id=EXCLUDED.series_id,
-			issue_number=EXCLUDED.issue_number, volume=EXCLUDED.volume, year=EXCLUDED.year,
-			publisher=EXCLUDED.publisher, format=EXCLUDED.format, page_count=EXCLUDED.page_count,
-			file_size=EXCLUDED.file_size, age_rating=EXCLUDED.age_rating,
-			language=EXCLUDED.language, summary=EXCLUDED.summary, updated_at=NOW()`
+			issue_number=EXCLUDED.issue_number, alternative_number=EXCLUDED.alternative_number,
+			volume=EXCLUDED.volume, year=EXCLUDED.year, publisher=EXCLUDED.publisher,
+			publisher_id=EXCLUDED.publisher_id, imprint_id=EXCLUDED.imprint_id,
+			format=EXCLUDED.format, comic_format=EXCLUDED.comic_format,
+			page_count=EXCLUDED.page_count, file_size=EXCLUDED.file_size,
+			age_rating=EXCLUDED.age_rating, language=EXCLUDED.language, summary=EXCLUDED.summary,
+			notes=EXCLUDED.notes, collection_title=EXCLUDED.collection_title,
+			manga_volume=EXCLUDED.manga_volume, cover_date=EXCLUDED.cover_date,
+			store_date=EXCLUDED.store_date, isbn=EXCLUDED.isbn, upc=EXCLUDED.upc,
+			community_rating=EXCLUDED.community_rating,
+			community_rating_count=EXCLUDED.community_rating_count,
+			last_modified=EXCLUDED.last_modified, updated_at=NOW()`
 	}
+
 	result := s.db.WithContext(ctx).Exec(`
-		INSERT INTO books (library_id, path, title, type, series, series_id, issue_number, volume, year, publisher,
-		                   format, page_count, file_size, age_rating, language, summary)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-		`+onConflict,
+		INSERT INTO books (
+			library_id, path, title, type, series, series_id,
+			issue_number, alternative_number, volume, year,
+			publisher, publisher_id, imprint_id,
+			format, comic_format, page_count, file_size,
+			age_rating, language, summary, notes,
+			collection_title, manga_volume, cover_date, store_date,
+			isbn, upc, community_rating, community_rating_count,
+			last_modified
+		) VALUES (
+			?,?,?,?,?,?,
+			?,?,?,?,
+			?,?,?,
+			?,?,?,?,
+			?,?,?,?,
+			?,?,?,?,
+			?,?,?,?,
+			?
+		) `+onConflict,
 		libraryID, path, meta.Title, bookType, meta.Series, nullString(seriesID),
-		meta.IssueNumber, nullInt(meta.Volume), nullInt(meta.Year), meta.Publisher,
-		string(format), pageCount, info.Size(),
-		coalesceString(meta.AgeRating, "unknown"), meta.Language, meta.Summary,
+		nullString(meta.IssueNumber), nullString(meta.AlternativeNumber), nullInt(meta.Volume), nullInt(meta.Year),
+		nullString(meta.Publisher), nullString(publisherID), nullString(imprintID),
+		string(format), nullString(meta.SeriesFormat), pageCount, info.Size(),
+		coalesceString(meta.AgeRating, "unknown"), nullString(meta.Language), nullString(meta.Summary), nullString(meta.Notes),
+		nullString(meta.CollectionTitle), nullString(meta.MangaVolume), nullString(meta.CoverDate), nullString(meta.StoreDate),
+		nullString(meta.ISBN), nullString(meta.UPC), nullFloat(meta.CommunityRating), nullInt(meta.CommunityRatingCount),
+		nullTime(meta.LastModified),
 	)
 	if result.Error != nil {
 		log.Printf("[scan] INSERT books error path=%s: %v", path, result.Error)
@@ -241,11 +282,6 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 
 	coverPath := bookCoverImage(path)
 	if coverPath != "" {
-		log.Printf("[scan] cover sidecar=%s", coverPath)
-	} else {
-		log.Printf("[scan] cover none path=%s", path)
-	}
-	if coverPath != "" {
 		s.db.WithContext(ctx).Exec(`
 			INSERT INTO book_covers (book_id, path)
 			VALUES (?,?)
@@ -253,10 +289,109 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			bookID, coverPath)
 	}
 
+	s.insertBookRelations(ctx, bookID, meta, force)
+
 	p, _ := json.Marshal(map[string]string{"book_id": bookID, "library_id": libraryID})
 	s.hub.Broadcast(ws.Message{Type: "book_added", Payload: p})
 
 	return nil
+}
+
+func (s *Scanner) insertBookRelations(ctx context.Context, bookID string, meta *metadata.BookMeta, force bool) {
+	if force {
+		for _, table := range []string{
+			"book_external_ids", "book_urls", "book_genres", "book_tags",
+			"book_story_arcs", "book_characters", "book_teams", "book_universes",
+			"book_locations", "book_credits", "book_stories", "book_prices", "book_reprints",
+		} {
+			s.db.WithContext(ctx).Exec(fmt.Sprintf(`DELETE FROM %s WHERE book_id = ?`, table), bookID)
+		}
+	}
+
+	for _, eid := range meta.ExternalIDs {
+		s.db.WithContext(ctx).Exec(`
+			INSERT INTO book_external_ids (book_id, source, source_id, is_primary)
+			VALUES (?,?,?,?)
+			ON CONFLICT (book_id, source) DO UPDATE SET source_id=EXCLUDED.source_id, is_primary=EXCLUDED.is_primary`,
+			bookID, eid.Source, eid.SourceID, eid.IsPrimary)
+	}
+
+	for _, g := range meta.Genres {
+		if gID := s.upsertEntity(ctx, "genres", g.Name, g.SourceID); gID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_genres (book_id, genre_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, gID)
+		}
+	}
+
+	for _, t := range meta.Tags {
+		if tID := s.upsertEntity(ctx, "tags", t.Name, t.SourceID); tID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_tags (book_id, tag_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, tID)
+		}
+	}
+
+	for _, a := range meta.Arcs {
+		if aID := s.upsertEntity(ctx, "story_arcs", a.Name, a.SourceID); aID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_story_arcs (book_id, arc_id, arc_number) VALUES (?,?,?) ON CONFLICT DO NOTHING`,
+				bookID, aID, nullInt(a.Number))
+		}
+	}
+
+	for _, c := range meta.Characters {
+		if cID := s.upsertEntity(ctx, "characters", c.Name, c.SourceID); cID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_characters (book_id, character_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, cID)
+		}
+	}
+
+	for _, t := range meta.Teams {
+		if tID := s.upsertEntity(ctx, "teams", t.Name, t.SourceID); tID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_teams (book_id, team_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, tID)
+		}
+	}
+
+	for _, u := range meta.Universes {
+		if uID := s.upsertUniverse(ctx, u.Name, u.Designation, u.SourceID); uID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_universes (book_id, universe_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, uID)
+		}
+	}
+
+	for _, l := range meta.Locations {
+		if lID := s.upsertEntity(ctx, "locations", l.Name, l.SourceID); lID != "" {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_locations (book_id, location_id) VALUES (?,?) ON CONFLICT DO NOTHING`, bookID, lID)
+		}
+	}
+
+	for _, c := range meta.Credits {
+		if c.CreatorName == "" {
+			continue
+		}
+		creatorID := s.upsertEntity(ctx, "creators", c.CreatorName, c.CreatorSourceID)
+		if creatorID == "" {
+			continue
+		}
+		for _, role := range c.Roles {
+			s.db.WithContext(ctx).Exec(`INSERT INTO book_credits (book_id, creator_id, role) VALUES (?,?,?)`, bookID, creatorID, role)
+		}
+	}
+
+	for i, st := range meta.Stories {
+		s.db.WithContext(ctx).Exec(`INSERT INTO book_stories (book_id, title, source_id, sort_order) VALUES (?,?,?,?)`,
+			bookID, st.Name, nullString(st.SourceID), i)
+	}
+
+	for _, p := range meta.Prices {
+		s.db.WithContext(ctx).Exec(`INSERT INTO book_prices (book_id, country, price) VALUES (?,?,?)`, bookID, p.Country, p.Amount)
+	}
+
+	for _, u := range meta.URLs {
+		s.db.WithContext(ctx).Exec(`INSERT INTO book_urls (book_id, url, is_primary) VALUES (?,?,?)`, bookID, u.URL, u.IsPrimary)
+	}
+
+	for _, r := range meta.Reprints {
+		if r.Name == "" {
+			continue
+		}
+		s.db.WithContext(ctx).Exec(`INSERT INTO book_reprints (book_id, name, source_id) VALUES (?,?,?)`,
+			bookID, r.Name, nullString(r.SourceID))
+	}
 }
 
 func buildMeta(_ context.Context, format media.Format, path string, sc *seriesContext) *metadata.BookMeta {
@@ -340,6 +475,109 @@ func applyAllMeta(dst, src *metadata.BookMeta) {
 	if src.PageCount != 0 {
 		dst.PageCount = src.PageCount
 	}
+
+	// MetronInfo extended fields
+	if len(src.ExternalIDs) > 0 {
+		dst.ExternalIDs = src.ExternalIDs
+	}
+	if src.PublisherSourceID != "" {
+		dst.PublisherSourceID = src.PublisherSourceID
+	}
+	if src.ImprintName != "" {
+		dst.ImprintName = src.ImprintName
+		dst.ImprintSourceID = src.ImprintSourceID
+	}
+	if src.SeriesSourceID != "" {
+		dst.SeriesSourceID = src.SeriesSourceID
+	}
+	if src.SeriesSortName != "" {
+		dst.SeriesSortName = src.SeriesSortName
+	}
+	if src.SeriesLanguage != "" {
+		dst.SeriesLanguage = src.SeriesLanguage
+	}
+	if src.SeriesFormat != "" {
+		dst.SeriesFormat = src.SeriesFormat
+	}
+	if src.SeriesStartYear != 0 {
+		dst.SeriesStartYear = src.SeriesStartYear
+	}
+	if src.SeriesIssueCount != 0 {
+		dst.SeriesIssueCount = src.SeriesIssueCount
+	}
+	if src.SeriesVolumeCount != 0 {
+		dst.SeriesVolumeCount = src.SeriesVolumeCount
+	}
+	if len(src.SeriesAlternativeNames) > 0 {
+		dst.SeriesAlternativeNames = src.SeriesAlternativeNames
+	}
+	if src.CollectionTitle != "" {
+		dst.CollectionTitle = src.CollectionTitle
+	}
+	if src.AlternativeNumber != "" {
+		dst.AlternativeNumber = src.AlternativeNumber
+	}
+	if src.MangaVolume != "" {
+		dst.MangaVolume = src.MangaVolume
+	}
+	if src.CoverDate != "" {
+		dst.CoverDate = src.CoverDate
+	}
+	if src.StoreDate != "" {
+		dst.StoreDate = src.StoreDate
+	}
+	if src.Notes != "" {
+		dst.Notes = src.Notes
+	}
+	if src.ISBN != "" {
+		dst.ISBN = src.ISBN
+	}
+	if src.UPC != "" {
+		dst.UPC = src.UPC
+	}
+	if src.CommunityRating != 0 {
+		dst.CommunityRating = src.CommunityRating
+		dst.CommunityRatingCount = src.CommunityRatingCount
+	}
+	if src.LastModified != nil {
+		dst.LastModified = src.LastModified
+	}
+	if len(src.Genres) > 0 {
+		dst.Genres = src.Genres
+	}
+	if len(src.Tags) > 0 {
+		dst.Tags = src.Tags
+	}
+	if len(src.Arcs) > 0 {
+		dst.Arcs = src.Arcs
+	}
+	if len(src.Characters) > 0 {
+		dst.Characters = src.Characters
+	}
+	if len(src.Teams) > 0 {
+		dst.Teams = src.Teams
+	}
+	if len(src.Universes) > 0 {
+		dst.Universes = src.Universes
+	}
+	if len(src.Locations) > 0 {
+		dst.Locations = src.Locations
+	}
+	if len(src.Reprints) > 0 {
+		dst.Reprints = src.Reprints
+	}
+	if len(src.Stories) > 0 {
+		dst.Stories = src.Stories
+	}
+	if len(src.Prices) > 0 {
+		dst.Prices = src.Prices
+	}
+	if len(src.URLs) > 0 {
+		dst.URLs = src.URLs
+	}
+	if len(src.Credits) > 0 {
+		dst.Credits = src.Credits
+	}
 }
 
 func applyFileMeta(dst, src *metadata.BookMeta) {
@@ -363,7 +601,162 @@ func applyFileMeta(dst, src *metadata.BookMeta) {
 	}
 }
 
-// bookCoverImage returns a sidecar image path for a book file (same basename, image ext), or "".
+func (s *Scanner) upsertPublisher(ctx context.Context, name, sourceID string) string {
+	if name == "" {
+		return ""
+	}
+	var id string
+	res := s.db.WithContext(ctx).Raw(`
+		INSERT INTO publishers (name, source_id)
+		VALUES (?, ?)
+		ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name
+		RETURNING id`,
+		name, nullString(sourceID),
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertPublisher error name=%q: %v", name, res.Error)
+	}
+	return id
+}
+
+func (s *Scanner) upsertImprint(ctx context.Context, publisherID, name, sourceID string) string {
+	if name == "" {
+		return ""
+	}
+	var id string
+	res := s.db.WithContext(ctx).Raw(`
+		INSERT INTO imprints (publisher_id, name, source_id)
+		VALUES (?, ?, ?)
+		ON CONFLICT (publisher_id, name) DO UPDATE SET name=EXCLUDED.name
+		RETURNING id`,
+		publisherID, name, nullString(sourceID),
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertImprint error name=%q: %v", name, res.Error)
+	}
+	return id
+}
+
+// upsertEntity handles normalized lookup tables: genres, tags, characters, teams, locations, creators, story_arcs.
+func (s *Scanner) upsertEntity(ctx context.Context, table, name, sourceID string) string {
+	if name == "" {
+		return ""
+	}
+	var id string
+	// #nosec G201 — table name is always a hardcoded literal from internal callers
+	res := s.db.WithContext(ctx).Raw(
+		fmt.Sprintf(`INSERT INTO %s (name, source_id) VALUES (?, ?) ON CONFLICT (name) DO UPDATE SET name=EXCLUDED.name RETURNING id`, table),
+		name, nullString(sourceID),
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertEntity table=%s name=%q: %v", table, name, res.Error)
+	}
+	return id
+}
+
+func (s *Scanner) upsertUniverse(ctx context.Context, name, designation, sourceID string) string {
+	if name == "" {
+		return ""
+	}
+	var id string
+	res := s.db.WithContext(ctx).Raw(`
+		INSERT INTO universes (name, designation, source_id)
+		VALUES (?, ?, ?)
+		ON CONFLICT (name) DO UPDATE SET designation=EXCLUDED.designation
+		RETURNING id`,
+		name, nullString(designation), nullString(sourceID),
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertUniverse name=%q: %v", name, res.Error)
+	}
+	return id
+}
+
+func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *metadata.BookMeta, publisherID, imprintID string, startYear, endYear int, ongoing bool) string {
+	if meta.Series == "" {
+		return ""
+	}
+	var id string
+	res := s.db.WithContext(ctx).Raw(`
+		INSERT INTO series (library_id, name, sort_name, volume, language, format,
+		                    publisher, publisher_id, imprint_id,
+		                    start_year, end_year, ongoing,
+		                    issue_count, volume_count)
+		VALUES (?,?,?,?,?,?,  ?,?,?,  ?,?,?,  ?,?)
+		ON CONFLICT (library_id, name) DO UPDATE SET
+			sort_name   = COALESCE(EXCLUDED.sort_name,   series.sort_name),
+			volume      = COALESCE(EXCLUDED.volume,      series.volume),
+			language    = EXCLUDED.language,
+			format      = COALESCE(EXCLUDED.format,      series.format),
+			publisher   = COALESCE(EXCLUDED.publisher,   series.publisher),
+			publisher_id= COALESCE(EXCLUDED.publisher_id,series.publisher_id),
+			imprint_id  = COALESCE(EXCLUDED.imprint_id,  series.imprint_id),
+			start_year  = COALESCE(EXCLUDED.start_year,  series.start_year),
+			end_year    = COALESCE(EXCLUDED.end_year,    series.end_year),
+			ongoing     = EXCLUDED.ongoing,
+			issue_count = COALESCE(EXCLUDED.issue_count, series.issue_count),
+			volume_count= COALESCE(EXCLUDED.volume_count,series.volume_count)
+		RETURNING id`,
+		libraryID, meta.Series, nullString(meta.SeriesSortName), nullInt(meta.Volume),
+		coalesceString(meta.SeriesLanguage, "en"), nullString(meta.SeriesFormat),
+		nullString(meta.Publisher), nullString(publisherID), nullString(imprintID),
+		nullInt(startYear), nullInt(endYear), ongoing,
+		nullInt(meta.SeriesIssueCount), nullInt(meta.SeriesVolumeCount),
+	).Scan(&id)
+	if res.Error != nil {
+		log.Printf("[scan] upsertSeries error name=%q: %v", meta.Series, res.Error)
+		return ""
+	}
+
+	if id == "" {
+		return ""
+	}
+
+	// Series external ID - derive source from book's primary external ID
+	if meta.SeriesSourceID != "" {
+		source := ""
+		for _, eid := range meta.ExternalIDs {
+			if eid.IsPrimary {
+				source = eid.Source
+				break
+			}
+		}
+		if source == "" && len(meta.ExternalIDs) > 0 {
+			source = meta.ExternalIDs[0].Source
+		}
+		if source != "" {
+			s.db.WithContext(ctx).Exec(`
+				INSERT INTO series_external_ids (series_id, source, source_id, is_primary)
+				VALUES (?,?,?,true)
+				ON CONFLICT (series_id, source) DO UPDATE SET source_id=EXCLUDED.source_id`,
+				id, source, meta.SeriesSourceID)
+		}
+	}
+
+	// Series alternative names
+	for _, an := range meta.SeriesAlternativeNames {
+		s.db.WithContext(ctx).Exec(`
+			INSERT INTO series_alternative_names (series_id, name, language, source_id)
+			VALUES (?,?,?,?)
+			ON CONFLICT DO NOTHING`,
+			id, an.Name, coalesceString(an.Language, "en"), nullString(an.SourceID))
+	}
+
+	return id
+}
+
+func (s *Scanner) upsertSeriesCover(ctx context.Context, seriesID, coverPath string) {
+	res := s.db.WithContext(ctx).Exec(`
+		INSERT INTO series_covers (series_id, path)
+		VALUES (?, ?)
+		ON CONFLICT (series_id) DO UPDATE SET path=EXCLUDED.path, updated_at=NOW()`,
+		seriesID, coverPath)
+	if res.Error != nil {
+		log.Printf("[scan] upsertSeriesCover error seriesID=%s: %v", seriesID, res.Error)
+	}
+}
+
+// bookCoverImage returns a sidecar image path for a book file, or "".
 func bookCoverImage(bookPath string) string {
 	base := strings.TrimSuffix(bookPath, filepath.Ext(bookPath))
 	for _, ext := range []string{".jpg", ".jpeg", ".png", ".webp"} {
@@ -399,42 +792,6 @@ func collectFiles(root string) ([]string, error) {
 	return paths, err
 }
 
-// upsertSeries inserts or updates a series record and returns its ID.
-// Returns "" if seriesName is empty.
-func (s *Scanner) upsertSeries(ctx context.Context, libraryID, seriesName, publisher string, startYear, endYear int, ongoing bool) string {
-	if seriesName == "" {
-		return ""
-	}
-	var id string
-	res := s.db.WithContext(ctx).Raw(`
-		INSERT INTO series (library_id, name, publisher, start_year, end_year, ongoing)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT (library_id, name) DO UPDATE SET
-			publisher  = EXCLUDED.publisher,
-			start_year = EXCLUDED.start_year,
-			end_year   = EXCLUDED.end_year,
-			ongoing    = EXCLUDED.ongoing
-		RETURNING id`,
-		libraryID, seriesName, nullString(publisher), nullInt(startYear), nullInt(endYear), ongoing,
-	).Scan(&id)
-	if res.Error != nil {
-		log.Printf("[scan] upsertSeries error name=%q: %v", seriesName, res.Error)
-	}
-	return id
-}
-
-
-func (s *Scanner) upsertSeriesCover(ctx context.Context, seriesID, coverPath string) {
-	res := s.db.WithContext(ctx).Exec(`
-		INSERT INTO series_covers (series_id, path)
-		VALUES (?, ?)
-		ON CONFLICT (series_id) DO UPDATE SET path=EXCLUDED.path, updated_at=NOW()`,
-		seriesID, coverPath)
-	if res.Error != nil {
-		log.Printf("[scan] upsertSeriesCover error seriesID=%s: %v", seriesID, res.Error)
-	}
-}
-
 func nullInt(v int) any {
 	if v == 0 {
 		return nil
@@ -447,6 +804,20 @@ func nullString(v string) any {
 		return nil
 	}
 	return v
+}
+
+func nullFloat(v float64) any {
+	if v == 0 {
+		return nil
+	}
+	return v
+}
+
+func nullTime(v *time.Time) any {
+	if v == nil {
+		return nil
+	}
+	return *v
 }
 
 func coalesceString(v, fallback string) string {

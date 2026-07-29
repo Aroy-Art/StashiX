@@ -289,8 +289,8 @@ CREATE INDEX idx_book_prices_book_id ON book_prices(book_id);
 CREATE TABLE book_reprints (
     id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     book_id   UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    source_id TEXT NOT NULL,
-    name      TEXT
+    name      TEXT NOT NULL,
+    source_id TEXT
 );
 
 CREATE INDEX idx_book_reprints_book_id ON book_reprints(book_id);
