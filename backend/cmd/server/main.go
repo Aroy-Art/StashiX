@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -18,9 +19,16 @@ import (
 )
 
 func main() {
+	port := flag.String("port", "", "port to listen on (overrides PORT env var)")
+	flag.Parse()
+
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("config: %v", err)
+	}
+
+	if *port != "" {
+		cfg.Port = *port
 	}
 
 	if err := db.Migrate(cfg.DatabaseURL, "migrations"); err != nil {
