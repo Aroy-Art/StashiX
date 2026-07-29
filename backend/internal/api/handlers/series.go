@@ -102,7 +102,7 @@ func (h *SeriesHandler) listByLibrary(ctx context.Context, input *listSeriesInpu
 	var seriesList []models.Series
 	result := h.db.WithContext(ctx).Raw(`
 		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.created_at,
-		       (SELECT b.id FROM books b WHERE b.series_id = s.id ORDER BY b.created_at ASC LIMIT 1) AS cover_book_id,
+		       (SELECT b.id FROM books b WHERE b.series_id = s.id ORDER BY b.volume NULLS FIRST, CAST(b.issue_number AS REAL) NULLS LAST LIMIT 1) AS cover_book_id,
 		       (SELECT COUNT(*) FROM books b WHERE b.series_id = s.id) AS book_count
 		FROM series s
 		LEFT JOIN library_permissions lp ON lp.library_id = s.library_id AND lp.user_id = ?
@@ -157,7 +157,7 @@ func (h *SeriesHandler) Cover(c *gin.Context) {
 	// fall back: use cover from first book in series
 	var coverBookID string
 	r1 := h.db.WithContext(c.Request.Context()).Raw(`
-		SELECT id FROM books WHERE series_id = ? ORDER BY created_at ASC LIMIT 1`, id,
+		SELECT id FROM books WHERE series_id = ? ORDER BY volume NULLS FIRST, CAST(issue_number AS REAL) NULLS LAST LIMIT 1`, id,
 	).Scan(&coverBookID)
 	if r1.Error != nil || r1.RowsAffected == 0 || coverBookID == "" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no cover available"})
