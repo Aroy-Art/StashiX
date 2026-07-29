@@ -77,17 +77,17 @@ func TestParseFilename(t *testing.T) {
 			name:       "zero-padded issue with year and tags",
 			input:      "The Disavowed 001 (2025) (digital) (Knight Ripper-Empire).cbz",
 			wantSeries: "The Disavowed",
-			wantIssue:  "001",
+			wantIssue:  "1",
 			wantYear:   2025,
-			wantTitle:  "The Disavowed #001",
+			wantTitle:  "The Disavowed #1",
 		},
 		{
 			name:       "zero-padded issue no tags",
 			input:      "Some Comic 012 (2020).cbz",
 			wantSeries: "Some Comic",
-			wantIssue:  "012",
+			wantIssue:  "12",
 			wantYear:   2020,
-			wantTitle:  "Some Comic #012",
+			wantTitle:  "Some Comic #12",
 		},
 		// issue number pattern: Series #N (Year)
 		{

@@ -142,7 +142,7 @@ func ParseFilename(path string) *BookMeta {
 		meta.Series = strings.TrimSpace(m[1])
 		v, _ := strconv.Atoi(m[2])
 		meta.Volume = v
-		meta.IssueNumber = m[3]
+		meta.IssueNumber = stripLeadingZeros(m[3])
 		meta.Title = meta.Series
 		return meta
 	}
@@ -154,8 +154,8 @@ func ParseFilename(path string) *BookMeta {
 			y, _ := strconv.Atoi(m[2])
 			meta.Year = y
 		}
-		meta.IssueNumber = m[3]
-		meta.Title = meta.Series + " Chapter " + m[3]
+		meta.IssueNumber = stripLeadingZeros(m[3])
+		meta.Title = meta.Series + " Chapter " + meta.IssueNumber
 		return meta
 	}
 
@@ -178,7 +178,7 @@ func ParseFilename(path string) *BookMeta {
 			v, _ := strconv.Atoi(m[2])
 			meta.Volume = v
 		}
-		meta.IssueNumber = m[3]
+		meta.IssueNumber = stripLeadingZeros(m[3])
 		if m[4] != "" {
 			y, _ := strconv.Atoi(m[4])
 			meta.Year = y
@@ -193,7 +193,7 @@ func ParseFilename(path string) *BookMeta {
 	// "Series 001 (Year) (tag) (group)" — zero-padded issue without # prefix
 	if m := reIssueNum.FindStringSubmatch(name); m != nil {
 		meta.Series = strings.TrimSpace(m[1])
-		meta.IssueNumber = m[2]
+		meta.IssueNumber = stripLeadingZeros(m[2])
 		if m[3] != "" {
 			y, _ := strconv.Atoi(m[3])
 			meta.Year = y
@@ -281,6 +281,18 @@ func parseXMLFile(f *zip.File, target any, apply func(any)) error {
 }
 
 // TODO Update to the proper age tags https://metron-project.github.io/docs/metroninfo/ratings
+
+func stripLeadingZeros(s string) string {
+	parts := strings.SplitN(s, ".", 2)
+	n, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return s
+	}
+	if len(parts) == 2 {
+		return strconv.Itoa(n) + "." + parts[1]
+	}
+	return strconv.Itoa(n)
+}
 
 func normalizeRating(r string) string {
 	switch strings.ToLower(r) {
