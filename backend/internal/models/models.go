@@ -33,8 +33,8 @@ type Series struct {
 	Ongoing     bool           `json:"ongoing"`
 	CreatedAt   time.Time      `json:"created_at"`
 	Volumes     []SeriesVolume `json:"volumes,omitempty" gorm:"foreignKey:SeriesID"`
-	CoverBookID *string        `json:"cover_book_id,omitempty" gorm:"-"`
-	BookCount   int            `json:"book_count,omitempty" gorm:"-"`
+	CoverBookID *string        `json:"cover_book_id,omitempty" gorm:"-:migration"`
+	BookCount   int            `json:"book_count,omitempty" gorm:"-:migration"`
 }
 
 type SeriesVolume struct {

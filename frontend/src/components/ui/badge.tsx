@@ -9,7 +9,7 @@ const badgeVariants = cva(
       variant: {
         default:  'bg-volt/20 text-volt-3 border border-volt/30',
         plasma:   'bg-plasma/20 text-plasma border border-plasma/30',
-        aqua:     'bg-aqua/15 text-aqua-3 border border-aqua-2/35',
+        aqua:     'bg-aqua/15 text-aqua-4 border border-aqua-2/35',
         outline:  'border border-border text-muted-foreground',
         surface:  'bg-surface-3 text-muted',
         success:  'bg-success/20 text-success border border-success/30',
