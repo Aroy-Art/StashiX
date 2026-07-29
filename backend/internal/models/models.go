@@ -18,6 +18,7 @@ type BookSummary struct {
 	Year        *int    `json:"year,omitempty"`
 	Format      string  `json:"format"`
 	PageCount   int     `json:"page_count"`
+	FileSize    int64   `json:"file_size"`
 	AgeRating   string  `json:"age_rating"`
 	CurrentPage *int    `json:"current_page,omitempty"`
 }

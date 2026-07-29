@@ -4,7 +4,7 @@ import { series as seriesApi, books as booksApi } from '@/api/client'
 import { BookCard } from '@/components/BookCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, BookOpen, Layers, Hash } from 'lucide-react'
+import { ChevronLeft, BookOpen, Layers, Hash, HardDrive } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatYears } from '@/lib/series'
 import type { SeriesDetail } from '@/types'
@@ -30,6 +30,12 @@ export default function SeriesPage() {
   const readLabel = continueBook ? 'Continue' : 'Read First Issue'
 
   const totalPages = data?.books.reduce((sum, b) => sum + b.page_count, 0) ?? 0
+  const totalBytes = data?.books.reduce((sum, b) => sum + (b.file_size ?? 0), 0) ?? 0
+  const totalSize = totalBytes >= 1024 * 1024 * 1024
+    ? `${(totalBytes / (1024 ** 3)).toFixed(1)} GB`
+    : totalBytes >= 1024 * 1024
+      ? `${(totalBytes / (1024 ** 2)).toFixed(1)} MB`
+      : totalBytes > 0 ? `${(totalBytes / 1024).toFixed(0)} KB` : null
   const yearRange = formatYears(data?.start_year, data?.end_year, data?.ongoing)
   const readCount = data?.books.filter(
     (b) => b.current_page != null && b.page_count > 0 && b.current_page >= b.page_count
@@ -112,6 +118,12 @@ export default function SeriesPage() {
                 <Hash className="w-3.5 h-3.5" />
                 {data.books.length} {data.books.length === 1 ? 'issue' : 'issues'}
               </span>
+              {totalSize && (
+                <span className="flex items-center gap-1">
+                  <HardDrive className="w-3.5 h-3.5" />
+                  {totalSize}
+                </span>
+              )}
               {readCount > 0 && (
                 <Badge variant="outline" className="text-[11px] text-volt-3 border-volt/30">
                   {readCount}/{data.books.length} read

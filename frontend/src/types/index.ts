@@ -22,7 +22,9 @@ export interface Book {
   id: string
   library_id: string
   title: string
+  type?: 'issue' | 'standalone'
   series?: string
+  series_id?: string
   issue_number?: string
   volume?: number
   year?: number
@@ -32,8 +34,42 @@ export interface Book {
   file_size: number
   age_rating: AgeRating
   language?: string
+  path?: string
   summary?: string
   created_at: string
+  current_page?: number
+}
+
+export interface Series {
+  id: string
+  library_id: string
+  name: string
+  publisher?: string
+  start_year?: number
+  end_year?: number
+  ongoing?: boolean
+  created_at: string
+  cover_book_id?: string
+  book_count?: number
+}
+
+export interface SeriesBook {
+  id: string
+  title: string
+  type?: 'issue' | 'standalone'
+  series?: string
+  series_id?: string
+  issue_number?: string
+  year?: number
+  format: BookFormat
+  page_count: number
+  file_size: number
+  age_rating: AgeRating
+  current_page?: number
+}
+
+export interface SeriesDetail extends Series {
+  books: SeriesBook[]
 }
 
 export interface ReadingProgress {
