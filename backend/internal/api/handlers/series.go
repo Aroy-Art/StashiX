@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"sort"
+	"strconv"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gin-gonic/gin"
@@ -58,7 +60,7 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 		FROM books b
 		LEFT JOIN reading_progress rp ON rp.book_id = b.id AND rp.user_id = ?
 		WHERE b.series_id = ?
-		ORDER BY b.volume NULLS FIRST, b.issue_number`,
+		ORDER BY b.volume NULLS FIRST, CAST(b.issue_number AS REAL) NULLS LAST, b.issue_number`,
 		claims.UserID, input.ID,
 	).Scan(&books)
 	if r2.Error != nil {
@@ -68,7 +70,19 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 		books = []models.BookSummary{}
 	}
 
+	sort.Slice(books, func(i, j int) bool {
+		return issueOrd(books[i].IssueNumber) < issueOrd(books[j].IssueNumber)
+	})
+
 	return &getSeriesOutput{Body: &SeriesDetail{Series: s, Books: books}}, nil
+}
+
+func issueOrd(s *string) float64 {
+	if s == nil || *s == "" {
+		return 0
+	}
+	f, _ := strconv.ParseFloat(*s, 64)
+	return f
 }
 
 type listSeriesInput struct {
