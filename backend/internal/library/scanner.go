@@ -2,8 +2,10 @@ package library
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,6 +20,23 @@ import (
 	"github.com/aroy/stashix/internal/models"
 	"github.com/aroy/stashix/internal/ws"
 )
+
+// fileHash computes a fast fingerprint: file size + SHA-256 of first 64 KB.
+// This is sufficient for rename detection without reading entire large archives.
+func fileHash(path string, size int64) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	buf := make([]byte, 65536)
+	n, err := io.ReadFull(f, buf)
+	if err != nil && err != io.ErrUnexpectedEOF {
+		return "", err
+	}
+	h := sha256.Sum256(buf[:n])
+	return fmt.Sprintf("%d:%x", size, h), nil
+}
 
 type ScanProgress struct {
 	LibraryID string `json:"library_id"`
@@ -112,6 +131,34 @@ func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bo
 		}
 		broadcast(i+1, i+1 == total)
 	}
+
+	s.pruneDeleted(ctx, libraryID, paths)
+}
+
+func (s *Scanner) pruneDeleted(ctx context.Context, libraryID string, scannedPaths []string) {
+	if len(scannedPaths) == 0 {
+		s.db.WithContext(ctx).Exec(
+			`UPDATE books SET deleted_at = NOW() WHERE library_id = ? AND deleted_at IS NULL`,
+			libraryID,
+		)
+		return
+	}
+
+	placeholders := make([]string, len(scannedPaths))
+	args := make([]interface{}, len(scannedPaths)+1)
+	args[0] = libraryID
+	for i, p := range scannedPaths {
+		placeholders[i] = "?"
+		args[i+1] = p
+	}
+	query := `UPDATE books SET deleted_at = NOW() WHERE library_id = ? AND deleted_at IS NULL AND path NOT IN (` +
+		strings.Join(placeholders, ",") + `)`
+	res := s.db.WithContext(ctx).Exec(query, args...)
+	if res.Error != nil {
+		log.Printf("[scan] pruneDeleted error: %v", res.Error)
+	} else if res.RowsAffected > 0 {
+		log.Printf("[scan] pruneDeleted marked %d books deleted libraryID=%s", res.RowsAffected, libraryID)
+	}
 }
 
 func buildSeriesContexts(libraryRoot string, paths []string, standaloneFolders []string) map[string]*seriesContext {
@@ -204,18 +251,56 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		return err
 	}
 
-	if !force {
-		var count int64
-		s.db.WithContext(ctx).Raw(`SELECT COUNT(*) FROM books WHERE path = ?`, path).Scan(&count)
-		if count > 0 {
-			log.Printf("[scan] skip already-exists path=%s", path)
-			return nil
-		}
-	}
-
 	info, err := os.Stat(path)
 	if err != nil {
 		return err
+	}
+
+	hash, hashErr := fileHash(path, info.Size())
+
+	if !force {
+		var existing struct {
+			ID        string
+			DeletedAt *time.Time
+		}
+		s.db.WithContext(ctx).Raw(`SELECT id, deleted_at FROM books WHERE path = ?`, path).Scan(&existing)
+		if existing.ID != "" {
+			if existing.DeletedAt != nil {
+				// File was marked deleted but is back on disk — restore it.
+				updates := map[string]interface{}{"deleted_at": nil}
+				if hashErr == nil {
+					updates["file_hash"] = hash
+				}
+				s.db.WithContext(ctx).Exec(
+					`UPDATE books SET deleted_at = NULL, file_hash = ? WHERE id = ?`,
+					nullString(hash), existing.ID,
+				)
+				log.Printf("[scan] restored deleted book id=%s path=%s", existing.ID, path)
+			} else {
+				log.Printf("[scan] skip already-exists path=%s", path)
+			}
+			return nil
+		}
+
+		// New path — check if it's a rename of an existing book by hash.
+		if hashErr == nil && hash != "" {
+			var renamedBook struct {
+				ID   string
+				Path string
+			}
+			s.db.WithContext(ctx).Raw(
+				`SELECT id, path FROM books WHERE library_id = ? AND file_hash = ? AND path != ? LIMIT 1`,
+				libraryID, hash, path,
+			).Scan(&renamedBook)
+			if renamedBook.ID != "" {
+				s.db.WithContext(ctx).Exec(
+					`UPDATE books SET path = ?, deleted_at = NULL WHERE id = ?`,
+					path, renamedBook.ID,
+				)
+				log.Printf("[scan] rename detected id=%s old=%s new=%s", renamedBook.ID, renamedBook.Path, path)
+				return nil
+			}
+		}
 	}
 
 	meta := buildMeta(ctx, format, path, sc)
@@ -264,7 +349,8 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		s.upsertSeriesCover(ctx, seriesID, sc.coverPath)
 	}
 
-	onConflict := `ON CONFLICT (path) DO NOTHING`
+	onConflict := `ON CONFLICT (path) DO UPDATE SET
+		deleted_at = NULL, file_hash = EXCLUDED.file_hash`
 	if force {
 		onConflict = `ON CONFLICT (path) DO UPDATE SET
 			title=EXCLUDED.title, type=EXCLUDED.type, series=EXCLUDED.series, series_id=EXCLUDED.series_id,
@@ -280,7 +366,13 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			store_date=EXCLUDED.store_date, isbn=EXCLUDED.isbn, upc=EXCLUDED.upc,
 			community_rating=EXCLUDED.community_rating,
 			community_rating_count=EXCLUDED.community_rating_count,
-			last_modified=EXCLUDED.last_modified, updated_at=NOW()`
+			last_modified=EXCLUDED.last_modified, file_hash=EXCLUDED.file_hash,
+			deleted_at=NULL, updated_at=NOW()`
+	}
+
+	hashVal := ""
+	if hashErr == nil {
+		hashVal = hash
 	}
 
 	result := s.db.WithContext(ctx).Exec(`
@@ -292,7 +384,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			age_rating, adult, language, summary, notes,
 			collection_title, manga_volume, cover_date, store_date,
 			isbn, upc, community_rating, community_rating_count,
-			last_modified
+			last_modified, file_hash
 		) VALUES (
 			?,?,?,?,?,?,
 			?,?,?,?,
@@ -301,7 +393,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			?,?,?,?,?,
 			?,?,?,?,
 			?,?,?,?,
-			?
+			?,?
 		) `+onConflict,
 		libraryID, path, meta.Title, bookType, meta.Series, nullString(seriesID),
 		nullString(meta.IssueNumber), nullString(meta.AlternativeNumber), nullInt(meta.Volume), nullInt(meta.Year),
@@ -310,7 +402,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		coalesceString(meta.AgeRating, "unknown"), adult, nullString(meta.Language), nullString(meta.Summary), nullString(meta.Notes),
 		nullString(meta.CollectionTitle), nullString(meta.MangaVolume), nullString(meta.CoverDate), nullString(meta.StoreDate),
 		nullString(meta.ISBN), nullString(meta.UPC), nullFloat(meta.CommunityRating), nullInt(meta.CommunityRatingCount),
-		nullTime(meta.LastModified),
+		nullTime(meta.LastModified), nullString(hashVal),
 	)
 	if result.Error != nil {
 		log.Printf("[scan] INSERT books error path=%s: %v", path, result.Error)

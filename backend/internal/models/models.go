@@ -156,11 +156,13 @@ type Book struct {
 	Notes                *string   `json:"notes,omitempty"`
 	ISBN                 *string   `json:"isbn,omitempty"`
 	UPC                  *string   `json:"upc,omitempty"`
-	CommunityRating      *float64  `json:"community_rating,omitempty"`
-	CommunityRatingCount *int      `json:"community_rating_count,omitempty"`
+	CommunityRating      *float64   `json:"community_rating,omitempty"`
+	CommunityRatingCount *int       `json:"community_rating_count,omitempty"`
 	LastModified         *time.Time `json:"last_modified,omitempty"`
-	CurrentPage          *int      `json:"current_page,omitempty" gorm:"-"`
-	CreatedAt            time.Time `json:"created_at"`
+	FileHash             *string    `json:"file_hash,omitempty"`
+	DeletedAt            *time.Time `json:"deleted_at,omitempty"`
+	CurrentPage          *int       `json:"current_page,omitempty" gorm:"-"`
+	CreatedAt            time.Time  `json:"created_at"`
 }
 
 type BookExternalID struct {

@@ -42,7 +42,16 @@ export interface Book {
   folder_path?: string
   summary?: string
   created_at: string
+  deleted_at?: string
   current_page?: number
+}
+
+export interface DeletedBook {
+  id: string
+  title: string
+  path: string
+  format: BookFormat
+  deleted_at: string
 }
 
 export interface Series {

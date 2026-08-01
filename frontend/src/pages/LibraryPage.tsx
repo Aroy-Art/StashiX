@@ -4,21 +4,33 @@ import { books as booksApi, libraries as librariesApi } from '@/api/client'
 import { transport } from '@/api/transport'
 import { BookCard } from '@/components/BookCard'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Book, Library, ScanTask } from '@/types'
+import type { Book, DeletedBook, Library, ScanTask } from '@/types'
 
 export default function LibraryPage() {
   const { id } = useParams<{ id: string }>()
   const [library, setLibrary] = useState<Library | null>(null)
   const [bookList, setBookList] = useState<Book[]>([])
+  const [deletedBooks, setDeletedBooks] = useState<DeletedBook[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [scanTask, setScanTask] = useState<ScanTask | null>(null)
   const [newBookIds, setNewBookIds] = useState<Set<string>>(new Set())
+  const [removingIds, setRemovingIds] = useState<Set<string>>(new Set())
   const newBookTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const pendingBookIds = useRef<string[]>([])
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const removeDeletedBook = async (bookId: string) => {
+    setRemovingIds((prev) => new Set(prev).add(bookId))
+    try {
+      await booksApi.delete(bookId)
+      setDeletedBooks((prev) => prev.filter((b) => b.id !== bookId))
+    } finally {
+      setRemovingIds((prev) => { const n = new Set(prev); n.delete(bookId); return n })
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -26,38 +38,50 @@ export default function LibraryPage() {
     Promise.all([
       librariesApi.list().then((libs) => libs?.find((l) => l.id === id) ?? null),
       booksApi.listByLibrary(id),
+      booksApi.listDeleted(id),
     ])
-      .then(([lib, books]) => {
+      .then(([lib, books, deleted]) => {
         setLibrary(lib)
         setBookList(books)
+        setDeletedBooks(deleted)
       })
       .catch(() => setError(true))
       .finally(() => setLoading(false))
 
+    function preloadCover(url: string): Promise<void> {
+      return new Promise((resolve) => {
+        const img = new Image()
+        const t = setTimeout(resolve, 5000)
+        img.onload = () => { clearTimeout(t); resolve() }
+        img.onerror = () => { clearTimeout(t); resolve() }
+        img.src = url
+      })
+    }
+
     function scheduleFlush() {
       if (flushTimer.current !== null) return
-      flushTimer.current = setTimeout(() => {
+      flushTimer.current = setTimeout(async () => {
         flushTimer.current = null
         const batch = pendingBookIds.current.splice(0, 5)
         if (batch.length === 0) return
-        Promise.all(batch.map((bid) => booksApi.get(bid))).then((books) => {
-          setBookList((prev) => {
-            const existingIds = new Set(prev.map((b) => b.id))
-            const fresh = books.filter((b) => !existingIds.has(b.id))
-            return fresh.length > 0 ? [...fresh, ...prev] : prev
-          })
-          setNewBookIds((prev) => {
-            const next = new Set(prev)
-            for (const book of books) {
-              next.add(book.id)
-              const timer = setTimeout(() => {
-                setNewBookIds((s) => { const n = new Set(s); n.delete(book.id); return n })
-                newBookTimers.current.delete(book.id)
-              }, 3000)
-              newBookTimers.current.set(book.id, timer)
-            }
-            return next
-          })
+        const books = await Promise.all(batch.map((bid) => booksApi.get(bid)))
+        await Promise.all(books.map((b) => preloadCover(booksApi.coverUrl(b.id, 'm'))))
+        setBookList((prev) => {
+          const existingIds = new Set(prev.map((b) => b.id))
+          const fresh = books.filter((b) => !existingIds.has(b.id))
+          return fresh.length > 0 ? [...fresh, ...prev] : prev
+        })
+        setNewBookIds((prev) => {
+          const next = new Set(prev)
+          for (const book of books) {
+            next.add(book.id)
+            const timer = setTimeout(() => {
+              setNewBookIds((s) => { const n = new Set(s); n.delete(book.id); return n })
+              newBookTimers.current.delete(book.id)
+            }, 3000)
+            newBookTimers.current.set(book.id, timer)
+          }
+          return next
         })
         if (pendingBookIds.current.length > 0) scheduleFlush()
       }, 800 + Math.random() * 600)
@@ -179,6 +203,37 @@ export default function LibraryPage() {
               <BookCard book={book} />
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Deleted books */}
+      {!loading && !error && deletedBooks.length > 0 && (
+        <div className="mt-10">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Deleted from disk
+            <Badge variant="outline" className="ml-2 text-xs">{deletedBooks.length}</Badge>
+          </h2>
+          <div className="flex flex-col gap-1">
+            {deletedBooks.map((book) => (
+              <div
+                key={book.id}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-md bg-muted/40 border border-border/50"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{book.title}</p>
+                  <p className="text-xs text-muted-foreground font-mono truncate">{book.path}</p>
+                </div>
+                <button
+                  onClick={() => removeDeletedBook(book.id)}
+                  disabled={removingIds.has(book.id)}
+                  className="shrink-0 p-1.5 rounded hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors disabled:opacity-40"
+                  title="Remove from library"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

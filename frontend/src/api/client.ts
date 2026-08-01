@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { transport } from './transport'
-import type { Book, Library, ScanTask, SearchResult, Series, SeriesDetail, TokenPair } from '../types'
+import type { Book, DeletedBook, Library, ScanTask, SearchResult, Series, SeriesDetail, TokenPair } from '../types'
 
 const http = axios.create({ baseURL: '/api' })
 
@@ -106,6 +106,13 @@ export const books = {
   },
   fileUrl(bookId: string) {
     return `/api/books/${bookId}/file`
+  },
+  async listDeleted(libraryId: string): Promise<DeletedBook[]> {
+    const { data } = await http.get<DeletedBook[]>(`/libraries/${libraryId}/deleted-books`)
+    return data
+  },
+  async delete(bookId: string): Promise<void> {
+    await http.delete(`/books/${bookId}`)
   },
 }
 

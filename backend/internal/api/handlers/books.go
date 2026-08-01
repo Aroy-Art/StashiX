@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/danielgtaylor/huma/v2"
 	"github.com/gin-gonic/gin"
@@ -47,7 +48,7 @@ func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOu
 		SELECT b.id, b.library_id, b.path, b.title, b.type, b.series_id, b.series,
 		       b.issue_number, b.volume, b.year, b.publisher, b.format, b.page_count,
 		       b.file_size, b.age_rating, b.language, b.summary, b.created_at,
-		       rp.current_page
+		       b.deleted_at, rp.current_page
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		LEFT JOIN reading_progress rp ON rp.book_id = b.id AND rp.user_id=?
@@ -117,7 +118,8 @@ func (h *BooksHandler) listByLibrary(ctx context.Context, input *listByLibraryIn
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE b.library_id=?
-		  AND (?='admin' OR lp.can_read=TRUE)%s
+		  AND (?='admin' OR lp.can_read=TRUE)
+		  AND b.deleted_at IS NULL%s
 		%s
 		LIMIT ? OFFSET ?`, typeFilter, orderBy)
 
@@ -318,6 +320,65 @@ func (h *BooksHandler) File(c *gin.Context) {
 	c.File(row.Path)
 }
 
+type listDeletedInput struct {
+	ID string `path:"id"`
+}
+
+type deletedBookItem struct {
+	ID        string     `json:"id"`
+	Title     string     `json:"title"`
+	Path      string     `json:"path"`
+	Format    string     `json:"format"`
+	DeletedAt *time.Time `json:"deleted_at"`
+}
+
+type listDeletedOutput struct {
+	Body []deletedBookItem
+}
+
+func (h *BooksHandler) listDeleted(ctx context.Context, input *listDeletedInput) (*listDeletedOutput, error) {
+	claims := auth.ClaimsFromCtx(ctx)
+	var rows []deletedBookItem
+	result := h.db.WithContext(ctx).Raw(`
+		SELECT b.id, b.title, b.path, b.format, b.deleted_at
+		FROM books b
+		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
+		WHERE b.library_id=?
+		  AND (?='admin' OR lp.can_read=TRUE)
+		  AND b.deleted_at IS NOT NULL
+		ORDER BY b.deleted_at DESC`,
+		claims.UserID, input.ID, claims.Role,
+	).Scan(&rows)
+	if result.Error != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
+	if rows == nil {
+		rows = []deletedBookItem{}
+	}
+	return &listDeletedOutput{Body: rows}, nil
+}
+
+type deleteBookInput struct {
+	ID string `path:"id"`
+}
+
+type deleteBookOutput struct{}
+
+func (h *BooksHandler) deleteBook(ctx context.Context, input *deleteBookInput) (*deleteBookOutput, error) {
+	claims := auth.ClaimsFromCtx(ctx)
+	if claims.Role != "admin" {
+		return nil, huma.NewError(http.StatusForbidden, "admin only")
+	}
+	result := h.db.WithContext(ctx).Exec(`DELETE FROM books WHERE id = ?`, input.ID)
+	if result.Error != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
+	if result.RowsAffected == 0 {
+		return nil, huma.NewError(http.StatusNotFound, "book not found")
+	}
+	return &deleteBookOutput{}, nil
+}
+
 func (h *BooksHandler) Register(api huma.API) {
 	huma.Register(api, huma.Operation{
 		OperationID: "getBook",
@@ -334,6 +395,22 @@ func (h *BooksHandler) Register(api huma.API) {
 		Tags:        []string{"Books"},
 		Summary:     "List books in a library with pagination",
 	}, h.listByLibrary)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "listDeletedBooks",
+		Method:      http.MethodGet,
+		Path:        "/api/libraries/{id}/deleted-books",
+		Tags:        []string{"Books"},
+		Summary:     "List soft-deleted books in a library",
+	}, h.listDeleted)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "deleteBook",
+		Method:      http.MethodDelete,
+		Path:        "/api/books/{id}",
+		Tags:        []string{"Books"},
+		Summary:     "Permanently delete a book record (admin only)",
+	}, h.deleteBook)
 
 	huma.Register(api, huma.Operation{
 		OperationID: "getBookPages",
