@@ -85,8 +85,13 @@ export const books = {
   get(bookId: string): Promise<Book> {
     return transport.send('get_book', { book_id: bookId })
   },
-  pages(bookId: string): Promise<{ count: number; pages: string[] }> {
-    return transport.send('get_pages', { book_id: bookId })
+  async pages(bookId: string): Promise<{ count: number; pages: string[] }> {
+    const result = await transport.send<{ count: number; pages: string[] }>('get_pages', { book_id: bookId })
+    const token = localStorage.getItem('access_token')
+    if (token) {
+      result.pages = result.pages.map(u => `${u}?token=${encodeURIComponent(token)}`)
+    }
+    return result
   },
   updateProgress(bookId: string, page: number): Promise<void> {
     return transport.send('update_progress', { book_id: bookId, page })
