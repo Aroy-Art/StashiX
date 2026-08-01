@@ -73,6 +73,7 @@ export interface SeriesBook {
 
 export interface SeriesDetail extends Series {
   books: SeriesBook[]
+  folder_path?: string
 }
 
 export interface ReadingProgress {

@@ -5,7 +5,7 @@ import { thumbnailSize } from '@/lib/thumbnail'
 import { BookCard } from '@/components/BookCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, BookOpen, Layers, Hash, HardDrive } from 'lucide-react'
+import { ChevronLeft, BookOpen, Layers, Hash, HardDrive, FolderOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { formatYears } from '@/lib/series'
 import type { SeriesDetail } from '@/types'
@@ -168,6 +168,17 @@ export default function SeriesPage() {
                     Years
                   </p>
                   <p className="text-sm text-foreground">{yearRange}</p>
+                </div>
+              )}
+              {data.folder_path && (
+                <div className="col-span-2 sm:col-span-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                    Folder
+                  </p>
+                  <p className="text-sm text-foreground flex items-center gap-1.5 font-mono break-all">
+                    <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                    {data.folder_path}
+                  </p>
                 </div>
               )}
             </div>

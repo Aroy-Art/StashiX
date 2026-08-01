@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 
@@ -27,7 +28,8 @@ func NewSeriesHandler(db *gorm.DB, thumbnailDir string) *SeriesHandler {
 
 type SeriesDetail struct {
 	models.Series
-	Books []models.BookSummary `json:"books"`
+	Books      []models.BookSummary `json:"books"`
+	FolderPath string               `json:"folder_path,omitempty"`
 }
 
 type getSeriesInput struct {
@@ -77,7 +79,30 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 		return issueOrd(books[i].IssueNumber) < issueOrd(books[j].IssueNumber)
 	})
 
-	return &getSeriesOutput{Body: &SeriesDetail{Series: s, Books: books}}, nil
+	var firstBookPath string
+	h.db.WithContext(ctx).Raw(
+		`SELECT path FROM books WHERE series_id = ? ORDER BY CAST(issue_number AS REAL) NULLS LAST LIMIT 1`, input.ID,
+	).Scan(&firstBookPath)
+	folderPath := ""
+	if firstBookPath != "" {
+		var libraryRootPath string
+		h.db.WithContext(ctx).Raw(
+			`SELECT root_path FROM libraries WHERE id = ?`, s.LibraryID,
+		).Scan(&libraryRootPath)
+		dir := filepath.Dir(firstBookPath)
+		if libraryRootPath != "" {
+			rel, err := filepath.Rel(libraryRootPath, dir)
+			if err == nil {
+				folderPath = rel
+			} else {
+				folderPath = dir
+			}
+		} else {
+			folderPath = dir
+		}
+	}
+
+	return &getSeriesOutput{Body: &SeriesDetail{Series: s, Books: books, FolderPath: folderPath}}, nil
 }
 
 func issueOrd(s *string) float64 {
