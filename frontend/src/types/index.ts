@@ -38,6 +38,7 @@ export interface Book {
   age_rating: AgeRating
   language?: string
   path?: string
+  folder_path?: string
   summary?: string
   created_at: string
   current_page?: number

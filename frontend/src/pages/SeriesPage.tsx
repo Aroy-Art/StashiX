@@ -175,9 +175,11 @@ export default function SeriesPage() {
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
                     Folder
                   </p>
-                  <p className="text-sm text-foreground flex items-center gap-1.5 font-mono break-all">
+                  <p className="text-sm text-foreground flex items-center gap-1.5 font-mono">
                     <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                    {data.folder_path}
+                    <span>{data.folder_path.split('/').map((seg, i, arr) => (
+                      <span key={i}>{seg}{i < arr.length - 1 && <><wbr/>/</>}</span>
+                    ))}</span>
                   </p>
                 </div>
               )}

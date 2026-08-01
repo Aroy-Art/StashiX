@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -25,12 +26,17 @@ func NewBooksHandler(db *gorm.DB, thumbnailDir string) *BooksHandler {
 	return &BooksHandler{db: db, thumbnailDir: thumbnailDir}
 }
 
+type BookDetail struct {
+	models.Book
+	FolderPath string `json:"folder_path,omitempty"`
+}
+
 type getBookInput struct {
 	ID string `path:"id"`
 }
 
 type getBookOutput struct {
-	Body *models.Book
+	Body *BookDetail
 }
 
 func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOutput, error) {
@@ -51,7 +57,26 @@ func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOu
 	if result.Error != nil || result.RowsAffected == 0 {
 		return nil, huma.NewError(http.StatusNotFound, "book not found")
 	}
-	return &getBookOutput{Body: &b}, nil
+
+	folderPath := ""
+	if b.Path != "" {
+		var libraryRootPath string
+		h.db.WithContext(ctx).Raw(
+			`SELECT root_path FROM libraries WHERE id = ?`, b.LibraryID,
+		).Scan(&libraryRootPath)
+		if libraryRootPath != "" {
+			rel, err := filepath.Rel(libraryRootPath, b.Path)
+			if err == nil {
+				folderPath = rel
+			} else {
+				folderPath = b.Path
+			}
+		} else {
+			folderPath = b.Path
+		}
+	}
+
+	return &getBookOutput{Body: &BookDetail{Book: b, FolderPath: folderPath}}, nil
 }
 
 type listByLibraryInput struct {

@@ -181,7 +181,19 @@ export default function BookPage() {
               <MetaField label="Format" value={FORMAT_LABELS[book.format] ?? book.format} />
               <MetaField label="File Size" value={book.file_size > 0 ? formatFileSize(book.file_size) : undefined} />
               {book.language && <MetaField label="Language" value={book.language} />}
-              {book.path && <MetaField label="File Path" value={book.path} />}
+              {book.folder_path && (
+                <div className="col-span-2 sm:col-span-3">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
+                    Path
+                  </p>
+                  <p className="text-sm text-foreground flex items-center gap-1.5 font-mono">
+                    <FileText className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                    <span>{book.folder_path.split('/').map((seg, i, arr) => (
+                      <span key={i}>{seg}{i < arr.length - 1 && <><wbr/>/</>}</span>
+                    ))}</span>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
