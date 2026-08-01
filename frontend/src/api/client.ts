@@ -71,9 +71,13 @@ export const books = {
   updateProgress(bookId: string, page: number): Promise<void> {
     return transport.send('update_progress', { book_id: bookId, page })
   },
-  coverUrl(bookId: string) {
+  coverUrl(bookId: string, thumbnail?: 'sx' | 's' | 'm' | 'l' | 'lx') {
     const token = localStorage.getItem('access_token')
-    return `/api/books/${bookId}/cover${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    const params = new URLSearchParams()
+    if (token) params.set('token', token)
+    if (thumbnail) params.set('thumbnail', thumbnail)
+    const qs = params.toString()
+    return `/api/books/${bookId}/cover${qs ? `?${qs}` : ''}`
   },
   fileUrl(bookId: string) {
     return `/api/books/${bookId}/file`
@@ -89,9 +93,13 @@ export const series = {
     const { data } = await http.get<Series[]>(`/libraries/${libraryId}/series`)
     return data
   },
-  coverUrl(seriesId: string) {
+  coverUrl(seriesId: string, thumbnail?: 'sx' | 's' | 'm' | 'l' | 'lx') {
     const token = localStorage.getItem('access_token')
-    return `/api/series/${seriesId}/cover${token ? `?token=${encodeURIComponent(token)}` : ''}`
+    const params = new URLSearchParams()
+    if (token) params.set('token', token)
+    if (thumbnail) params.set('thumbnail', thumbnail)
+    const qs = params.toString()
+    return `/api/series/${seriesId}/cover${qs ? `?${qs}` : ''}`
   },
 }
 

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { books as booksApi } from '@/api/client'
 import { cn } from '@/lib/utils'
+import { thumbnailSize } from '@/lib/thumbnail'
 import { Card, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
@@ -36,7 +37,7 @@ export function BookCard({ book, className, to }: BookCardProps) {
         {/* Cover */}
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <img
-            src={booksApi.coverUrl(book.id)}
+            src={booksApi.coverUrl(book.id, thumbnailSize(160))}
             alt={book.title}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"

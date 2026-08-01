@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"context"
+	"io"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 
@@ -15,11 +17,12 @@ import (
 )
 
 type SeriesHandler struct {
-	db *gorm.DB
+	db           *gorm.DB
+	thumbnailDir string
 }
 
-func NewSeriesHandler(db *gorm.DB) *SeriesHandler {
-	return &SeriesHandler{db: db}
+func NewSeriesHandler(db *gorm.DB, thumbnailDir string) *SeriesHandler {
+	return &SeriesHandler{db: db, thumbnailDir: thumbnailDir}
 }
 
 type SeriesDetail struct {
@@ -123,13 +126,13 @@ func (h *SeriesHandler) listByLibrary(ctx context.Context, input *listSeriesInpu
 
 func (h *SeriesHandler) Cover(c *gin.Context) {
 	id := c.Param("id")
+	size := c.Query("thumbnail")
 	claims := auth.ClaimsFromCtx(c.Request.Context())
 	if claims == nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	// permission check: series must be accessible to this user
 	var seriesLibraryID string
 	rPerm := h.db.WithContext(c.Request.Context()).Raw(`
 		SELECT s.library_id FROM series s
@@ -144,17 +147,23 @@ func (h *SeriesHandler) Cover(c *gin.Context) {
 		return
 	}
 
-	// prefer dedicated series cover file
 	var seriesCoverPath string
 	rSC := h.db.WithContext(c.Request.Context()).Raw(
 		`SELECT path FROM series_covers WHERE series_id=?`, id,
 	).Scan(&seriesCoverPath)
 	if rSC.Error == nil && rSC.RowsAffected > 0 && seriesCoverPath != "" {
+		if size != "" {
+			p := seriesCoverPath
+			media.ServeThumbnail(c, h.thumbnailDir, "series", id, size, func() (io.ReadCloser, error) {
+				return os.Open(p)
+			})
+			return
+		}
+		c.Header("Cache-Control", "public, max-age=604800")
 		c.File(seriesCoverPath)
 		return
 	}
 
-	// fall back: use cover from first book in series
 	var coverBookID string
 	r1 := h.db.WithContext(c.Request.Context()).Raw(`
 		SELECT id FROM books WHERE series_id = ? ORDER BY CAST(issue_number AS REAL) NULLS LAST LIMIT 1`, id,
@@ -169,6 +178,14 @@ func (h *SeriesHandler) Cover(c *gin.Context) {
 		`SELECT path FROM book_covers WHERE book_id=?`, coverBookID,
 	).Scan(&coverPath)
 	if r2.Error == nil && r2.RowsAffected > 0 && coverPath != "" {
+		if size != "" {
+			p := coverPath
+			media.ServeThumbnail(c, h.thumbnailDir, "series", id, size, func() (io.ReadCloser, error) {
+				return os.Open(p)
+			})
+			return
+		}
+		c.Header("Cache-Control", "public, max-age=604800")
 		c.File(coverPath)
 		return
 	}
@@ -187,6 +204,15 @@ func (h *SeriesHandler) Cover(c *gin.Context) {
 
 	if row.Format == "pdf" || row.Format == "epub" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no cover available"})
+		return
+	}
+
+	if size != "" {
+		bookPath, bookFormat := row.Path, row.Format
+		media.ServeThumbnail(c, h.thumbnailDir, "series", id, size, func() (io.ReadCloser, error) {
+			rc, _, err := media.CoverReader(bookPath, media.Format(bookFormat))
+			return rc, err
+		})
 		return
 	}
 

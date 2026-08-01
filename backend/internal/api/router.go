@@ -18,7 +18,7 @@ import (
 	"github.com/aroy/stashix/internal/ws"
 )
 
-func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret string) http.Handler {
+func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret, thumbnailDir string) http.Handler {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 	r.Use(gin.Logger())
@@ -66,7 +66,7 @@ func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret str
 	registerWSHandlers(wsRouter, db)
 	r.GET("/ws", gin.WrapH(wsRouter))
 
-	booksH := handlers.NewBooksHandler(db)
+	booksH := handlers.NewBooksHandler(db, thumbnailDir)
 	r.GET("/api/books/:id/page/:n", booksH.Page)
 	r.GET("/api/books/:id/cover", booksH.Cover)
 	r.GET("/api/books/:id/file", booksH.File)
@@ -75,7 +75,7 @@ func NewRouter(db *gorm.DB, hub *ws.Hub, scanner *library.Scanner, jwtSecret str
 	handlers.NewSetupHandler(db, jwtSecret).Register(api)
 	handlers.NewLibraryHandler(db, scanner, hub).Register(api)
 	booksH.Register(api)
-	seriesH := handlers.NewSeriesHandler(db)
+	seriesH := handlers.NewSeriesHandler(db, thumbnailDir)
 	r.GET("/api/series/:id/cover", seriesH.Cover)
 	seriesH.Register(api)
 	handlers.NewSearchHandler(db).Register(api)

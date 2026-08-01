@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -15,11 +17,12 @@ import (
 )
 
 type BooksHandler struct {
-	db *gorm.DB
+	db           *gorm.DB
+	thumbnailDir string
 }
 
-func NewBooksHandler(db *gorm.DB) *BooksHandler {
-	return &BooksHandler{db: db}
+func NewBooksHandler(db *gorm.DB, thumbnailDir string) *BooksHandler {
+	return &BooksHandler{db: db, thumbnailDir: thumbnailDir}
 }
 
 type getBookInput struct {
@@ -210,12 +213,21 @@ func (h *BooksHandler) Page(c *gin.Context) {
 
 func (h *BooksHandler) Cover(c *gin.Context) {
 	id := c.Param("id")
+	size := c.Query("thumbnail")
 
 	var coverPath string
 	r1 := h.db.WithContext(c.Request.Context()).Raw(
 		`SELECT path FROM book_covers WHERE book_id=?`, id,
 	).Scan(&coverPath)
 	if r1.Error == nil && r1.RowsAffected > 0 && coverPath != "" {
+		if size != "" {
+			p := coverPath
+			media.ServeThumbnail(c, h.thumbnailDir, "books", id, size, func() (io.ReadCloser, error) {
+				return os.Open(p)
+			})
+			return
+		}
+		c.Header("Cache-Control", "public, max-age=604800")
 		c.File(coverPath)
 		return
 	}
@@ -234,6 +246,15 @@ func (h *BooksHandler) Cover(c *gin.Context) {
 
 	if row.Format == "pdf" || row.Format == "epub" {
 		c.JSON(http.StatusNotFound, gin.H{"error": "no cover available"})
+		return
+	}
+
+	if size != "" {
+		bookPath, bookFormat := row.Path, row.Format
+		media.ServeThumbnail(c, h.thumbnailDir, "books", id, size, func() (io.ReadCloser, error) {
+			rc, _, err := media.CoverReader(bookPath, media.Format(bookFormat))
+			return rc, err
+		})
 		return
 	}
 

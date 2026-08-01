@@ -72,7 +72,7 @@ func main() {
 		go fw.Run(ctx, libMap)
 	}
 
-	router := api.NewRouter(gormDB, hub, scanner, cfg.JWTSecret)
+	router := api.NewRouter(gormDB, hub, scanner, cfg.JWTSecret, cfg.ThumbnailDir)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

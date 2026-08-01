@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { books as booksApi } from '@/api/client'
+import { thumbnailSize } from '@/lib/thumbnail'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, BookOpen, FileText, Globe, Layers } from 'lucide-react'
@@ -89,7 +90,7 @@ export default function BookPage() {
           <div className="shrink-0 w-36 sm:w-44">
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden border border-border bg-muted shadow-xl">
               <img
-                src={booksApi.coverUrl(book.id)}
+                src={booksApi.coverUrl(book.id, thumbnailSize(180))}
                 alt={book.title}
                 className="w-full h-full object-cover"
                 onError={(e) => {

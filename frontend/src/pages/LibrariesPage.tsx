@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { libraries as librariesApi, tasks as tasksApi, books as booksApi, series as seriesApi } from '@/api/client'
+import { thumbnailSize } from '@/lib/thumbnail'
 import { transport } from '@/api/transport'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
@@ -160,7 +161,7 @@ export default function LibrariesPage() {
                     {lib.previewBooks.slice(0, 5).map((book) => (
                       <img
                         key={book.id}
-                        src={booksApi.coverUrl(book.id)}
+                        src={booksApi.coverUrl(book.id, thumbnailSize(55))}
                         alt=""
                         className="flex-1 min-w-0 object-cover"
                         loading="lazy"

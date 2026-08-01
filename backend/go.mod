@@ -22,6 +22,7 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
+	golang.org/x/image v0.44.0 // indirect
 )
 
 require (

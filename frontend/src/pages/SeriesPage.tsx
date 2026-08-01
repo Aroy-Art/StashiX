@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { series as seriesApi, books as booksApi } from '@/api/client'
+import { thumbnailSize } from '@/lib/thumbnail'
 import { BookCard } from '@/components/BookCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -76,13 +77,14 @@ export default function SeriesPage() {
           <div className="shrink-0 w-36 sm:w-44">
             <div className="relative aspect-[2/3] rounded-lg overflow-hidden border border-border bg-muted shadow-xl">
               <img
-                src={seriesApi.coverUrl(id!)}
+                src={seriesApi.coverUrl(id!, thumbnailSize(180))}
                 alt={data.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
                   const img = e.target as HTMLImageElement
-                  if (firstBook && img.src !== booksApi.coverUrl(firstBook.id)) {
-                    img.src = booksApi.coverUrl(firstBook.id)
+                  const fallbackSrc = firstBook ? booksApi.coverUrl(firstBook.id, thumbnailSize(180)) : null
+                  if (fallbackSrc && img.src !== fallbackSrc) {
+                    img.src = fallbackSrc
                   } else {
                     img.style.display = 'none'
                     const fb = img.nextElementSibling as HTMLElement | null
