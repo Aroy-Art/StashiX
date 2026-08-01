@@ -161,7 +161,7 @@ class Transport {
   }
 
   private sendWS<T>(type: string, payload: Record<string, unknown>): Promise<T> {
-    const id = crypto.randomUUID()
+    const id = crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)
     const msg = JSON.stringify({ id, type, payload })
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, {
