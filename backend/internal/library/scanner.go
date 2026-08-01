@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -157,6 +158,17 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 	return contexts
 }
 
+var adultRe = regexp.MustCompile(`(?i)\badult\b|18\+|r-?18|\(18\)|\[18\]`)
+
+func isAdultContent(path string) bool {
+	for _, part := range strings.Split(filepath.ToSlash(path), "/") {
+		if adultRe.MatchString(part) {
+			return true
+		}
+	}
+	return false
+}
+
 func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *seriesContext, force bool) error {
 	format, err := media.DetectFormat(path)
 	if err != nil {
@@ -216,7 +228,9 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		startYear = meta.SeriesStartYear
 	}
 
-	seriesID := s.upsertSeries(ctx, libraryID, meta, publisherID, imprintID, startYear, endYear, ongoing)
+	adult := isAdultContent(path)
+
+	seriesID := s.upsertSeries(ctx, libraryID, meta, publisherID, imprintID, startYear, endYear, ongoing, adult)
 	if seriesID != "" && sc != nil && sc.coverPath != "" {
 		s.upsertSeriesCover(ctx, seriesID, sc.coverPath)
 	}
@@ -230,7 +244,8 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			publisher_id=EXCLUDED.publisher_id, imprint_id=EXCLUDED.imprint_id,
 			format=EXCLUDED.format, comic_format=EXCLUDED.comic_format,
 			page_count=EXCLUDED.page_count, file_size=EXCLUDED.file_size,
-			age_rating=EXCLUDED.age_rating, language=EXCLUDED.language, summary=EXCLUDED.summary,
+			age_rating=EXCLUDED.age_rating, adult=books.adult OR EXCLUDED.adult,
+			language=EXCLUDED.language, summary=EXCLUDED.summary,
 			notes=EXCLUDED.notes, collection_title=EXCLUDED.collection_title,
 			manga_volume=EXCLUDED.manga_volume, cover_date=EXCLUDED.cover_date,
 			store_date=EXCLUDED.store_date, isbn=EXCLUDED.isbn, upc=EXCLUDED.upc,
@@ -245,7 +260,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			issue_number, alternative_number, volume, year,
 			publisher, publisher_id, imprint_id,
 			format, comic_format, page_count, file_size,
-			age_rating, language, summary, notes,
+			age_rating, adult, language, summary, notes,
 			collection_title, manga_volume, cover_date, store_date,
 			isbn, upc, community_rating, community_rating_count,
 			last_modified
@@ -254,7 +269,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 			?,?,?,?,
 			?,?,?,
 			?,?,?,?,
-			?,?,?,?,
+			?,?,?,?,?,
 			?,?,?,?,
 			?,?,?,?,
 			?
@@ -263,7 +278,7 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 		nullString(meta.IssueNumber), nullString(meta.AlternativeNumber), nullInt(meta.Volume), nullInt(meta.Year),
 		nullString(meta.Publisher), nullString(publisherID), nullString(imprintID),
 		string(format), nullString(meta.SeriesFormat), pageCount, info.Size(),
-		coalesceString(meta.AgeRating, "unknown"), nullString(meta.Language), nullString(meta.Summary), nullString(meta.Notes),
+		coalesceString(meta.AgeRating, "unknown"), adult, nullString(meta.Language), nullString(meta.Summary), nullString(meta.Notes),
 		nullString(meta.CollectionTitle), nullString(meta.MangaVolume), nullString(meta.CoverDate), nullString(meta.StoreDate),
 		nullString(meta.ISBN), nullString(meta.UPC), nullFloat(meta.CommunityRating), nullInt(meta.CommunityRatingCount),
 		nullTime(meta.LastModified),
@@ -672,7 +687,7 @@ func (s *Scanner) upsertUniverse(ctx context.Context, name, designation, sourceI
 	return id
 }
 
-func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *metadata.BookMeta, publisherID, imprintID string, startYear, endYear int, ongoing bool) string {
+func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *metadata.BookMeta, publisherID, imprintID string, startYear, endYear int, ongoing, adult bool) string {
 	if meta.Series == "" {
 		return ""
 	}
@@ -680,9 +695,9 @@ func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *meta
 	res := s.db.WithContext(ctx).Raw(`
 		INSERT INTO series (library_id, name, sort_name, volume, language, format,
 		                    publisher, publisher_id, imprint_id,
-		                    start_year, end_year, ongoing,
+		                    start_year, end_year, ongoing, adult,
 		                    issue_count, volume_count)
-		VALUES (?,?,?,?,?,?,  ?,?,?,  ?,?,?,  ?,?)
+		VALUES (?,?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?)
 		ON CONFLICT (library_id, name) DO UPDATE SET
 			sort_name   = COALESCE(EXCLUDED.sort_name,   series.sort_name),
 			volume      = COALESCE(EXCLUDED.volume,      series.volume),
@@ -694,13 +709,14 @@ func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *meta
 			start_year  = COALESCE(EXCLUDED.start_year,  series.start_year),
 			end_year    = COALESCE(EXCLUDED.end_year,    series.end_year),
 			ongoing     = EXCLUDED.ongoing,
+			adult       = series.adult OR EXCLUDED.adult,
 			issue_count = COALESCE(EXCLUDED.issue_count, series.issue_count),
 			volume_count= COALESCE(EXCLUDED.volume_count,series.volume_count)
 		RETURNING id`,
 		libraryID, meta.Series, nullString(meta.SeriesSortName), nullInt(meta.Volume),
 		coalesceString(meta.SeriesLanguage, "en"), nullString(meta.SeriesFormat),
 		nullString(meta.Publisher), nullString(publisherID), nullString(imprintID),
-		nullInt(startYear), nullInt(endYear), ongoing,
+		nullInt(startYear), nullInt(endYear), ongoing, adult,
 		nullInt(meta.SeriesIssueCount), nullInt(meta.SeriesVolumeCount),
 	).Scan(&id)
 	if res.Error != nil {

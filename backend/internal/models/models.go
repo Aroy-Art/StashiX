@@ -54,6 +54,7 @@ type Series struct {
 	StartYear        *int                    `json:"start_year,omitempty"`
 	EndYear          *int                    `json:"end_year,omitempty"`
 	Ongoing          bool                    `json:"ongoing"`
+	Adult            bool                    `json:"adult"`
 	IssueCount       *int                    `json:"issue_count,omitempty"`
 	VolumeCount      *int                    `json:"volume_count,omitempty"`
 	Publisher        *string                 `json:"publisher,omitempty"`
@@ -115,6 +116,7 @@ type Book struct {
 	PageCount            int       `json:"page_count"`
 	FileSize             int64     `json:"file_size"`
 	AgeRating            string    `json:"age_rating"`
+	Adult                bool      `json:"adult"`
 	Language             *string   `json:"language,omitempty"`
 	Summary              *string   `json:"summary,omitempty"`
 	Notes                *string   `json:"notes,omitempty"`

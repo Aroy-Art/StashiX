@@ -245,7 +245,7 @@ func TestBuildMeta_StandaloneNoSeries(t *testing.T) {
 
 func TestUpsertSeries_EmptyName(t *testing.T) {
 	s := &Scanner{}
-	if got := s.upsertSeries(nil, "lib-id", "", "Viz", 0, 0, false); got != "" {
+	if got := s.upsertSeries(nil, "lib-id", &metadata.BookMeta{}, "", "", 0, 0, false, false); got != "" {
 		t.Errorf("empty series name should return empty, got %q", got)
 	}
 }
