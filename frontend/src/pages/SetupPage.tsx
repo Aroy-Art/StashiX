@@ -1,10 +1,10 @@
-import { useState, FormEvent } from 'react'
+import { useState, useRef, FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/auth'
 import { transport } from '@/api/transport'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Zap, CheckCircle2 } from 'lucide-react'
+import { Zap, CheckCircle2, Plus, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Step = 'account' | 'library'
@@ -197,10 +197,25 @@ function AccountStep({ onDone }: { onDone: (token: string) => void }) {
 function LibraryStep({ token }: { token: string }) {
   const [name, setName] = useState('Comics')
   const [path, setPath] = useState('')
+  const [sfFolders, setSfFolders] = useState<string[]>([])
+  const [sfInput, setSfInput] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const sfInputRef = useRef<HTMLInputElement>(null)
   const navigate = useNavigate()
   const restore = useAuthStore((s) => s.restore)
+
+  function addFolder() {
+    const val = sfInput.trim()
+    if (!val || sfFolders.includes(val)) return
+    setSfFolders((f) => [...f, val])
+    setSfInput('')
+    sfInputRef.current?.focus()
+  }
+
+  function removeFolder(folder: string) {
+    setSfFolders((f) => f.filter((x) => x !== folder))
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -213,7 +228,7 @@ function LibraryStep({ token }: { token: string }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name, root_path: path }),
+        body: JSON.stringify({ name, root_path: path, standalone_folders: sfFolders }),
       })
       if (!res.ok) {
         const body = await res.json().catch(() => ({ error: res.statusText }))
@@ -246,6 +261,37 @@ function LibraryStep({ token }: { token: string }) {
       >
         <Input type="text" value={path} onChange={(e) => setPath(e.target.value)}
           placeholder="/libraries/comics" required className="h-10 font-mono text-xs" />
+      </Field>
+
+      <Field
+        label="Standalone book folders"
+        hint="Folders whose name matches one of these are treated as standalone books, not series."
+      >
+        <div className="flex gap-2">
+          <Input
+            ref={sfInputRef}
+            placeholder="e.g. One-Shot"
+            value={sfInput}
+            onChange={(e) => setSfInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addFolder() } }}
+            className="h-9 text-sm"
+          />
+          <Button type="button" variant="outline" size="sm" onClick={addFolder} className="h-9 px-3 shrink-0">
+            <Plus className="w-4 h-4" />
+          </Button>
+        </div>
+        {sfFolders.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {sfFolders.map((f) => (
+              <span key={f} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs text-foreground">
+                {f}
+                <button type="button" onClick={() => removeFolder(f)} className="text-muted-foreground hover:text-foreground">
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </Field>
 
       {error && (
