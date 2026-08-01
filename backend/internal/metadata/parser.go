@@ -291,7 +291,7 @@ var (
 	reChapter  = regexp.MustCompile(`(?i)^(.+?)(?:\s+\((\d{4})\))?\s+-\s+[Cc]hapter\s+(\d+(?:\.\d+)?)`)
 	reVolTitle = regexp.MustCompile(`(?i)^[Vv]olume\s+(\d+)(?:\s+-\s+(.+))?$`)
 	reVolChap  = regexp.MustCompile(`(?i)^(.+?)\s+v(\d+)\s+c(\d+(?:\.\d+)?)`)
-	reIssueNum = regexp.MustCompile(`(?i)^(.+?)\s+(\d{3,})(?:\s+\((\d{4})\))?(?:\s+\([^)]+\))*\s*$`)
+	reIssueNum = regexp.MustCompile(`(?i)^(.+?)\s+(\d{1,4})(?:\s+\((\d{4})\))?(?:\s+(?:\([^)]+\)|\S+))*\s*$`)
 	reDirYear  = regexp.MustCompile(`\s*\((\d{4})(-(\d{4})?)?\)\s*$`)
 )
 

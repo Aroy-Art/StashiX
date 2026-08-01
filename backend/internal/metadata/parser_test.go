@@ -89,6 +89,23 @@ func TestParseFilename(t *testing.T) {
 			wantYear:   2020,
 			wantTitle:  "Some Comic #12",
 		},
+		// bare 2-digit issue number without # or padding
+		{
+			name:       "bare 2-digit issue",
+			input:      "The Rook 14.cbz",
+			wantSeries: "The Rook",
+			wantIssue:  "14",
+			wantTitle:  "The Rook #14",
+		},
+		// zero-padded issue with year and bare page-count suffix
+		{
+			name:       "zero-padded issue with year and bare suffix",
+			input:      "The Rook 008 (1981) 69p.cbz",
+			wantSeries: "The Rook",
+			wantIssue:  "8",
+			wantYear:   1981,
+			wantTitle:  "The Rook #8",
+		},
 		// issue number pattern: Series #N (Year)
 		{
 			name:      "series issue with year",
