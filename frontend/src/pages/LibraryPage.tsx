@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { books as booksApi, libraries as librariesApi } from '@/api/client'
 import { transport } from '@/api/transport'
 import { BookCard } from '@/components/BookCard'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft } from 'lucide-react'
-import type { Book, Library } from '@/types'
+import { cn } from '@/lib/utils'
+import type { Book, Library, ScanTask } from '@/types'
 
 export default function LibraryPage() {
   const { id } = useParams<{ id: string }>()
@@ -13,6 +14,11 @@ export default function LibraryPage() {
   const [bookList, setBookList] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [scanTask, setScanTask] = useState<ScanTask | null>(null)
+  const [newBookIds, setNewBookIds] = useState<Set<string>>(new Set())
+  const newBookTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const pendingBookIds = useRef<string[]>([])
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -28,14 +34,56 @@ export default function LibraryPage() {
       .catch(() => setError(true))
       .finally(() => setLoading(false))
 
-    const off = transport.on('book_added', (payload) => {
+    function scheduleFlush() {
+      if (flushTimer.current !== null) return
+      flushTimer.current = setTimeout(() => {
+        flushTimer.current = null
+        const batch = pendingBookIds.current.splice(0, 5)
+        if (batch.length === 0) return
+        Promise.all(batch.map((bid) => booksApi.get(bid))).then((books) => {
+          setBookList((prev) => {
+            const existingIds = new Set(prev.map((b) => b.id))
+            const fresh = books.filter((b) => !existingIds.has(b.id))
+            return fresh.length > 0 ? [...fresh, ...prev] : prev
+          })
+          setNewBookIds((prev) => {
+            const next = new Set(prev)
+            for (const book of books) {
+              next.add(book.id)
+              const timer = setTimeout(() => {
+                setNewBookIds((s) => { const n = new Set(s); n.delete(book.id); return n })
+                newBookTimers.current.delete(book.id)
+              }, 3000)
+              newBookTimers.current.set(book.id, timer)
+            }
+            return next
+          })
+        })
+        if (pendingBookIds.current.length > 0) scheduleFlush()
+      }, 800 + Math.random() * 600)
+    }
+
+    const offAdded = transport.on('book_added', (payload) => {
       const p = payload as { book_id: string; library_id: string }
       if (p.library_id !== id) return
-      booksApi.get(p.book_id).then((book) => {
-        setBookList((prev) => [book, ...prev])
-      })
+      pendingBookIds.current.push(p.book_id)
+      scheduleFlush()
     })
-    return off
+
+    const offProgress = transport.on('scan_progress', (payload) => {
+      const t = payload as ScanTask
+      if (t.library_id !== id) return
+      setScanTask(t.done ? null : t)
+    })
+
+    return () => {
+      offAdded()
+      offProgress()
+      if (flushTimer.current !== null) clearTimeout(flushTimer.current)
+      pendingBookIds.current = []
+      for (const timer of newBookTimers.current.values()) clearTimeout(timer)
+      newBookTimers.current.clear()
+    }
   }, [id])
 
   return (
@@ -58,7 +106,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Header */}
-      <div className="flex items-end gap-4 mb-8">
+      <div className="flex items-end gap-4 mb-4">
         <div>
           <h1 className="font-display font-bold text-2xl text-foreground tracking-tight">
             {library?.name ?? 'Library'}
@@ -73,6 +121,27 @@ export default function LibraryPage() {
           </Badge>
         )}
       </div>
+
+      {/* Scan progress */}
+      {scanTask && (
+        <div className="mb-6">
+          <div className="flex justify-between text-[11px] text-muted-foreground mb-1">
+            <span className="text-volt-3 animate-pulse">Scanning…</span>
+            <span className="font-mono">
+              {scanTask.scanned} / {scanTask.total}
+              {scanTask.total > 0 && (
+                <> · {Math.round((scanTask.scanned / scanTask.total) * 100)}%</>
+              )}
+            </span>
+          </div>
+          <div className="h-0.5 rounded-full bg-border overflow-hidden">
+            <div
+              className="h-full rounded-full shimmer-bar transition-all duration-300"
+              style={{ width: scanTask.total > 0 ? `${Math.round((scanTask.scanned / scanTask.total) * 100)}%` : '0%' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Loading */}
       {loading && (
@@ -105,6 +174,7 @@ export default function LibraryPage() {
             <div
               key={book.id}
               style={{ animationDelay: `${Math.min(i * 30, 300)}ms` }}
+              className={cn(newBookIds.has(book.id) && 'animate-book-arrive')}
             >
               <BookCard book={book} />
             </div>

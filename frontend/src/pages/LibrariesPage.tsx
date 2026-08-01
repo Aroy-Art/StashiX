@@ -88,7 +88,7 @@ export default function LibrariesPage() {
   }, [])
 
   useEffect(() => {
-    return transport.on('scan_progress', (payload) => {
+    const offProgress = transport.on('scan_progress', (payload) => {
       const t = payload as ScanTask
       setActiveTasks((prev) => {
         if (t.done) {
@@ -98,7 +98,74 @@ export default function LibrariesPage() {
         }
         return { ...prev, [t.library_id]: t }
       })
+      if (t.done) {
+        librariesApi.list().then((updatedLibs) => {
+          const updated = updatedLibs?.find((l) => l.id === t.library_id)
+          if (updated) {
+            setLibs((prev) =>
+              prev.map((l) =>
+                l.id === updated.id
+                  ? { ...l, book_count: updated.book_count, issue_count: updated.issue_count, series_count: updated.series_count }
+                  : l
+              )
+            )
+          }
+        })
+      }
     })
+
+    const pendingBooks = new Map<string, string[]>() // library_id → book_ids
+    let flushTimer: ReturnType<typeof setTimeout> | null = null
+
+    function scheduleFlush() {
+      if (flushTimer !== null) return
+      flushTimer = setTimeout(() => {
+        flushTimer = null
+        const snapshot = new Map(pendingBooks)
+        pendingBooks.clear()
+
+        for (const [libraryId, bookIds] of snapshot) {
+          const batch = bookIds.splice(0, 5)
+          if (batch.length === 0) continue
+          Promise.all(batch.map((bid) => booksApi.get(bid))).then((books) => {
+            setLibs((prev) =>
+              prev.map((lib) => {
+                if (lib.id !== libraryId) return lib
+                let { recentBooks, recentIssues, previewBooks } = lib
+                for (const book of books) {
+                  const isIssue = book.type === 'issue'
+                  const dedup = <T extends { id: string }>(arr: T[], item: T) =>
+                    arr.some((x) => x.id === item.id) ? arr : [item, ...arr]
+                  recentBooks = isIssue ? recentBooks : dedup(recentBooks, book).slice(0, 20)
+                  recentIssues = isIssue ? dedup(recentIssues, book).slice(0, 20) : recentIssues
+                  previewBooks = previewBooks.length < 5 ? dedup(previewBooks, book) : previewBooks
+                }
+                return { ...lib, recentBooks, recentIssues, previewBooks }
+              })
+            )
+          })
+          if (bookIds.length > 0) {
+            pendingBooks.set(libraryId, bookIds)
+          }
+        }
+        if (pendingBooks.size > 0) scheduleFlush()
+      }, 800 + Math.random() * 600)
+    }
+
+    const offAdded = transport.on('book_added', (payload) => {
+      const p = payload as { book_id: string; library_id: string }
+      const queue = pendingBooks.get(p.library_id) ?? []
+      queue.push(p.book_id)
+      pendingBooks.set(p.library_id, queue)
+      scheduleFlush()
+    })
+
+    return () => {
+      offProgress()
+      offAdded()
+      if (flushTimer !== null) clearTimeout(flushTimer)
+      pendingBooks.clear()
+    }
   }, [])
 
   const openSettings = (lib: LibraryWithContent) => {
