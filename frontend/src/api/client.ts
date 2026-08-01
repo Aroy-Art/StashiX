@@ -10,6 +10,23 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+http.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const original = error.config
+    const status = error.response?.status
+    if ((status === 401 || status === 403) && !original._retry) {
+      original._retry = true
+      const refreshed = await transport.tryRefresh()
+      if (refreshed) {
+        original.headers.Authorization = `Bearer ${localStorage.getItem('access_token')}`
+        return http(original)
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const auth = {
   async login(email: string, password: string): Promise<TokenPair> {
     const { data } = await http.post<TokenPair>('/auth/login', { email, password })
@@ -37,6 +54,9 @@ export const libraries = {
   async scan(libraryId: string, force = false): Promise<void> {
     const params = force ? '?force=true' : ''
     await http.post(`/libraries/${libraryId}/scan${params}`)
+  },
+  async update(libraryId: string, data: { standalone_folders: string[] }): Promise<void> {
+    await http.patch(`/libraries/${libraryId}`, data)
   },
 }
 

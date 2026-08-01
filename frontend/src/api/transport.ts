@@ -195,7 +195,7 @@ class Transport {
     }
 
     const res = await fetch(url, init)
-    if (res.status === 401 && !isRetry) {
+    if ((res.status === 401 || res.status === 403) && !isRetry) {
       const refreshed = await this.tryRefresh()
       if (refreshed) return this.sendREST<T>(type, payload, true)
     }
@@ -206,7 +206,7 @@ class Transport {
     return res.json() as Promise<T>
   }
 
-  private async tryRefresh(): Promise<boolean> {
+  async tryRefresh(): Promise<boolean> {
     const refreshToken = localStorage.getItem('refresh_token')
     if (!refreshToken) return false
     try {
