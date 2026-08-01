@@ -48,13 +48,14 @@ func (s *Scanner) ActiveTasks() []ScanProgress {
 }
 
 type seriesContext struct {
-	publisher string
-	series    string
-	year      int
-	endYear   int
-	ongoing   bool
-	indexMeta *metadata.BookMeta
-	coverPath string
+	publisher  string
+	series     string
+	year       int
+	endYear    int
+	ongoing    bool
+	standalone bool
+	indexMeta  *metadata.BookMeta
+	coverPath  string
 }
 
 func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bool) {
@@ -130,6 +131,7 @@ func buildSeriesContexts(libraryRoot string, paths []string, standaloneFolders [
 
 		if len(sfSet) > 0 && sfSet[strings.ToLower(filepath.Base(dir))] {
 			// parent folder is configured as a standalone container — leave series empty
+			sc.standalone = true
 			log.Printf("[scan] standalone folder matched dir=%s", dir)
 			if m, err := metadata.ParseIndexJSON(filepath.Join(dir, "index.json")); err == nil {
 				sc.indexMeta = m
@@ -449,14 +451,22 @@ func buildMeta(_ context.Context, format media.Format, path string, sc *seriesCo
 		applySeriesMeta(meta, sc.indexMeta)
 	}
 
+	fileMeta := metadata.ParseFilename(path)
+	if sc != nil && sc.standalone {
+		fileMeta.Series = ""
+	}
+
 	if format == media.FormatCBZ || format == media.FormatEPUB {
 		if archMeta, err := metadata.ParseZipArchive(path); err == nil && archMeta.Title != "" {
+			if sc != nil && sc.standalone {
+				archMeta.Series = ""
+			}
 			applyAllMeta(meta, archMeta)
 			goto done
 		}
 	}
 
-	applyFileMeta(meta, metadata.ParseFilename(path))
+	applyFileMeta(meta, fileMeta)
 
 done:
 	if meta.Title == "" {
