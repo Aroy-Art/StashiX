@@ -8,10 +8,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { SectionCarousel } from '@/components/SectionCarousel'
 import { BookCard } from '@/components/BookCard'
 import { SeriesCard } from '@/components/SeriesCard'
-import { ScanLine, Library, FolderPlus, RefreshCw, RotateCcw, Settings, X, Plus } from 'lucide-react'
+import { ScanLine, Library, FolderPlus, RefreshCw, RotateCcw, Settings, X, Plus, MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Library as LibraryType, ScanTask, Book, Series } from '@/types'
 
@@ -114,12 +120,22 @@ export default function LibrariesPage() {
       }
     })
 
+    function preloadCover(url: string): Promise<void> {
+      return new Promise((resolve) => {
+        const img = new Image()
+        const t = setTimeout(resolve, 5000)
+        img.onload = () => { clearTimeout(t); resolve() }
+        img.onerror = () => { clearTimeout(t); resolve() }
+        img.src = url
+      })
+    }
+
     const pendingBooks = new Map<string, string[]>() // library_id → book_ids
     let flushTimer: ReturnType<typeof setTimeout> | null = null
 
     function scheduleFlush() {
       if (flushTimer !== null) return
-      flushTimer = setTimeout(() => {
+      flushTimer = setTimeout(async () => {
         flushTimer = null
         const snapshot = new Map(pendingBooks)
         pendingBooks.clear()
@@ -127,26 +143,24 @@ export default function LibrariesPage() {
         for (const [libraryId, bookIds] of snapshot) {
           const batch = bookIds.splice(0, 5)
           if (batch.length === 0) continue
-          Promise.all(batch.map((bid) => booksApi.get(bid))).then((books) => {
-            setLibs((prev) =>
-              prev.map((lib) => {
-                if (lib.id !== libraryId) return lib
-                let { recentBooks, recentIssues, previewBooks } = lib
-                for (const book of books) {
-                  const isIssue = book.type === 'issue'
-                  const dedup = <T extends { id: string }>(arr: T[], item: T) =>
-                    arr.some((x) => x.id === item.id) ? arr : [item, ...arr]
-                  recentBooks = isIssue ? recentBooks : dedup(recentBooks, book).slice(0, 20)
-                  recentIssues = isIssue ? dedup(recentIssues, book).slice(0, 20) : recentIssues
-                  previewBooks = previewBooks.length < 5 ? dedup(previewBooks, book) : previewBooks
-                }
-                return { ...lib, recentBooks, recentIssues, previewBooks }
-              })
-            )
-          })
-          if (bookIds.length > 0) {
-            pendingBooks.set(libraryId, bookIds)
-          }
+          const books = await Promise.all(batch.map((bid) => booksApi.get(bid)))
+          await Promise.all(books.map((b) => preloadCover(booksApi.coverUrl(b.id, 'm'))))
+          setLibs((prev) =>
+            prev.map((lib) => {
+              if (lib.id !== libraryId) return lib
+              let { recentBooks, recentIssues, previewBooks } = lib
+              for (const book of books) {
+                const isIssue = book.type === 'issue'
+                const dedup = <T extends { id: string }>(arr: T[], item: T) =>
+                  arr.some((x) => x.id === item.id) ? arr : [item, ...arr]
+                recentBooks = isIssue ? recentBooks : dedup(recentBooks, book).slice(0, 20)
+                recentIssues = isIssue ? dedup(recentIssues, book).slice(0, 20) : recentIssues
+                previewBooks = previewBooks.length < 5 ? dedup(previewBooks, book) : previewBooks
+              }
+              return { ...lib, recentBooks, recentIssues, previewBooks }
+            })
+          )
+          if (bookIds.length > 0) pendingBooks.set(libraryId, bookIds)
         }
         if (pendingBooks.size > 0) scheduleFlush()
       }, 800 + Math.random() * 600)
@@ -272,7 +286,7 @@ export default function LibrariesPage() {
                         className="flex-1 min-w-0 object-cover"
                         loading="lazy"
                         onError={(e) => {
-                          ;(e.target as HTMLImageElement).style.display = 'none'
+                          ; (e.target as HTMLImageElement).style.display = 'none'
                         }}
                       />
                     ))}
@@ -304,45 +318,43 @@ export default function LibrariesPage() {
                           {lib.series_count} {lib.series_count === 1 ? 'series' : 'series'}
                         </Badge>
                       )}
-                      {isAdmin && (
-                        <>
+                    </div>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="icon-sm"
+                            size="icon"
+                            aria-label="Library actions"
+                            className={cn('-mr-3 -mt-1', isScanning && 'animate-pulse')}
+                          >
+                            {isScanning
+                              ? <ScanLine className="w-4 h-4 text-plasma" />
+                              : <MoreVertical className="w-4 h-4" />}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
                             onClick={() => handleScan(lib.id)}
                             disabled={isScanning}
-                            aria-label="Scan library"
-                            title="Scan for new files"
-                            className={cn(isScanning && 'animate-pulse')}
                           >
-                            {isScanning ? (
-                              <ScanLine className="w-3.5 h-3.5 text-plasma" />
-                            ) : (
-                              <RefreshCw className="w-3.5 h-3.5" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
+                            <RefreshCw className="w-3.5 h-3.5 mr-2" />
+                            Scan for new files
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={() => handleScan(lib.id, true)}
                             disabled={isScanning}
-                            aria-label="Force rescan library"
-                            title="Force rescan (re-imports all files)"
                           >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => openSettings(lib)}
-                            aria-label="Library settings"
-                            title="Library settings"
-                          >
-                            <Settings className="w-3.5 h-3.5" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
+                            <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                            Force rescan
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openSettings(lib)}>
+                            <Settings className="w-3.5 h-3.5 mr-2" />
+                            Settings
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </div>
 
                   {pct !== null && (

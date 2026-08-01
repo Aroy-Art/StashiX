@@ -1,3 +1,4 @@
+import { useState, useRef } from 'react'
 import { useNavigate, useLocation, NavLink } from 'react-router-dom'
 import {
   Home,
@@ -8,6 +9,12 @@ import {
   ScanLine,
   LogOut,
   ChevronRight,
+  MoreVertical,
+  RefreshCw,
+  RotateCcw,
+  Settings,
+  X,
+  Plus,
 } from 'lucide-react'
 import {
   Sidebar,
@@ -18,12 +25,23 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useAuthStore } from '@/store/auth'
+import { libraries as librariesApi } from '@/api/client'
 import { cn } from '@/lib/utils'
 import type { Library as LibraryType, ScanTask } from '@/types'
 
@@ -42,7 +60,57 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const logout = useAuthStore((s) => s.logout)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
   const totalTasks = Object.values(activeTasks)
+
+  const [scanning, setScanning] = useState<Set<string>>(new Set())
+  const [settingsLib, setSettingsLib] = useState<LibraryType | null>(null)
+  const [sfFolders, setSfFolders] = useState<string[]>([])
+  const [sfInput, setSfInput] = useState('')
+  const [sfSaving, setSfSaving] = useState(false)
+  const sfInputRef = useRef<HTMLInputElement>(null)
+
+  const openSettings = (lib: LibraryType) => {
+    setSettingsLib(lib)
+    setSfFolders(lib.standalone_folders ?? [])
+    setSfInput('')
+  }
+
+  const addFolder = () => {
+    const val = sfInput.trim()
+    if (!val || sfFolders.includes(val)) return
+    setSfFolders((f) => [...f, val])
+    setSfInput('')
+    sfInputRef.current?.focus()
+  }
+
+  const removeFolder = (folder: string) => setSfFolders((f) => f.filter((x) => x !== folder))
+
+  const handleSaveFolders = async () => {
+    if (!settingsLib) return
+    setSfSaving(true)
+    try {
+      await librariesApi.update(settingsLib.id, { standalone_folders: sfFolders })
+      setSettingsLib(null)
+    } finally {
+      setSfSaving(false)
+    }
+  }
+
+  const handleScan = async (libId: string, force = false) => {
+    setScanning((s) => new Set(s).add(libId))
+    try {
+      await librariesApi.scan(libId, force)
+    } catch {
+      // progress via WS
+    } finally {
+      setScanning((s) => {
+        const next = new Set(s)
+        next.delete(libId)
+        return next
+      })
+    }
+  }
 
   function handleLogout() {
     logout()
@@ -123,6 +191,8 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                         : null
                     const active = isLibraryActive(lib.id)
 
+                    const isScanning = !!task || scanning.has(lib.id)
+
                     return (
                       <SidebarMenuItem key={lib.id}>
                         <SidebarMenuButton
@@ -136,9 +206,38 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                           </NavLink>
                         </SidebarMenuButton>
                         {pct !== null && (
-                          <SidebarMenuBadge className="text-volt-3 font-mono text-[10px]">
+                          <SidebarMenuBadge className={cn('text-volt-3 font-mono text-[10px]', isAdmin && 'right-7')}>
                             {pct}%
                           </SidebarMenuBadge>
+                        )}
+                        {isAdmin && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <SidebarMenuAction aria-label="Library actions">
+                                <MoreVertical className="w-3.5 h-3.5" />
+                              </SidebarMenuAction>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent side="right" align="start">
+                              <DropdownMenuItem
+                                onClick={() => handleScan(lib.id)}
+                                disabled={isScanning}
+                              >
+                                <RefreshCw className="w-3.5 h-3.5 mr-2" />
+                                Scan for new files
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleScan(lib.id, true)}
+                                disabled={isScanning}
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 mr-2" />
+                                Force rescan
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openSettings(lib)}>
+                                <Settings className="w-3.5 h-3.5 mr-2" />
+                                Settings
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         )}
                       </SidebarMenuItem>
                     )
@@ -201,6 +300,69 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+      <Sheet open={!!settingsLib} onOpenChange={(open) => !open && setSettingsLib(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <SheetTitle className="font-display text-base">
+              {settingsLib?.name} — Settings
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">Standalone book folders</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Files whose immediate parent folder matches one of these names are always treated as standalone books, regardless of directory structure.
+              </p>
+
+              <div className="flex gap-2 mb-3">
+                <Input
+                  ref={sfInputRef}
+                  placeholder="e.g. One-Shot"
+                  value={sfInput}
+                  onChange={(e) => setSfInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addFolder()}
+                  className="text-sm h-8"
+                />
+                <Button size="sm" variant="outline" onClick={addFolder} className="shrink-0 h-8 px-2">
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+
+              {sfFolders.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {sfFolders.map((f) => (
+                    <span
+                      key={f}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs text-foreground"
+                    >
+                      {f}
+                      <button
+                        onClick={() => removeFolder(f)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={`Remove ${f}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No standalone folders configured.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSettingsLib(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSaveFolders} disabled={sfSaving}>
+              {sfSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </Sidebar>
   )
 }
