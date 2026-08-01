@@ -1,15 +1,49 @@
 package models
 
-import "time"
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"time"
+)
+
+// StringSlice is a []string that serializes as JSON for JSONB columns.
+type StringSlice []string
+
+func (s *StringSlice) Scan(value interface{}) error {
+	if value == nil {
+		*s = nil
+		return nil
+	}
+	var b []byte
+	switch v := value.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("StringSlice: unsupported type %T", value)
+	}
+	return json.Unmarshal(b, s)
+}
+
+func (s StringSlice) Value() (driver.Value, error) {
+	if s == nil {
+		return "[]", nil
+	}
+	b, err := json.Marshal(s)
+	return string(b), err
+}
 
 type Library struct {
-	ID          string    `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
-	Name        string    `json:"name"`
-	RootPath    string    `json:"root_path"`
-	CreatedAt   time.Time `json:"created_at"`
-	BookCount   int       `json:"book_count"`
-	IssueCount  int       `json:"issue_count"`
-	SeriesCount int       `json:"series_count"`
+	ID                string      `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
+	Name              string      `json:"name"`
+	RootPath          string      `json:"root_path"`
+	CreatedAt         time.Time   `json:"created_at"`
+	BookCount         int         `json:"book_count"`
+	IssueCount        int         `json:"issue_count"`
+	SeriesCount       int         `json:"series_count"`
+	StandaloneFolders StringSlice `json:"standalone_folders" gorm:"column:standalone_folders"`
 }
 
 type BookSummary struct {

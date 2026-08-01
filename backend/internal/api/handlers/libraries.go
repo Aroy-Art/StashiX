@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"github.com/danielgtaylor/huma/v2"
@@ -33,7 +34,7 @@ func (h *LibraryHandler) list(ctx context.Context, _ *struct{}) (*libraryListOut
 	var result *gorm.DB
 	if claims.Role == "admin" {
 		result = h.db.WithContext(ctx).Raw(`
-			SELECT id::text, name, root_path, created_at,
+			SELECT id::text, name, root_path, created_at, standalone_folders,
 				(SELECT COUNT(*) FROM books b WHERE b.library_id = libraries.id AND b.type = 'standalone') AS book_count,
 				(SELECT COUNT(*) FROM books b WHERE b.library_id = libraries.id AND b.type = 'issue') AS issue_count,
 				(SELECT COUNT(*) FROM series s WHERE s.library_id = libraries.id) AS series_count
@@ -41,7 +42,7 @@ func (h *LibraryHandler) list(ctx context.Context, _ *struct{}) (*libraryListOut
 		).Scan(&libs)
 	} else {
 		result = h.db.WithContext(ctx).Raw(`
-			SELECT l.id::text, l.name, l.root_path, l.created_at,
+			SELECT l.id::text, l.name, l.root_path, l.created_at, l.standalone_folders,
 				(SELECT COUNT(*) FROM books b WHERE b.library_id = l.id AND b.type = 'standalone') AS book_count,
 				(SELECT COUNT(*) FROM books b WHERE b.library_id = l.id AND b.type = 'issue') AS issue_count,
 				(SELECT COUNT(*) FROM series s WHERE s.library_id = l.id) AS series_count
@@ -62,8 +63,9 @@ func (h *LibraryHandler) list(ctx context.Context, _ *struct{}) (*libraryListOut
 
 type createLibraryInput struct {
 	Body struct {
-		Name     string `json:"name" required:"true"`
-		RootPath string `json:"root_path" required:"true"`
+		Name              string   `json:"name" required:"true"`
+		RootPath          string   `json:"root_path" required:"true"`
+		StandaloneFolders []string `json:"standalone_folders"`
 	}
 }
 
@@ -78,10 +80,16 @@ func (h *LibraryHandler) create(ctx context.Context, input *createLibraryInput) 
 		return nil, err
 	}
 
+	folders := input.Body.StandaloneFolders
+	if folders == nil {
+		folders = []string{}
+	}
+	foldersJSON, _ := json.Marshal(folders)
+
 	var id string
 	result := h.db.WithContext(ctx).Raw(
-		`INSERT INTO libraries (name, root_path) VALUES (?,?) RETURNING id`,
-		input.Body.Name, input.Body.RootPath,
+		`INSERT INTO libraries (name, root_path, standalone_folders) VALUES (?,?,?) RETURNING id`,
+		input.Body.Name, input.Body.RootPath, string(foldersJSON),
 	).Scan(&id)
 	if result.Error != nil {
 		return nil, huma.NewError(http.StatusInternalServerError, "db error")
@@ -92,6 +100,37 @@ func (h *LibraryHandler) create(ctx context.Context, input *createLibraryInput) 
 	out := &createLibraryOutput{}
 	out.Body.ID = id
 	return out, nil
+}
+
+type updateLibraryInput struct {
+	ID   string `path:"id"`
+	Body struct {
+		StandaloneFolders []string `json:"standalone_folders" required:"true"`
+	}
+}
+
+func (h *LibraryHandler) update(ctx context.Context, input *updateLibraryInput) (*struct{}, error) {
+	if err := requireAdmin(ctx); err != nil {
+		return nil, err
+	}
+
+	folders := input.Body.StandaloneFolders
+	if folders == nil {
+		folders = []string{}
+	}
+	foldersJSON, _ := json.Marshal(folders)
+
+	result := h.db.WithContext(ctx).Exec(
+		`UPDATE libraries SET standalone_folders = ? WHERE id = ?`,
+		string(foldersJSON), input.ID,
+	)
+	if result.Error != nil {
+		return nil, huma.NewError(http.StatusInternalServerError, "db error")
+	}
+	if result.RowsAffected == 0 {
+		return nil, huma.NewError(http.StatusNotFound, "library not found")
+	}
+	return nil, nil
 }
 
 type scanLibraryInput struct {
@@ -154,6 +193,14 @@ func (h *LibraryHandler) Register(api huma.API) {
 		Summary:       "Create a new library and trigger initial scan (admin)",
 		DefaultStatus: http.StatusCreated,
 	}, h.create)
+
+	huma.Register(api, huma.Operation{
+		OperationID: "updateLibrary",
+		Method:      http.MethodPatch,
+		Path:        "/api/libraries/{id}",
+		Tags:        []string{"Libraries"},
+		Summary:     "Update library settings (admin)",
+	}, h.update)
 
 	huma.Register(api, huma.Operation{
 		OperationID:   "scanLibrary",

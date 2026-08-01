@@ -19,6 +19,7 @@ export interface Library {
   book_count?: number
   issue_count?: number
   series_count?: number
+  standalone_folders?: string[]
 }
 
 export interface Book {

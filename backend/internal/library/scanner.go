@@ -15,6 +15,7 @@ import (
 	"gorm.io/gorm"
 	"github.com/aroy/stashix/internal/media"
 	"github.com/aroy/stashix/internal/metadata"
+	"github.com/aroy/stashix/internal/models"
 	"github.com/aroy/stashix/internal/ws"
 )
 
@@ -57,13 +58,17 @@ type seriesContext struct {
 }
 
 func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bool) {
-	var libraryRoot string
-	s.db.WithContext(ctx).Raw(`SELECT root_path FROM libraries WHERE id = ?`, libraryID).Scan(&libraryRoot)
+	var lib struct {
+		RootPath          string `gorm:"column:root_path"`
+		StandaloneFolders models.StringSlice `gorm:"column:standalone_folders"`
+	}
+	s.db.WithContext(ctx).Raw(`SELECT root_path, standalone_folders FROM libraries WHERE id = ?`, libraryID).Scan(&lib)
+	libraryRoot := lib.RootPath
 	if libraryRoot == "" {
 		libraryRoot = scanRoot
 	}
 
-	log.Printf("[scan] start libraryID=%s root=%s force=%v", libraryID, scanRoot, force)
+	log.Printf("[scan] start libraryID=%s root=%s force=%v standaloneFolders=%v", libraryID, scanRoot, force, []string(lib.StandaloneFolders))
 
 	paths, err := collectFiles(scanRoot)
 	if err != nil {
@@ -94,7 +99,7 @@ func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bo
 
 	broadcast(0, false)
 
-	contexts := buildSeriesContexts(libraryRoot, paths)
+	contexts := buildSeriesContexts(libraryRoot, paths, lib.StandaloneFolders)
 
 	for i, path := range paths {
 		if ctx.Err() != nil {
@@ -108,7 +113,12 @@ func (s *Scanner) Scan(ctx context.Context, libraryID, scanRoot string, force bo
 	}
 }
 
-func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesContext {
+func buildSeriesContexts(libraryRoot string, paths []string, standaloneFolders []string) map[string]*seriesContext {
+	sfSet := make(map[string]bool, len(standaloneFolders))
+	for _, f := range standaloneFolders {
+		sfSet[strings.ToLower(f)] = true
+	}
+
 	seenDirs := make(map[string]bool, len(paths))
 	for _, p := range paths {
 		seenDirs[filepath.Dir(p)] = true
@@ -117,6 +127,23 @@ func buildSeriesContexts(libraryRoot string, paths []string) map[string]*seriesC
 	contexts := make(map[string]*seriesContext, len(seenDirs))
 	for dir := range seenDirs {
 		sc := &seriesContext{}
+
+		if len(sfSet) > 0 && sfSet[strings.ToLower(filepath.Base(dir))] {
+			// parent folder is configured as a standalone container — leave series empty
+			log.Printf("[scan] standalone folder matched dir=%s", dir)
+			if m, err := metadata.ParseIndexJSON(filepath.Join(dir, "index.json")); err == nil {
+				sc.indexMeta = m
+			}
+			for _, name := range []string{"cover.jpg", "cover.jpeg", "cover.png", "cover.webp"} {
+				cp := filepath.Join(dir, name)
+				if _, err := os.Stat(cp); err == nil {
+					sc.coverPath = cp
+					break
+				}
+			}
+			contexts[dir] = sc
+			continue
+		}
 
 		if rel, err := filepath.Rel(libraryRoot, dir); err == nil && rel != "." {
 			parts := strings.Split(rel, string(os.PathSeparator))

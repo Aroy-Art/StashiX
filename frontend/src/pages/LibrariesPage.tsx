@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { libraries as librariesApi, tasks as tasksApi, books as booksApi, series as seriesApi } from '@/api/client'
 import { thumbnailSize } from '@/lib/thumbnail'
@@ -6,10 +6,12 @@ import { transport } from '@/api/transport'
 import { useAuthStore } from '@/store/auth'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { SectionCarousel } from '@/components/SectionCarousel'
 import { BookCard } from '@/components/BookCard'
 import { SeriesCard } from '@/components/SeriesCard'
-import { ScanLine, Library, FolderPlus, RefreshCw, RotateCcw } from 'lucide-react'
+import { ScanLine, Library, FolderPlus, RefreshCw, RotateCcw, Settings, X, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Library as LibraryType, ScanTask, Book, Series } from '@/types'
 
@@ -26,6 +28,11 @@ export default function LibrariesPage() {
   const [loading, setLoading] = useState(true)
   const [activeTasks, setActiveTasks] = useState<Record<string, ScanTask>>({})
   const [scanning, setScanning] = useState<Set<string>>(new Set())
+  const [settingsLib, setSettingsLib] = useState<LibraryWithContent | null>(null)
+  const [sfFolders, setSfFolders] = useState<string[]>([])
+  const [sfInput, setSfInput] = useState('')
+  const [sfSaving, setSfSaving] = useState(false)
+  const sfInputRef = useRef<HTMLInputElement>(null)
   const isAdmin = useAuthStore((s) => s.isAdmin)
 
   useEffect(() => {
@@ -93,6 +100,38 @@ export default function LibrariesPage() {
       })
     })
   }, [])
+
+  const openSettings = (lib: LibraryWithContent) => {
+    setSettingsLib(lib)
+    setSfFolders(lib.standalone_folders ?? [])
+    setSfInput('')
+  }
+
+  const addFolder = () => {
+    const val = sfInput.trim()
+    if (!val || sfFolders.includes(val)) return
+    setSfFolders((f) => [...f, val])
+    setSfInput('')
+    sfInputRef.current?.focus()
+  }
+
+  const removeFolder = (folder: string) => {
+    setSfFolders((f) => f.filter((x) => x !== folder))
+  }
+
+  const handleSaveFolders = async () => {
+    if (!settingsLib) return
+    setSfSaving(true)
+    try {
+      await librariesApi.update(settingsLib.id, { standalone_folders: sfFolders })
+      setLibs((prev) =>
+        prev.map((l) => (l.id === settingsLib.id ? { ...l, standalone_folders: sfFolders } : l))
+      )
+      setSettingsLib(null)
+    } finally {
+      setSfSaving(false)
+    }
+  }
 
   const handleScan = async (libId: string, force = false) => {
     setScanning((s) => new Set(s).add(libId))
@@ -225,6 +264,15 @@ export default function LibrariesPage() {
                           >
                             <RotateCcw className="w-3.5 h-3.5" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => openSettings(lib)}
+                            aria-label="Library settings"
+                            title="Library settings"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                          </Button>
                         </>
                       )}
                     </div>
@@ -258,6 +306,71 @@ export default function LibrariesPage() {
           })}
         </div>
       </div>
+
+      {/* Library settings sheet */}
+      <Sheet open={!!settingsLib} onOpenChange={(open) => !open && setSettingsLib(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-md flex flex-col gap-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border">
+            <SheetTitle className="font-display text-base">
+              {settingsLib?.name} — Settings
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+            <div>
+              <p className="text-sm font-medium text-foreground mb-1">Standalone book folders</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Files whose immediate parent folder matches one of these names are always treated as standalone books, regardless of directory structure.
+              </p>
+
+              <div className="flex gap-2 mb-3">
+                <Input
+                  ref={sfInputRef}
+                  placeholder="e.g. One-Shot"
+                  value={sfInput}
+                  onChange={(e) => setSfInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addFolder()}
+                  className="text-sm h-8"
+                />
+                <Button size="sm" variant="outline" onClick={addFolder} className="shrink-0 h-8 px-2">
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+
+              {sfFolders.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {sfFolders.map((f) => (
+                    <span
+                      key={f}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-xs text-foreground"
+                    >
+                      {f}
+                      <button
+                        onClick={() => removeFolder(f)}
+                        className="text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label={`Remove ${f}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground italic">No standalone folders configured.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="px-6 py-4 border-t border-border flex justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSettingsLib(null)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={handleSaveFolders} disabled={sfSaving}>
+              {sfSaving ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Per-library carousels */}
       {libs.map((lib) => (

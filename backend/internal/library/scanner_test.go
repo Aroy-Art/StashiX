@@ -29,7 +29,7 @@ func TestBuildSeriesContexts_SeriesDir(t *testing.T) {
 	book := filepath.Join(root, "Viz Graphic Novels", "AD Police (1994)", "AD Police (1994) - Chapter 1.cbz")
 	touch(t, book)
 
-	ctx := buildSeriesContexts(root, []string{book})
+	ctx := buildSeriesContexts(root, []string{book}, nil)
 	sc := ctx[filepath.Dir(book)]
 
 	if sc == nil {
@@ -51,7 +51,7 @@ func TestBuildSeriesContexts_YearRange(t *testing.T) {
 	book := filepath.Join(root, "Viz Graphic Novels", "Battle Angel Alita (1994-1998)", "Volume 1 - Rusty Angel.cbz")
 	touch(t, book)
 
-	ctx := buildSeriesContexts(root, []string{book})
+	ctx := buildSeriesContexts(root, []string{book}, nil)
 	sc := ctx[filepath.Dir(book)]
 
 	if sc.series != "Battle Angel Alita" {
@@ -67,7 +67,7 @@ func TestBuildSeriesContexts_CategoryDir_NoSeries(t *testing.T) {
 	book := filepath.Join(root, "TOKYOPOP", "One-Shot", "NOiSE (2007).cbz")
 	touch(t, book)
 
-	ctx := buildSeriesContexts(root, []string{book})
+	ctx := buildSeriesContexts(root, []string{book}, nil)
 	sc := ctx[filepath.Dir(book)]
 
 	if sc == nil {
@@ -91,7 +91,7 @@ func TestBuildSeriesContexts_SeriesCover(t *testing.T) {
 	touch(t, book)
 	touch(t, cover)
 
-	ctx := buildSeriesContexts(root, []string{book})
+	ctx := buildSeriesContexts(root, []string{book}, nil)
 	sc := ctx[filepath.Dir(book)]
 
 	if sc.coverPath != cover {
@@ -109,7 +109,7 @@ func TestBuildSeriesContexts_IndexJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ctx := buildSeriesContexts(root, []string{book})
+	ctx := buildSeriesContexts(root, []string{book}, nil)
 	sc := ctx[filepath.Dir(book)]
 
 	if sc.indexMeta == nil {
