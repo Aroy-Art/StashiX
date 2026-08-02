@@ -10,10 +10,11 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/golang-migrate/migrate/v4 v4.19.1
-	github.com/jackc/pgx/v5 v5.7.1
+	github.com/jackc/pgx/v5 v5.10.0
 	github.com/nwaples/rardecode/v2 v2.0.0-beta.2
 	golang.org/x/crypto v0.52.0
-	gorm.io/driver/postgres v1.6.0
+	golang.org/x/image v0.44.0
+	gorm.io/driver/postgres v1.6.2
 	gorm.io/gorm v1.31.2
 )
 
@@ -22,7 +23,6 @@ require (
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/stangelandcl/ppmd v0.1.1 // indirect
-	golang.org/x/image v0.44.0 // indirect
 )
 
 require (
