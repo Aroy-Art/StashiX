@@ -19,7 +19,7 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@v6
 
       - name: setup go
-        uses: https://code.forgejo.org/actions/setup-go@v5
+        uses: https://code.forgejo.org/actions/setup-go@v7
         with:
           go-version-file: backend/go.mod
 
