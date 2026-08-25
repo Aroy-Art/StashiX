@@ -87,6 +87,12 @@ defmodule StashixWeb.BookLive do
                 <span class="text-gray-200 ml-2">{@book.language}</span>
               </div>
             <% end %>
+            <div class="col-span-2">
+              <span class="text-gray-500">File</span>
+              <span class="text-gray-400 ml-2 font-mono text-xs break-all">
+                {@library.name <> "/" <> (String.replace_prefix(@book.path, @library.root_path, "") |> String.trim_leading("/"))}
+              </span>
+            </div>
           </div>
 
           <%= if @book.summary && @book.summary != "" do %>
