@@ -2,20 +2,20 @@ defmodule StashixWeb.LoginLive do
   use StashixWeb, :live_view
 
   alias Stashix.Accounts
-  alias Stashix.Auth.TokenHelper
 
   on_mount {StashixWeb.Live.Hooks, :optional_auth}
 
   @impl true
-  def mount(_params, _session, socket) do
-    if socket.assigns.current_user do
+  def mount(_params, session, socket) do
+    if session["guardian_default_token"] do
       {:ok, redirect(socket, to: "/")}
     else
       {:ok,
        assign(socket,
          page_title: "Login",
          form: to_form(%{"email" => "", "password" => ""}),
-         error: nil
+         error: nil,
+         trigger_submit: false
        )}
     end
   end
@@ -23,13 +23,8 @@ defmodule StashixWeb.LoginLive do
   @impl true
   def handle_event("login", %{"email" => email, "password" => password}, socket) do
     case Accounts.authenticate_user(email, password) do
-      {:ok, user} ->
-        {:ok, access_token, _refresh_token} = TokenHelper.generate_tokens(user)
-
-        {:noreply,
-         socket
-         |> push_event("set_token", %{token: access_token, user_id: user.id})
-         |> redirect(to: "/")}
+      {:ok, _user} ->
+        {:noreply, assign(socket, trigger_submit: true, form: to_form(%{"email" => email, "password" => password}))}
 
       {:error, _} ->
         {:noreply, assign(socket, error: "Invalid email or password")}
@@ -53,7 +48,15 @@ defmodule StashixWeb.LoginLive do
             </div>
           <% end %>
 
-          <form phx-submit="login" class="space-y-4">
+          <form
+            id="login-form"
+            method="post"
+            action={~p"/login"}
+            phx-submit="login"
+            phx-trigger-action={@trigger_submit}
+            class="space-y-4"
+          >
+            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
               <input

@@ -2,8 +2,8 @@ import Config
 
 # Configure your database
 config :stashix, Stashix.Repo,
-  username: "postgres",
-  password: "postgres",
+  username: "stashix",
+  password: "changeme",
   hostname: "localhost",
   database: "stashix_dev",
   stacktrace: true,

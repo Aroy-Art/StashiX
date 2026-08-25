@@ -2,7 +2,6 @@ defmodule StashixWeb.SetupLive do
   use StashixWeb, :live_view
 
   alias Stashix.Accounts
-  alias Stashix.Auth.TokenHelper
 
   @impl true
   def mount(_params, _session, socket) do
@@ -12,38 +11,16 @@ defmodule StashixWeb.SetupLive do
       {:ok,
        assign(socket,
          page_title: "Setup",
-         error: nil,
-         errors: %{}
+         errors: %{},
+         trigger_submit: false,
+         form: to_form(%{"email" => "", "username" => "", "password" => ""})
        )}
     end
   end
 
   @impl true
-  def handle_event(
-        "setup",
-        %{"email" => email, "username" => username, "password" => password},
-        socket
-      ) do
-    case Accounts.create_user(%{
-           email: email,
-           username: username,
-           password: password,
-           role: :admin
-         }) do
-      {:ok, user} ->
-        {:ok, access_token, _} = TokenHelper.generate_tokens(user)
-
-        {:noreply,
-         socket
-         |> push_event("set_token", %{token: access_token})
-         |> redirect(to: "/")}
-
-      {:error, changeset} ->
-        errors =
-          Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-
-        {:noreply, assign(socket, errors: errors)}
-    end
+  def handle_event("setup", params, socket) do
+    {:noreply, assign(socket, trigger_submit: true, form: to_form(params))}
   end
 
   @impl true
@@ -57,7 +34,15 @@ defmodule StashixWeb.SetupLive do
         </div>
 
         <div class="bg-gray-900 rounded-xl border border-gray-800 p-8">
-          <form phx-submit="setup" class="space-y-4">
+          <form
+          id="setup-form"
+          method="post"
+          action={~p"/setup"}
+          phx-submit="setup"
+          phx-trigger-action={@trigger_submit}
+          class="space-y-4"
+        >
+          <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <div>
               <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
               <input

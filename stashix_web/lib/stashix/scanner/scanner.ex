@@ -60,6 +60,8 @@ defmodule Stashix.Scanner do
       broadcast_progress(library_id, idx, total)
     end)
 
+    Library.update_series_counts(library_id)
+
     update_task_status(library_id, %{scanned: total, total: total, done: true})
     broadcast_progress(library_id, total, total)
 

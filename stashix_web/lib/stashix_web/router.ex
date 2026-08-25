@@ -88,6 +88,10 @@ defmodule StashixWeb.Router do
 
     live "/login", LoginLive, :index
     live "/setup", SetupLive, :index
+
+    post "/login", SessionController, :create
+    post "/setup", SessionController, :setup
+    delete "/logout", SessionController, :delete
   end
 
   scope "/", StashixWeb do

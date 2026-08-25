@@ -76,6 +76,14 @@ defmodule Stashix.Library do
   def list_series(library_id) do
     from(s in Series,
       where: s.library_id == ^library_id,
+      select: %{
+        s
+        | issue_count:
+            fragment(
+              "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
+              s.id
+            )
+      },
       preload: [:publisher]
     )
     |> Repo.all()
@@ -120,6 +128,20 @@ defmodule Stashix.Library do
       offset: ^offset
     )
     |> Repo.all()
+  end
+
+  def update_series_counts(library_id) do
+    Repo.query!(
+      """
+      UPDATE series
+      SET issue_count = (
+        SELECT COUNT(*) FROM books
+        WHERE books.series_id = series.id AND books.deleted_at IS NULL
+      )
+      WHERE series.library_id = $1
+      """,
+      [library_id]
+    )
   end
 
   def create_or_find_series(attrs) do
