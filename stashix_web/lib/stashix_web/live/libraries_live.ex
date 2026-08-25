@@ -22,7 +22,6 @@ defmodule StashixWeb.LibrariesLive do
      assign(socket,
        page_title: "Home",
        libraries_data: libraries_data,
-       sidebar_libraries: libraries,
        scan_progress: %{}
      )}
   end

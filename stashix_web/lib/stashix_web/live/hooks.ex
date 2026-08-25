@@ -3,11 +3,12 @@ defmodule StashixWeb.Live.Hooks do
   import Phoenix.Component
 
   alias Stashix.Auth.TokenHelper
+  alias Stashix.Library
 
   def on_mount(:require_auth, _params, session, socket) do
     case authenticate_from_session(session) do
       {:ok, user} ->
-        {:cont, assign(socket, :current_user, user)}
+        {:cont, assign(socket, current_user: user, sidebar_libraries: Library.list_libraries(user))}
 
       {:error, _} ->
         {:halt, redirect(socket, to: "/login")}
@@ -17,7 +18,7 @@ defmodule StashixWeb.Live.Hooks do
   def on_mount(:require_admin, _params, session, socket) do
     case authenticate_from_session(session) do
       {:ok, user} when user.role == :admin ->
-        {:cont, assign(socket, :current_user, user)}
+        {:cont, assign(socket, current_user: user, sidebar_libraries: Library.list_libraries(user))}
 
       {:ok, _user} ->
         {:halt, redirect(socket, to: "/")}
