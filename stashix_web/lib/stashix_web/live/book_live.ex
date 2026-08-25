@@ -26,16 +26,23 @@ defmodule StashixWeb.BookLive do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto space-y-6">
-      <div>
-        <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300 text-sm">
-          ← {@library.name}
-        </a>
+      <div class="flex items-center gap-2 text-sm">
+        <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Back
+        </button>
+        <span class="text-gray-700">/</span>
+        <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
+        <span class="text-gray-700">/</span>
+        <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
         <%= if @book.series do %>
-          <span class="text-gray-600 mx-2">·</span>
-          <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300 text-sm">
-            {@book.series.name}
-          </a>
+          <span class="text-gray-700">/</span>
+          <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
         <% end %>
+        <span class="text-gray-700">/</span>
+        <span class="text-gray-300">{@book.title}</span>
       </div>
 
       <div class="flex gap-8">
