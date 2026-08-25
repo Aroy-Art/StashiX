@@ -7,7 +7,10 @@ defmodule StashixWeb.LoginLive do
 
   @impl true
   def mount(_params, session, socket) do
-    if session["guardian_default_token"] do
+    token = session["guardian_default_token"]
+    already_authed = token && match?({:ok, _}, Stashix.Auth.TokenHelper.resource_from_token(token))
+
+    if already_authed do
       {:ok, redirect(socket, to: "/")}
     else
       {:ok,
