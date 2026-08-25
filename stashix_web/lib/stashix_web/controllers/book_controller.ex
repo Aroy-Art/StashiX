@@ -1,0 +1,120 @@
+defmodule StashixWeb.BookController do
+  use StashixWeb, :controller
+
+  alias Stashix.Library
+  alias Stashix.Media.Extractor
+
+  def index(conn, %{"id" => library_id} = params) do
+    opts = [
+      limit: parse_int(params["limit"], 50),
+      offset: parse_int(params["offset"], 0),
+      sort: String.to_atom(params["sort"] || "inserted_at"),
+      type: params["type"]
+    ]
+
+    books = Library.list_books(library_id, opts)
+    json(conn, %{books: Enum.map(books, &book_json/1)})
+  end
+
+  def show(conn, %{"id" => id}) do
+    book = Library.get_book_with_series(id)
+    json(conn, %{book: book_json(book)})
+  end
+
+  def pages(conn, %{"id" => id}) do
+    book = Library.get_book!(id)
+
+    case Extractor.list_pages(book.path) do
+      {:ok, pages} ->
+        json(conn, %{pages: pages, count: length(pages)})
+
+      {:error, reason} ->
+        conn
+        |> put_status(:unprocessable_entity)
+        |> json(%{error: inspect(reason)})
+    end
+  end
+
+  def page(conn, %{"id" => id, "n" => n}) do
+    book = Library.get_book!(id)
+    page_index = String.to_integer(n)
+
+    case Extractor.get_page(book.path, page_index) do
+      {:ok, data} ->
+        content_type = detect_image_type(data)
+
+        conn
+        |> put_resp_content_type(content_type)
+        |> send_resp(200, data)
+
+      {:error, :page_not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: "page not found"})
+
+      {:error, reason} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
+    end
+  end
+
+  def cover(conn, %{"id" => id}) do
+    book = Library.get_book!(id) |> Stashix.Repo.preload(:cover)
+
+    case book.cover do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "no cover"})
+
+      cover ->
+        if File.exists?(cover.path) do
+          send_file(conn, 200, cover.path)
+        else
+          conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
+        end
+    end
+  end
+
+  def progress(conn, %{"id" => id} = params) do
+    user = Guardian.Plug.current_resource(conn)
+    page = parse_int(params["page"], 0)
+
+    case Library.update_progress(user.id, id, page) do
+      {:ok, _} -> json(conn, %{status: "ok", page: page})
+      {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
+    end
+  end
+
+  defp book_json(book) do
+    %{
+      id: book.id,
+      title: book.title,
+      path: book.path,
+      format: book.format,
+      issue_number: book.issue_number,
+      volume: book.volume,
+      year: book.year,
+      page_count: book.page_count,
+      language: book.language,
+      summary: book.summary,
+      age_rating: book.age_rating,
+      type: book.type,
+      file_size: book.file_size,
+      series_id: book.series_id,
+      library_id: book.library_id,
+      has_cover: not is_nil(Map.get(book, :cover)),
+      inserted_at: book.inserted_at
+    }
+  end
+
+  defp detect_image_type(<<0xFF, 0xD8, _::binary>>), do: "image/jpeg"
+  defp detect_image_type(<<0x89, 0x50, 0x4E, 0x47, _::binary>>), do: "image/png"
+  defp detect_image_type(<<"GIF", _::binary>>), do: "image/gif"
+  defp detect_image_type(<<"RIFF", _::32, "WEBP", _::binary>>), do: "image/webp"
+  defp detect_image_type(_), do: "image/jpeg"
+
+  defp parse_int(nil, default), do: default
+  defp parse_int(s, default) when is_binary(s) do
+    case Integer.parse(s) do
+      {n, _} -> n
+      :error -> default
+    end
+  end
+  defp parse_int(n, _default) when is_integer(n), do: n
+end

@@ -1,0 +1,104 @@
+defmodule StashixWeb.SearchLive do
+  use StashixWeb, :live_view
+
+  alias Stashix.Library
+
+  on_mount {StashixWeb.Live.Hooks, :require_auth}
+
+  @debounce_ms 300
+
+  @impl true
+  def mount(_params, _session, socket) do
+    {:ok,
+     assign(socket,
+       page_title: "Search",
+       query: "",
+       results: [],
+       search_timer: nil,
+       searching: false
+     )}
+  end
+
+  @impl true
+  def handle_event("search", %{"q" => query}, socket) do
+    if socket.assigns.search_timer do
+      Process.cancel_timer(socket.assigns.search_timer)
+    end
+
+    timer = Process.send_after(self(), {:do_search, query}, @debounce_ms)
+    {:noreply, assign(socket, query: query, search_timer: timer, searching: true)}
+  end
+
+  @impl true
+  def handle_info({:do_search, query}, socket) do
+    results =
+      if String.length(query) >= 2 do
+        Library.search_books(query, limit: 50)
+      else
+        []
+      end
+
+    {:noreply, assign(socket, results: results, searching: false, search_timer: nil)}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="max-w-4xl mx-auto space-y-6">
+      <h1 class="text-2xl font-bold text-white">Search</h1>
+
+      <div class="relative">
+        <input
+          type="text"
+          value={@query}
+          phx-keyup="search"
+          name="q"
+          placeholder="Search books, series, publishers..."
+          class="w-full bg-gray-900 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 text-lg"
+          autofocus
+        />
+        <%= if @searching do %>
+          <div class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+            Searching...
+          </div>
+        <% end %>
+      </div>
+
+      <%= if @results != [] do %>
+        <div>
+          <p class="text-gray-500 text-sm mb-3">{length(@results)} results for "{@query}"</p>
+
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            <%= for book <- @results do %>
+              <a href={~p"/book/#{book.id}"} class="group">
+                <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1">
+                  <%= if book.cover do %>
+                    <img
+                      src={~p"/api/books/#{book.id}/cover"}
+                      alt={book.title}
+                      class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                    />
+                  <% else %>
+                    <div class="w-full h-full flex items-center justify-center text-gray-600">
+                      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                      </svg>
+                    </div>
+                  <% end %>
+                </div>
+                <p class="text-xs text-gray-400 truncate group-hover:text-white">{book.title}</p>
+              </a>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+      <%= if @query != "" && !@searching && @results == [] do %>
+        <div class="text-center py-12 text-gray-500">
+          No results found for "{@query}"
+        </div>
+      <% end %>
+    </div>
+    """
+  end
+end
