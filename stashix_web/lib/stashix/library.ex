@@ -143,6 +143,8 @@ defmodule Stashix.Library do
   end
 
   def update_series_counts(library_id) do
+    {:ok, uuid_bin} = Ecto.UUID.dump(library_id)
+
     Repo.query!(
       """
       UPDATE series
@@ -152,7 +154,7 @@ defmodule Stashix.Library do
       )
       WHERE series.library_id = $1
       """,
-      [library_id]
+      [uuid_bin]
     )
   end
 
@@ -230,9 +232,40 @@ defmodule Stashix.Library do
     Repo.aggregate(from(s in Series, where: s.library_id == ^library_id), :count, :id)
   end
 
-  def recent_books(library_id, limit \\ 10) do
+  def count_issues(library_id) do
+    Repo.aggregate(
+      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"),
+      :count,
+      :id
+    )
+  end
+
+  def recent_books(library_id, limit \\ 10, type \\ nil) do
+    query =
+      from b in Book,
+        where: b.library_id == ^library_id and is_nil(b.deleted_at),
+        order_by: [desc: b.inserted_at],
+        limit: ^limit,
+        preload: [:cover]
+
+    query =
+      if type, do: where(query, [b], b.type == ^type), else: query
+
+    Repo.all(query)
+  end
+
+  def recent_series(library_id, limit \\ 10) do
+    from(s in Series,
+      where: s.library_id == ^library_id,
+      order_by: [desc: s.inserted_at],
+      limit: ^limit
+    )
+    |> Repo.all()
+  end
+
+  def recent_issues(library_id, limit \\ 10) do
     from(b in Book,
-      where: b.library_id == ^library_id and is_nil(b.deleted_at),
+      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue",
       order_by: [desc: b.inserted_at],
       limit: ^limit,
       preload: [:cover]

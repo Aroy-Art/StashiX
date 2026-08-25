@@ -10,15 +10,7 @@ defmodule StashixWeb.LibrariesLive do
     user = socket.assigns.current_user
     libraries = Library.list_libraries(user)
 
-    libraries_with_stats =
-      Enum.map(libraries, fn lib ->
-        %{
-          library: lib,
-          book_count: Library.count_books(lib.id),
-          series_count: Library.count_series(lib.id),
-          recent_books: Library.recent_books(lib.id, 6)
-        }
-      end)
+    libraries_data = Enum.map(libraries, &load_library_data/1)
 
     if connected?(socket) do
       Enum.each(libraries, fn lib ->
@@ -28,33 +20,54 @@ defmodule StashixWeb.LibrariesLive do
 
     {:ok,
      assign(socket,
-       page_title: "Libraries",
-       libraries: libraries_with_stats,
+       page_title: "Home",
+       libraries_data: libraries_data,
+       sidebar_libraries: libraries,
        scan_progress: %{}
      )}
   end
 
+  defp load_library_data(lib) do
+    recent_standalone = Library.recent_books(lib.id, 20, "standalone")
+    recent_issues = Library.recent_issues(lib.id, 20)
+    cover_books = Enum.take(recent_standalone ++ recent_issues, 5)
+
+    %{
+      library: lib,
+      book_count: Library.count_books(lib.id),
+      series_count: Library.count_series(lib.id),
+      issue_count: Library.count_issues(lib.id),
+      cover_books: cover_books,
+      recent_books: recent_standalone,
+      recent_series: Library.recent_series(lib.id, 20),
+      recent_issues: recent_issues
+    }
+  end
+
   @impl true
+  def handle_info({:scan_progress, %{library_id: lib_id, scanned: scanned, total: total, done: done}}, socket) do
+    socket = update(socket, :scan_progress, &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: done}))
+
+    if done do
+      Process.send_after(self(), {:clear_scan_progress, lib_id}, 3_000)
+    end
+
+    {:noreply, socket}
+  end
+
   def handle_info({:scan_progress, %{library_id: lib_id, scanned: scanned, total: total}}, socket) do
     {:noreply,
-     update(socket, :scan_progress, &Map.put(&1, lib_id, %{scanned: scanned, total: total}))}
+     update(socket, :scan_progress, &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: false}))}
+  end
+
+  def handle_info({:clear_scan_progress, lib_id}, socket) do
+    {:noreply, update(socket, :scan_progress, &Map.delete(&1, lib_id))}
   end
 
   def handle_info({:book_added, _book}, socket) do
     user = socket.assigns.current_user
     libraries = Library.list_libraries(user)
-
-    libraries_with_stats =
-      Enum.map(libraries, fn lib ->
-        %{
-          library: lib,
-          book_count: Library.count_books(lib.id),
-          series_count: Library.count_series(lib.id),
-          recent_books: Library.recent_books(lib.id, 6)
-        }
-      end)
-
-    {:noreply, assign(socket, :libraries, libraries_with_stats)}
+    {:noreply, assign(socket, libraries_data: Enum.map(libraries, &load_library_data/1))}
   end
 
   @impl true
@@ -66,95 +79,208 @@ defmodule StashixWeb.LibrariesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-8">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white">Libraries</h1>
-        <%= if @current_user.role == :admin do %>
-          <a href="/admin" class="text-sm text-indigo-400 hover:text-indigo-300">
-            Admin Panel
-          </a>
-        <% end %>
-      </div>
+    <div class="space-y-10">
 
-      <%= if @libraries == [] do %>
-        <div class="text-center py-16 text-gray-500">
-          <p class="text-lg">No libraries yet.</p>
-          <%= if @current_user.role == :admin do %>
-            <p class="mt-2">Create a library from the Admin Panel.</p>
+      <%# Libraries overview %>
+      <section>
+        <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+          Libraries
+        </h2>
+        <div class="flex flex-wrap gap-4">
+          <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, cover_books: covers} <- @libraries_data do %>
+            <div class="w-72 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+              <%# Cover mosaic %>
+              <div class="h-28 flex overflow-hidden relative bg-gray-800">
+                <%= for book <- Enum.take(covers, 5) do %>
+                  <div class="flex-1 min-w-0">
+                    <img
+                      src={~p"/api/books/#{book.id}/cover"}
+                      class="w-full h-full object-cover"
+                      onerror="this.style.display='none'"
+                    />
+                  </div>
+                <% end %>
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+              </div>
+
+              <div class="p-4">
+                <div class="flex items-start justify-between mb-1">
+                  <h3 class="font-semibold text-white truncate">{lib.name}</h3>
+                  <%= if @current_user.role == :admin do %>
+                    <button
+                      phx-click="scan"
+                      phx-value-id={lib.id}
+                      class="text-xs text-gray-500 hover:text-white ml-2 flex-shrink-0"
+                    >
+                      Scan
+                    </button>
+                  <% end %>
+                </div>
+
+                <p class="text-xs text-gray-500 truncate mb-3">{lib.root_path}</p>
+
+                <div class="flex flex-wrap gap-2 mb-3">
+                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{books} books</span>
+                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{issues} issues</span>
+                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{series} series</span>
+                </div>
+
+                <%= if progress = @scan_progress[lib.id] do %>
+                  <div class={"mb-3 transition-opacity duration-1000 #{if progress.done, do: "opacity-0", else: "opacity-100"}"}>
+                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>{if progress.done, do: "Complete", else: "Scanning..."}</span>
+                      <span>{progress.scanned}/{progress.total}</span>
+                    </div>
+                    <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        class={"h-full transition-all #{if progress.done, do: "bg-green-500", else: "bg-violet-500"}"}
+                        style={"width: #{if progress.total > 0, do: round(progress.scanned / progress.total * 100), else: 0}%"}
+                      ></div>
+                    </div>
+                  </div>
+                <% end %>
+
+                <a href={~p"/library/#{lib.id}"} class="text-sm text-violet-400 hover:text-violet-300">
+                  Browse collection →
+                </a>
+              </div>
+            </div>
           <% end %>
         </div>
-      <% end %>
+      </section>
 
-      <%= for %{library: lib, book_count: books, series_count: series, recent_books: recents} <- @libraries do %>
-        <div class="bg-gray-900 rounded-xl border border-gray-800 p-6">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <a href={~p"/library/#{lib.id}"} class="text-xl font-semibold text-white hover:text-indigo-300">
-                {lib.name}
-              </a>
-              <p class="text-gray-500 text-sm mt-1">{lib.root_path}</p>
-            </div>
+      <%# Per-library sections %>
+      <%= for %{library: lib, recent_books: books, recent_series: series, recent_issues: issues} <- @libraries_data do %>
 
-            <div class="flex items-center gap-4">
-              <div class="text-right text-sm text-gray-400">
-                <span>{books} books</span>
-                <span class="mx-2">·</span>
-                <span>{series} series</span>
-              </div>
-
-              <%= if @current_user.role == :admin do %>
-                <button
-                  phx-click="scan"
-                  phx-value-id={lib.id}
-                  class="px-3 py-1 text-sm bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg border border-gray-700"
-                >
-                  Scan
+        <%# Recent Books %>
+        <%= if books != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                {lib.name} — Recent Books
+              </h2>
+              <div class="flex gap-1">
+                <button onclick={"document.getElementById('books-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
                 </button>
-              <% end %>
-            </div>
-          </div>
-
-          <%= if progress = @scan_progress[lib.id] do %>
-            <div class="mb-4">
-              <div class="flex justify-between text-xs text-gray-500 mb-1">
-                <span>Scanning...</span>
-                <span>{progress.scanned}/{progress.total}</span>
-              </div>
-              <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-indigo-500 transition-all"
-                  style={"width: #{if progress.total > 0, do: round(progress.scanned / progress.total * 100), else: 0}%"}
-                >
-                </div>
+                <button onclick={"document.getElementById('books-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
               </div>
             </div>
-          <% end %>
-
-          <%= if recents != [] do %>
-            <div class="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4">
-              <%= for book <- recents do %>
-                <a href={~p"/book/#{book.id}"} class="group">
-                  <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden">
-                    <%= if book.cover do %>
-                      <img
-                        src={~p"/api/books/#{book.id}/cover"}
-                        alt={book.title}
-                        class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-                      />
-                    <% else %>
-                      <div class="w-full h-full flex items-center justify-center text-gray-600">
-                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                      </div>
-                    <% end %>
+            <div id={"books-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for book <- books do %>
+                <a href={~p"/book/#{book.id}"} class="flex-shrink-0 w-36 group">
+                  <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-2">
+                    <img
+                      src={~p"/api/books/#{book.id}/cover"}
+                      alt={book.title}
+                      class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                    />
+                    <div class="w-full h-full hidden items-center justify-center text-gray-600">
+                      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    </div>
                   </div>
-                  <p class="text-xs text-gray-400 mt-1 truncate">{book.title}</p>
+                  <p class="text-xs text-gray-300 truncate group-hover:text-white">{book.title}</p>
+                  <%= if book.year do %>
+                    <p class="text-xs text-gray-600">{book.year}</p>
+                  <% end %>
                 </a>
               <% end %>
             </div>
-          <% end %>
-        </div>
+          </section>
+        <% end %>
+
+        <%# Recent Series %>
+        <%= if series != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                {lib.name} — Recent Series
+              </h2>
+              <div class="flex gap-1">
+                <button onclick={"document.getElementById('series-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button onclick={"document.getElementById('series-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id={"series-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for s <- series do %>
+                <a href={~p"/series/#{s.id}"} class="flex-shrink-0 w-36 group">
+                  <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-2 relative">
+                    <img
+                      src={~p"/api/series/#{s.id}/cover"}
+                      alt={s.name}
+                      class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                    />
+                    <div class="w-full h-full hidden items-center justify-center text-gray-600">
+                      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                    </div>
+                    <span class="absolute bottom-2 left-2 text-xs bg-gray-900/80 text-gray-300 px-1.5 py-0.5 rounded">
+                      {s.issue_count} issues
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-300 truncate group-hover:text-white">{s.name}</p>
+                </a>
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%# Recent Issues %>
+        <%= if issues != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                {lib.name} — Recent Issues
+              </h2>
+              <div class="flex gap-1">
+                <button onclick={"document.getElementById('issues-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button onclick={"document.getElementById('issues-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+              </div>
+            </div>
+            <div id={"issues-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for book <- issues do %>
+                <a href={~p"/book/#{book.id}"} class="flex-shrink-0 w-36 group">
+                  <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-2 relative">
+                    <img
+                      src={~p"/api/books/#{book.id}/cover"}
+                      alt={book.title}
+                      class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+                      onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                    />
+                    <div class="w-full h-full hidden items-center justify-center text-gray-600">
+                      <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                    </div>
+                    <%= if book.issue_number do %>
+                      <span class="absolute bottom-2 left-2 text-xs bg-gray-900/80 text-gray-300 px-1.5 py-0.5 rounded">
+                        #{book.issue_number}
+                      </span>
+                    <% end %>
+                  </div>
+                  <p class="text-xs text-gray-300 truncate group-hover:text-white">{book.title}</p>
+                  <%= if book.issue_number do %>
+                    <p class="text-xs text-gray-600">#{book.issue_number}</p>
+                  <% end %>
+                </a>
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
       <% end %>
     </div>
     """
