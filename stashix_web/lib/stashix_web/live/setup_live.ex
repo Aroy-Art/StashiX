@@ -14,7 +14,7 @@ defmodule StashixWeb.SetupLive do
          errors: %{},
          trigger_submit: false,
          form: to_form(%{"email" => "", "username" => "", "password" => ""})
-       )}
+       ), layout: {StashixWeb.Layouts, :root}}
     end
   end
 
