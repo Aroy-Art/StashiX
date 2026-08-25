@@ -130,6 +130,18 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
+  def get_series_cover(series_id) do
+    from(bc in BookCover,
+      join: b in Book,
+      on: b.id == bc.book_id,
+      where: b.series_id == ^series_id and is_nil(b.deleted_at),
+      order_by: [asc_nulls_last: b.issue_number, asc: b.inserted_at],
+      limit: 1,
+      select: bc.path
+    )
+    |> Repo.one()
+  end
+
   def update_series_counts(library_id) do
     Repo.query!(
       """

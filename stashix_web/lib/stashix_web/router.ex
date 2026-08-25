@@ -53,6 +53,7 @@ defmodule StashixWeb.Router do
 
     get "/books/:id/cover", BookController, :cover
     get "/books/:id/page/:n", BookController, :page
+    get "/series/:id/cover", SeriesController, :cover
   end
 
   scope "/api", StashixWeb do
@@ -71,7 +72,6 @@ defmodule StashixWeb.Router do
     put "/books/:id/progress", BookController, :progress
 
     get "/series/:id", SeriesController, :show
-    get "/series/:id/cover", SeriesController, :cover
 
     get "/search", SearchController, :search
 

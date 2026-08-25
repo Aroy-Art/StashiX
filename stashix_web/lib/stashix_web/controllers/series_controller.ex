@@ -18,21 +18,13 @@ defmodule StashixWeb.SeriesController do
   end
 
   def cover(conn, %{"id" => id}) do
-    series = Library.get_series!(id)
-
-    first_book =
-      Library.list_books(series.library_id, limit: 1, sort: :issue_number)
-      |> Enum.find(fn b -> b.series_id == id end)
-
-    cover_book = first_book && Stashix.Repo.preload(first_book, :cover)
-
-    case cover_book && cover_book.cover do
+    case Library.get_series_cover(id) do
       nil ->
         conn |> put_status(:not_found) |> json(%{error: "no cover"})
 
-      cover ->
-        if File.exists?(cover.path) do
-          send_file(conn, 200, cover.path)
+      path ->
+        if File.exists?(path) do
+          send_file(conn, 200, path)
         else
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
