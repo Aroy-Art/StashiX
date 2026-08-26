@@ -50,7 +50,7 @@ defmodule StashixWeb.BookLive do
           <div class="aspect-[2/3] bg-gray-800 rounded-xl overflow-hidden">
             <%= if @book.cover do %>
               <img
-                src={~p"/api/books/#{@book.id}/cover"}
+                src={~p"/api/books/#{@book.id}/cover?w=384"}
                 alt={@book.title}
                 class="w-full h-full object-cover"
               />

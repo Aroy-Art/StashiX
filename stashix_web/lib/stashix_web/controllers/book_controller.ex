@@ -3,6 +3,7 @@ defmodule StashixWeb.BookController do
 
   alias Stashix.Library
   alias Stashix.Media.Extractor
+  alias Stashix.Media.ImageResizer
 
   def index(conn, %{"id" => library_id} = params) do
     opts = [
@@ -55,7 +56,7 @@ defmodule StashixWeb.BookController do
     end
   end
 
-  def cover(conn, %{"id" => id}) do
+  def cover(conn, %{"id" => id} = params) do
     book = Library.get_book!(id) |> Stashix.Repo.preload(:cover)
 
     case book.cover do
@@ -64,7 +65,7 @@ defmodule StashixWeb.BookController do
 
       cover ->
         if File.exists?(cover.path) do
-          send_file(conn, 200, cover.path)
+          serve_image(conn, cover.path, params["w"])
         else
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
@@ -101,6 +102,32 @@ defmodule StashixWeb.BookController do
       has_cover: not is_nil(Map.get(book, :cover)),
       inserted_at: book.inserted_at
     }
+  end
+
+  defp serve_image(conn, path, w) when is_binary(w) do
+    case Integer.parse(w) do
+      {width, _} when width > 0 ->
+        case ImageResizer.resize(path, width) do
+          {:ok, resized_path} ->
+            conn
+            |> put_resp_header("cache-control", "public, max-age=86400")
+            |> send_file(200, resized_path)
+
+          {:error, _} ->
+            conn
+            |> put_resp_header("cache-control", "public, max-age=86400")
+            |> send_file(200, path)
+        end
+
+      _ ->
+        serve_image(conn, path, nil)
+    end
+  end
+
+  defp serve_image(conn, path, _w) do
+    conn
+    |> put_resp_header("cache-control", "public, max-age=86400")
+    |> send_file(200, path)
   end
 
   defp detect_image_type(<<0xFF, 0xD8, _::binary>>), do: "image/jpeg"

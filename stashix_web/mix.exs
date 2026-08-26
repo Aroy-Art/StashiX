@@ -62,7 +62,8 @@ defmodule Stashix.MixProject do
       {:sweet_xml, "~> 0.7"},
       {:unzip, "~> 0.12"},
       {:cors_plug, "~> 3.0"},
-      {:file_system, "~> 1.0"}
+      {:file_system, "~> 1.0"},
+      {:image, "~> 0.54"}
     ]
   end
 

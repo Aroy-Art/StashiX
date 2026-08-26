@@ -100,7 +100,7 @@ defmodule StashixWeb.LibrariesLive do
                 <%= for book <- Enum.take(covers, 5) do %>
                   <div class="flex-1 min-w-0">
                     <img
-                      src={~p"/api/books/#{book.id}/cover"}
+                      src={~p"/api/books/#{book.id}/cover?w=200"}
                       class="w-full h-full object-cover"
                       onerror="this.style.display='none'"
                     />
@@ -179,8 +179,9 @@ defmodule StashixWeb.LibrariesLive do
               <%= for book <- books do %>
                 <.media_card
                   href={~p"/book/#{book.id}"}
-                  title={book.title}
+                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={288}
                   subtitle={book.year && to_string(book.year)}
                   type={:book}
                   class="flex-shrink-0 w-36"
@@ -213,6 +214,7 @@ defmodule StashixWeb.LibrariesLive do
                   href={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
+                  width={288}
                   subtitle={series_date_range(s)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
@@ -244,10 +246,10 @@ defmodule StashixWeb.LibrariesLive do
               <%= for book <- issues do %>
                 <.media_card
                   href={~p"/book/#{book.id}"}
-                  title={book.title}
+                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={288}
                   subtitle={book.year && to_string(book.year)}
-                  badge={book.issue_number && "##{book.issue_number}"}
                   type={:book}
                   class="flex-shrink-0 w-36"
                 />

@@ -2,7 +2,7 @@ FROM elixir:1.18-alpine AS build
 
 WORKDIR /app
 
-RUN apk add --no-cache build-base git nodejs npm
+RUN apk add --no-cache build-base git nodejs npm vips-dev
 
 COPY mix.exs mix.lock ./
 RUN mix local.hex --force && mix local.rebar --force
@@ -20,7 +20,7 @@ RUN MIX_ENV=prod mix release
 
 FROM alpine:3.20
 
-RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip unrar
+RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip unrar vips
 
 WORKDIR /app
 

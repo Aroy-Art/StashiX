@@ -730,18 +730,25 @@ defmodule StashixWeb.CoreComponents do
   attr :href, :string, required: true
   attr :title, :string, required: true
   attr :cover_url, :string, default: nil
+  attr :width, :integer, default: nil
   attr :subtitle, :string, default: nil
   attr :badge, :string, default: nil
   attr :type, :atom, default: :book
   attr :class, :string, default: ""
 
   def media_card(assigns) do
+    assigns =
+      assign(assigns, :img_src, if(assigns.cover_url && assigns.width,
+        do: "#{assigns.cover_url}?w=#{assigns.width}",
+        else: assigns.cover_url
+      ))
+
     ~H"""
     <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
       <div class="aspect-[2/3] bg-gray-800 relative">
-        <%= if @cover_url do %>
+        <%= if @img_src do %>
           <img
-            src={@cover_url}
+            src={@img_src}
             alt={@title}
             class="w-full h-full object-cover"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"

@@ -129,6 +129,7 @@ defmodule StashixWeb.LibraryLive do
                 href={~p"/series/#{s.id}"}
                 title={s.name}
                 cover_url={~p"/api/series/#{s.id}/cover"}
+                width={300}
                 subtitle={series_date_range(s)}
                 badge={"#{s.issue_count} issues"}
                 type={:series}
@@ -145,10 +146,10 @@ defmodule StashixWeb.LibraryLive do
             <%= for book <- @books do %>
               <.media_card
                 href={~p"/book/#{book.id}"}
-                title={book.title}
+                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
+                width={300}
                 subtitle={book.year && to_string(book.year)}
-                badge={book.issue_number && "##{book.issue_number}"}
                 type={:book}
               />
             <% end %>
