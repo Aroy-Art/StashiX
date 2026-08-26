@@ -268,6 +268,29 @@ defmodule Stashix.ScannerTest do
 
   # ── force rescan ──────────────────────────────────────────────────────────
 
+  describe "scan_sync/2 rename detection" do
+    test "renamed file updates title and path, keeps same book record", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "Battle Angel Alita (1994-1998)")
+      old_cbz = write_cbz(folder, "Volume 1 - Rusty Angel.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id)
+      assert book.title == "Volume 1 - Rusty Angel"
+      book_id = book.id
+
+      new_cbz = Path.join(folder, "Issue 1 - Rusty Angel (1994).cbz")
+      File.cp!(old_cbz, new_cbz)
+      File.rm!(old_cbz)
+      Scanner.scan_sync(lib.id)
+
+      books = Library.list_books(lib.id)
+      assert length(books) == 1
+      updated = hd(books)
+      assert updated.id == book_id
+      assert updated.title == "Issue 1 - Rusty Angel"
+      assert updated.year == 1994
+    end
+  end
+
   describe "scan_sync/2 force rescan" do
     test "force rescan corrects manually corrupted type", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "One-Shot"), "Standalone.cbz")

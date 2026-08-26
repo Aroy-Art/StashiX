@@ -103,7 +103,7 @@ defmodule Stashix.Scanner do
             import_new_book(file_path, library, file_hash, last_modified, stat.size)
 
           existing_book ->
-            Library.update_book(existing_book, %{path: file_path})
+            reimport_book(existing_book, file_path, library, file_hash, last_modified, stat.size)
         end
 
       existing_book ->
@@ -163,6 +163,11 @@ defmodule Stashix.Scanner do
     series = find_or_create_series(file_path, library, metadata)
 
     attrs = %{
+      path: file_path,
+      title: Map.get(metadata, :title) || filename,
+      issue_number: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number),
+      volume: Map.get(metadata, :volume),
+      year: Map.get(metadata, :year),
       series_id: series && series.id,
       type: if(series, do: "issue", else: "standalone"),
       page_count: resolve_page_count(metadata, file_path, book.page_count),
