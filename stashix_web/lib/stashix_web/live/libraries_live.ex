@@ -12,12 +12,6 @@ defmodule StashixWeb.LibrariesLive do
 
     libraries_data = Enum.map(libraries, &load_library_data/1)
 
-    if connected?(socket) do
-      Enum.each(libraries, fn lib ->
-        Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{lib.id}")
-      end)
-    end
-
     {:ok,
      assign(socket,
        page_title: "Home",

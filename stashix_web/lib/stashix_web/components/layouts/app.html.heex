@@ -45,10 +45,18 @@
           <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Libraries</p>
         </div>
         <%= for lib <- @sidebar_libraries do %>
+          <%
+            progress = Map.get(assigns[:sidebar_scan_progress] || %{}, lib.id)
+            pct = if progress && progress.total > 0, do: round(progress.scanned / progress.total * 100), else: nil
+            scanning = not is_nil(progress)
+          %>
           <div class="relative group/lib flex items-center mb-1">
             <a href={"/library/#{lib.id}"} class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors min-w-0">
-              <.icon name="lucide-folder" class="w-4 h-4 shrink-0" />
+              <.icon name={if scanning, do: "lucide-loader-circle", else: "lucide-folder"} class={if scanning, do: "w-4 h-4 shrink-0 animate-spin text-violet-400", else: "w-4 h-4 shrink-0"} />
               <span class="truncate">{lib.name}</span>
+              <%= if pct do %>
+                <span class="ml-auto text-[10px] font-mono text-violet-400 shrink-0">{pct}%</span>
+              <% end %>
             </a>
             <%= if @current_user.role == :admin do %>
               <div class="relative">
