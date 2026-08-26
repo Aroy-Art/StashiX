@@ -2,22 +2,43 @@ const plugin = require("tailwindcss/plugin")
 const fs = require("fs")
 const path = require("path")
 
-module.exports = plugin(function({matchComponents, theme}) {
-  let iconsDir = path.join(__dirname, "../../deps/lucide/icons")
-  let values = {}
+// Scan lib/ for every lucide-ICONNAME reference so we only embed used icons.
+function findUsedIcons(dir) {
+  const used = new Set()
+  function walk(current) {
+    for (const entry of fs.readdirSync(current, {withFileTypes: true})) {
+      const full = path.join(current, entry.name)
+      if (entry.isDirectory()) {
+        walk(full)
+      } else if (/\.(ex|heex|js)$/.test(entry.name)) {
+        const content = fs.readFileSync(full, "utf8")
+        for (const [, name] of content.matchAll(/lucide-([a-z0-9-]+)/g)) {
+          used.add(name)
+        }
+      }
+    }
+  }
+  walk(dir)
+  return used
+}
 
-  if (fs.existsSync(iconsDir)) {
-    fs.readdirSync(iconsDir)
-      .filter(file => file.endsWith(".svg"))
-      .forEach(file => {
-        let name = path.basename(file, ".svg")
-        values[name] = {name, fullPath: path.join(iconsDir, file)}
-      })
+module.exports = plugin(function({matchComponents, theme}) {
+  const iconsDir = path.join(__dirname, "../../deps/lucide/icons")
+  const libDir = path.join(__dirname, "../../lib")
+
+  const usedIcons = findUsedIcons(libDir)
+
+  const values = {}
+  for (const name of usedIcons) {
+    const fullPath = path.join(iconsDir, `${name}.svg`)
+    if (fs.existsSync(fullPath)) {
+      values[name] = {name, fullPath}
+    }
   }
 
   matchComponents({
     "lucide": ({name, fullPath}) => {
-      let content = fs.readFileSync(fullPath).toString().replace(/\r?\n|\r/g, "")
+      const content = fs.readFileSync(fullPath, "utf8").replace(/\r?\n|\r/g, "")
       return {
         [`--lucide-${name}`]: `url('data:image/svg+xml;utf8,${content}')`,
         "-webkit-mask": `var(--lucide-${name})`,
