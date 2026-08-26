@@ -19,7 +19,7 @@ defmodule Stashix.MixProject do
   def application do
     [
       mod: {Stashix.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :os_mon]
     ]
   end
 
@@ -35,6 +35,7 @@ defmodule Stashix.MixProject do
       {:phoenix, "~> 1.7.21"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
+      {:ecto_psql_extras, "~> 0.6"},
       {:postgrex, ">= 0.0.0"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
@@ -43,10 +44,10 @@ defmodule Stashix.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
-      {:heroicons,
-       github: "tailwindlabs/heroicons",
-       tag: "v2.1.1",
-       sparse: "optimized",
+      {:lucide,
+       github: "lucide-icons/lucide",
+       tag: "0.460.0",
+       sparse: "icons",
        app: false,
        compile: false,
        depth: 1},

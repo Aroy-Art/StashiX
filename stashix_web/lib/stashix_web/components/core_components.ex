@@ -12,7 +12,7 @@ defmodule StashixWeb.CoreComponents do
   See the [Tailwind CSS documentation](https://tailwindcss.com) to learn
   how to customize them or feel free to swap in another framework altogether.
 
-  Icons are provided by [heroicons](https://heroicons.com). See `icon/1` for usage.
+  Icons are provided by [lucide](https://lucide.dev). See `icon/1` for usage.
   """
   use Phoenix.Component
   use Gettext, backend: StashixWeb.Gettext
@@ -75,7 +75,7 @@ defmodule StashixWeb.CoreComponents do
                   class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
                   aria-label={gettext("close")}
                 >
-                  <.icon name="hero-x-mark-solid" class="h-5 w-5" />
+                  <.icon name="lucide-x" class="h-5 w-5" />
                 </button>
               </div>
               <div id={"#{@id}-content"}>
@@ -122,13 +122,13 @@ defmodule StashixWeb.CoreComponents do
       {@rest}
     >
       <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
-        <.icon :if={@kind == :info} name="hero-information-circle-mini" class="h-4 w-4" />
-        <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" />
+        <.icon :if={@kind == :info} name="lucide-info" class="h-4 w-4" />
+        <.icon :if={@kind == :error} name="lucide-circle-alert" class="h-4 w-4" />
         {@title}
       </p>
       <p class="mt-2 text-sm leading-5">{msg}</p>
       <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
+        <.icon name="lucide-x" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
       </button>
     </div>
     """
@@ -158,7 +158,7 @@ defmodule StashixWeb.CoreComponents do
         hidden
       >
         {gettext("Attempting to reconnect")}
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <.icon name="lucide-loader-circle" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
 
       <.flash
@@ -170,7 +170,7 @@ defmodule StashixWeb.CoreComponents do
         hidden
       >
         {gettext("Hang in there while we get back on track")}
-        <.icon name="hero-arrow-path" class="ml-1 h-3 w-3 animate-spin" />
+        <.icon name="lucide-loader-circle" class="ml-1 h-3 w-3 animate-spin" />
       </.flash>
     </div>
     """
@@ -410,7 +410,7 @@ defmodule StashixWeb.CoreComponents do
   def error(assigns) do
     ~H"""
     <p class="mt-3 flex gap-3 text-sm leading-6 text-rose-600">
-      <.icon name="hero-exclamation-circle-mini" class="mt-0.5 h-5 w-5 flex-none" />
+      <.icon name="lucide-circle-alert" class="mt-0.5 h-5 w-5 flex-none" />
       {render_slot(@inner_block)}
     </p>
     """
@@ -563,7 +563,7 @@ defmodule StashixWeb.CoreComponents do
         navigate={@navigate}
         class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
       >
-        <.icon name="hero-arrow-left-solid" class="h-3 w-3" />
+        <.icon name="lucide-arrow-left" class="h-3 w-3" />
         {render_slot(@inner_block)}
       </.link>
     </div>
@@ -571,29 +571,22 @@ defmodule StashixWeb.CoreComponents do
   end
 
   @doc """
-  Renders a [Heroicon](https://heroicons.com).
+  Renders a [Lucide](https://lucide.dev) icon.
 
-  Heroicons come in three styles – outline, solid, and mini.
-  By default, the outline style is used, but solid and mini may
-  be applied by using the `-solid` and `-mini` suffix.
-
-  You can customize the size and colors of the icons by setting
-  width, height, and background color classes.
-
-  Icons are extracted from the `deps/heroicons` directory and bundled within
+  Icons are extracted from the `deps/lucide` directory and bundled within
   your compiled app.css by the plugin in your `assets/tailwind.config.js`.
 
   ## Examples
 
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+      <.icon name="lucide-x" />
+      <.icon name="lucide-refresh-cw" class="w-4 h-4 animate-spin" />
   """
   attr :name, :string, required: true
   attr :class, :string, default: nil
 
-  def icon(%{name: "hero-" <> _} = assigns) do
+  def icon(%{name: "lucide-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} aria-hidden="true"></span>
     """
   end
 
@@ -744,13 +737,13 @@ defmodule StashixWeb.CoreComponents do
 
   def media_card(assigns) do
     ~H"""
-    <a href={@href} class={["group", @class]}>
-      <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1 relative">
+    <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
+      <div class="aspect-[2/3] bg-gray-800 relative">
         <%= if @cover_url do %>
           <img
             src={@cover_url}
             alt={@title}
-            class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+            class="w-full h-full object-cover"
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
           />
           <div class="w-full h-full hidden items-center justify-center text-gray-600">
@@ -762,15 +755,18 @@ defmodule StashixWeb.CoreComponents do
           </div>
         <% end %>
         <%= if @badge do %>
-          <span class="absolute bottom-2 left-2 text-xs bg-gray-900/80 text-gray-300 px-1.5 py-0.5 rounded">
+          <span class="absolute bottom-2 left-2 text-xs bg-black/70 text-gray-300 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
             {@badge}
           </span>
         <% end %>
+        <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
       </div>
-      <p class="text-xs text-gray-400 truncate group-hover:text-white">{@title}</p>
-      <%= if @subtitle do %>
-        <p class="text-xs text-gray-600">{@subtitle}</p>
-      <% end %>
+      <div class="px-2.5 py-2 bg-gray-900">
+        <p class="text-xs font-medium text-gray-200 truncate group-hover:text-white transition-colors">{@title}</p>
+        <%= if @subtitle do %>
+          <p class="text-xs text-gray-500 mt-0.5">{@subtitle}</p>
+        <% end %>
+      </div>
     </a>
     """
   end
