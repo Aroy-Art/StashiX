@@ -597,6 +597,55 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc """
+  Renders a dark-themed confirmation dialog driven by server state.
+
+  Pass a `confirm` map with keys `:title`, `:message`, `:event`, and optionally
+  `:params` (map of extra phx-value bindings). When non-nil the dialog is shown.
+  The host LiveView must handle `"confirm_action"` and `"cancel_confirm"` events.
+
+  ## Example
+
+      <.confirm_dialog confirm={@pending_confirm} />
+  """
+  attr :confirm, :map, default: nil
+
+  def confirm_dialog(assigns) do
+    ~H"""
+    <%= if @confirm do %>
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          phx-click="cancel_confirm"
+          aria-hidden="true"
+        />
+        <div class="relative bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+          <h3 class="text-white font-semibold text-base mb-2">{@confirm.title}</h3>
+          <p class="text-gray-400 text-sm mb-6">{@confirm.message}</p>
+          <div class="flex gap-3 justify-end">
+            <button
+              phx-click="cancel_confirm"
+              class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              phx-click="confirm_action"
+              class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg font-medium transition-colors"
+            >
+              {@confirm[:confirm_label] || "Confirm"}
+            </button>
+          </div>
+        </div>
+      </div>
+    <% end %>
+    """
+  end
+
   ## JS Commands
 
   def show(js \\ %JS{}, selector) do
@@ -672,5 +721,75 @@ defmodule StashixWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  A unified card component for books and series.
+
+  Attrs:
+    - href: link target
+    - title: display title
+    - cover_url: image src (nil shows fallback)
+    - subtitle: small text below title (year, date range, etc.)
+    - badge: overlaid bottom-left badge text (issue number, issue count)
+    - type: :book | :series — controls fallback icon
+  """
+  attr :href, :string, required: true
+  attr :title, :string, required: true
+  attr :cover_url, :string, default: nil
+  attr :subtitle, :string, default: nil
+  attr :badge, :string, default: nil
+  attr :type, :atom, default: :book
+  attr :class, :string, default: ""
+
+  def media_card(assigns) do
+    ~H"""
+    <a href={@href} class={["group", @class]}>
+      <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1 relative">
+        <%= if @cover_url do %>
+          <img
+            src={@cover_url}
+            alt={@title}
+            class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+          />
+          <div class="w-full h-full hidden items-center justify-center text-gray-600">
+            <.media_card_fallback type={@type} />
+          </div>
+        <% else %>
+          <div class="w-full h-full flex items-center justify-center text-gray-600">
+            <.media_card_fallback type={@type} />
+          </div>
+        <% end %>
+        <%= if @badge do %>
+          <span class="absolute bottom-2 left-2 text-xs bg-gray-900/80 text-gray-300 px-1.5 py-0.5 rounded">
+            {@badge}
+          </span>
+        <% end %>
+      </div>
+      <p class="text-xs text-gray-400 truncate group-hover:text-white">{@title}</p>
+      <%= if @subtitle do %>
+        <p class="text-xs text-gray-600">{@subtitle}</p>
+      <% end %>
+    </a>
+    """
+  end
+
+  attr :type, :atom, default: :book
+
+  defp media_card_fallback(%{type: :series} = assigns) do
+    ~H"""
+    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+    </svg>
+    """
+  end
+
+  defp media_card_fallback(assigns) do
+    ~H"""
+    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+    </svg>
+    """
   end
 end

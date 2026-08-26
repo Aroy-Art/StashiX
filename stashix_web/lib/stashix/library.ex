@@ -75,7 +75,7 @@ defmodule Stashix.Library do
 
   def list_series(library_id) do
     from(s in Series,
-      where: s.library_id == ^library_id,
+      where: s.library_id == ^library_id and is_nil(s.deleted_at),
       select: %{
         s
         | issue_count:
@@ -131,15 +131,25 @@ defmodule Stashix.Library do
   end
 
   def get_series_cover(series_id) do
-    from(bc in BookCover,
-      join: b in Book,
-      on: b.id == bc.book_id,
-      where: b.series_id == ^series_id and is_nil(b.deleted_at),
-      order_by: [asc_nulls_last: b.issue_number, asc: b.inserted_at],
-      limit: 1,
-      select: bc.path
-    )
-    |> Repo.one()
+    series = Repo.get!(Series, series_id)
+
+    folder_cover =
+      series.path &&
+        Enum.find_value(~w(cover.jpg cover.jpeg cover.png cover.webp), fn name ->
+          path = Path.join(series.path, name)
+          if File.exists?(path), do: path
+        end)
+
+    folder_cover ||
+      from(bc in BookCover,
+        join: b in Book,
+        on: b.id == bc.book_id,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at),
+        order_by: [asc_nulls_last: b.issue_number, asc: b.inserted_at],
+        limit: 1,
+        select: bc.path
+      )
+      |> Repo.one()
   end
 
   def update_series_counts(library_id) do
@@ -166,7 +176,9 @@ defmodule Stashix.Library do
         |> Repo.insert()
 
       series ->
-        {:ok, series}
+        series
+        |> Series.changeset(Map.take(attrs, [:start_year, :end_year, :ongoing, :path]))
+        |> Repo.update()
     end
   end
 
@@ -229,7 +241,11 @@ defmodule Stashix.Library do
   end
 
   def count_series(library_id) do
-    Repo.aggregate(from(s in Series, where: s.library_id == ^library_id), :count, :id)
+    Repo.aggregate(
+      from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at)),
+      :count,
+      :id
+    )
   end
 
   def count_issues(library_id) do
@@ -271,5 +287,112 @@ defmodule Stashix.Library do
       preload: [:cover]
     )
     |> Repo.all()
+  end
+
+  def mark_orphaned_books(library_id, scanned_paths) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    from(b in Book,
+      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.path not in ^scanned_paths
+    )
+    |> Repo.update_all(set: [deleted_at: now])
+  end
+
+  def mark_empty_series_deleted(library_id) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    active_series_ids =
+      from(b in Book,
+        where: not is_nil(b.series_id) and is_nil(b.deleted_at),
+        select: b.series_id,
+        distinct: true
+      )
+
+    from(s in Series,
+      where:
+        s.library_id == ^library_id and is_nil(s.deleted_at) and
+          s.id not in subquery(active_series_ids)
+    )
+    |> Repo.update_all(set: [deleted_at: now])
+  end
+
+  def list_all_deleted_books do
+    from(b in Book,
+      where: not is_nil(b.deleted_at),
+      preload: [:series, :cover, :library],
+      order_by: [desc: b.deleted_at]
+    )
+    |> Repo.all()
+  end
+
+  def list_all_deleted_series do
+    from(s in Series,
+      where: not is_nil(s.deleted_at),
+      preload: [:library],
+      order_by: [desc: s.deleted_at]
+    )
+    |> Repo.all()
+  end
+
+  def restore_book(book) do
+    book |> Book.changeset(%{deleted_at: nil}) |> Repo.update()
+  end
+
+  def restore_series(series) do
+    Repo.transaction(fn ->
+      from(b in Book, where: b.series_id == ^series.id and not is_nil(b.deleted_at))
+      |> Repo.update_all(set: [deleted_at: nil])
+
+      series |> Series.changeset(%{deleted_at: nil}) |> Repo.update!()
+    end)
+  end
+
+  def purge_book(book) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from bc in BookCover, where: bc.book_id == ^book.id)
+      Repo.delete!(book)
+    end)
+  end
+
+  def purge_series(series) do
+    Repo.transaction(fn ->
+      book_ids =
+        from(b in Book, where: b.series_id == ^series.id, select: b.id) |> Repo.all()
+
+      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
+      Repo.delete_all(from b in Book, where: b.id in ^book_ids)
+      Repo.delete!(series)
+    end)
+  end
+
+  def batch_restore_books(ids) do
+    from(b in Book, where: b.id in ^ids)
+    |> Repo.update_all(set: [deleted_at: nil])
+  end
+
+  def batch_purge_books(ids) do
+    Repo.transaction(fn ->
+      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^ids)
+      Repo.delete_all(from b in Book, where: b.id in ^ids)
+    end)
+  end
+
+  def batch_restore_series(ids) do
+    Repo.transaction(fn ->
+      from(b in Book, where: b.series_id in ^ids and not is_nil(b.deleted_at))
+      |> Repo.update_all(set: [deleted_at: nil])
+
+      from(s in Series, where: s.id in ^ids)
+      |> Repo.update_all(set: [deleted_at: nil])
+    end)
+  end
+
+  def batch_purge_series(ids) do
+    Repo.transaction(fn ->
+      book_ids = from(b in Book, where: b.series_id in ^ids, select: b.id) |> Repo.all()
+      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
+      Repo.delete_all(from b in Book, where: b.id in ^book_ids)
+      Repo.delete_all(from s in Series, where: s.id in ^ids)
+    end)
   end
 end

@@ -3,7 +3,7 @@ defmodule Stashix.Scanner do
   require Logger
 
   alias Stashix.Library
-  alias Stashix.Media.Thumbnail
+  alias Stashix.Media.{Thumbnail, Extractor}
   alias Stashix.Metadata.Parser
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
@@ -16,6 +16,9 @@ defmodule Stashix.Scanner do
   def scan_library(library_id, force \\ false) do
     GenServer.cast(__MODULE__, {:scan, library_id, force})
   end
+
+  @doc false
+  def scan_sync(library_id, force \\ false), do: do_scan(library_id, force)
 
   def get_task_status(library_id) do
     case :ets.lookup(@ets_table, library_id) do
@@ -60,10 +63,15 @@ defmodule Stashix.Scanner do
       broadcast_progress(library_id, idx, total)
     end)
 
+    if File.dir?(library.root_path) do
+      Library.mark_orphaned_books(library_id, files)
+      Library.mark_empty_series_deleted(library_id)
+    end
+
     Library.update_series_counts(library_id)
 
     update_task_status(library_id, %{scanned: total, total: total, done: true})
-    broadcast_progress(library_id, total, total)
+    broadcast_progress(library_id, total, total, true)
 
     Logger.info("Scan complete for library #{library.name}: #{total} files processed")
   end
@@ -99,7 +107,10 @@ defmodule Stashix.Scanner do
         end
 
       existing_book ->
-        if force || NaiveDateTime.compare(last_modified, existing_book.last_modified || ~N[1970-01-01 00:00:00]) == :gt do
+        was_deleted = existing_book.deleted_at != nil
+        modified = NaiveDateTime.compare(last_modified, existing_book.last_modified || ~N[1970-01-01 00:00:00]) == :gt
+
+        if force || was_deleted || modified do
           reimport_book(existing_book, file_path, library, file_hash, last_modified, stat.size)
         end
     end
@@ -121,10 +132,11 @@ defmodule Stashix.Scanner do
       path: file_path,
       title: Map.get(metadata, :title) || filename,
       format: format,
+      type: if(series, do: "issue", else: "standalone"),
       issue_number: Map.get(metadata, :issue_number),
       volume: Map.get(metadata, :volume),
       year: Map.get(metadata, :year),
-      page_count: Map.get(metadata, :page_count, 0),
+      page_count: resolve_page_count(metadata, file_path, 0),
       language: Map.get(metadata, :language, "en"),
       summary: Map.get(metadata, :summary),
       file_hash: file_hash,
@@ -142,19 +154,24 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp reimport_book(book, file_path, _library, file_hash, last_modified, file_size) do
+  defp reimport_book(book, file_path, library, file_hash, last_modified, file_size) do
     filename = Path.basename(file_path, Path.extname(file_path))
     parsed = Parser.parse_filename(filename)
     comicinfo = Parser.parse_comicinfo(file_path)
     metadata = Map.merge(parsed, comicinfo)
 
+    series = find_or_create_series(file_path, library, metadata)
+
     attrs = %{
-      page_count: Map.get(metadata, :page_count, book.page_count),
+      series_id: series && series.id,
+      type: if(series, do: "issue", else: "standalone"),
+      page_count: resolve_page_count(metadata, file_path, book.page_count),
       language: Map.get(metadata, :language, book.language),
       summary: Map.get(metadata, :summary, book.summary),
       file_hash: file_hash,
       file_size: file_size,
-      last_modified: last_modified
+      last_modified: last_modified,
+      deleted_at: nil
     }
 
     case Library.update_book(book, attrs) do
@@ -163,28 +180,79 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp find_or_create_series(file_path, library, metadata) do
-    series_name = Map.get(metadata, :series)
+  @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
+
+  defp find_or_create_series(file_path, library, _metadata) do
     parent_dir = Path.dirname(file_path)
     dir_name = Path.basename(parent_dir)
+    dir_name_lower = String.downcase(dir_name)
+
+    standalone_patterns =
+      @default_standalone_patterns ++
+        Enum.map(library.standalone_folders || [], &String.downcase/1)
+
+    at_root = dir_name == Path.basename(library.root_path)
+    is_standalone_folder = dir_name_lower in standalone_patterns
 
     name =
       cond do
-        series_name && series_name != "" -> series_name
-        dir_name != Path.basename(library.root_path) -> dir_name
-        true -> nil
+        at_root -> nil
+        is_standalone_folder -> nil
+        true -> dir_name
       end
 
     if name do
+      {clean_name, start_year, end_year, ongoing} = parse_folder_name(name)
+
       case Library.create_or_find_series(%{
              library_id: library.id,
-             name: name,
+             name: clean_name,
              path: parent_dir,
-             volume: Map.get(metadata, :volume)
+             start_year: start_year,
+             end_year: end_year,
+             ongoing: ongoing
            }) do
         {:ok, series} -> series
         _ -> nil
       end
+    end
+  end
+
+  defp resolve_page_count(metadata, file_path, fallback) do
+    case Map.get(metadata, :page_count) do
+      n when is_integer(n) and n > 0 -> n
+      _ ->
+        case Extractor.get_page_count(file_path) do
+          n when n > 0 -> n
+          _ -> fallback
+        end
+    end
+  end
+
+  # "Batman (1940-2011)" → {"Batman", 1940, 2011, false}
+  # "The Disavowed (2025-)" → {"The Disavowed", 2025, nil, true}
+  # "AD Police (1994)" → {"AD Police", 1994, nil, false}
+  # "Plain Name" → {"Plain Name", nil, nil, false}
+  @doc false
+  def parse_folder_name(name) do
+    cond do
+      # "Series Name (YYYY-YYYY)" — start and end year
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})-(\d{4})\)\s*$/, name) ->
+        [_, base, sy, ey] = match
+        {String.trim(base), String.to_integer(sy), String.to_integer(ey), false}
+
+      # "Series Name (YYYY-)" — ongoing
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})-\)\s*$/, name) ->
+        [_, base, sy] = match
+        {String.trim(base), String.to_integer(sy), nil, true}
+
+      # "Series Name (YYYY)" — single year
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})\)\s*$/, name) ->
+        [_, base, sy] = match
+        {String.trim(base), String.to_integer(sy), nil, false}
+
+      true ->
+        {name, nil, nil, false}
     end
   end
 
@@ -193,10 +261,27 @@ defmodule Stashix.Scanner do
     File.mkdir_p!(thumb_dir)
     dest = Path.join(thumb_dir, "#{book.id}.jpg")
 
-    case Thumbnail.generate(file_path, dest) do
+    result =
+      case find_sidecar_image(file_path) do
+        nil -> Thumbnail.generate(file_path, dest)
+        sidecar -> File.cp(sidecar, dest)
+      end
+
+    case result do
+      :ok -> Library.create_or_update_cover(book.id, dest)
       {:ok, _} -> Library.create_or_update_cover(book.id, dest)
       {:error, reason} -> Logger.warning("Thumbnail failed for #{file_path}: #{inspect(reason)}")
     end
+  end
+
+  @doc false
+  def find_sidecar_image(file_path) do
+    base = Path.rootname(file_path)
+
+    Enum.find_value(~w(.jpg .jpeg .png .webp), fn ext ->
+      path = base <> ext
+      if File.exists?(path), do: path
+    end)
   end
 
   defp compute_hash(file_path, file_size) do
@@ -218,11 +303,11 @@ defmodule Stashix.Scanner do
     :ets.insert(@ets_table, {library_id, status})
   end
 
-  defp broadcast_progress(library_id, scanned, total) do
+  defp broadcast_progress(library_id, scanned, total, done \\ false) do
     Phoenix.PubSub.broadcast(
       Stashix.PubSub,
       "scan:#{library_id}",
-      {:scan_progress, %{library_id: library_id, scanned: scanned, total: total}}
+      {:scan_progress, %{library_id: library_id, scanned: scanned, total: total, done: done}}
     )
   end
 end

@@ -27,9 +27,12 @@ defmodule Stashix.Library.Series do
     field :format, Ecto.Enum, values: @comic_formats
     field :issue_count, :integer, default: 0
     field :volume_count, :integer, default: 0
+    field :start_year, :integer
+    field :end_year, :integer
     field :ongoing, :boolean, default: false
     field :adult, :boolean, default: false
     field :path, :string
+    field :deleted_at, :naive_datetime
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :publisher, Stashix.Library.Publisher
@@ -49,9 +52,12 @@ defmodule Stashix.Library.Series do
       :format,
       :issue_count,
       :volume_count,
+      :start_year,
+      :end_year,
       :ongoing,
       :adult,
       :path,
+      :deleted_at,
       :library_id,
       :publisher_id
     ])
