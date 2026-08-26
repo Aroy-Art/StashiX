@@ -56,6 +56,12 @@ defmodule StashixWeb.LibraryLive do
     {:noreply, load_content(socket, socket.assigns.filter, 0)}
   end
 
+  defp series_date_range(%{start_year: nil}), do: nil
+  defp series_date_range(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
+  defp series_date_range(%{start_year: y, end_year: nil}), do: to_string(y)
+  defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
+  defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
+
   defp load_content(socket, filter, page) do
     library_id = socket.assigns.library.id
     opts = filter_opts(filter, page)
@@ -119,23 +125,14 @@ defmodule StashixWeb.LibraryLive do
           <h2 class="text-lg font-semibold text-gray-300 mb-3">Series</h2>
           <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             <%= for s <- @series do %>
-              <a href={~p"/series/#{s.id}"} class="group">
-                <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1">
-                  <img
-                    src={~p"/api/series/#{s.id}/cover"}
-                    alt={s.name}
-                    class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-                  />
-                  <div class="w-full h-full hidden items-center justify-center text-gray-600">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                  </div>
-                </div>
-                <p class="text-xs text-gray-400 truncate group-hover:text-white">{s.name}</p>
-                <p class="text-xs text-gray-600">{s.issue_count} issues</p>
-              </a>
+              <.media_card
+                href={~p"/series/#{s.id}"}
+                title={s.name}
+                cover_url={~p"/api/series/#{s.id}/cover"}
+                subtitle={series_date_range(s)}
+                badge={"#{s.issue_count} issues"}
+                type={:series}
+              />
             <% end %>
           </div>
         </section>
@@ -146,25 +143,14 @@ defmodule StashixWeb.LibraryLive do
           <h2 class="text-lg font-semibold text-gray-300 mb-3">Books</h2>
           <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             <%= for book <- @books do %>
-              <a href={~p"/book/#{book.id}"} class="group">
-                <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1">
-                  <img
-                    src={~p"/api/books/#{book.id}/cover"}
-                    alt={book.title}
-                    class="w-full h-full object-cover group-hover:opacity-80 transition-opacity"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-                  />
-                  <div class="w-full h-full hidden items-center justify-center text-gray-600">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                  </div>
-                </div>
-                <p class="text-xs text-gray-400 truncate group-hover:text-white">{book.title}</p>
-                <%= if book.issue_number do %>
-                  <p class="text-xs text-gray-600">#{book.issue_number}</p>
-                <% end %>
-              </a>
+              <.media_card
+                href={~p"/book/#{book.id}"}
+                title={book.title}
+                cover_url={~p"/api/books/#{book.id}/cover"}
+                subtitle={book.year && to_string(book.year)}
+                badge={book.issue_number && "##{book.issue_number}"}
+                type={:book}
+              />
             <% end %>
           </div>
           <div class="mt-6 text-center">

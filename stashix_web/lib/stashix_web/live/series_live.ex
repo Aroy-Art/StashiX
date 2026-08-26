@@ -68,24 +68,14 @@ defmodule StashixWeb.SeriesLive do
 
       <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         <%= for book <- @books do %>
-          <a href={~p"/book/#{book.id}"} class="group">
-            <div class="aspect-[2/3] bg-gray-800 rounded-lg overflow-hidden mb-1">
-              <div class="w-full h-full flex items-center justify-center text-gray-600 text-xs text-center px-1">
-                <%= if book.issue_number do %>
-                  <span>#{ book.issue_number}</span>
-                <% else %>
-                  <span>{book.title}</span>
-                <% end %>
-              </div>
-            </div>
-            <p class="text-xs text-gray-400 truncate group-hover:text-white">
-              <%= if book.issue_number do %>
-                #{book.issue_number}
-              <% else %>
-                {book.title}
-              <% end %>
-            </p>
-          </a>
+          <.media_card
+            href={~p"/book/#{book.id}"}
+            title={if book.issue_number, do: "##{book.issue_number}", else: book.title}
+            cover_url={~p"/api/books/#{book.id}/cover"}
+            subtitle={book.year && to_string(book.year)}
+            badge={book.issue_number && "##{book.issue_number}"}
+            type={:book}
+          />
         <% end %>
       </div>
     </div>
