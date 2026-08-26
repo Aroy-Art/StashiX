@@ -42,7 +42,7 @@ defmodule StashixWeb.BookLive do
           <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
         <% end %>
         <span class="text-gray-700">/</span>
-        <span class="text-gray-300">{@book.title}</span>
+        <span class="text-gray-300">{if @book.issue_number, do: "##{@book.issue_number} – #{@book.title}", else: @book.title}</span>
       </div>
 
       <div class="flex gap-8">
@@ -65,7 +65,9 @@ defmodule StashixWeb.BookLive do
         </div>
 
         <div class="flex-1">
-          <h1 class="text-3xl font-bold text-white">{@book.title}</h1>
+          <h1 class="text-3xl font-bold text-white">
+            {if @book.issue_number, do: "##{@book.issue_number} – #{@book.title}", else: @book.title}
+          </h1>
 
           <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
             <%= if @book.issue_number do %>

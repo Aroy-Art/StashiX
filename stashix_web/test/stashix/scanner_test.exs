@@ -274,7 +274,8 @@ defmodule Stashix.ScannerTest do
       old_cbz = write_cbz(folder, "Volume 1 - Rusty Angel.cbz")
       Scanner.scan_sync(lib.id)
       [book] = Library.list_books(lib.id)
-      assert book.title == "Volume 1 - Rusty Angel"
+      assert book.title == "Rusty Angel"
+      assert book.issue_number == Decimal.new("1")
       book_id = book.id
 
       new_cbz = Path.join(folder, "Issue 1 - Rusty Angel (1994).cbz")
@@ -286,7 +287,8 @@ defmodule Stashix.ScannerTest do
       assert length(books) == 1
       updated = hd(books)
       assert updated.id == book_id
-      assert updated.title == "Issue 1 - Rusty Angel"
+      assert updated.title == "Rusty Angel"
+      assert updated.issue_number == Decimal.new("1")
       assert updated.year == 1994
     end
   end

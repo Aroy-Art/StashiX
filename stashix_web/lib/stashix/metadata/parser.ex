@@ -91,7 +91,28 @@ defmodule Stashix.Metadata.Parser do
 
     result = %{}
 
+    # "Issue 6 - Angel of Death (1996)" or "Volume 3 - Killing Angel"
     result =
+      case Regex.run(~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*[-–]\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i, clean) do
+        [_, num, title, year] ->
+          result
+          |> Map.put(:issue_number, parse_decimal(num))
+          |> Map.put(:title, String.trim(title))
+          |> maybe_put(:year, parse_int(year))
+
+        [_, num, title] ->
+          result
+          |> Map.put(:issue_number, parse_decimal(num))
+          |> Map.put(:title, String.trim(title))
+
+        nil ->
+          result
+      end
+
+    result =
+      if map_size(result) > 0 do
+        result
+      else
       case Regex.run(
              ~r/^(.+?)\s*\((\d{4})(?:-\d{4})?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/,
              clean
@@ -127,6 +148,7 @@ defmodule Stashix.Metadata.Parser do
                   Map.put(result, :title, clean)
               end
           end
+      end
       end
 
     if not Map.has_key?(result, :title) do
