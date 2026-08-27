@@ -133,7 +133,7 @@ defmodule Stashix.Scanner do
       title: Map.get(metadata, :title) || filename,
       format: format,
       type: if(series, do: "issue", else: "standalone"),
-      issue_number: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number),
+      issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
       volume: Map.get(metadata, :volume),
       year: Map.get(metadata, :year),
       page_count: resolve_page_count(metadata, file_path, 0),
@@ -165,7 +165,7 @@ defmodule Stashix.Scanner do
     attrs = %{
       path: file_path,
       title: Map.get(metadata, :title) || filename,
-      issue_number: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number),
+      issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
       volume: Map.get(metadata, :volume),
       year: Map.get(metadata, :year),
       series_id: series && series.id,
