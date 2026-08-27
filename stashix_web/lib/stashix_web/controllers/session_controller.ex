@@ -21,22 +21,27 @@ defmodule StashixWeb.SessionController do
     end
   end
 
-  def setup(conn, %{"email" => email, "username" => username, "password" => password}) do
+  def setup(conn, params) do
     if Accounts.setup_complete?() do
       redirect(conn, to: ~p"/login")
     else
-      case Accounts.create_user(%{email: email, username: username, password: password, role: :admin}) do
-        {:ok, user} ->
-          {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
+      %{"email" => email, "username" => username, "password" => password,
+        "library_name" => library_name, "library_path" => library_path} = params
 
-          conn
-          |> put_session("guardian_default_token", access_token)
-          |> put_session("guardian_refresh_token", refresh_token)
-          |> redirect(to: ~p"/")
+      with {:ok, user} <-
+             Accounts.create_user(%{email: email, username: username, password: password, role: :admin}),
+           {:ok, _library} <-
+             Stashix.Library.create_library(%{name: library_name, root_path: library_path}) do
+        {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 
-        {:error, _changeset} ->
+        conn
+        |> put_session("guardian_default_token", access_token)
+        |> put_session("guardian_refresh_token", refresh_token)
+        |> redirect(to: ~p"/")
+      else
+        {:error, _} ->
           conn
-          |> put_flash(:error, "Failed to create account. Check your details and try again.")
+          |> put_flash(:error, "Setup failed. Check your details and try again.")
           |> redirect(to: ~p"/setup")
       end
     end
