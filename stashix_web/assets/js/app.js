@@ -24,6 +24,20 @@ import topbar from "../vendor/topbar"
 
 let Hooks = {}
 
+Hooks.CoverImage = {
+  mounted() {
+    this.el.style.transition = 'opacity 0.2s ease'
+    this.el.style.opacity = '0'
+    const reveal = () => { this.el.style.opacity = '1' }
+    if (this.el.complete && this.el.naturalWidth > 0) {
+      reveal()
+    } else {
+      this.el.addEventListener('load', reveal, { once: true })
+      this.el.addEventListener('error', reveal, { once: true })
+    }
+  }
+}
+
 Hooks.PageImage = {
   mounted() {
     this.spinner = this.el.previousElementSibling

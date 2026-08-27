@@ -22,6 +22,40 @@ defmodule StashixWeb.BookLive do
      )}
   end
 
+  defp format_file_size(nil), do: "—"
+  defp format_file_size(0), do: "—"
+
+  defp format_file_size(bytes) do
+    cond do
+      bytes >= 1_073_741_824 -> "#{Float.round(bytes / 1_073_741_824, 1)} GB"
+      bytes >= 1_048_576 -> "#{Float.round(bytes / 1_048_576, 1)} MB"
+      bytes >= 1024 -> "#{Float.round(bytes / 1024, 1)} KB"
+      true -> "#{bytes} B"
+    end
+  end
+
+  defp format_age_rating(:unknown), do: "N/A"
+  defp format_age_rating(:everyone), do: "Everyone"
+  defp format_age_rating(:teen), do: "Teen"
+  defp format_age_rating(:teen_plus), do: "Teen+"
+  defp format_age_rating(:mature), do: "Mature"
+  defp format_age_rating(:adult), do: "Adult"
+  defp format_age_rating(:explicit), do: "Explicit"
+  defp format_age_rating(_), do: "N/A"
+
+  defp book_display_title(book) do
+    cond do
+      book.series && book.issue_number ->
+        "#{book.series.name} ##{book.issue_number |> Decimal.to_integer()}"
+      true ->
+        book.title
+    end
+  end
+
+  defp relative_path(book, library) do
+    library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -42,101 +76,142 @@ defmodule StashixWeb.BookLive do
           <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
         <% end %>
         <span class="text-gray-700">/</span>
-        <span class="text-gray-300">{if @book.issue_number, do: "##{@book.issue_number} – #{@book.title}", else: @book.title}</span>
+        <span class="text-gray-300">{if @book.issue_number, do: "##{Decimal.to_integer(@book.issue_number)} – #{@book.title}", else: @book.title}</span>
       </div>
 
-      <div class="flex gap-8">
-        <div class="w-48 flex-shrink-0">
-          <div class="aspect-[2/3] bg-gray-800 rounded-xl overflow-hidden">
+      <div class="flex gap-6 md:gap-8">
+        <%!-- Cover --%>
+        <div class="w-36 md:w-48 flex-shrink-0">
+          <div class="aspect-[2/3] bg-gray-800/60 rounded-xl overflow-hidden">
             <%= if @book.cover do %>
               <img
+                id={"book-cover-#{@book.id}"}
+                phx-hook="CoverImage"
                 src={~p"/api/books/#{@book.id}/cover?w=384"}
                 alt={@book.title}
                 class="w-full h-full object-cover"
               />
             <% else %>
               <div class="w-full h-full flex items-center justify-center text-gray-600">
-                <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
+                <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
               </div>
             <% end %>
           </div>
         </div>
 
-        <div class="flex-1">
-          <h1 class="text-3xl font-bold text-white">
-            {if @book.issue_number, do: "##{@book.issue_number} – #{@book.title}", else: @book.title}
+        <%!-- Info --%>
+        <div class="flex-1 min-w-0">
+          <%!-- Series link --%>
+          <%= if @book.series do %>
+            <div class="flex items-baseline gap-1.5">
+              <a
+                href={~p"/series/#{@book.series.id}"}
+                class="text-violet-400 text-sm font-medium hover:text-violet-300 transition-colors"
+              >
+                {@book.series.name}
+              </a>
+              <%= if @book.series.start_year do %>
+                <span class="text-gray-500 text-sm">
+                  ({@book.series.start_year}{if @book.series.end_year, do: "–#{@book.series.end_year}", else: "–"})
+                </span>
+              <% end %>
+            </div>
+          <% end %>
+
+          <%!-- Title --%>
+          <h1 class="text-2xl md:text-3xl font-bold text-white mt-0.5">
+            {book_display_title(@book)}
           </h1>
 
-          <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <%= if @book.issue_number do %>
+          <%!-- Issue subtitle --%>
+          <%= if @book.issue_number do %>
+            <p class="text-gray-400 text-sm mt-1">
+              Issue #{Decimal.to_integer(@book.issue_number)}
+            </p>
+          <% end %>
+
+          <%!-- Quick stats --%>
+          <div class="flex items-center gap-5 mt-3 text-sm text-gray-400">
+            <%= if @book.page_count > 0 do %>
+              <span class="flex items-center gap-1.5">
+                <.icon name="lucide-book-open" class="w-4 h-4" />
+                {@book.page_count} pages
+              </span>
+            <% end %>
+            <span class="flex items-center gap-1.5">
+              <.icon name="lucide-file-text" class="w-4 h-4" />
+              {String.upcase(to_string(@book.format))}
+            </span>
+          </div>
+
+          <%!-- Progress bar --%>
+          <%= if @progress > 0 && @book.page_count > 0 do %>
+            <div class="mt-3">
+              <div class="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Progress</span>
+                <span>{@progress}/{@book.page_count} pages</span>
+              </div>
+              <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  class="h-full bg-violet-500"
+                  style={"width: #{round(@progress / @book.page_count * 100)}%"}
+                >
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <%!-- Read button --%>
+          <%= if @book.page_count > 0 do %>
+            <a
+              href={~p"/read/#{@book.id}"}
+              class="inline-flex items-center gap-2 px-5 py-2.5 mt-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <.icon name="lucide-book-open" class="w-4 h-4" />
+              {if @progress > 0, do: "Continue", else: "Read"}
+            </a>
+          <% end %>
+
+          <%!-- Metadata grid --%>
+          <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+            <%= if @book.publisher do %>
               <div>
-                <span class="text-gray-500">Issue</span>
-                <span class="text-gray-200 ml-2">#{@book.issue_number}</span>
+                <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Publisher</p>
+                <p class="mt-1 text-sm text-gray-200">{@book.publisher.name}</p>
               </div>
             <% end %>
             <%= if @book.year do %>
               <div>
-                <span class="text-gray-500">Year</span>
-                <span class="text-gray-200 ml-2">{@book.year}</span>
+                <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Year</p>
+                <p class="mt-1 text-sm text-gray-200">{@book.year}</p>
               </div>
             <% end %>
             <div>
-              <span class="text-gray-500">Pages</span>
-              <span class="text-gray-200 ml-2">{@book.page_count}</span>
+              <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Age Rating</p>
+              <p class="mt-1 text-sm text-gray-200">{format_age_rating(@book.age_rating)}</p>
             </div>
             <div>
-              <span class="text-gray-500">Format</span>
-              <span class="text-gray-200 ml-2 uppercase">{@book.format}</span>
+              <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Format</p>
+              <p class="mt-1 text-sm text-gray-200">{String.upcase(to_string(@book.format))}</p>
             </div>
-            <%= if @book.language do %>
-              <div>
-                <span class="text-gray-500">Language</span>
-                <span class="text-gray-200 ml-2">{@book.language}</span>
-              </div>
-            <% end %>
-            <div class="col-span-2">
-              <span class="text-gray-500">File</span>
-              <span class="text-gray-400 ml-2 font-mono text-xs break-all">
-                {@library.name <> "/" <> (String.replace_prefix(@book.path, @library.root_path, "") |> String.trim_leading("/"))}
-              </span>
+            <div>
+              <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">File Size</p>
+              <p class="mt-1 text-sm text-gray-200">{format_file_size(@book.file_size)}</p>
             </div>
           </div>
 
+          <%!-- Path --%>
+          <div class="mt-4">
+            <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Path</p>
+            <p class="mt-1 flex items-start gap-1.5 text-sm font-mono text-gray-400 break-all">
+              <.icon name="lucide-file" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-gray-500" />
+              {relative_path(@book, @library)}
+            </p>
+          </div>
+
+          <%!-- Summary --%>
           <%= if @book.summary && @book.summary != "" do %>
-            <p class="mt-4 text-gray-400 text-sm leading-relaxed">{@book.summary}</p>
-          <% end %>
-
-          <%= if @book.page_count > 0 do %>
-            <div class="mt-6">
-              <%= if @progress > 0 do %>
-                <div class="mb-2">
-                  <div class="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>Progress</span>
-                    <span>{@progress}/{@book.page_count} pages</span>
-                  </div>
-                  <div class="h-1.5 bg-gray-800 rounded-full overflow-hidden">
-                    <div
-                      class="h-full bg-indigo-500"
-                      style={"width: #{round(@progress / @book.page_count * 100)}%"}
-                    >
-                    </div>
-                  </div>
-                </div>
-              <% end %>
-
-              <a
-                href={~p"/read/#{@book.id}"}
-                class="inline-flex items-center gap-2 px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg transition-colors"
-              >
-                <%= if @progress > 0 do %>
-                  Continue Reading
-                <% else %>
-                  Read Now
-                <% end %>
-              </a>
-            </div>
+            <p class="mt-5 text-gray-400 text-sm leading-relaxed">{@book.summary}</p>
           <% end %>
         </div>
       </div>

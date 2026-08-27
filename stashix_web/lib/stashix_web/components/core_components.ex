@@ -738,16 +738,20 @@ defmodule StashixWeb.CoreComponents do
 
   def media_card(assigns) do
     assigns =
-      assign(assigns, :img_src, if(assigns.cover_url && assigns.width,
+      assigns
+      |> assign(:img_src, if(assigns.cover_url && assigns.width,
         do: "#{assigns.cover_url}?w=#{assigns.width}",
         else: assigns.cover_url
       ))
+      |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.href)}")
 
     ~H"""
     <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
       <div class="aspect-[2/3] bg-gray-800 relative">
         <%= if @img_src do %>
           <img
+            id={@cover_id}
+            phx-hook="CoverImage"
             src={@img_src}
             alt={@title}
             class="w-full h-full object-cover"

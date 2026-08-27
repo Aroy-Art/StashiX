@@ -67,6 +67,8 @@ defmodule StashixWeb.SeriesLive do
           <div class="aspect-[2/3] bg-gray-800/60 rounded-xl overflow-hidden">
             <%= if @cover_book && @cover_book.cover do %>
               <img
+                id={"series-cover-#{@series.id}"}
+                phx-hook="CoverImage"
                 src={~p"/api/books/#{@cover_book.id}/cover?w=384"}
                 alt={@series.name}
                 class="w-full h-full object-cover"
