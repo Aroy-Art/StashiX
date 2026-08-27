@@ -7,11 +7,14 @@
 # General application configuration
 import Config
 
+repo_tmp = Path.expand("../../tmp/data", __DIR__)
+
 config :stashix,
   ecto_repos: [Stashix.Repo],
   generators: [timestamp_type: :utc_datetime],
   data_dir: System.get_env("DATA_DIR") || "/tmp/stashix",
-  thumbnail_dir: System.get_env("THUMBNAIL_DIR") || Path.join(System.get_env("DATA_DIR") || "/tmp/stashix", "thumbnails"),
+  thumbnail_dir: System.get_env("THUMBNAIL_DIR") || Path.join(repo_tmp, "thumbnails"),
+  image_cache_dir: System.get_env("IMAGE_CACHE_DIR") || Path.join(repo_tmp, "cache/images/resized"),
   library_path: System.get_env("LIBRARY_PATH") || "/libraries"
 
 config :stashix, Stashix.Auth.Guardian,

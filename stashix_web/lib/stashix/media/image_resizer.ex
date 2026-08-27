@@ -26,7 +26,6 @@ defmodule Stashix.Media.ImageResizer do
   end
 
   defp resized_cache_dir do
-    base = Application.get_env(:stashix, :thumbnail_dir, "/tmp/stashix/thumbnails")
-    Path.join(base, "resized")
+    Application.get_env(:stashix, :image_cache_dir, "/tmp/stashix/cache/images/resized")
   end
 end
