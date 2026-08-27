@@ -41,12 +41,14 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def handle_event("prev_page", _params, socket) do
-    new_page = max(socket.assigns.current_page - 1, 0)
+    step = if socket.assigns.page_layout == "double", do: 2, else: 1
+    new_page = max(socket.assigns.current_page - step, 0)
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
   def handle_event("next_page", _params, socket) do
-    new_page = min(socket.assigns.current_page + 1, socket.assigns.page_count - 1)
+    step = if socket.assigns.page_layout == "double", do: 2, else: 1
+    new_page = min(socket.assigns.current_page + step, socket.assigns.page_count - 1)
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
@@ -86,6 +88,9 @@ defmodule StashixWeb.ReaderLive do
     timer = Process.send_after(self(), :save_progress, @progress_debounce_ms)
     assign(socket, :save_timer, timer)
   end
+
+  defp preload_offsets("double"), do: [2, 3, 4, -2]
+  defp preload_offsets(_single), do: [1, 2, -1]
 
   defp save_reader_settings(socket) do
     user = socket.assigns.current_user
@@ -259,14 +264,11 @@ defmodule StashixWeb.ReaderLive do
 
             <%!-- Preload adjacent pages --%>
             <div class="hidden" aria-hidden="true">
-              <%= if @current_page + 1 < @page_count do %>
-                <img src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"} />
-              <% end %>
-              <%= if @current_page + 2 < @page_count do %>
-                <img src={~p"/api/books/#{@book.id}/page/#{@current_page + 2}"} />
-              <% end %>
-              <%= if @current_page - 1 >= 0 do %>
-                <img src={~p"/api/books/#{@book.id}/page/#{@current_page - 1}"} />
+              <%= for offset <- preload_offsets(@page_layout) do %>
+                <% p = @current_page + offset %>
+                <%= if p >= 0 && p < @page_count do %>
+                  <img src={~p"/api/books/#{@book.id}/page/#{p}"} />
+                <% end %>
               <% end %>
             </div>
           </div>
