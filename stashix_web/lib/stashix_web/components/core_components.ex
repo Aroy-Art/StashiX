@@ -773,7 +773,7 @@ defmodule StashixWeb.CoreComponents do
         <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
       </div>
       <div class="px-2.5 py-2 bg-gray-900">
-        <p class="text-xs font-medium text-gray-200 truncate group-hover:text-white transition-colors">{@title}</p>
+        <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">{@title}</p>
         <%= if @subtitle do %>
           <p class="text-xs text-gray-500 mt-0.5">{@subtitle}</p>
         <% end %>
