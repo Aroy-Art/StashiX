@@ -8,7 +8,7 @@ defmodule StashixWeb.ReaderLive do
   @progress_debounce_ms 2_000
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     book = Library.get_book!(id)
 
     pages =
@@ -19,7 +19,11 @@ defmodule StashixWeb.ReaderLive do
 
     user = socket.assigns.current_user
     progress = Library.get_progress(user.id, id)
-    current_page = (progress && progress.current_page) || 0
+    current_page =
+      case Map.get(params, "page") do
+        "0" -> 0
+        _ -> (progress && progress.current_page) || 0
+      end
 
     settings = user.reader_settings || %{}
     page_layout = Map.get(settings, "page_layout", "single")
@@ -34,6 +38,7 @@ defmodule StashixWeb.ReaderLive do
        current_page: current_page,
        page_layout: page_layout,
        direction: direction,
+       layout_menu_open: false,
        save_timer: nil
      ),
      layout: false}
@@ -41,13 +46,13 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def handle_event("prev_page", _params, socket) do
-    step = if socket.assigns.page_layout == "double", do: 2, else: 1
+    step = prev_step(socket.assigns.page_layout, socket.assigns.current_page)
     new_page = max(socket.assigns.current_page - step, 0)
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
   def handle_event("next_page", _params, socket) do
-    step = if socket.assigns.page_layout == "double", do: 2, else: 1
+    step = next_step(socket.assigns.page_layout, socket.assigns.current_page)
     new_page = min(socket.assigns.current_page + step, socket.assigns.page_count - 1)
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
@@ -58,10 +63,18 @@ defmodule StashixWeb.ReaderLive do
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
-  def handle_event("set_layout", %{"layout" => layout}, socket) when layout in ["single", "double"] do
-    socket = assign(socket, :page_layout, layout)
+  def handle_event("set_layout", %{"layout" => layout}, socket) when layout in ["single", "double", "cover"] do
+    socket = assign(socket, page_layout: layout, layout_menu_open: false)
     save_reader_settings(socket)
     {:noreply, socket}
+  end
+
+  def handle_event("toggle_layout_menu", _params, socket) do
+    {:noreply, assign(socket, :layout_menu_open, !socket.assigns.layout_menu_open)}
+  end
+
+  def handle_event("close_layout_menu", _params, socket) do
+    {:noreply, assign(socket, :layout_menu_open, false)}
   end
 
   def handle_event("toggle_direction", _params, socket) do
@@ -89,7 +102,18 @@ defmodule StashixWeb.ReaderLive do
     assign(socket, :save_timer, timer)
   end
 
+  defp next_step("double", _page), do: 2
+  defp next_step("cover", 0), do: 1
+  defp next_step("cover", _page), do: 2
+  defp next_step(_single, _page), do: 1
+
+  defp prev_step("double", _page), do: 2
+  defp prev_step("cover", 1), do: 1
+  defp prev_step("cover", _page), do: 2
+  defp prev_step(_single, _page), do: 1
+
   defp preload_offsets("double"), do: [2, 3, 4, -2]
+  defp preload_offsets("cover"), do: [2, 3, 4, -2]
   defp preload_offsets(_single), do: [1, 2, -1]
 
   defp save_reader_settings(socket) do
@@ -150,42 +174,55 @@ defmodule StashixWeb.ReaderLive do
 
             <%!-- Right: controls + page counter --%>
             <div class="flex items-center gap-2 min-w-0 w-36 justify-end">
-              <%!-- Single page layout --%>
-              <button
-                phx-click="set_layout"
-                phx-value-layout="single"
-                title="Single page"
-                class={[
-                  "p-1.5 rounded transition-colors",
-                  if(@page_layout == "single",
-                    do: "bg-zinc-600 text-white",
-                    else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                  )
-                ]}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="5" y="3" width="14" height="18" rx="1"/>
-                </svg>
-              </button>
+              <%!-- View mode dropdown --%>
+              <div class="relative">
+                <button
+                  phx-click="toggle_layout_menu"
+                  class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="18" rx="1"/>
+                    <rect x="14" y="3" width="7" height="18" rx="1"/>
+                  </svg>
+                  View Mode
+                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-3 h-3 flex-shrink-0 transition-transform", if(@layout_menu_open, do: "rotate-180", else: "")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
 
-              <%!-- Double page layout --%>
-              <button
-                phx-click="set_layout"
-                phx-value-layout="double"
-                title="Double page spread"
-                class={[
-                  "p-1.5 rounded transition-colors",
-                  if(@page_layout == "double",
-                    do: "bg-zinc-600 text-white",
-                    else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
-                  )
-                ]}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="2" y="3" width="9" height="18" rx="1"/>
-                  <rect x="13" y="3" width="9" height="18" rx="1"/>
-                </svg>
-              </button>
+                <%= if @layout_menu_open do %>
+                  <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
+                  <div class="absolute right-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 w-56">
+                    <%!-- Single Page --%>
+                    <button phx-click="set_layout" phx-value-layout="single" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "single", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "single", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <rect x="5" y="3" width="14" height="18" rx="1"/>
+                      </svg>
+                      <span class={if(@page_layout == "single", do: "text-white font-medium", else: "text-zinc-300")}>Single Page</span>
+                    </button>
+                    <%!-- Facing Pages --%>
+                    <button phx-click="set_layout" phx-value-layout="double" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "double", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "double", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <rect x="2" y="3" width="9" height="18" rx="1"/>
+                        <rect x="13" y="3" width="9" height="18" rx="1"/>
+                      </svg>
+                      <span class={if(@page_layout == "double", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages</span>
+                    </button>
+                    <%!-- Facing Pages Cover First --%>
+                    <button phx-click="set_layout" phx-value-layout="cover" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "cover", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "cover", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                        <rect x="8" y="2" width="8" height="10" rx="1"/>
+                        <rect x="2" y="14" width="9" height="10" rx="1"/>
+                        <rect x="13" y="14" width="9" height="10" rx="1"/>
+                      </svg>
+                      <span class={if(@page_layout == "cover", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages (Cover First)</span>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
 
               <%!-- Direction toggle --%>
               <button
@@ -224,7 +261,7 @@ defmodule StashixWeb.ReaderLive do
               "flex items-center justify-center h-full",
               if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
             ]}>
-              <div class="relative flex items-center justify-center h-full" style={if @page_layout == "double", do: "max-width: 50%", else: "max-width: 100%"}>
+              <div class="relative flex items-center justify-center h-full" style={if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0), do: "max-width: 50%", else: "max-width: 100%"}>
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
                   <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
@@ -241,7 +278,7 @@ defmodule StashixWeb.ReaderLive do
                   draggable="false"
                 />
               </div>
-              <%= if @page_layout == "double" && @current_page + 1 < @page_count do %>
+              <%= if (@page_layout == "double" || (@page_layout == "cover" && @current_page > 0)) && @current_page + 1 < @page_count do %>
                 <div class="relative flex items-center justify-center h-full" style="max-width: 50%">
                   <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
                     <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
