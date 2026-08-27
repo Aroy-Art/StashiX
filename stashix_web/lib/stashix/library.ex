@@ -92,7 +92,8 @@ defmodule Stashix.Library do
   def get_series!(id), do: Repo.get!(Series, id)
 
   def get_series_with_books(id) do
-    Repo.get!(Series, id) |> Repo.preload(books: from(b in Book, where: is_nil(b.deleted_at), order_by: [asc: b.issue_number]))
+    books_query = from(b in Book, where: is_nil(b.deleted_at), order_by: [asc: b.issue_number])
+    Repo.get!(Series, id) |> Repo.preload([:publisher, books: {books_query, [:cover]}])
   end
 
   def update_progress(user_id, book_id, page) do

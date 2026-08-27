@@ -39,6 +39,7 @@ defmodule StashixWeb.ReaderLive do
        page_layout: page_layout,
        direction: direction,
        layout_menu_open: false,
+       overlay_visible: true,
        save_timer: nil
      ),
      layout: false}
@@ -75,6 +76,10 @@ defmodule StashixWeb.ReaderLive do
 
   def handle_event("close_layout_menu", _params, socket) do
     {:noreply, assign(socket, :layout_menu_open, false)}
+  end
+
+  def handle_event("toggle_overlay", _params, socket) do
+    {:noreply, assign(socket, overlay_visible: !socket.assigns.overlay_visible, layout_menu_open: false)}
   end
 
   def handle_event("toggle_direction", _params, socket) do
@@ -143,17 +148,22 @@ defmodule StashixWeb.ReaderLive do
           .reader-page { cursor: pointer; user-select: none; }
           .reader-zone-left { cursor: w-resize; }
           .reader-zone-right { cursor: e-resize; }
+          input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; }
+          input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; border: none; }
         </style>
       </head>
       <body class="bg-black">
         <div
-          class="flex flex-col"
+          class="relative"
           style="height: 100dvh;"
           id="reader-container"
           phx-hook="ReaderKeyboard"
         >
-          <%!-- Top bar --%>
-          <div class="flex items-center justify-between px-4 py-2 bg-zinc-950 border-b border-zinc-800 shrink-0" style="height: 48px;">
+          <%!-- Top bar overlay --%>
+          <div class={[
+            "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-2 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
+            if(@overlay_visible, do: "translate-y-0", else: "-translate-y-full")
+          ]} style="height: 48px;">
             <%!-- Left: back --%>
             <div class="flex items-center min-w-0 w-36">
               <a
@@ -240,13 +250,20 @@ defmodule StashixWeb.ReaderLive do
             </div>
           </div>
 
-          <%!-- Reading area --%>
-          <div class="flex-1 relative overflow-hidden select-none" style="min-height: 0;">
+          <%!-- Reading area (full viewport) --%>
+          <div class="absolute inset-0 overflow-hidden select-none">
             <%!-- Click zone: left (prev in LTR, next in RTL) --%>
             <div
               class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left"
               style="width: 30%;"
               phx-click={if @direction == "ltr", do: "prev_page", else: "next_page"}
+            />
+
+            <%!-- Click zone: center (toggle overlay) --%>
+            <div
+              class="absolute top-0 bottom-0 z-10"
+              style="left: 30%; width: 40%; cursor: default;"
+              phx-click="toggle_overlay"
             />
 
             <%!-- Click zone: right (next in LTR, prev in RTL) --%>
@@ -307,6 +324,27 @@ defmodule StashixWeb.ReaderLive do
                   <img src={~p"/api/books/#{@book.id}/page/#{p}"} />
                 <% end %>
               <% end %>
+            </div>
+
+            <%!-- Bottom progress bar overlay --%>
+            <div class={[
+              "absolute bottom-0 left-0 right-0 z-30 px-4 py-3 bg-zinc-950/95 backdrop-blur border-t border-zinc-800 transition-transform duration-200",
+              if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
+            ]}>
+              <div class="flex items-center gap-3">
+                <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@current_page + 1}</span>
+                <input
+                  type="range"
+                  name="page"
+                  min="0"
+                  max={@page_count - 1}
+                  value={@current_page}
+                  phx-change="goto_page"
+                  class="flex-1 h-1.5 appearance-none bg-zinc-700 rounded-full accent-violet-500 cursor-pointer"
+                  style="outline: none;"
+                />
+                <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@page_count}</span>
+              </div>
             </div>
           </div>
         </div>
