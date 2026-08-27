@@ -30,8 +30,9 @@ defmodule StashixWeb.SessionController do
 
       with {:ok, user} <-
              Accounts.create_user(%{email: email, username: username, password: password, role: :admin}),
-           {:ok, _library} <-
+           {:ok, library} <-
              Stashix.Library.create_library(%{name: library_name, root_path: library_path}) do
+        Stashix.Scanner.scan_library(library.id)
         {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 
         conn
