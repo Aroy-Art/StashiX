@@ -12,6 +12,7 @@ defmodule Stashix.Accounts.User do
     field :password_hash, :string
     field :role, Ecto.Enum, values: [:admin, :user], default: :user
     field :birth_date, :date
+    field :reader_settings, :map, default: %{}
 
     has_many :library_permissions, Stashix.Library.LibraryPermission
 
@@ -54,4 +55,8 @@ defmodule Stashix.Accounts.User do
   end
 
   defp maybe_hash_password(changeset), do: changeset
+
+  def reader_settings_changeset(user, attrs) do
+    cast(user, attrs, [:reader_settings])
+  end
 end

@@ -1,7 +1,7 @@
 defmodule StashixWeb.ReaderLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Library, Media.Extractor}
+  alias Stashix.{Accounts, Library, Media.Extractor}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -17,8 +17,13 @@ defmodule StashixWeb.ReaderLive do
         _ -> []
       end
 
-    progress = Library.get_progress(socket.assigns.current_user.id, id)
+    user = socket.assigns.current_user
+    progress = Library.get_progress(user.id, id)
     current_page = (progress && progress.current_page) || 0
+
+    settings = user.reader_settings || %{}
+    page_layout = Map.get(settings, "page_layout", "single")
+    direction = Map.get(settings, "direction", "ltr")
 
     {:ok,
      assign(socket,
@@ -27,8 +32,8 @@ defmodule StashixWeb.ReaderLive do
        pages: pages,
        page_count: length(pages),
        current_page: current_page,
-       page_layout: "single",
-       direction: "ltr",
+       page_layout: page_layout,
+       direction: direction,
        save_timer: nil
      ),
      layout: false}
@@ -52,12 +57,16 @@ defmodule StashixWeb.ReaderLive do
   end
 
   def handle_event("set_layout", %{"layout" => layout}, socket) when layout in ["single", "double"] do
-    {:noreply, assign(socket, :page_layout, layout)}
+    socket = assign(socket, :page_layout, layout)
+    save_reader_settings(socket)
+    {:noreply, socket}
   end
 
   def handle_event("toggle_direction", _params, socket) do
     new_dir = if socket.assigns.direction == "ltr", do: "rtl", else: "ltr"
-    {:noreply, assign(socket, :direction, new_dir)}
+    socket = assign(socket, :direction, new_dir)
+    save_reader_settings(socket)
+    {:noreply, socket}
   end
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
@@ -76,6 +85,15 @@ defmodule StashixWeb.ReaderLive do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
     timer = Process.send_after(self(), :save_progress, @progress_debounce_ms)
     assign(socket, :save_timer, timer)
+  end
+
+  defp save_reader_settings(socket) do
+    user = socket.assigns.current_user
+    settings = %{
+      "page_layout" => socket.assigns.page_layout,
+      "direction" => socket.assigns.direction
+    }
+    Accounts.save_reader_settings(user, settings)
   end
 
   @impl true

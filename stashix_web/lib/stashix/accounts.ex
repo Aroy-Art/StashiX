@@ -50,6 +50,12 @@ defmodule Stashix.Accounts do
     end
   end
 
+  def save_reader_settings(user, settings) do
+    user
+    |> User.reader_settings_changeset(%{reader_settings: settings})
+    |> Repo.update()
+  end
+
   def setup_complete? do
     Repo.aggregate(User, :count, :id) > 0
   end
