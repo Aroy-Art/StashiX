@@ -18,8 +18,18 @@ defmodule StashixWeb.BookLive do
        page_title: book.title,
        book: book,
        library: library,
-       progress: current_page
+       progress: current_page,
+       read_menu_open: false
      )}
+  end
+
+  @impl true
+  def handle_event("toggle_read_menu", _params, socket) do
+    {:noreply, assign(socket, read_menu_open: !socket.assigns.read_menu_open)}
+  end
+
+  def handle_event("close_read_menu", _params, socket) do
+    {:noreply, assign(socket, read_menu_open: false)}
   end
 
   defp format_file_size(nil), do: "—"
@@ -167,13 +177,41 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Read button --%>
           <%= if @book.page_count > 0 do %>
-            <a
-              href={~p"/read/#{@book.id}"}
-              class="inline-flex items-center gap-2 px-5 py-2.5 mt-4 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              <.icon name="lucide-book-open" class="w-4 h-4" />
-              {if @progress > 0, do: "Continue", else: "Read"}
-            </a>
+            <div class="relative inline-flex mt-4">
+              <a
+                href={~p"/read/#{@book.id}"}
+                class={[
+                  "inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors",
+                  if(@progress > 0, do: "rounded-l-lg", else: "rounded-lg")
+                ]}
+              >
+                <.icon name="lucide-book-open" class="w-4 h-4" />
+                {if @progress > 0, do: "Continue", else: "Read"}
+              </a>
+              <%= if @progress > 0 do %>
+                <button
+                  phx-click="toggle_read_menu"
+                  class="inline-flex items-center px-2 py-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors"
+                  aria-label="More reading options"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 transition-transform", if(@read_menu_open, do: "rotate-180", else: "")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+                <%= if @read_menu_open do %>
+                  <div class="fixed inset-0 z-20" phx-click="close_read_menu" />
+                  <div class="absolute left-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-48">
+                    <a
+                      href={~p"/read/#{@book.id}?page=0"}
+                      class="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                    >
+                      <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
+                      Read from Beginning
+                    </a>
+                  </div>
+                <% end %>
+              <% end %>
+            </div>
           <% end %>
 
           <%!-- Metadata grid --%>
