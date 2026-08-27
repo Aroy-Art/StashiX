@@ -200,21 +200,54 @@ defmodule StashixWeb.ReaderLive do
               "flex items-center justify-center h-full",
               if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
             ]}>
-              <img
-                src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
-                alt={"Page #{@current_page + 1}"}
-                class="max-h-full max-w-full object-contain reader-page"
-                style="height: 100%; width: auto; max-width: 100%;"
-                draggable="false"
-              />
-              <%= if @page_layout == "double" && @current_page + 1 < @page_count do %>
+              <div class="relative flex items-center justify-center h-full" style={if @page_layout == "double", do: "max-width: 50%", else: "max-width: 100%"}>
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
+                  <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                </div>
                 <img
-                  src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
-                  alt={"Page #{@current_page + 2}"}
-                  class="max-h-full max-w-full object-contain reader-page"
-                  style="height: 100%; width: auto; max-width: 100%;"
+                  id="reader-page-main"
+                  phx-hook="PageImage"
+                  src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
+                  alt={"Page #{@current_page + 1}"}
+                  class="max-h-full max-w-full object-contain"
+                  style="height: 100%; width: auto; opacity: 0; transition: opacity 0.15s ease;"
                   draggable="false"
                 />
+              </div>
+              <%= if @page_layout == "double" && @current_page + 1 < @page_count do %>
+                <div class="relative flex items-center justify-center h-full" style="max-width: 50%">
+                  <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
+                    <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  </div>
+                  <img
+                    id="reader-page-second"
+                    phx-hook="PageImage"
+                    src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
+                    alt={"Page #{@current_page + 2}"}
+                    class="max-h-full max-w-full object-contain"
+                    style="height: 100%; width: auto; opacity: 0; transition: opacity 0.15s ease;"
+                    draggable="false"
+                  />
+                </div>
+              <% end %>
+            </div>
+
+            <%!-- Preload adjacent pages --%>
+            <div class="hidden" aria-hidden="true">
+              <%= if @current_page + 1 < @page_count do %>
+                <img src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"} />
+              <% end %>
+              <%= if @current_page + 2 < @page_count do %>
+                <img src={~p"/api/books/#{@book.id}/page/#{@current_page + 2}"} />
+              <% end %>
+              <%= if @current_page - 1 >= 0 do %>
+                <img src={~p"/api/books/#{@book.id}/page/#{@current_page - 1}"} />
               <% end %>
             </div>
           </div>

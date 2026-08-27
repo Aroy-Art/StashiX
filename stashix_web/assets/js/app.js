@@ -24,6 +24,31 @@ import topbar from "../vendor/topbar"
 
 let Hooks = {}
 
+Hooks.PageImage = {
+  mounted() {
+    this.spinner = this.el.previousElementSibling
+    this.el.addEventListener('load', () => this.reveal())
+    this.el.addEventListener('error', () => this.reveal())
+    if (this.el.complete && this.el.naturalWidth > 0) {
+      this.reveal()
+    } else {
+      this.hide()
+    }
+  },
+  updated() {
+    this.hide()
+    if (this.el.complete && this.el.naturalWidth > 0) this.reveal()
+  },
+  hide() {
+    this.el.style.opacity = '0'
+    if (this.spinner) this.spinner.style.display = 'flex'
+  },
+  reveal() {
+    this.el.style.opacity = '1'
+    if (this.spinner) this.spinner.style.display = 'none'
+  }
+}
+
 Hooks.ReaderKeyboard = {
   mounted() {
     this.handleKey = (e) => {
