@@ -113,6 +113,38 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
+        case Regex.run(~r/^(.+?)\s+(\d{1,4})\s+\((\d{4})\)/i, clean) do
+          [_, series, issue, year] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:year, String.to_integer(year))
+            |> Map.put(:issue_number, parse_decimal(issue))
+
+          nil ->
+            result
+        end
+      end
+
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d{4})?\)\s*[-–]\s*(?:Chapter|Ch\.?)\s+(\d{1,4})/i, clean) do
+          [_, series, year, chapter] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:year, String.to_integer(year))
+            |> Map.put(:issue_number, parse_decimal(chapter))
+
+          nil ->
+            result
+        end
+      end
+
+    result =
+      if map_size(result) > 0 do
+        result
+      else
       case Regex.run(
              ~r/^(.+?)\s*\((\d{4})(?:-\d{4})?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/,
              clean

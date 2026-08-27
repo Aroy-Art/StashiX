@@ -7,10 +7,11 @@ defmodule StashixWeb.SessionController do
   def create(conn, %{"email" => email, "password" => password}) do
     case Accounts.authenticate_user(email, password) do
       {:ok, user} ->
-        {:ok, token, _} = TokenHelper.generate_tokens(user)
+        {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 
         conn
-        |> put_session("guardian_default_token", token)
+        |> put_session("guardian_default_token", access_token)
+        |> put_session("guardian_refresh_token", refresh_token)
         |> redirect(to: ~p"/")
 
       {:error, _} ->
@@ -26,10 +27,11 @@ defmodule StashixWeb.SessionController do
     else
       case Accounts.create_user(%{email: email, username: username, password: password, role: :admin}) do
         {:ok, user} ->
-          {:ok, token, _} = TokenHelper.generate_tokens(user)
+          {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 
           conn
-          |> put_session("guardian_default_token", token)
+          |> put_session("guardian_default_token", access_token)
+          |> put_session("guardian_refresh_token", refresh_token)
           |> redirect(to: ~p"/")
 
         {:error, _changeset} ->

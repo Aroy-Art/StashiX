@@ -91,12 +91,19 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp authenticate_from_session(session) do
-    token = session["guardian_default_token"]
+    access_token = session["guardian_default_token"]
 
-    if token do
-      TokenHelper.resource_from_token(token)
-    else
-      {:error, :no_token}
+    case access_token && TokenHelper.resource_from_token(access_token) do
+      {:ok, user} ->
+        {:ok, user}
+
+      _ ->
+        refresh_token = session["guardian_refresh_token"]
+
+        case refresh_token && TokenHelper.refresh_tokens(refresh_token) do
+          {:ok, user, _new_access, _new_refresh} -> {:ok, user}
+          _ -> {:error, :unauthenticated}
+        end
     end
   end
 end
