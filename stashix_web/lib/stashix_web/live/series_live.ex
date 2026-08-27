@@ -41,6 +41,10 @@ defmodule StashixWeb.SeriesLive do
   end
 
   @impl true
+  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
+  @impl true
   def render(assigns) do
     ~H"""
     <div class="space-y-6">

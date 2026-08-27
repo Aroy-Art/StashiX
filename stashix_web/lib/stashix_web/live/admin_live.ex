@@ -288,6 +288,9 @@ defmodule StashixWeb.AdminLive do
      |> put_flash(:info, "Series and its books restored")}
   end
 
+  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""

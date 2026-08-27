@@ -30,6 +30,9 @@ defmodule StashixWeb.SearchLive do
   end
 
   @impl true
+  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
   def handle_info({:do_search, query}, socket) do
     results =
       if String.length(query) >= 2 do
