@@ -334,12 +334,12 @@ defmodule StashixWeb.ReaderLive do
               <div class="flex items-center gap-3">
                 <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@current_page + 1}</span>
                 <input
+                  id="page-slider"
                   type="range"
-                  name="page"
                   min="0"
                   max={@page_count - 1}
                   value={@current_page}
-                  phx-change="goto_page"
+                  phx-hook="PageSlider"
                   class="flex-1 h-1.5 appearance-none bg-zinc-700 rounded-full accent-violet-500 cursor-pointer"
                   style="outline: none;"
                 />

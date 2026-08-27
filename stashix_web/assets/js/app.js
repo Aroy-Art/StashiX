@@ -63,6 +63,25 @@ Hooks.PageImage = {
   }
 }
 
+Hooks.PageSlider = {
+  mounted() {
+    this.isDragging = false
+    this.el.addEventListener('pointerdown', () => { this.isDragging = true })
+    this.el.addEventListener('change', (e) => {
+      this.isDragging = false
+      this.pushEvent("goto_page", {page: e.target.value})
+    })
+    // Safety net: clear flag if pointer leaves without firing change
+    this.el.addEventListener('pointercancel', () => { this.isDragging = false })
+  },
+  updated() {
+    // Only sync server value when user isn't dragging
+    if (!this.isDragging) {
+      this.el.value = this.el.getAttribute('value')
+    }
+  }
+}
+
 Hooks.ReaderKeyboard = {
   mounted() {
     this.handleKey = (e) => {
