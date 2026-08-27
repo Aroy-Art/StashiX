@@ -61,6 +61,7 @@ defmodule StashixWeb.ReaderLive do
   end
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info(:save_progress, socket) do
