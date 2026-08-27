@@ -27,7 +27,7 @@ defmodule StashixWeb.ReaderLive do
        pages: pages,
        page_count: length(pages),
        current_page: current_page,
-       layout: "single",
+       page_layout: "single",
        direction: "ltr",
        save_timer: nil
      ),
@@ -52,7 +52,7 @@ defmodule StashixWeb.ReaderLive do
   end
 
   def handle_event("set_layout", %{"layout" => layout}, socket) when layout in ["single", "double"] do
-    {:noreply, assign(socket, :layout, layout)}
+    {:noreply, assign(socket, :page_layout, layout)}
   end
 
   def handle_event("toggle_direction", _params, socket) do
@@ -131,7 +131,7 @@ defmodule StashixWeb.ReaderLive do
                 title="Single page"
                 class={[
                   "p-1.5 rounded transition-colors",
-                  if(@layout == "single",
+                  if(@page_layout == "single",
                     do: "bg-zinc-600 text-white",
                     else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
                   )
@@ -149,7 +149,7 @@ defmodule StashixWeb.ReaderLive do
                 title="Double page spread"
                 class={[
                   "p-1.5 rounded transition-colors",
-                  if(@layout == "double",
+                  if(@page_layout == "double",
                     do: "bg-zinc-600 text-white",
                     else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
                   )
@@ -205,7 +205,7 @@ defmodule StashixWeb.ReaderLive do
                 style="height: 100%; width: auto; max-width: 100%;"
                 draggable="false"
               />
-              <%= if @layout == "double" && @current_page + 1 < @page_count do %>
+              <%= if @page_layout == "double" && @current_page + 1 < @page_count do %>
                 <img
                   src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
                   alt={"Page #{@current_page + 2}"}
