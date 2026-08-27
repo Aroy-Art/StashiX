@@ -28,6 +28,7 @@ defmodule StashixWeb.ReaderLive do
        page_count: length(pages),
        current_page: current_page,
        layout: "single",
+       direction: "ltr",
        save_timer: nil
      ),
      layout: false}
@@ -50,9 +51,13 @@ defmodule StashixWeb.ReaderLive do
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
-  def handle_event("toggle_layout", _params, socket) do
-    new_layout = if socket.assigns.layout == "single", do: "double", else: "single"
-    {:noreply, assign(socket, :layout, new_layout)}
+  def handle_event("set_layout", %{"layout" => layout}, socket) when layout in ["single", "double"] do
+    {:noreply, assign(socket, :layout, layout)}
+  end
+
+  def handle_event("toggle_direction", _params, socket) do
+    new_dir = if socket.assigns.direction == "ltr", do: "rtl", else: "ltr"
+    {:noreply, assign(socket, :direction, new_dir)}
   end
 
   @impl true
@@ -65,10 +70,7 @@ defmodule StashixWeb.ReaderLive do
   end
 
   defp schedule_progress_save(socket) do
-    if socket.assigns.save_timer do
-      Process.cancel_timer(socket.assigns.save_timer)
-    end
-
+    if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
     timer = Process.send_after(self(), :save_progress, @progress_debounce_ms)
     assign(socket, :save_timer, timer)
   end
@@ -86,78 +88,133 @@ defmodule StashixWeb.ReaderLive do
         <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
         <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
         </script>
+        <style>
+          html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+          .reader-page { cursor: pointer; user-select: none; }
+          .reader-zone-left { cursor: w-resize; }
+          .reader-zone-right { cursor: e-resize; }
+        </style>
       </head>
       <body class="bg-black">
         <div
-          class="min-h-screen flex flex-col"
-          phx-window-keydown="keydown"
-          phx-key=""
+          class="flex flex-col"
+          style="height: 100dvh;"
           id="reader-container"
           phx-hook="ReaderKeyboard"
         >
-          <div class="flex items-center justify-between px-4 py-2 bg-gray-950 border-b border-gray-800">
-            <a href={~p"/book/#{@book.id}"} class="text-gray-400 hover:text-white text-sm">
-              ← {@book.title}
-            </a>
-
-            <div class="flex items-center gap-4 text-sm text-gray-400">
-              <span>{@current_page + 1} / {@page_count}</span>
-
-              <button
-                phx-click="toggle_layout"
-                class="px-2 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs"
+          <%!-- Top bar --%>
+          <div class="flex items-center justify-between px-4 py-2 bg-zinc-950 border-b border-zinc-800 shrink-0" style="height: 48px;">
+            <%!-- Left: back --%>
+            <div class="flex items-center min-w-0 w-36">
+              <a
+                href={~p"/book/#{@book.id}"}
+                class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
               >
-                {if @layout == "single", do: "Single", else: "Double"}
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M19 12H5M12 5l-7 7 7 7"/>
+                </svg>
+                Back
+              </a>
+            </div>
+
+            <%!-- Center: title --%>
+            <div class="flex-1 text-center px-4 min-w-0">
+              <span class="text-white text-sm font-medium truncate block">{@book.title}</span>
+            </div>
+
+            <%!-- Right: controls + page counter --%>
+            <div class="flex items-center gap-2 min-w-0 w-36 justify-end">
+              <%!-- Single page layout --%>
+              <button
+                phx-click="set_layout"
+                phx-value-layout="single"
+                title="Single page"
+                class={[
+                  "p-1.5 rounded transition-colors",
+                  if(@layout == "single",
+                    do: "bg-zinc-600 text-white",
+                    else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  )
+                ]}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="3" width="14" height="18" rx="1"/>
+                </svg>
               </button>
+
+              <%!-- Double page layout --%>
+              <button
+                phx-click="set_layout"
+                phx-value-layout="double"
+                title="Double page spread"
+                class={[
+                  "p-1.5 rounded transition-colors",
+                  if(@layout == "double",
+                    do: "bg-zinc-600 text-white",
+                    else: "text-zinc-400 hover:text-white hover:bg-zinc-800"
+                  )
+                ]}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="9" height="18" rx="1"/>
+                  <rect x="13" y="3" width="9" height="18" rx="1"/>
+                </svg>
+              </button>
+
+              <%!-- Direction toggle --%>
+              <button
+                phx-click="toggle_direction"
+                title="Toggle reading direction (LTR/RTL)"
+                class="px-2 py-1 rounded text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+              >
+                {@direction |> String.upcase()}
+              </button>
+
+              <%!-- Page counter --%>
+              <span class="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
+                {@current_page + 1} / {@page_count}
+              </span>
             </div>
           </div>
 
-          <div class="flex-1 flex items-center justify-center relative select-none">
-            <button
-              phx-click="prev_page"
-              disabled={@current_page == 0}
-              class="absolute left-2 z-10 p-3 bg-black/50 hover:bg-black/80 text-white rounded-full disabled:opacity-20 transition-all"
-            >
-              ‹
-            </button>
+          <%!-- Reading area --%>
+          <div class="flex-1 relative overflow-hidden select-none" style="min-height: 0;">
+            <%!-- Click zone: left (prev in LTR, next in RTL) --%>
+            <div
+              class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left"
+              style="width: 30%;"
+              phx-click={if @direction == "ltr", do: "prev_page", else: "next_page"}
+            />
 
+            <%!-- Click zone: right (next in LTR, prev in RTL) --%>
+            <div
+              class="absolute right-0 top-0 bottom-0 z-10 reader-zone-right"
+              style="width: 30%;"
+              phx-click={if @direction == "ltr", do: "next_page", else: "prev_page"}
+            />
+
+            <%!-- Pages --%>
             <div class={[
-              "flex items-center justify-center gap-1 h-full max-h-screen p-4",
-              if(@layout == "double", do: "max-w-6xl", else: "max-w-3xl")
+              "flex items-center justify-center h-full",
+              if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
             ]}>
               <img
                 src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
                 alt={"Page #{@current_page + 1}"}
-                class="max-h-full max-w-full object-contain"
+                class="max-h-full max-w-full object-contain reader-page"
+                style="height: 100%; width: auto; max-width: 100%;"
+                draggable="false"
               />
               <%= if @layout == "double" && @current_page + 1 < @page_count do %>
                 <img
                   src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
                   alt={"Page #{@current_page + 2}"}
-                  class="max-h-full max-w-full object-contain"
+                  class="max-h-full max-w-full object-contain reader-page"
+                  style="height: 100%; width: auto; max-width: 100%;"
+                  draggable="false"
                 />
               <% end %>
             </div>
-
-            <button
-              phx-click="next_page"
-              disabled={@current_page >= @page_count - 1}
-              class="absolute right-2 z-10 p-3 bg-black/50 hover:bg-black/80 text-white rounded-full disabled:opacity-20 transition-all"
-            >
-              ›
-            </button>
-          </div>
-
-          <div class="px-4 py-2 bg-gray-950 border-t border-gray-800">
-            <input
-              type="range"
-              min="0"
-              max={max(@page_count - 1, 0)}
-              value={@current_page}
-              phx-change="goto_page"
-              name="page"
-              class="w-full accent-indigo-500"
-            />
           </div>
         </div>
       </body>
