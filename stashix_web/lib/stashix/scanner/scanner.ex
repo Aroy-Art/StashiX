@@ -240,24 +240,29 @@ defmodule Stashix.Scanner do
   # "Plain Name" → {"Plain Name", nil, nil, false}
   @doc false
   def parse_folder_name(name) do
+    # Trailing non-year parentheticals like (digital), (web), (c2c)
+    trailing = ~r/(?:\s*\((?!\d{4}[\-)])[^)]+\))+\s*$/
+
+    clean = Regex.replace(trailing, name, "") |> String.trim()
+
     cond do
       # "Series Name (YYYY-YYYY)" — start and end year
-      match = Regex.run(~r/^(.+?)\s*\((\d{4})-(\d{4})\)\s*$/, name) ->
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})-(\d{4})\)\s*$/, clean) ->
         [_, base, sy, ey] = match
         {String.trim(base), String.to_integer(sy), String.to_integer(ey), false}
 
       # "Series Name (YYYY-)" — ongoing
-      match = Regex.run(~r/^(.+?)\s*\((\d{4})-\)\s*$/, name) ->
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})-\)\s*$/, clean) ->
         [_, base, sy] = match
         {String.trim(base), String.to_integer(sy), nil, true}
 
       # "Series Name (YYYY)" — single year
-      match = Regex.run(~r/^(.+?)\s*\((\d{4})\)\s*$/, name) ->
+      match = Regex.run(~r/^(.+?)\s*\((\d{4})\)\s*$/, clean) ->
         [_, base, sy] = match
         {String.trim(base), String.to_integer(sy), nil, false}
 
       true ->
-        {name, nil, nil, false}
+        {clean, nil, nil, false}
     end
   end
 
