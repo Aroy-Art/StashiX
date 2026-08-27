@@ -60,6 +60,8 @@ defmodule StashixWeb.ReaderLive do
     {:noreply, assign(socket, :direction, new_dir)}
   end
 
+  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+
   @impl true
   def handle_info(:save_progress, socket) do
     user_id = socket.assigns.current_user.id
