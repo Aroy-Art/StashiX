@@ -20,6 +20,7 @@ defmodule StashixWeb.LibraryLive do
        page_title: library.name,
        library: library,
        filter: "all",
+       sort: "title_asc",
        page: 0,
        books: [],
        series: [],
@@ -40,11 +41,16 @@ defmodule StashixWeb.LibraryLive do
     {:noreply, load_content(assign(socket, filter: filter, page: 0), filter, 0)}
   end
 
+  def handle_event("sort", %{"value" => sort}, socket) do
+    {:noreply, load_content(assign(socket, sort: sort, page: 0), socket.assigns.filter, 0)}
+  end
+
   def handle_event("load_more", _params, socket) do
     next_page = socket.assigns.page + 1
     library_id = socket.assigns.library.id
     filter = socket.assigns.filter
-    opts = filter_opts(filter, next_page)
+    sort = socket.assigns.sort
+    opts = filter_opts(filter, next_page, sort)
     new_books = Library.list_books(library_id, opts)
     {:noreply, update(socket, :books, &(&1 ++ new_books)) |> assign(:page, next_page)}
   end
@@ -64,7 +70,8 @@ defmodule StashixWeb.LibraryLive do
 
   defp load_content(socket, filter, page) do
     library_id = socket.assigns.library.id
-    opts = filter_opts(filter, page)
+    sort = socket.assigns.sort
+    opts = filter_opts(filter, page, sort)
 
     books =
       if filter in ["all", "issues", "standalone"] do
@@ -75,7 +82,7 @@ defmodule StashixWeb.LibraryLive do
 
     series =
       if filter in ["all", "series"] do
-        Library.list_series(library_id)
+        Library.list_series(library_id, sort: sort)
       else
         []
       end
@@ -83,13 +90,37 @@ defmodule StashixWeb.LibraryLive do
     assign(socket, books: books, series: series, loading: false)
   end
 
-  defp filter_opts("issues", page),
-    do: [type: "issue", limit: @page_size, offset: page * @page_size]
+  defp sort_options("issues") do
+    [
+      {"A → Z", "title_asc"},
+      {"Z → A", "title_desc"},
+      {"Issue # ↑", "issue_asc"},
+      {"Issue # ↓", "issue_desc"},
+      {"Year ↑", "year_asc"},
+      {"Year ↓", "year_desc"},
+      {"Date Added ↓", "added_desc"},
+      {"Date Added ↑", "added_asc"}
+    ]
+  end
 
-  defp filter_opts("standalone", page),
-    do: [type: "standalone", limit: @page_size, offset: page * @page_size]
+  defp sort_options(_filter) do
+    [
+      {"A → Z", "title_asc"},
+      {"Z → A", "title_desc"},
+      {"Year ↑", "year_asc"},
+      {"Year ↓", "year_desc"},
+      {"Date Added ↓", "added_desc"},
+      {"Date Added ↑", "added_asc"}
+    ]
+  end
 
-  defp filter_opts(_, page), do: [limit: @page_size, offset: page * @page_size]
+  defp filter_opts("issues", page, sort),
+    do: [type: "issue", limit: @page_size, offset: page * @page_size, sort: sort]
+
+  defp filter_opts("standalone", page, sort),
+    do: [type: "standalone", limit: @page_size, offset: page * @page_size, sort: sort]
+
+  defp filter_opts(_, page, sort), do: [limit: @page_size, offset: page * @page_size, sort: sort]
 
   @impl true
   def render(assigns) do
@@ -101,22 +132,37 @@ defmodule StashixWeb.LibraryLive do
           <h1 class="text-2xl font-bold text-white mt-1">{@library.name}</h1>
         </div>
 
-        <div class="flex gap-2">
-          <%= for {label, value} <- [{"All", "all"}, {"Series", "series"}, {"Issues", "issues"}, {"Standalone", "standalone"}] do %>
-            <button
-              phx-click="filter"
-              phx-value-value={value}
-              class={[
-                "px-3 py-1 text-sm rounded-lg border transition-colors",
-                if(@filter == value,
-                  do: "bg-indigo-600 border-indigo-500 text-white",
-                  else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-                )
-              ]}
+        <div class="flex items-center gap-3">
+          <div class="flex gap-2">
+            <%= for {label, value} <- [{"All", "all"}, {"Series", "series"}, {"Issues", "issues"}, {"Standalone", "standalone"}] do %>
+              <button
+                phx-click="filter"
+                phx-value-value={value}
+                class={[
+                  "px-3 py-1 text-sm rounded-lg border transition-colors",
+                  if(@filter == value,
+                    do: "bg-indigo-600 border-indigo-500 text-white",
+                    else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+                  )
+                ]}
+              >
+                {label}
+              </button>
+            <% end %>
+          </div>
+
+          <div class="w-px h-5 bg-gray-700"></div>
+
+          <form phx-change="sort">
+            <select
+              name="value"
+              class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
             >
-              {label}
-            </button>
-          <% end %>
+              <%= for {label, value} <- sort_options(@filter) do %>
+                <option value={value} selected={@sort == value}>{label}</option>
+              <% end %>
+            </select>
+          </form>
         </div>
       </div>
 

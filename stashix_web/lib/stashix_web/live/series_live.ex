@@ -12,14 +12,17 @@ defmodule StashixWeb.SeriesLive do
 
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
     total_size = Enum.sum(Enum.map(series.books, & &1.file_size))
-    cover_book = List.first(series.books)
+    sort = "issue_asc"
+    books = sort_books(series.books, sort)
+    cover_book = List.first(books)
 
     {:ok,
      assign(socket,
        page_title: series.name,
        series: series,
        library: library,
-       books: series.books,
+       books: books,
+       sort: sort,
        total_pages: total_pages,
        total_size: total_size,
        cover_book: cover_book
@@ -41,8 +44,32 @@ defmodule StashixWeb.SeriesLive do
   end
 
   @impl true
+  def handle_event("sort", %{"value" => sort}, socket) do
+    {:noreply, assign(socket, sort: sort, books: sort_books(socket.assigns.series.books, sort))}
+  end
+
+  @impl true
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
+  defp sort_books(books, "title_asc"), do: Enum.sort_by(books, & &1.title)
+  defp sort_books(books, "title_desc"), do: Enum.sort_by(books, & &1.title, :desc)
+  defp sort_books(books, "year_asc"), do: Enum.sort_by(books, &(&1.year || 0))
+  defp sort_books(books, "year_desc"), do: Enum.sort_by(books, &(&1.year || 0), :desc)
+  defp sort_books(books, "added_asc"), do: Enum.sort_by(books, & &1.inserted_at, NaiveDateTime)
+  defp sort_books(books, "added_desc"), do: Enum.sort_by(books, & &1.inserted_at, {:desc, NaiveDateTime})
+
+  defp sort_books(books, "issue_desc") do
+    Enum.sort_by(books, fn b ->
+      if b.issue_number, do: Decimal.to_float(b.issue_number), else: -1.0
+    end, :desc)
+  end
+
+  defp sort_books(books, _) do
+    Enum.sort_by(books, fn b ->
+      if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
+    end)
+  end
 
   @impl true
   def render(assigns) do
@@ -164,6 +191,28 @@ defmodule StashixWeb.SeriesLive do
       </div>
 
       <%!-- Books grid --%>
+      <div class="flex items-center justify-between mb-1">
+        <h2 class="text-lg font-semibold text-gray-300">{length(@books)} Issues</h2>
+        <form phx-change="sort">
+          <select
+            name="value"
+            class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+          >
+            <%= for {label, value} <- [
+              {"Issue # ↑", "issue_asc"},
+              {"Issue # ↓", "issue_desc"},
+              {"A → Z", "title_asc"},
+              {"Z → A", "title_desc"},
+              {"Year ↑", "year_asc"},
+              {"Year ↓", "year_desc"},
+              {"Date Added ↓", "added_desc"},
+              {"Date Added ↑", "added_asc"}
+            ] do %>
+              <option value={value} selected={@sort == value}>{label}</option>
+            <% end %>
+          </select>
+        </form>
+      </div>
       <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         <%= for book <- @books do %>
           <.media_card

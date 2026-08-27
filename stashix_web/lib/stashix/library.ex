@@ -32,7 +32,7 @@ defmodule Stashix.Library do
   def list_books(library_id, opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
     offset = Keyword.get(opts, :offset, 0)
-    sort = Keyword.get(opts, :sort, :inserted_at)
+    sort = Keyword.get(opts, :sort, "title_asc")
     type = Keyword.get(opts, :type)
     series_id = Keyword.get(opts, :series_id)
 
@@ -59,9 +59,14 @@ defmodule Stashix.Library do
 
     query =
       case sort do
-        :title -> order_by(query, [b], asc: b.title)
-        :issue_number -> order_by(query, [b], asc: b.issue_number)
-        _ -> order_by(query, [b], desc: b.inserted_at)
+        "title_desc" -> order_by(query, [b], desc: b.title)
+        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
+        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "added_asc" -> order_by(query, [b], asc: b.inserted_at)
+        "added_desc" -> order_by(query, [b], desc: b.inserted_at)
+        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
+        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        _ -> order_by(query, [b], asc: b.title)
       end
 
     Repo.all(query)
@@ -73,20 +78,33 @@ defmodule Stashix.Library do
     Repo.get!(Book, id) |> Repo.preload([:series, :cover, :publisher])
   end
 
-  def list_series(library_id) do
-    from(s in Series,
-      where: s.library_id == ^library_id and is_nil(s.deleted_at),
-      select: %{
-        s
-        | issue_count:
-            fragment(
-              "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
-              s.id
-            )
-      },
-      preload: [:publisher]
-    )
-    |> Repo.all()
+  def list_series(library_id, opts \\ []) do
+    sort = Keyword.get(opts, :sort, "title_asc")
+
+    query =
+      from s in Series,
+        where: s.library_id == ^library_id and is_nil(s.deleted_at),
+        select: %{
+          s
+          | issue_count:
+              fragment(
+                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
+                s.id
+              )
+        },
+        preload: [:publisher]
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [s], desc: s.name)
+        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
+        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "added_asc" -> order_by(query, [s], asc: s.inserted_at)
+        "added_desc" -> order_by(query, [s], desc: s.inserted_at)
+        _ -> order_by(query, [s], asc: s.name)
+      end
+
+    Repo.all(query)
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
