@@ -11,11 +11,13 @@ defmodule StashixWeb.LibrariesLive do
     libraries = Library.list_libraries(user)
 
     libraries_data = Enum.map(libraries, &load_library_data/1)
+    continue_reading = Library.in_progress_books(user.id, 20)
 
     {:ok,
      assign(socket,
        page_title: "Home",
        libraries_data: libraries_data,
+       continue_reading: continue_reading,
        scan_progress: %{}
      )}
   end
@@ -66,7 +68,12 @@ defmodule StashixWeb.LibrariesLive do
   def handle_info({:book_added, _book}, socket) do
     user = socket.assigns.current_user
     libraries = Library.list_libraries(user)
-    {:noreply, assign(socket, libraries_data: Enum.map(libraries, &load_library_data/1))}
+
+    {:noreply,
+     assign(socket,
+       libraries_data: Enum.map(libraries, &load_library_data/1),
+       continue_reading: Library.in_progress_books(user.id, 20)
+     )}
   end
 
   @impl true
@@ -148,6 +155,52 @@ defmodule StashixWeb.LibrariesLive do
           <% end %>
         </div>
       </section>
+
+      <%# Continue Reading %>
+      <%= if @continue_reading != [] do %>
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+              Continue Reading
+            </h2>
+            <div class="flex gap-1">
+              <button onclick="document.getElementById('continue-reading').scrollBy({left:-600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <button onclick="document.getElementById('continue-reading').scrollBy({left:600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+            </div>
+          </div>
+          <div id="continue-reading" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <%= for %{book: book, current_page: current_page} <- @continue_reading do %>
+              <% progress = if book.page_count && book.page_count > 1, do: current_page / (book.page_count - 1), else: nil %>
+              <.media_card
+                href={~p"/book/#{book.id}"}
+                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                cover_url={~p"/api/books/#{book.id}/cover"}
+                width={288}
+                subtitle={
+                  cond do
+                    book.type == "issue" && book.issue_number && book.series && book.series.issue_count > 0 ->
+                      "Issue ##{book.issue_number} of #{book.series.issue_count}"
+                    book.type == "issue" && book.issue_number ->
+                      "Issue ##{book.issue_number}"
+                    book.type == "issue" ->
+                      "Issue"
+                    true ->
+                      "Standalone"
+                  end
+                }
+                progress={progress}
+                type={:book}
+                class="flex-shrink-0 w-36"
+              />
+            <% end %>
+          </div>
+        </section>
+      <% end %>
 
       <%# Per-library sections %>
       <%= for %{library: lib, recent_books: books, recent_series: series, recent_issues: issues} <- @libraries_data do %>

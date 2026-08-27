@@ -141,6 +141,23 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series (YEAR) - Issue N" or "Series (YEAR) - Issue N - Title"
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d{4})?\)\s*[-–]\s*(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)/i, clean) do
+          [_, series, year, issue] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:year, String.to_integer(year))
+            |> Map.put(:issue_number, parse_decimal(issue))
+
+          nil ->
+            result
+        end
+      end
+
     result =
       if map_size(result) > 0 do
         result

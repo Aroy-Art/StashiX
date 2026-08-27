@@ -133,6 +133,49 @@ defmodule Stashix.Library do
     Repo.get_by(ReadingProgress, user_id: user_id, book_id: book_id)
   end
 
+  def progress_map(_user_id, []), do: %{}
+
+  def progress_map(user_id, book_ids) do
+    from(rp in ReadingProgress,
+      where: rp.user_id == ^user_id and rp.book_id in ^book_ids and rp.current_page > 0,
+      select: {rp.book_id, rp.current_page}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  def in_progress_books(user_id, limit \\ 20) do
+    results =
+      from(rp in ReadingProgress,
+        where: rp.user_id == ^user_id and rp.current_page > 0,
+        join: b in Book,
+        on: b.id == rp.book_id and is_nil(b.deleted_at),
+        order_by: [desc: rp.updated_at],
+        limit: ^limit,
+        select: {b, rp.current_page}
+      )
+      |> Repo.all()
+
+    books = Enum.map(results, fn {book, _} -> book end)
+    series_query =
+      from s in Series,
+        select: %{
+          s
+          | issue_count:
+              fragment(
+                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
+                s.id
+              )
+        }
+
+    loaded_map =
+      Repo.preload(books, [:cover, [series: series_query]]) |> Map.new(&{&1.id, &1})
+
+    Enum.map(results, fn {book, current_page} ->
+      %{book: loaded_map[book.id], current_page: current_page}
+    end)
+  end
+
   def search_books(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
     offset = Keyword.get(opts, :offset, 0)
@@ -291,9 +334,17 @@ defmodule Stashix.Library do
 
   def recent_series(library_id, limit \\ 10) do
     from(s in Series,
-      where: s.library_id == ^library_id,
+      where: s.library_id == ^library_id and is_nil(s.deleted_at),
       order_by: [desc: s.inserted_at],
-      limit: ^limit
+      limit: ^limit,
+      select: %{
+        s
+        | issue_count:
+            fragment(
+              "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
+              s.id
+            )
+      }
     )
     |> Repo.all()
   end

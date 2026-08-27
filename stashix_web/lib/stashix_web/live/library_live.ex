@@ -24,6 +24,7 @@ defmodule StashixWeb.LibraryLive do
        page: 0,
        books: [],
        series: [],
+       progress_map: %{},
        loading: true
      )
      |> load_content("all", 0)}
@@ -50,9 +51,16 @@ defmodule StashixWeb.LibraryLive do
     library_id = socket.assigns.library.id
     filter = socket.assigns.filter
     sort = socket.assigns.sort
+    user_id = socket.assigns.current_user.id
     opts = filter_opts(filter, next_page, sort)
     new_books = Library.list_books(library_id, opts)
-    {:noreply, update(socket, :books, &(&1 ++ new_books)) |> assign(:page, next_page)}
+    new_progress = Library.progress_map(user_id, Enum.map(new_books, & &1.id))
+
+    {:noreply,
+     socket
+     |> update(:books, &(&1 ++ new_books))
+     |> update(:progress_map, &Map.merge(&1, new_progress))
+     |> assign(:page, next_page)}
   end
 
   @impl true
@@ -70,6 +78,7 @@ defmodule StashixWeb.LibraryLive do
 
   defp load_content(socket, filter, page) do
     library_id = socket.assigns.library.id
+    user_id = socket.assigns.current_user.id
     sort = socket.assigns.sort
     opts = filter_opts(filter, page, sort)
 
@@ -87,7 +96,9 @@ defmodule StashixWeb.LibraryLive do
         []
       end
 
-    assign(socket, books: books, series: series, loading: false)
+    progress_map = Library.progress_map(user_id, Enum.map(books, & &1.id))
+
+    assign(socket, books: books, series: series, progress_map: progress_map, loading: false)
   end
 
   defp sort_options("issues") do
@@ -190,12 +201,15 @@ defmodule StashixWeb.LibraryLive do
           <h2 class="text-lg font-semibold text-gray-300 mb-3">Books</h2>
           <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
             <%= for book <- @books do %>
+              <% prog = @progress_map[book.id] %>
+              <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
               <.media_card
                 href={~p"/book/#{book.id}"}
                 title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 width={300}
                 subtitle={book.year && to_string(book.year)}
+                progress={progress}
                 type={:book}
               />
             <% end %>

@@ -733,6 +733,7 @@ defmodule StashixWeb.CoreComponents do
   attr :width, :integer, default: nil
   attr :subtitle, :string, default: nil
   attr :badge, :string, default: nil
+  attr :progress, :float, default: nil
   attr :type, :atom, default: :book
   attr :class, :string, default: ""
 
@@ -771,6 +772,21 @@ defmodule StashixWeb.CoreComponents do
           </span>
         <% end %>
         <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+        <%= if @progress do %>
+          <%= if @progress >= 1.0 do %>
+            <div class="absolute top-2 left-2 z-10 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
+              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          <% end %>
+          <div class="absolute bottom-0 inset-x-0 h-1 bg-gray-700/60 z-10">
+            <div
+              class={"h-full transition-all #{if @progress >= 1.0, do: "bg-green-500", else: "bg-violet-500"}"}
+              style={"width: #{round(min(@progress, 1.0) * 100)}%"}
+            ></div>
+          </div>
+        <% end %>
       </div>
       <div class="px-2.5 py-2 bg-gray-900">
         <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">{@title}</p>

@@ -15,6 +15,8 @@ defmodule StashixWeb.SeriesLive do
     sort = "issue_asc"
     books = sort_books(series.books, sort)
     cover_book = List.first(books)
+    book_ids = Enum.map(series.books, & &1.id)
+    progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
 
     {:ok,
      assign(socket,
@@ -23,6 +25,7 @@ defmodule StashixWeb.SeriesLive do
        library: library,
        books: books,
        sort: sort,
+       progress_map: progress_map,
        total_pages: total_pages,
        total_size: total_size,
        cover_book: cover_book
@@ -215,12 +218,15 @@ defmodule StashixWeb.SeriesLive do
       </div>
       <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         <%= for book <- @books do %>
+          <% prog = @progress_map[book.id] %>
+          <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
           <.media_card
             href={~p"/book/#{book.id}"}
             title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
             cover_url={~p"/api/books/#{book.id}/cover"}
             width={300}
             subtitle={book.year && to_string(book.year)}
+            progress={progress}
             type={:book}
           />
         <% end %>
