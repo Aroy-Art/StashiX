@@ -214,7 +214,7 @@ defmodule StashixWeb.SeriesLive do
           </select>
         </form>
       </div>
-      <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+      <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
         <%= for book <- @books do %>
           <% prog = @progress_map[book.id] %>
           <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>

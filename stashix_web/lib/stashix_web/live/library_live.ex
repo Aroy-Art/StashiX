@@ -180,7 +180,7 @@ defmodule StashixWeb.LibraryLive do
       <%= if @series != [] && @filter in ["all", "series"] do %>
         <section>
           <h2 class="text-lg font-semibold text-gray-300 mb-3">Series</h2>
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             <%= for s <- @series do %>
               <.media_card
                 href={~p"/series/#{s.id}"}
@@ -199,7 +199,7 @@ defmodule StashixWeb.LibraryLive do
       <%= if @books != [] && @filter in ["all", "issues", "standalone"] do %>
         <section>
           <h2 class="text-lg font-semibold text-gray-300 mb-3">Books</h2>
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
             <%= for book <- @books do %>
               <% prog = @progress_map[book.id] %>
               <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>

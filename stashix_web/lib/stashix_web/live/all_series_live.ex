@@ -144,7 +144,7 @@ defmodule StashixWeb.AllSeriesLive do
       <%= if @series != [] do %>
         <.pagination page={@page} total_pages={@total_pages} />
 
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
           <%= for s <- @series do %>
             <.media_card
               href={~p"/series/#{s.id}"}
