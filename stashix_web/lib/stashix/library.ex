@@ -150,6 +150,7 @@ defmodule Stashix.Library do
         where: rp.user_id == ^user_id and rp.current_page > 0,
         join: b in Book,
         on: b.id == rp.book_id and is_nil(b.deleted_at),
+        where: b.page_count == 0 or rp.current_page < b.page_count - 1,
         order_by: [desc: rp.updated_at],
         limit: ^limit,
         select: {b, rp.current_page}
@@ -174,6 +175,42 @@ defmodule Stashix.Library do
     Enum.map(results, fn {book, current_page} ->
       %{book: loaded_map[book.id], current_page: current_page}
     end)
+  end
+
+  def next_issue_books(user_id, limit \\ 20) do
+    completed_by_series =
+      from(rp in ReadingProgress,
+        where: rp.user_id == ^user_id and rp.current_page > 0,
+        join: b in Book,
+          on: b.id == rp.book_id
+            and is_nil(b.deleted_at)
+            and not is_nil(b.series_id)
+            and b.page_count > 0,
+        where: rp.current_page >= b.page_count - 1,
+        group_by: b.series_id,
+        order_by: [desc: max(rp.updated_at)],
+        select: {b.series_id, max(b.issue_number)},
+        limit: ^limit
+      )
+      |> Repo.all()
+
+    books =
+      Enum.flat_map(completed_by_series, fn {series_id, max_issue} ->
+        from(b in Book,
+          where: b.series_id == ^series_id
+            and b.issue_number > ^max_issue
+            and is_nil(b.deleted_at),
+          left_join: rp in ReadingProgress,
+            on: rp.book_id == b.id and rp.user_id == ^user_id,
+          where: is_nil(rp.id) or rp.current_page == 0,
+          order_by: [asc: b.issue_number],
+          limit: 1,
+          select: b
+        )
+        |> Repo.all()
+      end)
+
+    Repo.preload(books, [:cover, :series])
   end
 
   def search_books(query_string, opts \\ []) do
@@ -384,6 +421,94 @@ defmodule Stashix.Library do
           s.id not in subquery(active_series_ids)
     )
     |> Repo.update_all(set: [deleted_at: now])
+  end
+
+  def list_all_books(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    sort = Keyword.get(opts, :sort, "title_asc")
+    type = Keyword.get(opts, :type)
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from b in Book,
+        where: is_nil(b.deleted_at),
+        preload: [:cover, :series],
+        limit: ^limit,
+        offset: ^offset
+
+    query = if type, do: where(query, [b], b.type == ^type), else: query
+    query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [b], desc: b.title)
+        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
+        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "added_asc" -> order_by(query, [b], asc: b.inserted_at)
+        "added_desc" -> order_by(query, [b], desc: b.inserted_at)
+        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
+        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        _ -> order_by(query, [b], asc: b.title)
+      end
+
+    Repo.all(query)
+  end
+
+  def count_all_books(opts \\ []) do
+    type = Keyword.get(opts, :type)
+    library_id = Keyword.get(opts, :library_id)
+
+    query = from b in Book, where: is_nil(b.deleted_at)
+    query = if type, do: where(query, [b], b.type == ^type), else: query
+    query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
+
+    Repo.aggregate(query, :count, :id)
+  end
+
+  def list_all_series(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    sort = Keyword.get(opts, :sort, "title_asc")
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from s in Series,
+        where: is_nil(s.deleted_at),
+        select: %{
+          s
+          | issue_count:
+              fragment(
+                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
+                s.id
+              )
+        },
+        preload: [:publisher],
+        limit: ^limit,
+        offset: ^offset
+
+    query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [s], desc: s.name)
+        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
+        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "added_asc" -> order_by(query, [s], asc: s.inserted_at)
+        "added_desc" -> order_by(query, [s], desc: s.inserted_at)
+        _ -> order_by(query, [s], asc: s.name)
+      end
+
+    Repo.all(query)
+  end
+
+  def count_all_series(opts \\ []) do
+    library_id = Keyword.get(opts, :library_id)
+
+    query = from s in Series, where: is_nil(s.deleted_at)
+    query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
+
+    Repo.aggregate(query, :count, :id)
   end
 
   def list_all_deleted_books do

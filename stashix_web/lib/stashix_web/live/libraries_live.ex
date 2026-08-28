@@ -12,12 +12,14 @@ defmodule StashixWeb.LibrariesLive do
 
     libraries_data = Enum.map(libraries, &load_library_data/1)
     continue_reading = Library.in_progress_books(user.id, 20)
+    next_issue = Library.next_issue_books(user.id, 20)
 
     {:ok,
      assign(socket,
        page_title: "Home",
        libraries_data: libraries_data,
        continue_reading: continue_reading,
+       next_issue: next_issue,
        scan_progress: %{}
      )}
   end
@@ -72,7 +74,8 @@ defmodule StashixWeb.LibrariesLive do
     {:noreply,
      assign(socket,
        libraries_data: Enum.map(libraries, &load_library_data/1),
-       continue_reading: Library.in_progress_books(user.id, 20)
+       continue_reading: Library.in_progress_books(user.id, 20),
+       next_issue: Library.next_issue_books(user.id, 20)
      )}
   end
 
@@ -194,6 +197,39 @@ defmodule StashixWeb.LibrariesLive do
                   end
                 }
                 progress={progress}
+                type={:book}
+                class="flex-shrink-0 w-36"
+              />
+            <% end %>
+          </div>
+        </section>
+      <% end %>
+
+      <%# Next Issue %>
+      <%= if @next_issue != [] do %>
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+              <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+              Next Issue
+            </h2>
+            <div class="flex gap-1">
+              <button onclick="document.getElementById('next-issue').scrollBy({left:-600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-left" class="w-5 h-5" />
+              </button>
+              <button onclick="document.getElementById('next-issue').scrollBy({left:600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-right" class="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          <div id="next-issue" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+            <%= for book <- @next_issue do %>
+              <.media_card
+                href={~p"/book/#{book.id}"}
+                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                cover_url={~p"/api/books/#{book.id}/cover"}
+                width={288}
+                subtitle={if book.series, do: book.series.name, else: nil}
                 type={:book}
                 class="flex-shrink-0 w-36"
               />
