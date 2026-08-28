@@ -58,9 +58,26 @@ defmodule Stashix.Metadata.Parser do
     end
   end
 
+  defp sanitize_xml(data) when is_binary(data) do
+    # xmerl fatal on duplicate namespace declarations; deduplicate xmlns:* attrs
+    Regex.replace(
+      ~r/(<[A-Za-z][^>]*?)((\s+xmlns:[A-Za-z0-9_]+=("[^"]*"|'[^']*'))+)/,
+      data,
+      fn _, tag_open, ns_block, _, _ ->
+        deduped =
+          Regex.scan(~r/\s+xmlns:[A-Za-z0-9_]+=(?:"[^"]*"|'[^']*')/, ns_block)
+          |> Enum.map(&hd/1)
+          |> Enum.uniq_by(fn attr -> Regex.run(~r/xmlns:[A-Za-z0-9_]+/, attr) end)
+          |> Enum.join("")
+
+        tag_open <> deduped
+      end
+    )
+  end
+
   defp parse_comicinfo_xml(data) when is_binary(data) do
     try do
-      doc = parse(data)
+      doc = data |> sanitize_xml() |> parse()
 
       age_rating_raw = xpath(doc, ~x"//ComicInfo/AgeRating/text()"s)
 
@@ -83,6 +100,8 @@ defmodule Stashix.Metadata.Parser do
       |> maybe_put(:story_arc, xpath(doc, ~x"//ComicInfo/StoryArc/text()"os))
     rescue
       _ -> %{}
+    catch
+      :exit, _ -> %{}
     end
   end
 
