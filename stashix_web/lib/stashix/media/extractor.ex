@@ -101,23 +101,27 @@ defmodule Stashix.Media.Extractor do
   end
 
   defp list_pdf_pages(path) do
-    case System.cmd("pdfinfo", [path], stderr_to_stdout: true) do
-      {output, 0} ->
-        pages =
-          output
-          |> String.split("\n", trim: true)
-          |> Enum.find_value(fn line ->
-            case Regex.run(~r/^Pages:\s+(\d+)/, line) do
-              [_, n] -> String.to_integer(n)
-              _ -> nil
-            end
-          end) || 0
+    try do
+      case System.cmd("pdfinfo", [path], stderr_to_stdout: true) do
+        {output, 0} ->
+          pages =
+            output
+            |> String.split("\n", trim: true)
+            |> Enum.find_value(fn line ->
+              case Regex.run(~r/^Pages:\s+(\d+)/, line) do
+                [_, n] -> String.to_integer(n)
+                _ -> nil
+              end
+            end) || 0
 
-        page_names = Enum.map(1..max(pages, 1), &"page-#{String.pad_leading(to_string(&1), 4, "0")}.jpg")
-        {:ok, page_names}
+          page_names = Enum.map(1..max(pages, 1), &"page-#{String.pad_leading(to_string(&1), 4, "0")}.jpg")
+          {:ok, page_names}
 
-      {error, _} ->
-        {:error, error}
+        {error, _} ->
+          {:error, error}
+      end
+    rescue
+      ErlangError -> {:error, :pdfinfo_not_found}
     end
   end
 
