@@ -12,6 +12,7 @@ defmodule StashixWeb.BookLive do
 
     progress = Library.get_progress(socket.assigns.current_user.id, id)
     current_page = (progress && progress.current_page) || 0
+    fully_read = book.page_count > 0 && current_page >= book.page_count - 1
 
     {:ok,
      assign(socket,
@@ -19,6 +20,7 @@ defmodule StashixWeb.BookLive do
        book: book,
        library: library,
        progress: current_page,
+       fully_read: fully_read,
        read_menu_open: false
      )}
   end
@@ -30,6 +32,11 @@ defmodule StashixWeb.BookLive do
 
   def handle_event("close_read_menu", _params, socket) do
     {:noreply, assign(socket, read_menu_open: false)}
+  end
+
+  def handle_event("mark_unread", _params, socket) do
+    Library.update_progress(socket.assigns.current_user.id, socket.assigns.book.id, 0)
+    {:noreply, assign(socket, progress: 0, fully_read: false, read_menu_open: false)}
   end
 
   defp format_file_size(nil), do: "—"
@@ -156,21 +163,23 @@ defmodule StashixWeb.BookLive do
               <.icon name="lucide-file-text" class="w-4 h-4" />
               {String.upcase(to_string(@book.format))}
             </span>
+            <%= if @fully_read do %>
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">
+                <.icon name="lucide-circle-check" class="w-3.5 h-3.5" />
+                Read
+              </span>
+            <% end %>
           </div>
 
-          <%!-- Progress bar --%>
-          <%= if @progress > 0 && @book.page_count > 0 do %>
+          <%!-- Progress bar (only when partially read) --%>
+          <%= if !@fully_read && @progress > 0 && @book.page_count > 0 do %>
             <div class="mt-3">
               <div class="flex justify-between text-xs text-gray-500 mb-1">
                 <span>Progress</span>
                 <span>{@progress}/{@book.page_count} pages</span>
               </div>
               <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-violet-500"
-                  style={"width: #{round(@progress / @book.page_count * 100)}%"}
-                >
-                </div>
+                <div class="h-full bg-violet-500" style={"width: #{round(@progress / @book.page_count * 100)}%"} />
               </div>
             </div>
           <% end %>
@@ -179,14 +188,18 @@ defmodule StashixWeb.BookLive do
           <%= if @book.page_count > 0 do %>
             <div class="relative inline-flex mt-4">
               <a
-                href={~p"/read/#{@book.id}"}
+                href={if @fully_read, do: ~p"/read/#{@book.id}?page=0", else: ~p"/read/#{@book.id}"}
                 class={[
                   "inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-medium transition-colors",
                   if(@progress > 0, do: "rounded-l-lg", else: "rounded-lg")
                 ]}
               >
                 <.icon name="lucide-book-open" class="w-4 h-4" />
-                {if @progress > 0, do: "Continue", else: "Read"}
+                {cond do
+                  @fully_read -> "Read Again"
+                  @progress > 0 -> "Continue"
+                  true -> "Read"
+                end}
               </a>
               <%= if @progress > 0 do %>
                 <button
@@ -201,13 +214,22 @@ defmodule StashixWeb.BookLive do
                 <%= if @read_menu_open do %>
                   <div class="fixed inset-0 z-20" phx-click="close_read_menu" />
                   <div class="absolute left-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-48">
-                    <a
-                      href={~p"/read/#{@book.id}?page=0"}
-                      class="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                    <%= if !@fully_read do %>
+                      <a
+                        href={~p"/read/#{@book.id}?page=0"}
+                        class="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                      >
+                        <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
+                        Read from Beginning
+                      </a>
+                    <% end %>
+                    <button
+                      phx-click="mark_unread"
+                      class="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors text-left"
                     >
-                      <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
-                      Read from Beginning
-                    </a>
+                      <.icon name="lucide-x-circle" class="w-4 h-4" />
+                      Mark as Unread
+                    </button>
                   </div>
                 <% end %>
               <% end %>
