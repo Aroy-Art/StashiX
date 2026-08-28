@@ -165,7 +165,7 @@ defmodule StashixWeb.BookLive do
             </span>
             <%= if @fully_read do %>
               <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">
-                <.icon name="lucide-circle-check" class="w-3.5 h-3.5" />
+                <.icon name="lucide-check" class="w-3.5 h-3.5" />
                 Read
               </span>
             <% end %>
@@ -227,7 +227,7 @@ defmodule StashixWeb.BookLive do
                       phx-click="mark_unread"
                       class="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors text-left"
                     >
-                      <.icon name="lucide-x-circle" class="w-4 h-4" />
+                      <.icon name="lucide-circle-x" class="w-4 h-4" />
                       Mark as Unread
                     </button>
                   </div>
