@@ -201,10 +201,7 @@ defmodule StashixWeb.ReaderLive do
                   phx-click="toggle_layout_menu"
                   class="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="7" height="18" rx="1"/>
-                    <rect x="14" y="3" width="7" height="18" rx="1"/>
-                  </svg>
+                  <.icon name="lucide-columns-2" class="w-4 h-4 flex-shrink-0" />
                   View Mode
                   <.icon name="lucide-chevron-down" class={["w-3 h-3 flex-shrink-0 transition-transform", if(@layout_menu_open, do: "rotate-180", else: "")]} />
                 </button>
@@ -251,10 +248,7 @@ defmodule StashixWeb.ReaderLive do
                   title="Fit page"
                   class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "page", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
                 >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
-                    <line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/>
-                  </svg>
+                  <.icon name="lucide-maximize-2" class="w-4 h-4" />
                 </button>
                 <button
                   phx-click="set_fit"
@@ -262,9 +256,7 @@ defmodule StashixWeb.ReaderLive do
                   title="Fit width"
                   class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "width", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
                 >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M5 12h14M5 12l3-3M5 12l3 3M19 12l-3-3M19 12l-3 3"/>
-                  </svg>
+                  <.icon name="lucide-arrow-left-right" class="w-4 h-4" />
                 </button>
                 <button
                   phx-click="set_fit"
@@ -272,9 +264,7 @@ defmodule StashixWeb.ReaderLive do
                   title="Fit height"
                   class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "height", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
                 >
-                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 5v14M12 5l-3 3M12 5l3 3M12 19l-3-3M12 19l3-3"/>
-                  </svg>
+                  <.icon name="lucide-arrow-up-down" class="w-4 h-4" />
                 </button>
               </div>
 
