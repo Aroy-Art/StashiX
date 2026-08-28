@@ -201,26 +201,32 @@ defmodule Stashix.Media.Extractor do
     File.mkdir_p!(tmp)
     out_prefix = Path.join(tmp, "page")
 
-    case System.cmd(
-           "pdftoppm",
-           ["-jpeg", "-r", "150", "-f", to_string(page_num), "-l", to_string(page_num), archive_path, out_prefix],
-           stderr_to_stdout: true
-         ) do
-      {_, 0} ->
-        case File.ls!(tmp) |> List.first() do
-          nil ->
-            File.rm_rf!(tmp)
-            {:error, :page_not_found}
+    try do
+      case System.cmd(
+             "pdftoppm",
+             ["-jpeg", "-r", "150", "-f", to_string(page_num), "-l", to_string(page_num), archive_path, out_prefix],
+             stderr_to_stdout: true
+           ) do
+        {_, 0} ->
+          case File.ls!(tmp) |> Enum.sort() |> List.first() do
+            nil ->
+              File.rm_rf!(tmp)
+              {:error, :page_not_found}
 
-          fname ->
-            data = File.read!(Path.join(tmp, fname))
-            File.rm_rf!(tmp)
-            {:ok, data}
-        end
+            fname ->
+              data = File.read!(Path.join(tmp, fname))
+              File.rm_rf!(tmp)
+              {:ok, data}
+          end
 
-      {error, _} ->
+        {error, _} ->
+          File.rm_rf!(tmp)
+          {:error, error}
+      end
+    rescue
+      ErlangError ->
         File.rm_rf!(tmp)
-        {:error, error}
+        {:error, :pdftoppm_not_found}
     end
   end
 end

@@ -16,15 +16,18 @@ defmodule Stashix.Metadata.Parser do
   def parse_comicinfo(archive_path) do
     ext = archive_path |> Path.extname() |> String.downcase()
 
-    xml =
-      case ext do
-        cbz when cbz in [".cbz", ".epub"] -> extract_xml_from_zip(archive_path)
-        _ -> nil
-      end
+    case ext do
+      cbz when cbz in [".cbz", ".epub"] ->
+        case extract_xml_from_zip(archive_path) do
+          nil -> %{}
+          data -> parse_comicinfo_xml(data)
+        end
 
-    case xml do
-      nil -> %{}
-      data -> parse_comicinfo_xml(data)
+      ".pdf" ->
+        parse_pdf_metadata(archive_path)
+
+      _ ->
+        %{}
     end
   end
 
@@ -102,6 +105,43 @@ defmodule Stashix.Metadata.Parser do
       _ -> %{}
     catch
       :exit, _ -> %{}
+    end
+  end
+
+  defp parse_pdf_metadata(path) do
+    try do
+      case System.cmd("pdfinfo", [path], stderr_to_stdout: true) do
+        {output, 0} ->
+          fields =
+            output
+            |> String.split("\n", trim: true)
+            |> Enum.reduce(%{}, fn line, acc ->
+              case String.split(line, ":", parts: 2) do
+                [key, value] -> Map.put(acc, String.trim(key), String.trim(value))
+                _ -> acc
+              end
+            end)
+
+          year =
+            case Map.get(fields, "CreationDate") do
+              nil -> nil
+              date -> Regex.run(~r/(\d{4})/, date) |> then(fn
+                [_, y] -> parse_int(y)
+                _ -> nil
+              end)
+            end
+
+          %{}
+          |> maybe_put(:title, Map.get(fields, "Title"))
+          |> maybe_put(:publisher, Map.get(fields, "Creator"))
+          |> maybe_put(:page_count, parse_int(Map.get(fields, "Pages")))
+          |> maybe_put(:year, year)
+
+        _ ->
+          %{}
+      end
+    rescue
+      ErlangError -> %{}
     end
   end
 
