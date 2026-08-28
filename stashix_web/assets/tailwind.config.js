@@ -11,6 +11,9 @@ module.exports = {
     "../lib/stashix_web.ex",
     "../lib/stashix_web/**/*.*ex"
   ],
+  safelist: [
+    { pattern: /^lucide-/ }
+  ],
   darkMode: "class",
   theme: {
     extend: {
