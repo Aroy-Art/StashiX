@@ -333,7 +333,8 @@ defmodule Stashix.Library do
   end
 
   def count_books(library_id) do
-    Repo.aggregate(from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at)),
+    Repo.aggregate(
+      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"),
       :count,
       :id
     )
@@ -421,6 +422,128 @@ defmodule Stashix.Library do
           s.id not in subquery(active_series_ids)
     )
     |> Repo.update_all(set: [deleted_at: now])
+  end
+
+  def list_all_issues(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    sort = Keyword.get(opts, :sort, "title_asc")
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from b in Book,
+        left_join: s in Series,
+        on: b.series_id == s.id,
+        where: is_nil(b.deleted_at) and b.type == "issue",
+        select: b,
+        limit: ^limit,
+        offset: ^offset
+
+    query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
+
+    query =
+      case sort do
+        "title_desc" ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST, ? DESC", s.name, b.title, b.issue_number, b.title)
+          )
+        "year_asc" ->
+          order_by(query, [b, s],
+            fragment("? ASC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.start_year, s.name, b.title, b.issue_number)
+          )
+        "year_desc" ->
+          order_by(query, [b, s],
+            fragment("? DESC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.start_year, s.name, b.title, b.issue_number)
+          )
+        "added_asc" ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.inserted_at, b.inserted_at, b.issue_number)
+          )
+        "added_desc" ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST", s.inserted_at, b.inserted_at, b.issue_number)
+          )
+        "issue_asc" ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.name, b.title, b.issue_number)
+          )
+        "issue_desc" ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) ASC NULLS LAST, ? DESC NULLS LAST", s.name, b.title, b.issue_number)
+          )
+        _ ->
+          order_by(query, [b, s],
+            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST, ? ASC", s.name, b.title, b.issue_number, b.title)
+          )
+      end
+
+    Repo.all(query) |> Repo.preload([:cover, :series])
+  end
+
+  def list_series_for_issues(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 12)
+    offset = Keyword.get(opts, :offset, 0)
+    sort = Keyword.get(opts, :sort, "title_asc")
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from s in Series,
+        where:
+          is_nil(s.deleted_at) and
+            fragment(
+              "EXISTS (SELECT 1 FROM books WHERE books.series_id = ? AND books.deleted_at IS NULL AND books.type = 'issue')",
+              s.id
+            ),
+        limit: ^limit,
+        offset: ^offset
+
+    query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [s], desc: s.name)
+        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
+        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "added_asc" -> order_by(query, [s], asc: s.inserted_at)
+        "added_desc" -> order_by(query, [s], desc: s.inserted_at)
+        _ -> order_by(query, [s], asc: s.name)
+      end
+
+    issues_query =
+      from b in Book,
+        where: is_nil(b.deleted_at) and b.type == "issue",
+        order_by: [asc_nulls_last: b.issue_number, asc: b.title]
+
+    Repo.all(query) |> Repo.preload(books: {issues_query, [:cover]})
+  end
+
+  def count_series_for_issues(opts \\ []) do
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from s in Series,
+        where:
+          is_nil(s.deleted_at) and
+            fragment(
+              "EXISTS (SELECT 1 FROM books WHERE books.series_id = ? AND books.deleted_at IS NULL AND books.type = 'issue')",
+              s.id
+            )
+
+    query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
+    Repo.aggregate(query, :count, :id)
+  end
+
+  def list_ungrouped_issues(opts \\ []) do
+    library_id = Keyword.get(opts, :library_id)
+
+    query =
+      from b in Book,
+        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id),
+        order_by: [asc: b.title],
+        preload: [:cover]
+
+    query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
+    Repo.all(query)
   end
 
   def list_all_books(opts \\ []) do

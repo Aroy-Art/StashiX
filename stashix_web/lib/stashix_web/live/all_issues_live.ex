@@ -76,7 +76,7 @@ defmodule StashixWeb.AllIssuesLive do
       offset: (page - 1) * @page_size
     ]
 
-    books = Library.list_all_books(opts)
+    books = Library.list_all_issues(opts)
     total = Library.count_all_books(opts)
     total_pages = max(1, ceil(total / @page_size))
     user_id = socket.assigns.current_user.id
