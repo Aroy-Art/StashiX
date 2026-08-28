@@ -227,6 +227,17 @@ defmodule Stashix.ScannerTest do
       assert b1.series_id == b2.series_id
     end
 
+    test "Series NN - Title (Publisher YEAR) filename parses all fields", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "The Bank (2025)")
+      write_cbz(folder, "The Bank 01 - The Waterloo Insider (Cinebook 2025) (webrip) (MagicMan-DCP).cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id)
+      assert book.issue_number == Decimal.new("1")
+      assert book.title == "The Waterloo Insider"
+      assert book.year == 2025
+      assert book.source_format == "webrip"
+    end
+
     test "Issue N - Title filename sets issue_number", %{lib: lib, tmp: tmp} do
       folder = mkdir(tmp, "Battle Angel Alita (1994)")
       write_cbz(folder, "Issue 1 - Rusty Angel.cbz")

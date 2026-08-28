@@ -139,6 +139,7 @@ defmodule Stashix.Scanner do
       page_count: resolve_page_count(metadata, file_path, 0),
       language: Map.get(metadata, :language, "en"),
       summary: Map.get(metadata, :summary),
+      source_format: Map.get(parsed, :source_format),
       file_hash: file_hash,
       file_size: file_size,
       last_modified: last_modified
@@ -173,6 +174,7 @@ defmodule Stashix.Scanner do
       page_count: resolve_page_count(metadata, file_path, book.page_count),
       language: Map.get(metadata, :language, book.language),
       summary: Map.get(metadata, :summary, book.summary),
+      source_format: Map.get(parsed, :source_format),
       file_hash: file_hash,
       file_size: file_size,
       last_modified: last_modified,

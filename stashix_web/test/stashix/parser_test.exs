@@ -102,6 +102,49 @@ defmodule Stashix.Metadata.ParserTest do
 
   end
 
+  describe "parse_filename/1 — Series NN - Title (Publisher YEAR) pattern" do
+    test "user-reported filename" do
+      r = Parser.parse_filename("The Bank 01 - The Waterloo Insider (Cinebook 2025) (webrip) (MagicMan-DCP)")
+      assert r[:series] == "The Bank"
+      assert r[:issue_number] == d("1")
+      assert r[:title] == "The Waterloo Insider"
+      assert r[:year] == 2025
+      assert r[:source_format] == "webrip"
+    end
+
+    test "decimal issue number" do
+      r = Parser.parse_filename("Thorgal 13.5 - Between Life and Death (Le Lombard 1988)")
+      assert r[:series] == "Thorgal"
+      assert r[:issue_number] == d("13.5")
+      assert r[:title] == "Between Life and Death"
+      assert r[:year] == 1988
+    end
+
+    test "no publisher, just year in parens" do
+      r = Parser.parse_filename("Spawn 001 - Darkness Within (1992)")
+      assert r[:series] == "Spawn"
+      assert r[:issue_number] == d("1")
+      assert r[:title] == "Darkness Within"
+      assert r[:year] == 1992
+    end
+
+    test "digital tag captured as source_format" do
+      r = Parser.parse_filename("Batman 100 - Joker War (DC 2020) (Digital)")
+      assert r[:source_format] == "digital"
+      assert r[:issue_number] == d("100")
+    end
+
+    test "c2c tag captured as source_format" do
+      r = Parser.parse_filename("Superman 1 - Man of Steel (DC 1986) (c2c)")
+      assert r[:source_format] == "c2c"
+    end
+
+    test "no source_format when no tag" do
+      r = Parser.parse_filename("Saga 001 - Chapter One (Image 2012)")
+      assert r[:source_format] == nil
+    end
+  end
+
   describe "parse_filename/1 — Series (YEAR) general pattern" do
     test "series with year only — no issue" do
       r = Parser.parse_filename("Watchmen (1986)")

@@ -30,6 +30,7 @@ defmodule Stashix.Library.Book do
     field :isbn, :string
     field :upc, :string
     field :community_rating, :float
+    field :source_format, :string
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -65,6 +66,7 @@ defmodule Stashix.Library.Book do
       :isbn,
       :upc,
       :community_rating,
+      :source_format,
       :library_id,
       :series_id,
       :publisher_id,

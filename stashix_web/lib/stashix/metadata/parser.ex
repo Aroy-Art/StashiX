@@ -87,6 +87,12 @@ defmodule Stashix.Metadata.Parser do
   end
 
   def parse_filename(filename) do
+    source_format =
+      case Regex.run(~r/\((Digital|Webrip|c2c|Retail|HQ)\)/i, filename) do
+        [_, tag] -> String.downcase(tag)
+        nil -> nil
+      end
+
     clean = Regex.replace(@noise_regex, filename, " ") |> String.trim()
 
     result = %{}
@@ -158,6 +164,27 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series NN - Title (Publisher YEAR) ..." e.g. "The Bank 01 - The Waterloo Insider (Cinebook 2025)"
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s+(\d{1,4}(?:\.\d+)?)\s*[-–]\s*(.+?)\s*\([^)]*?(\d{4})[^)]*\)/,
+               clean
+             ) do
+          [_, series, issue, title, year] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
+            |> Map.put(:title, String.trim(title))
+            |> Map.put(:year, String.to_integer(year))
+
+          nil ->
+            result
+        end
+      end
+
     result =
       if map_size(result) > 0 do
         result
@@ -199,6 +226,8 @@ defmodule Stashix.Metadata.Parser do
           end
       end
       end
+
+    result = maybe_put(result, :source_format, source_format)
 
     if not Map.has_key?(result, :title) do
       Map.put_new(result, :title, Map.get(result, :series, clean))
