@@ -102,10 +102,10 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def handle_info(:save_progress, socket) do
-    user_id = socket.assigns.current_user.id
-    book_id = socket.assigns.book.id
     page = socket.assigns.current_page
-    Library.update_progress(user_id, book_id, page)
+    if page > 0 do
+      Library.update_progress(socket.assigns.current_user.id, socket.assigns.book.id, page)
+    end
     {:noreply, assign(socket, :save_timer, nil)}
   end
 
