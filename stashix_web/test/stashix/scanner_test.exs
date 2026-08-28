@@ -203,6 +203,40 @@ defmodule Stashix.ScannerTest do
     end
   end
 
+  # ── issue number parsing ──────────────────────────────────────────────────
+
+  describe "scan_sync/2 issue number parsing" do
+    test "Series (YEAR) - Issue N filename sets issue_number", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "Bubblegum Crisis: Grand Mal (1994)")
+      write_cbz(folder, "Bubblegum Crisis: Grand Mal (1994) - Issue 3.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id)
+      assert book.issue_number == Decimal.new("3")
+    end
+
+    test "Series (YEAR) - Issue N sets correct series", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "Saga (2012)")
+      write_cbz(folder, "Saga (2012) - Issue 1.cbz")
+      write_cbz(folder, "Saga (2012) - Issue 2.cbz")
+      Scanner.scan_sync(lib.id)
+      books = Library.list_books(lib.id, sort: "issue_asc")
+      assert length(books) == 2
+      [b1, b2] = books
+      assert b1.issue_number == Decimal.new("1")
+      assert b2.issue_number == Decimal.new("2")
+      assert b1.series_id == b2.series_id
+    end
+
+    test "Issue N - Title filename sets issue_number", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "Battle Angel Alita (1994)")
+      write_cbz(folder, "Issue 1 - Rusty Angel.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id)
+      assert book.issue_number == Decimal.new("1")
+      assert book.title == "Rusty Angel"
+    end
+  end
+
   # ── page count ────────────────────────────────────────────────────────────
 
   describe "scan_sync/2 page count" do
