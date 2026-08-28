@@ -815,4 +815,78 @@ defmodule StashixWeb.CoreComponents do
     </svg>
     """
   end
+
+  attr :page, :integer, required: true
+  attr :total_pages, :integer, required: true
+  attr :on_page, :string, default: "goto_page"
+
+  def pagination(assigns) do
+    assigns = assign(assigns, :pages, pagination_pages(assigns.page, assigns.total_pages))
+
+    ~H"""
+    <%= if @total_pages > 1 do %>
+      <div class="flex items-center justify-center gap-1">
+        <button
+          phx-click={@on_page}
+          phx-value-page={1}
+          disabled={@page == 1}
+          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <.icon name="lucide-chevron-first" class="w-4 h-4" />
+        </button>
+        <button
+          phx-click={@on_page}
+          phx-value-page={@page - 1}
+          disabled={@page == 1}
+          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <.icon name="lucide-chevron-left" class="w-4 h-4" />
+        </button>
+
+        <%= for {p, i} <- Enum.with_index(@pages, 1) do %>
+          <button
+            phx-click={@on_page}
+            phx-value-page={p}
+            class={[
+              "w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors",
+              if(i > 5, do: "hidden sm:flex", else: "flex"),
+              if(p == @page,
+                do: "bg-gray-100 border-gray-200 text-gray-900 font-semibold",
+                else: "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white"
+              )
+            ]}
+          >
+            {p}
+          </button>
+        <% end %>
+
+        <button
+          phx-click={@on_page}
+          phx-value-page={@page + 1}
+          disabled={@page == @total_pages}
+          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <.icon name="lucide-chevron-right" class="w-4 h-4" />
+        </button>
+        <button
+          phx-click={@on_page}
+          phx-value-page={@total_pages}
+          disabled={@page == @total_pages}
+          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+        >
+          <.icon name="lucide-chevron-last" class="w-4 h-4" />
+        </button>
+      </div>
+    <% end %>
+    """
+  end
+
+  defp pagination_pages(current, total) when total <= 11, do: Enum.to_list(1..total)
+
+  defp pagination_pages(current, total) do
+    half = 5
+    start = max(1, min(current - half, total - 10))
+    finish = min(total, start + 10)
+    Enum.to_list(start..finish)
+  end
 end

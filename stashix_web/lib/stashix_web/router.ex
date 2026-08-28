@@ -100,6 +100,9 @@ defmodule StashixWeb.Router do
 
     live "/", LibrariesLive, :index
     live "/library/:id", LibraryLive, :index
+    live "/books", AllBooksLive, :index
+    live "/issues", AllIssuesLive, :index
+    live "/series", AllSeriesLive, :index
     live "/book/:id", BookLive, :show
     live "/series/:id", SeriesLive, :show
     live "/search", SearchLive, :index
