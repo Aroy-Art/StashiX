@@ -1,5 +1,8 @@
-import { useState, useRef } from 'react'
-import { useNavigate, useLocation, NavLink } from 'react-router-dom'
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
 import {
   Home,
   Search,
@@ -57,8 +60,8 @@ const NAV_ITEMS = [
 ]
 
 export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
-  const location = useLocation()
-  const navigate = useNavigate()
+  const pathname = usePathname() ?? ''
+  const router = useRouter()
   const logout = useAuthStore((s) => s.logout)
   const isAdmin = useAuthStore((s) => s.isAdmin)
   const totalTasks = Object.values(activeTasks)
@@ -97,33 +100,38 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
     }
   }
 
+  useEffect(() => {
+    setScanning((s) => {
+      if (s.size === 0) return s
+      const next = new Set(s)
+      let changed = false
+      for (const libId of s) {
+        if (activeTasks[libId]) { next.delete(libId); changed = true }
+      }
+      return changed ? next : s
+    })
+  }, [activeTasks])
+
   const handleScan = async (libId: string, force = false) => {
     setScanning((s) => new Set(s).add(libId))
     try {
       await librariesApi.scan(libId, force)
     } catch {
-      // progress via WS
-    } finally {
-      setScanning((s) => {
-        const next = new Set(s)
-        next.delete(libId)
-        return next
-      })
+      setScanning((s) => { const next = new Set(s); next.delete(libId); return next })
     }
   }
 
   function handleLogout() {
-    logout()
-    navigate('/login')
+    logout().catch(() => {}).finally(() => router.push('/login'))
   }
 
   function isNavActive(to: string, end: boolean) {
-    if (end) return location.pathname === to
-    return location.pathname.startsWith(to)
+    if (end) return pathname === to
+    return pathname.startsWith(to)
   }
 
   function isLibraryActive(id: string) {
-    return location.pathname === `/library/${id}`
+    return pathname === `/library/${id}`
   }
 
   return (
@@ -161,10 +169,10 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                       isNavActive(to, end) && 'sidebar-active-glow'
                     )}
                   >
-                    <NavLink to={to} end={end}>
+                    <Link href={to}>
                       <Icon />
                       <span>{label}</span>
-                    </NavLink>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -200,16 +208,20 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                           isActive={active}
                           className={cn(active && 'sidebar-active-glow')}
                         >
-                          <NavLink to={`/library/${lib.id}`}>
+                          <Link href={`/library/${lib.id}`}>
                             <ChevronRight className="w-3 h-3 opacity-50" />
                             <span>{lib.name}</span>
-                          </NavLink>
+                          </Link>
                         </SidebarMenuButton>
-                        {pct !== null && (
+                        {(scanning.has(lib.id) && !task) || (task && task.total === 0) ? (
+                          <SidebarMenuBadge className={cn('text-volt-3', isAdmin && 'right-7')}>
+                            <div className="w-2.5 h-2.5 rounded-full border border-volt-3 border-t-transparent animate-spin" />
+                          </SidebarMenuBadge>
+                        ) : pct !== null ? (
                           <SidebarMenuBadge className={cn('text-volt-3 font-mono text-[10px]', isAdmin && 'right-7')}>
                             {pct}%
                           </SidebarMenuBadge>
-                        )}
+                        ) : null}
                         {isAdmin && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -249,7 +261,7 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
         )}
 
         {/* ── Active scans ─────────────────────────────────────────────────── */}
-        {totalTasks.length > 0 && (
+        {(totalTasks.length > 0 || scanning.size > 0) && (
           <>
             <SidebarSeparator />
             <SidebarGroup>
@@ -259,9 +271,30 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
               </SidebarGroupLabel>
               <SidebarGroupContent>
                 <div className="px-2 space-y-2">
+                  {[...scanning].filter((id) => !activeTasks[id]).map((libId) => {
+                    const lib = libraries.find((l) => l.id === libId)
+                    return (
+                      <div key={libId} className="flex items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground truncate flex-1">
+                          {lib?.name ?? 'Library'}
+                        </span>
+                        <div className="w-3 h-3 rounded-full border border-volt-3 border-t-transparent animate-spin shrink-0" />
+                      </div>
+                    )
+                  })}
                   {totalTasks.map((t) => {
                     const lib = libraries.find((l) => l.id === t.library_id)
-                    const pct = t.total > 0 ? Math.round((t.scanned / t.total) * 100) : 0
+                    if (t.total === 0) {
+                      return (
+                        <div key={t.library_id} className="flex items-center gap-2">
+                          <span className="text-[11px] text-muted-foreground truncate flex-1">
+                            {lib?.name ?? 'Library'}
+                          </span>
+                          <div className="w-3 h-3 rounded-full border border-volt-3 border-t-transparent animate-spin shrink-0" />
+                        </div>
+                      )
+                    }
+                    const pct = Math.round((t.scanned / t.total) * 100)
                     return (
                       <div key={t.library_id}>
                         <div className="flex justify-between text-[11px] mb-1">
