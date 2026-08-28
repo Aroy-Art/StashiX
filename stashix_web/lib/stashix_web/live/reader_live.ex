@@ -28,6 +28,7 @@ defmodule StashixWeb.ReaderLive do
     settings = user.reader_settings || %{}
     page_layout = Map.get(settings, "page_layout", "single")
     direction = Map.get(settings, "direction", "ltr")
+    fit_mode = Map.get(settings, "fit_mode", "page")
 
     {:ok,
      assign(socket,
@@ -38,6 +39,7 @@ defmodule StashixWeb.ReaderLive do
        current_page: current_page,
        page_layout: page_layout,
        direction: direction,
+       fit_mode: fit_mode,
        layout_menu_open: false,
        overlay_visible: true,
        save_timer: nil
@@ -80,6 +82,12 @@ defmodule StashixWeb.ReaderLive do
 
   def handle_event("toggle_overlay", _params, socket) do
     {:noreply, assign(socket, overlay_visible: !socket.assigns.overlay_visible, layout_menu_open: false)}
+  end
+
+  def handle_event("set_fit", %{"mode" => mode}, socket) when mode in ["page", "width", "height"] do
+    socket = assign(socket, fit_mode: mode)
+    save_reader_settings(socket)
+    {:noreply, socket}
   end
 
   def handle_event("toggle_direction", _params, socket) do
@@ -125,10 +133,15 @@ defmodule StashixWeb.ReaderLive do
     user = socket.assigns.current_user
     settings = %{
       "page_layout" => socket.assigns.page_layout,
-      "direction" => socket.assigns.direction
+      "direction" => socket.assigns.direction,
+      "fit_mode" => socket.assigns.fit_mode
     }
     Accounts.save_reader_settings(user, settings)
   end
+
+  defp img_fit_style("width"), do: "width: 100%; height: auto; max-height: none; max-width: none;"
+  defp img_fit_style("height"), do: "height: 100%; width: auto; max-height: none; max-width: none;"
+  defp img_fit_style(_page), do: "max-height: 100%; max-width: 100%; width: auto; height: auto;"
 
   @impl true
   def render(assigns) do
@@ -161,18 +174,16 @@ defmodule StashixWeb.ReaderLive do
         >
           <%!-- Top bar overlay --%>
           <div class={[
-            "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-2 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
+            "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-1 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
             if(@overlay_visible, do: "translate-y-0", else: "-translate-y-full")
-          ]} style="height: 48px;">
+          ]} style="height: 44px;">
             <%!-- Left: back --%>
             <div class="flex items-center min-w-0 w-36">
               <a
                 href={~p"/book/#{@book.id}"}
                 class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M19 12H5M12 5l-7 7 7 7"/>
-                </svg>
+                <.icon name="lucide-arrow-left" class="w-4 h-4" />
                 Back
               </a>
             </div>
@@ -183,21 +194,19 @@ defmodule StashixWeb.ReaderLive do
             </div>
 
             <%!-- Right: controls + page counter --%>
-            <div class="flex items-center gap-2 min-w-0 w-36 justify-end">
+            <div class="flex items-center gap-2 min-w-0 justify-end">
               <%!-- View mode dropdown --%>
               <div class="relative">
                 <button
                   phx-click="toggle_layout_menu"
-                  class="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
+                  class="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="3" width="7" height="18" rx="1"/>
                     <rect x="14" y="3" width="7" height="18" rx="1"/>
                   </svg>
                   View Mode
-                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-3 h-3 flex-shrink-0 transition-transform", if(@layout_menu_open, do: "rotate-180", else: "")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
+                  <.icon name="lucide-chevron-down" class={["w-3 h-3 flex-shrink-0 transition-transform", if(@layout_menu_open, do: "rotate-180", else: "")]} />
                 </button>
 
                 <%= if @layout_menu_open do %>
@@ -234,11 +243,46 @@ defmodule StashixWeb.ReaderLive do
                 <% end %>
               </div>
 
+              <%!-- Fit mode buttons --%>
+              <div class="flex items-center gap-1">
+                <button
+                  phx-click="set_fit"
+                  phx-value-mode="page"
+                  title="Fit page"
+                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "page", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/>
+                    <line x1="10" y1="14" x2="21" y2="3"/><line x1="3" y1="21" x2="14" y2="10"/>
+                  </svg>
+                </button>
+                <button
+                  phx-click="set_fit"
+                  phx-value-mode="width"
+                  title="Fit width"
+                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "width", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M5 12l3-3M5 12l3 3M19 12l-3-3M19 12l-3 3"/>
+                  </svg>
+                </button>
+                <button
+                  phx-click="set_fit"
+                  phx-value-mode="height"
+                  title="Fit height"
+                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "height", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
+                >
+                  <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M12 5l-3 3M12 5l3 3M12 19l-3-3M12 19l3-3"/>
+                  </svg>
+                </button>
+              </div>
+
               <%!-- Direction toggle --%>
               <button
                 phx-click="toggle_direction"
                 title="Toggle reading direction (LTR/RTL)"
-                class="px-2 py-1 rounded text-xs font-mono text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                class="flex items-center px-2.5 py-1.5 rounded text-xs font-mono text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors"
               >
                 {@direction |> String.upcase()}
               </button>
@@ -280,18 +324,15 @@ defmodule StashixWeb.ReaderLive do
             ]}>
               <div class="relative flex items-center justify-center h-full" style={if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0), do: "max-width: 50%", else: "max-width: 100%"}>
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
-                  <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                  </svg>
+                  <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-zinc-600" />
                 </div>
                 <img
                   id="reader-page-main"
                   phx-hook="PageImage"
                   src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
                   alt={"Page #{@current_page + 1}"}
-                  class="max-h-full max-w-full object-contain"
-                  style="height: 100%; width: auto; opacity: 0; transition: opacity 0.15s ease;"
+                  class="object-contain"
+                  style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
                   draggable="false"
                 />
               </div>
@@ -308,8 +349,8 @@ defmodule StashixWeb.ReaderLive do
                     phx-hook="PageImage"
                     src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
                     alt={"Page #{@current_page + 2}"}
-                    class="max-h-full max-w-full object-contain"
-                    style="height: 100%; width: auto; opacity: 0; transition: opacity 0.15s ease;"
+                    class="object-contain"
+                    style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
                     draggable="false"
                   />
                 </div>

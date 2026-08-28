@@ -83,9 +83,7 @@ defmodule StashixWeb.BookLive do
     <div class="max-w-4xl mx-auto space-y-6">
       <div class="flex items-center gap-2 text-sm">
         <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-          </svg>
+          <.icon name="lucide-chevron-left" class="w-4 h-4" />
           Back
         </button>
         <span class="text-gray-700">/</span>
@@ -207,9 +205,7 @@ defmodule StashixWeb.BookLive do
                   class="inline-flex items-center px-2 py-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors"
                   aria-label="More reading options"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 transition-transform", if(@read_menu_open, do: "rotate-180", else: "")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
+                  <.icon name="lucide-chevron-down" class={["w-4 h-4 transition-transform", if(@read_menu_open, do: "rotate-180", else: "")]} />
                 </button>
                 <%= if @read_menu_open do %>
                   <div class="fixed inset-0 z-20" phx-click="close_read_menu" />
