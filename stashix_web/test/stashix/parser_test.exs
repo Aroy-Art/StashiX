@@ -205,4 +205,67 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:issue_number] == nil
     end
   end
+
+  describe "parse_filename/1 — ongoing series (YEAR-) pattern" do
+    test "c-prefix chapter in ongoing series" do
+      r = Parser.parse_filename("Amulet (2008-) c01 The Stonekeeper")
+      assert r[:series] == "Amulet"
+      assert r[:year] == 2008
+      assert r[:issue_number] == d("1")
+    end
+
+    test "zero-padded issue in ongoing series" do
+      r = Parser.parse_filename("Invincible (2003-) 001 (Digital)")
+      assert r[:series] == "Invincible"
+      assert r[:year] == 2003
+      assert r[:issue_number] == d("1")
+    end
+
+    test "chapter keyword in ongoing series" do
+      r = Parser.parse_filename("One-Punch Man (2012-) - Chapter 100")
+      assert r[:series] == "One-Punch Man"
+      assert r[:year] == 2012
+      assert r[:issue_number] == d("100")
+    end
+
+    test "issue keyword in ongoing series" do
+      r = Parser.parse_filename("Saga (2012-) - Issue 3")
+      assert r[:series] == "Saga"
+      assert r[:year] == 2012
+      assert r[:issue_number] == d("3")
+    end
+
+    test "existing year-range (YEAR-YEAR) still works" do
+      r = Parser.parse_filename("Batman (2011-2016) 001 (Digital)")
+      assert r[:series] == "Batman"
+      assert r[:year] == 2011
+      assert r[:issue_number] == d("1")
+    end
+  end
+
+  describe "parse_filename/1 — Vol. NNN after dash pattern" do
+    test "Vol. NNN followed by year" do
+      r = Parser.parse_filename("Heavy Metal Magazine #202011 - Vol. 302 (2020) (2 covers) (Digital) (Mephisto-Empire)")
+      assert r[:issue_number] == d("302")
+      assert r[:year] == 2020
+    end
+
+    test "Vol. NNN with subtitle before year" do
+      r = Parser.parse_filename("Heavy Metal Magazine #201806 - Vol. 290: Deadly Special (2018) (4 covers) (Digital) (Mephisto-Empire)")
+      assert r[:issue_number] == d("290")
+      assert r[:year] == 2018
+    end
+
+    test "simple Vol. NNN" do
+      r = Parser.parse_filename("Some Magazine - Vol. 15 (2023)")
+      assert r[:issue_number] == d("15")
+      assert r[:year] == 2023
+    end
+
+    test "Vol. NNN with subtitle and no extra tags" do
+      r = Parser.parse_filename("Some Magazine - Vol. 15: Special Edition (2023)")
+      assert r[:issue_number] == d("15")
+      assert r[:year] == 2023
+    end
+  end
 end
