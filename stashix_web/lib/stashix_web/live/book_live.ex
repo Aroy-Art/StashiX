@@ -60,14 +60,7 @@ defmodule StashixWeb.BookLive do
   defp format_age_rating(:explicit), do: "Explicit"
   defp format_age_rating(_), do: "N/A"
 
-  defp book_display_title(book) do
-    cond do
-      book.series && book.issue_number ->
-        "#{book.series.name} ##{book.issue_number |> Decimal.to_integer()}"
-      true ->
-        book.title
-    end
-  end
+  defp book_display_title(book), do: book.title
 
   defp relative_path(book, library) do
     library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
@@ -95,7 +88,13 @@ defmodule StashixWeb.BookLive do
           <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
         <% end %>
         <span class="text-gray-700">/</span>
-        <span class="text-gray-300">{if @book.issue_number, do: "##{Decimal.to_integer(@book.issue_number)} – #{@book.title}", else: @book.title}</span>
+        <span class="text-gray-300">
+          <%= if @book.issue_number do %>
+            <span class="hidden sm:inline">Issue </span>#<%= Decimal.to_integer(@book.issue_number) %>
+          <% else %>
+            {@book.title}
+          <% end %>
+        </span>
       </div>
 
       <div class="flex gap-6 md:gap-8">
@@ -139,15 +138,9 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Title --%>
           <h1 class="text-2xl md:text-3xl font-bold text-white mt-0.5">
-            {book_display_title(@book)}
+            <%= if @book.issue_number do %>#<%= Decimal.to_integer(@book.issue_number) %> – <% end %>{book_display_title(@book)}
           </h1>
 
-          <%!-- Issue subtitle --%>
-          <%= if @book.issue_number do %>
-            <p class="text-gray-400 text-sm mt-1">
-              Issue #{Decimal.to_integer(@book.issue_number)}
-            </p>
-          <% end %>
 
           <%!-- Quick stats --%>
           <div class="flex items-center gap-5 mt-3 text-sm text-gray-400">
