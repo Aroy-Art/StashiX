@@ -83,16 +83,11 @@ defmodule Stashix.Library do
 
     query =
       from s in Series,
+        left_join: b in Book,
+          on: b.series_id == s.id and is_nil(b.deleted_at),
         where: s.library_id == ^library_id and is_nil(s.deleted_at),
-        select: %{
-          s
-          | issue_count:
-              fragment(
-                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
-                s.id
-              )
-        },
-        preload: [:publisher]
+        group_by: s.id,
+        select: %{s | issue_count: count(b.id)}
 
     query =
       case sort do
@@ -104,7 +99,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query)
+    Repo.all(query) |> Repo.preload(:publisher)
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
@@ -158,16 +153,13 @@ defmodule Stashix.Library do
       |> Repo.all()
 
     books = Enum.map(results, fn {book, _} -> book end)
+
     series_query =
       from s in Series,
-        select: %{
-          s
-          | issue_count:
-              fragment(
-                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
-                s.id
-              )
-        }
+        left_join: b in Book,
+          on: b.series_id == s.id and is_nil(b.deleted_at),
+        group_by: s.id,
+        select: %{s | issue_count: count(b.id)}
 
     loaded_map =
       Repo.preload(books, [:cover, [series: series_query]]) |> Map.new(&{&1.id, &1})
@@ -194,23 +186,30 @@ defmodule Stashix.Library do
       )
       |> Repo.all()
 
-    books =
-      Enum.flat_map(completed_by_series, fn {series_id, max_issue} ->
-        from(b in Book,
-          where: b.series_id == ^series_id
-            and b.issue_number > ^max_issue
-            and is_nil(b.deleted_at),
-          left_join: rp in ReadingProgress,
-            on: rp.book_id == b.id and rp.user_id == ^user_id,
-          where: is_nil(rp.id) or rp.current_page == 0,
-          order_by: [asc: b.issue_number],
-          limit: 1,
-          select: b
-        )
-        |> Repo.all()
-      end)
+    valid = Enum.reject(completed_by_series, fn {_, issue} -> is_nil(issue) end)
 
-    Repo.preload(books, [:cover, :series])
+    if valid == [] do
+      []
+    else
+      series_ids = Enum.map(valid, &elem(&1, 0))
+      max_issues = Map.new(valid)
+
+      from(b in Book,
+        where: b.series_id in ^series_ids and is_nil(b.deleted_at),
+        left_join: rp in ReadingProgress,
+          on: rp.book_id == b.id and rp.user_id == ^user_id,
+        where: is_nil(rp.id) or rp.current_page == 0,
+        order_by: [asc: b.series_id, asc_nulls_last: b.issue_number],
+        preload: [:cover, :series]
+      )
+      |> Repo.all()
+      |> Enum.filter(fn b ->
+        max = Map.get(max_issues, b.series_id)
+        not is_nil(max) and not is_nil(b.issue_number) and b.issue_number > max
+      end)
+      |> Enum.uniq_by(& &1.series_id)
+      |> Enum.take(limit)
+    end
   end
 
   def search_books(query_string, opts \\ []) do
@@ -265,6 +264,12 @@ defmodule Stashix.Library do
       """,
       [uuid_bin]
     )
+  end
+
+  def load_series_cache(library_id) do
+    from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at), select: {s.name, s})
+    |> Repo.all()
+    |> Map.new()
   end
 
   def create_or_find_series(attrs) do
@@ -372,17 +377,13 @@ defmodule Stashix.Library do
 
   def recent_series(library_id, limit \\ 10) do
     from(s in Series,
+      left_join: b in Book,
+        on: b.series_id == s.id and is_nil(b.deleted_at),
       where: s.library_id == ^library_id and is_nil(s.deleted_at),
+      group_by: s.id,
       order_by: [desc: s.inserted_at],
       limit: ^limit,
-      select: %{
-        s
-        | issue_count:
-            fragment(
-              "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
-              s.id
-            )
-      }
+      select: %{s | issue_count: count(b.id)}
     )
     |> Repo.all()
   end
@@ -432,12 +433,12 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        left_join: s in Series,
-        on: b.series_id == s.id,
+        left_join: s in assoc(b, :series),
+        left_join: c in assoc(b, :cover),
         where: is_nil(b.deleted_at) and b.type == "issue",
-        select: b,
         limit: ^limit,
-        offset: ^offset
+        offset: ^offset,
+        preload: [series: s, cover: c]
 
     query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 
@@ -477,7 +478,7 @@ defmodule Stashix.Library do
           )
       end
 
-    Repo.all(query) |> Repo.preload([:cover, :series])
+    Repo.all(query)
   end
 
   def list_series_for_issues(opts \\ []) do
@@ -597,16 +598,11 @@ defmodule Stashix.Library do
 
     query =
       from s in Series,
+        left_join: b in Book,
+          on: b.series_id == s.id and is_nil(b.deleted_at),
         where: is_nil(s.deleted_at),
-        select: %{
-          s
-          | issue_count:
-              fragment(
-                "(SELECT COUNT(*) FROM books WHERE series_id = ? AND deleted_at IS NULL)",
-                s.id
-              )
-        },
-        preload: [:publisher],
+        group_by: s.id,
+        select: %{s | issue_count: count(b.id)},
         limit: ^limit,
         offset: ^offset
 
@@ -622,7 +618,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query)
+    Repo.all(query) |> Repo.preload(:publisher)
   end
 
   def count_all_series(opts \\ []) do
