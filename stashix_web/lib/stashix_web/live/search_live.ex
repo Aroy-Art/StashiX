@@ -20,13 +20,27 @@ defmodule StashixWeb.SearchLive do
   end
 
   @impl true
-  def handle_event("search", %{"q" => query}, socket) do
+  def handle_params(%{"q" => query}, _uri, socket) when query != "" do
+    send(self(), {:do_search, query})
+    {:noreply, assign(socket, query: query, searching: true)}
+  end
+
+  def handle_params(_params, _uri, socket) do
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("search", %{"value" => query}, socket) do
     if socket.assigns.search_timer do
       Process.cancel_timer(socket.assigns.search_timer)
     end
 
     timer = Process.send_after(self(), {:do_search, query}, @debounce_ms)
-    {:noreply, assign(socket, query: query, search_timer: timer, searching: true)}
+
+    {:noreply,
+     socket
+     |> assign(query: query, search_timer: timer, searching: true)
+     |> push_patch(to: ~p"/search?#{if query != "", do: [q: query], else: []}", replace: true)}
   end
 
   @impl true
