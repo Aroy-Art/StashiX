@@ -40,6 +40,7 @@ defmodule StashixWeb.LibrariesLive do
       book_count: Library.count_books(lib.id),
       series_count: Library.count_series(lib.id),
       issue_count: Library.count_issues(lib.id),
+      total_size: Library.total_size(lib.id),
       cover_books: cover_books,
       recent_books: recent_standalone,
       recent_series: Library.recent_series(lib.id, 20),
@@ -97,7 +98,7 @@ defmodule StashixWeb.LibrariesLive do
           Libraries
         </h2>
         <div class="flex flex-wrap gap-4">
-          <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, cover_books: covers} <- @libraries_data do %>
+          <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
             <div class="w-72 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
               <%!-- Cover mosaic --%>
               <div class="h-28 flex overflow-hidden relative bg-gray-800">
@@ -133,6 +134,9 @@ defmodule StashixWeb.LibrariesLive do
                   <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{books} books</span>
                   <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{issues} issues</span>
                   <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{series} series</span>
+                  <%= if total_size > 0 do %>
+                    <span class="text-xs bg-gray-800 text-gray-400 border border-gray-700 px-2 py-0.5 rounded-full">{Stashix.Formatters.format_bytes(total_size)}</span>
+                  <% end %>
                 </div>
 
                 <%= if progress = @scan_progress[lib.id] do %>

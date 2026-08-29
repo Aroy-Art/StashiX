@@ -361,6 +361,19 @@ defmodule Stashix.Library do
     )
   end
 
+  def total_size(library_id) do
+    result = Repo.aggregate(
+      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at)),
+      :sum,
+      :file_size
+    )
+    case result do
+      nil -> 0
+      %Decimal{} = d -> Decimal.to_integer(d)
+      n -> n
+    end
+  end
+
   def recent_books(library_id, limit \\ 10, type \\ nil) do
     query =
       from b in Book,
