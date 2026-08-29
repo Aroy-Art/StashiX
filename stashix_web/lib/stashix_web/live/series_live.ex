@@ -1,7 +1,7 @@
 defmodule StashixWeb.SeriesLive do
   use StashixWeb, :live_view
 
-  alias Stashix.Library
+  alias Stashix.{Library, Scanner}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -18,6 +18,10 @@ defmodule StashixWeb.SeriesLive do
     book_ids = Enum.map(series.books, & &1.id)
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
 
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
+    end
+
     {:ok,
      assign(socket,
        page_title: series.name,
@@ -28,7 +32,9 @@ defmodule StashixWeb.SeriesLive do
        progress_map: progress_map,
        total_pages: total_pages,
        total_size: total_size,
-       cover_book: cover_book
+       cover_book: cover_book,
+       scanning: false,
+       show_admin_menu: false
      )}
   end
 
@@ -51,7 +57,41 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, assign(socket, sort: sort, books: sort_books(socket.assigns.series.books, sort))}
   end
 
+  def handle_event("toggle_admin_menu", _, socket) do
+    {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
+  end
+
+  def handle_event("rescan_series", _, socket) do
+    Scanner.scan_series(socket.assigns.series.id)
+    {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
+  end
+
+  def handle_event("force_rescan_series", _, socket) do
+    Scanner.scan_series(socket.assigns.series.id, true)
+    {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
+  end
+
   @impl true
+  def handle_info({:scan_progress, %{done: true}}, socket) do
+    series = Library.get_series_with_books(socket.assigns.series.id)
+    books = sort_books(series.books, socket.assigns.sort)
+    book_ids = Enum.map(series.books, & &1.id)
+    progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
+    total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
+    total_size = Enum.sum(Enum.map(series.books, & &1.file_size))
+
+    {:noreply,
+     assign(socket,
+       scanning: false,
+       series: series,
+       books: books,
+       progress_map: progress_map,
+       total_pages: total_pages,
+       total_size: total_size,
+       cover_book: List.first(books)
+     )}
+  end
+
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
@@ -79,17 +119,61 @@ defmodule StashixWeb.SeriesLive do
     ~H"""
     <div class="space-y-6">
       <%!-- Breadcrumbs --%>
-      <div class="flex items-center gap-2 text-sm">
-        <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
-          <.icon name="lucide-chevron-left" class="w-4 h-4" />
-          Back
-        </button>
-        <span class="text-gray-700">/</span>
-        <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
-        <span class="text-gray-700">/</span>
-        <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
-        <span class="text-gray-700">/</span>
-        <span class="text-gray-300">{@series.name}</span>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-sm">
+          <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
+            <.icon name="lucide-chevron-left" class="w-4 h-4" />
+            Back
+          </button>
+          <span class="text-gray-700">/</span>
+          <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
+          <span class="text-gray-700">/</span>
+          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
+          <span class="text-gray-700">/</span>
+          <span class="text-gray-300">{@series.name}</span>
+        </div>
+        <%= if @current_user.role == :admin do %>
+          <div class="relative">
+            <button
+              phx-click="toggle_admin_menu"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors"
+            >
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" />
+              Admin
+              <.icon name="lucide-chevron-down" class="w-3 h-3" />
+            </button>
+            <%= if @show_admin_menu do %>
+              <div class="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-gray-700 bg-gray-900 shadow-xl py-1">
+                <button
+                  phx-click="rescan_series"
+                  disabled={@scanning}
+                  class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
+                >
+                  <%= if @scanning do %>
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin text-violet-400" />
+                    Scanning…
+                  <% else %>
+                    <.icon name="lucide-refresh-cw" class="w-4 h-4" />
+                    Rescan Series
+                  <% end %>
+                </button>
+                <button
+                  phx-click="force_rescan_series"
+                  disabled={@scanning}
+                  class="w-full flex items-center gap-2 px-4 py-2 text-sm text-amber-400 hover:bg-gray-800 hover:text-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
+                >
+                  <%= if @scanning do %>
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
+                    Scanning…
+                  <% else %>
+                    <.icon name="lucide-zap" class="w-4 h-4" />
+                    Force Rescan
+                  <% end %>
+                </button>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
 
       <%!-- Header --%>

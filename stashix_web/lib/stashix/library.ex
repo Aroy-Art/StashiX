@@ -452,6 +452,15 @@ defmodule Stashix.Library do
     |> Repo.update_all(set: [deleted_at: now])
   end
 
+  def mark_orphaned_series_books(series_id, scanned_paths) do
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    from(b in Book,
+      where: b.series_id == ^series_id and is_nil(b.deleted_at) and b.path not in ^scanned_paths
+    )
+    |> Repo.update_all(set: [deleted_at: now])
+  end
+
   def mark_empty_series_deleted(library_id) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 

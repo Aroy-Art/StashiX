@@ -23,6 +23,10 @@ defmodule Stashix.Scanner do
     GenServer.cast(__MODULE__, {:scan_file, library_id, file_path})
   end
 
+  def scan_series(series_id, force \\ false) do
+    GenServer.cast(__MODULE__, {:scan_series, series_id, force})
+  end
+
   @doc false
   def scan_sync(library_id, force \\ false), do: do_scan(library_id, force)
 
@@ -56,6 +60,14 @@ defmodule Stashix.Scanner do
   def handle_cast({:scan_file, library_id, file_path}, state) do
     Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
       do_scan_file(library_id, file_path)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:scan_series, series_id, force}, state) do
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+      do_scan_series(series_id, force)
     end)
 
     {:noreply, state}
@@ -309,6 +321,62 @@ defmodule Stashix.Scanner do
     else
       {nil, cache}
     end
+  end
+
+  defp do_scan_series(series_id, force) do
+    series = Library.get_series!(series_id)
+    library = Library.get_library!(series.library_id)
+    library_id = library.id
+
+    Logger.info("Starting series rescan: #{series.name}")
+
+    files = if series.path && File.dir?(series.path), do: collect_files(series.path), else: []
+    total = length(files)
+
+    broadcast_progress(library_id, 0, total)
+
+    series_cache = Library.load_series_cache(library_id)
+
+    parsed_files =
+      files
+      |> Task.async_stream(&parse_file_metadata/1,
+           max_concurrency: @metadata_concurrency,
+           ordered: true,
+           timeout: 60_000)
+      |> Enum.flat_map(fn
+        {:ok, result} -> [result]
+        {:exit, reason} ->
+          Logger.error("Metadata parse crashed: #{inspect(reason)}")
+          []
+      end)
+
+    {thumbnail_jobs, _cache} =
+      parsed_files
+      |> Enum.with_index(1)
+      |> Enum.reduce({[], series_cache}, fn {file_meta, idx}, {jobs, cache} ->
+        {job, new_cache} = upsert_book(file_meta, library, force, cache)
+        broadcast_progress(library_id, idx, total)
+        new_jobs = if job, do: [job | jobs], else: jobs
+        {new_jobs, new_cache}
+      end)
+
+    thumbnail_jobs
+    |> Task.async_stream(
+      fn {book, path} -> generate_thumbnail(book, path) end,
+      max_concurrency: @thumbnail_concurrency,
+      ordered: false,
+      timeout: 120_000
+    )
+    |> Stream.run()
+
+    if series.path && File.dir?(series.path) do
+      Library.mark_orphaned_series_books(series_id, files)
+    end
+
+    Library.update_series_counts(library_id)
+
+    broadcast_progress(library_id, total, total, true)
+    Logger.info("Series rescan complete: #{series.name} (#{total} files)")
   end
 
   defp do_scan_file(library_id, file_path) do
