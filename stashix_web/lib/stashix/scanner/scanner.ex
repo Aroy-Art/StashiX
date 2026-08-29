@@ -49,10 +49,13 @@ defmodule Stashix.Scanner do
 
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
 
+    update_task_status(library_id, %{scanned: 0, total: 0, done: false, collecting: true})
+    broadcast_progress(library_id, 0, 0)
+
     files = collect_files(library.root_path)
     total = length(files)
 
-    update_task_status(library_id, %{scanned: 0, total: total, done: false})
+    update_task_status(library_id, %{scanned: 0, total: total, done: false, collecting: false})
     broadcast_progress(library_id, 0, total)
 
     files

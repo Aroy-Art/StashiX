@@ -136,15 +136,26 @@ defmodule StashixWeb.LibrariesLive do
                 </div>
 
                 <%= if progress = @scan_progress[lib.id] do %>
+                  <%
+                    collecting = progress.total == 0 and not progress.done
+                    label = cond do
+                      progress.done -> "Complete"
+                      collecting -> "Collecting files..."
+                      true -> "Scanning..."
+                    end
+                    pct = if progress.total > 0, do: round(progress.scanned / progress.total * 100), else: 0
+                  %>
                   <div class={"mb-3 transition-opacity duration-1000 #{if progress.done, do: "opacity-0", else: "opacity-100"}"}>
                     <div class="flex justify-between text-xs text-gray-500 mb-1">
-                      <span>{if progress.done, do: "Complete", else: "Scanning..."}</span>
-                      <span>{progress.scanned}/{progress.total}</span>
+                      <span>{label}</span>
+                      <%= if not collecting do %>
+                        <span>{progress.scanned}/{progress.total}</span>
+                      <% end %>
                     </div>
                     <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
                       <div
-                        class={"h-full transition-all #{if progress.done, do: "bg-green-500", else: "bg-violet-500"}"}
-                        style={"width: #{if progress.total > 0, do: round(progress.scanned / progress.total * 100), else: 0}%"}
+                        class={"h-full transition-all #{cond do progress.done -> "bg-green-500"; collecting -> "bg-violet-500 animate-pulse w-full"; true -> "bg-violet-500" end}"}
+                        style={if collecting, do: "", else: "width: #{pct}%"}
                       ></div>
                     </div>
                   </div>

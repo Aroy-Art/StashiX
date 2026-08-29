@@ -26,7 +26,8 @@ defmodule StashixWeb.AdminLive do
        deleted_series: [],
        selected_books: MapSet.new(),
        selected_series: MapSet.new(),
-       pending_confirm: nil
+       pending_confirm: nil,
+       scanning_libraries: MapSet.new()
      )}
   end
 
@@ -113,12 +114,12 @@ defmodule StashixWeb.AdminLive do
 
   def handle_event("scan_library", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)
-    {:noreply, put_flash(socket, :info, "Scan started")}
+    {:noreply, update(socket, :scanning_libraries, &MapSet.put(&1, id))}
   end
 
   def handle_event("force_scan_library", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id, true)
-    {:noreply, put_flash(socket, :info, "Force scan started")}
+    {:noreply, update(socket, :scanning_libraries, &MapSet.put(&1, id))}
   end
 
   def handle_event("edit_library", %{"id" => id}, socket) do
@@ -288,7 +289,16 @@ defmodule StashixWeb.AdminLive do
      |> put_flash(:info, "Series and its books restored")}
   end
 
-  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:scan_progress, %{library_id: id, done: true}}, socket) do
+    {:noreply, update(socket, :scanning_libraries, &MapSet.delete(&1, id))}
+  end
+
+  def handle_info({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
+    {:noreply, update(socket, :scanning_libraries, fn libs ->
+      if t > 0 and s < t, do: MapSet.put(libs, id), else: libs
+    end)}
+  end
+
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   @impl true
@@ -448,7 +458,10 @@ defmodule StashixWeb.AdminLive do
                       </p>
                     <% end %>
                   </div>
-                  <div class="flex gap-2">
+                  <%
+                    scanning = MapSet.member?(@scanning_libraries, lib.id)
+                  %>
+                  <div class="flex gap-2 items-center">
                     <button
                       phx-click="edit_library"
                       phx-value-id={lib.id}
@@ -459,14 +472,29 @@ defmodule StashixWeb.AdminLive do
                     <button
                       phx-click="scan_library"
                       phx-value-id={lib.id}
-                      class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg border border-gray-700"
+                      disabled={scanning}
+                      class={["px-3 py-1.5 text-sm rounded-lg border flex items-center gap-1.5",
+                        if(scanning,
+                          do: "bg-gray-900 text-gray-500 border-gray-800 cursor-not-allowed",
+                          else: "bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700"
+                        )]}
                     >
-                      Scan
+                      <%= if scanning do %>
+                        <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" />
+                        Scanning...
+                      <% else %>
+                        Scan
+                      <% end %>
                     </button>
                     <button
                       phx-click="force_scan_library"
                       phx-value-id={lib.id}
-                      class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-amber-400 text-sm rounded-lg border border-gray-700"
+                      disabled={scanning}
+                      class={["px-3 py-1.5 text-sm rounded-lg border",
+                        if(scanning,
+                          do: "bg-gray-900 text-gray-600 border-gray-800 cursor-not-allowed",
+                          else: "bg-gray-800 hover:bg-gray-700 text-amber-400 border-gray-700"
+                        )]}
                     >
                       Force Rescan
                     </button>
