@@ -203,7 +203,7 @@ defmodule StashixWeb.ReaderLive do
                 >
                   <.icon name="lucide-columns-2" class="w-4 h-4 flex-shrink-0" />
                   View Mode
-                  <.icon name="lucide-chevron-down" class={["w-3 h-3 flex-shrink-0 transition-transform", if(@layout_menu_open, do: "rotate-180", else: "")]} />
+                  <.icon name="lucide-chevron-down" class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"} />
                 </button>
 
                 <%= if @layout_menu_open do %>
@@ -285,33 +285,63 @@ defmodule StashixWeb.ReaderLive do
           </div>
 
           <%!-- Reading area (full viewport) --%>
-          <div class="absolute inset-0 overflow-hidden select-none">
+          <div class="absolute inset-0 overflow-hidden select-none" id="reading-area" phx-hook="ReaderZoom">
             <%!-- Click zone: left (prev in LTR, next in RTL) --%>
             <div
-              class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left"
+              class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left reader-click-zone"
               style="width: 30%;"
               phx-click={if @direction == "ltr", do: "prev_page", else: "next_page"}
             />
 
             <%!-- Click zone: center (toggle overlay) --%>
             <div
-              class="absolute top-0 bottom-0 z-10"
+              class="absolute top-0 bottom-0 z-10 reader-click-zone"
               style="left: 30%; width: 40%; cursor: default;"
               phx-click="toggle_overlay"
             />
 
             <%!-- Click zone: right (next in LTR, prev in RTL) --%>
             <div
-              class="absolute right-0 top-0 bottom-0 z-10 reader-zone-right"
+              class="absolute right-0 top-0 bottom-0 z-10 reader-zone-right reader-click-zone"
               style="width: 30%;"
               phx-click={if @direction == "ltr", do: "next_page", else: "prev_page"}
             />
 
+            <%!-- Floating zoom controls (Mapbox-style) --%>
+            <div
+              class={[
+                "absolute transition-transform duration-200",
+                if(@overlay_visible, do: "translate-x-0", else: "translate-x-[calc(100%+16px)]")
+              ]}
+              style="top: 56px; right: 16px; z-index: 25;"
+            >
+              <div class="flex flex-col rounded-md overflow-hidden shadow-xl border border-zinc-700 bg-zinc-900/90 backdrop-blur">
+                <button
+                  onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
+                  title="Zoom in (+)"
+                  class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors border-b border-zinc-700"
+                >
+                  <.icon name="lucide-plus" class="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
+                  title="Zoom out (-)"
+                  class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+                >
+                  <.icon name="lucide-minus" class="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
             <%!-- Pages --%>
-            <div class={[
-              "flex items-center justify-center h-full",
-              if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
-            ]}>
+            <div
+              id="reader-pages"
+              class={[
+                "flex items-center justify-center h-full",
+                if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
+              ]}
+              style="transform-origin: center; will-change: transform;"
+            >
               <div class="relative flex items-center justify-center h-full" style={if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0), do: "max-width: 50%", else: "max-width: 100%"}>
                 <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
                   <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-zinc-600" />
