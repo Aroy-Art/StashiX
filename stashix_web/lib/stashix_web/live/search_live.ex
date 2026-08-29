@@ -13,7 +13,7 @@ defmodule StashixWeb.SearchLive do
      assign(socket,
        page_title: "Search",
        query: "",
-       results: [],
+       results: %{series: [], issues: [], books: []},
        search_timer: nil,
        searching: false
      )}
@@ -50,13 +50,15 @@ defmodule StashixWeb.SearchLive do
   def handle_info({:do_search, query}, socket) do
     results =
       if String.length(query) >= 2 do
-        Library.search_books(query, limit: 50)
+        Library.search_all(query, limit: 20)
       else
-        []
+        %{series: [], issues: [], books: []}
       end
 
     {:noreply, assign(socket, results: results, searching: false, search_timer: nil)}
   end
+
+  defp total_results(%{series: s, issues: i, books: b}), do: length(s) + length(i) + length(b)
 
   @impl true
   def render(assigns) do
@@ -81,26 +83,65 @@ defmodule StashixWeb.SearchLive do
         <% end %>
       </div>
 
-      <%= if @results != [] do %>
-        <div>
-          <p class="text-gray-500 text-sm mb-3">{length(@results)} results for "{@query}"</p>
+      <%= if total_results(@results) > 0 do %>
+        <p class="text-gray-500 text-sm">{total_results(@results)} results for "{@query}"</p>
 
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            <%= for book <- @results do %>
-              <.media_card
-                href={~p"/book/#{book.id}"}
-                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
-                cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
-                width={300}
-                subtitle={book.year && to_string(book.year)}
-                type={:book}
-              />
-            <% end %>
-          </div>
-        </div>
+        <%= if @results.series != [] do %>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Series</h2>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              <%= for s <- @results.series do %>
+                <.media_card
+                  href={~p"/series/#{s.id}"}
+                  title={s.name}
+                  cover_url={~p"/api/series/#{s.id}/cover"}
+                  width={300}
+                  subtitle={s.start_year && to_string(s.start_year)}
+                  type={:series}
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%= if @results.issues != [] do %>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Issues</h2>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              <%= for book <- @results.issues do %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                  cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
+                  width={300}
+                  subtitle={book.series && book.series.name}
+                  type={:book}
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%= if @results.books != [] do %>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Books</h2>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              <%= for book <- @results.books do %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={book.title}
+                  cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
+                  width={300}
+                  subtitle={book.year && to_string(book.year)}
+                  type={:book}
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
       <% end %>
 
-      <%= if @query != "" && !@searching && @results == [] do %>
+      <%= if @query != "" && !@searching && total_results(@results) == 0 do %>
         <div class="text-center py-12 text-gray-500">
           No results found for "{@query}"
         </div>

@@ -228,6 +228,38 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
+  def search_all(query_string, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 20)
+
+    books =
+      from(b in Book,
+        where:
+          fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
+            is_nil(b.deleted_at),
+        order_by:
+          fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
+        preload: [:cover, :series],
+        limit: ^limit
+      )
+      |> Repo.all()
+
+    pattern = "%#{String.replace(query_string, "%", "\\%")}%"
+
+    series =
+      from(s in Series,
+        where: ilike(s.name, ^pattern) and is_nil(s.deleted_at),
+        order_by: [asc: s.name],
+        limit: ^limit
+      )
+      |> Repo.all()
+
+    %{
+      series: series,
+      issues: Enum.filter(books, &(&1.type == "issue")),
+      books: Enum.filter(books, &(&1.type == "standalone"))
+    }
+  end
+
   def get_series_cover(series_id) do
     series = Repo.get!(Series, series_id)
 
