@@ -52,7 +52,7 @@ defmodule Stashix.Scanner.FileWatcher do
   def handle_info({:trigger_scan_file, path, library_id}, state) do
     Logger.info("FileWatcher triggering scan for #{path}")
     Stashix.Scanner.scan_file(library_id, path)
-    {:noreply, Map.delete(state.debounce, path)}
+    {:noreply, %{state | debounce: Map.delete(state.debounce, path)}}
   end
 
   defp load_libraries do
