@@ -8,6 +8,7 @@ defmodule Stashix.Scanner.Supervisor do
   @impl true
   def init(_opts) do
     children = [
+      {Task.Supervisor, name: Stashix.Scanner.TaskSupervisor},
       Stashix.Scanner,
       Stashix.Scanner.FileWatcher
     ]
