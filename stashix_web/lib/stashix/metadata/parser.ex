@@ -276,6 +276,26 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series #DATECODE - Vol. NNN[: Subtitle] (YEAR)" — e.g. Heavy Metal
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s*[-–]\s*Vol\.?\s+(\d+(?:\.\d+)?)(?:\s*:.*?)?\s*\((\d{4})\)/i,
+               clean
+             ) do
+          [_, series, issue, year] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:year, String.to_integer(year))
+            |> Map.put(:issue_number, parse_decimal(issue))
+
+          nil ->
+            result
+        end
+      end
+
     result =
       if map_size(result) > 0 do
         result
