@@ -198,6 +198,23 @@ defmodule Stashix.Metadata.ParserTest do
     end
   end
 
+  describe "parse_filename/1 — en-dash in filename" do
+    test "en-dash separator produces clean title (no stray UTF-8 bytes)" do
+      r = Parser.parse_filename("Metal Hurlant 02 – Space Stares Back (2025) (digital) (juvecube)")
+      assert r[:series] == "Metal Hurlant"
+      assert r[:issue_number] == d("2")
+      assert r[:title] == "Space Stares Back"
+      assert r[:year] == 2025
+      assert String.valid?(r[:title])
+    end
+
+    test "en-dash in Vol. NNN pattern" do
+      r = Parser.parse_filename("Some Mag – Vol. 7 (2022)")
+      assert r[:issue_number] == d("7")
+      assert r[:year] == 2022
+    end
+  end
+
   describe "parse_filename/1 — no match falls back to title" do
     test "plain title with no pattern" do
       r = Parser.parse_filename("My Random File")

@@ -244,7 +244,7 @@ defmodule Stashix.Metadata.Parser do
 
     # "Issue 6 - Angel of Death (1996)" or "Volume 3 - Killing Angel"
     result =
-      case Regex.run(~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*[-–]\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i, clean) do
+      case Regex.run(~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*(?:-|–)\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i, clean) do
         [_, num, title, year] ->
           result
           |> Map.put(:issue_number, parse_decimal(num))
@@ -282,7 +282,7 @@ defmodule Stashix.Metadata.Parser do
         result
       else
         case Regex.run(
-               ~r/^(.+?)\s*[-–]\s*Vol\.?\s+(\d+(?:\.\d+)?)(?:\s*:.*?)?\s*\((\d{4})\)/i,
+               ~r/^(.+?)\s*(?:-|–)\s*Vol\.?\s+(\d+(?:\.\d+)?)(?:\s*:.*?)?\s*\((\d{4})\)/i,
                clean
              ) do
           [_, series, issue, year] ->
@@ -300,7 +300,7 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*[-–]\s*(?:Chapter|Ch\.?)\s+(\d{1,4})/i, clean) do
+        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Chapter|Ch\.?)\s+(\d{1,4})/i, clean) do
           [_, series, year, chapter] ->
             result
             |> Map.put(:series, String.trim(series))
@@ -317,7 +317,7 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*[-–]\s*(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)/i, clean) do
+        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)/i, clean) do
           [_, series, year, issue] ->
             result
             |> Map.put(:series, String.trim(series))
@@ -335,7 +335,7 @@ defmodule Stashix.Metadata.Parser do
         result
       else
         case Regex.run(
-               ~r/^(.+?)\s+(\d{1,4}(?:\.\d+)?)\s*[-–]\s*(.+?)\s*\([^)]*?(\d{4})[^)]*\)/,
+               ~r/^(.+?)\s+(\d{1,4}(?:\.\d+)?)\s*(?:-|–)\s*(.+?)\s*\([^)]*?(\d{4})[^)]*\)/,
                clean
              ) do
           [_, series, issue, title, year] ->
