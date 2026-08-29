@@ -881,7 +881,7 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
-  defp pagination_pages(current, total) when total <= 11, do: Enum.to_list(1..total)
+  defp pagination_pages(_current, total) when total <= 11, do: Enum.to_list(1..total)
 
   defp pagination_pages(current, total) do
     half = 5

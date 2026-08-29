@@ -205,7 +205,7 @@ defmodule StashixWeb.BookLive do
                   class="inline-flex items-center px-2 py-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors"
                   aria-label="More reading options"
                 >
-                  <.icon name="lucide-chevron-down" class={["w-4 h-4 transition-transform", if(@read_menu_open, do: "rotate-180", else: "")]} />
+                  <.icon name="lucide-chevron-down" class={"w-4 h-4 transition-transform#{if @read_menu_open, do: " rotate-180", else: ""}"} />
                 </button>
                 <%= if @read_menu_open do %>
                   <div class="fixed inset-0 z-20" phx-click="close_read_menu" />

@@ -90,7 +90,7 @@ defmodule StashixWeb.LibrariesLive do
     ~H"""
     <div class="space-y-10">
 
-      <%# Libraries overview %>
+      <%!-- Libraries overview --%>
       <section>
         <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
@@ -99,7 +99,7 @@ defmodule StashixWeb.LibrariesLive do
         <div class="flex flex-wrap gap-4">
           <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, cover_books: covers} <- @libraries_data do %>
             <div class="w-72 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
-              <%# Cover mosaic %>
+              <%!-- Cover mosaic --%>
               <div class="h-28 flex overflow-hidden relative bg-gray-800">
                 <%= for book <- Enum.take(covers, 5) do %>
                   <div class="flex-1 min-w-0">
@@ -170,7 +170,7 @@ defmodule StashixWeb.LibrariesLive do
         </div>
       </section>
 
-      <%# Continue Reading %>
+      <%!-- Continue Reading --%>
       <%= if @continue_reading != [] do %>
         <section>
           <div class="flex items-center justify-between mb-4">
@@ -216,7 +216,7 @@ defmodule StashixWeb.LibrariesLive do
         </section>
       <% end %>
 
-      <%# Next Issue %>
+      <%!-- Next Issue --%>
       <%= if @next_issue != [] do %>
         <section>
           <div class="flex items-center justify-between mb-4">
@@ -249,10 +249,10 @@ defmodule StashixWeb.LibrariesLive do
         </section>
       <% end %>
 
-      <%# Per-library sections %>
+      <%!-- Per-library sections --%>
       <%= for %{library: lib, recent_books: books, recent_series: series, recent_issues: issues} <- @libraries_data do %>
 
-        <%# Recent Books %>
+        <%!-- Recent Books --%>
         <%= if books != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">
@@ -285,7 +285,7 @@ defmodule StashixWeb.LibrariesLive do
           </section>
         <% end %>
 
-        <%# Recent Series %>
+        <%!-- Recent Series --%>
         <%= if series != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">
@@ -319,7 +319,7 @@ defmodule StashixWeb.LibrariesLive do
           </section>
         <% end %>
 
-        <%# Recent Issues %>
+        <%!-- Recent Issues --%>
         <%= if issues != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">

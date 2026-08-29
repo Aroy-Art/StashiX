@@ -52,6 +52,16 @@ defmodule StashixWeb.Live.Hooks do
     end
   end
 
+  def on_mount(:optional_auth, _params, session, socket) do
+    case authenticate_from_session(session) do
+      {:ok, user} ->
+        {:cont, assign(socket, :current_user, user)}
+
+      {:error, _} ->
+        {:cont, assign(socket, :current_user, nil)}
+    end
+  end
+
   defp handle_sidebar_scan("sidebar_scan", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)
     {:halt, put_flash(socket, :info, "Scan started")}
@@ -79,16 +89,6 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_sidebar_progress(_msg, socket), do: {:cont, socket}
-
-  def on_mount(:optional_auth, _params, session, socket) do
-    case authenticate_from_session(session) do
-      {:ok, user} ->
-        {:cont, assign(socket, :current_user, user)}
-
-      {:error, _} ->
-        {:cont, assign(socket, :current_user, nil)}
-    end
-  end
 
   defp authenticate_from_session(session) do
     access_token = session["guardian_default_token"]

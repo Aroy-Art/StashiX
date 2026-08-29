@@ -130,7 +130,7 @@ defmodule StashixWeb.AdminLive do
     {:noreply, assign(socket, :editing_library_id, nil)}
   end
 
-  def handle_event("save_standalone_folders", %{"id" => id, "standalone_folders" => raw}, socket) do
+  def handle_event("save_standalone_folders", %{"_id" => id, "standalone_folders" => raw}, socket) do
     library = Library.get_library!(id)
     folders = raw |> String.split("\n") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
 
@@ -289,6 +289,7 @@ defmodule StashixWeb.AdminLive do
      |> put_flash(:info, "Series and its books restored")}
   end
 
+  @impl true
   def handle_info({:scan_progress, %{library_id: id, done: true}}, socket) do
     {:noreply, update(socket, :scanning_libraries, &MapSet.delete(&1, id))}
   end
@@ -504,7 +505,7 @@ defmodule StashixWeb.AdminLive do
                 <%= if @editing_library_id == lib.id do %>
                   <div class="border-t border-gray-800 p-4 bg-gray-950">
                     <form phx-submit="save_standalone_folders" class="space-y-3">
-                      <input type="hidden" name="id" value={lib.id} />
+                      <input type="hidden" name="_id" value={lib.id} />
                       <div>
                         <label class="block text-xs font-medium text-gray-400 mb-1">
                           Standalone folder names
