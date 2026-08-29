@@ -20,7 +20,8 @@ defmodule Stashix.Metadata.Parser do
       cbz when cbz in [".cbz", ".epub"] ->
         case extract_xml_from_zip(archive_path) do
           nil -> %{}
-          data -> parse_comicinfo_xml(data)
+          {:metroninfo, data} -> parse_metroninfo_xml(data)
+          {:comicinfo, data} -> parse_comicinfo_xml(data)
         end
 
       ".pdf" ->
@@ -35,9 +36,9 @@ defmodule Stashix.Metadata.Parser do
     path_charlist = String.to_charlist(archive_path)
 
     with {:ok, entries} <- :zip.list_dir(path_charlist) do
-      xml_entry =
+      xml_entries =
         entries
-        |> Enum.find(fn
+        |> Enum.filter(fn
           {:zip_file, name, _info, _comment, _offset, _comp_size} ->
             n = to_string(name) |> String.downcase()
             n == "comicinfo.xml" || n == "metroninfo.xml"
@@ -46,13 +47,24 @@ defmodule Stashix.Metadata.Parser do
             false
         end)
 
+      # Prefer MetronInfo over ComicInfo when both exist
+      xml_entry =
+        Enum.find(xml_entries, fn {:zip_file, name, _, _, _, _} ->
+          to_string(name) |> String.downcase() == "metroninfo.xml"
+        end) || List.first(xml_entries)
+
       case xml_entry do
         nil ->
           nil
 
         {:zip_file, name, _info, _comment, _offset, _comp_size} ->
+          format =
+            if to_string(name) |> String.downcase() == "metroninfo.xml",
+              do: :metroninfo,
+              else: :comicinfo
+
           case :zip.extract(path_charlist, [:memory, {:file_list, [name]}]) do
-            {:ok, [{_name, data}]} -> data
+            {:ok, [{_name, data}]} -> {format, data}
             _ -> nil
           end
       end
@@ -107,6 +119,80 @@ defmodule Stashix.Metadata.Parser do
       :exit, _ -> %{}
     end
   end
+
+  defp parse_metroninfo_xml(data) when is_binary(data) do
+    try do
+      doc = data |> sanitize_xml() |> parse()
+
+      age_rating_raw = xpath(doc, ~x"//MetronInfo/AgeRating/text()"s)
+
+      cover_year =
+        case xpath(doc, ~x"//MetronInfo/CoverDate/text()"os) do
+          nil -> nil
+          "" -> nil
+          date -> date |> String.slice(0, 4) |> parse_int()
+        end
+
+      store_year =
+        case xpath(doc, ~x"//MetronInfo/StoreDate/text()"os) do
+          nil -> nil
+          "" -> nil
+          date -> date |> String.slice(0, 4) |> parse_int()
+        end
+
+      genres =
+        xpath(doc, ~x"//MetronInfo/Genres/Genre/text()"ls)
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join(", ")
+
+      tags =
+        xpath(doc, ~x"//MetronInfo/Tags/Tag/text()"ls)
+        |> Enum.reject(&(&1 == ""))
+        |> Enum.join(", ")
+
+      community_rating_raw = xpath(doc, ~x"//MetronInfo/CommunityRating/AverageRating/text()"os)
+      community_rating =
+        case community_rating_raw do
+          nil -> nil
+          "" -> nil
+          s ->
+            case Float.parse(s) do
+              {f, _} -> f
+              :error -> nil
+            end
+        end
+
+      %{}
+      |> maybe_put(:series, xpath(doc, ~x"//MetronInfo/Series/Name/text()"os))
+      |> maybe_put(:volume, parse_int(xpath(doc, ~x"//MetronInfo/Series/Volume/text()"os)))
+      |> maybe_put(:language, xpath(doc, ~x"//MetronInfo/Series/@lang"os))
+      |> maybe_put(:issue_number, parse_decimal(xpath(doc, ~x"//MetronInfo/Number/text()"os)))
+      |> maybe_put(:alternative_number, xpath(doc, ~x"//MetronInfo/AlternativeNumber/text()"os))
+      |> maybe_put(:collection_title, xpath(doc, ~x"//MetronInfo/CollectionTitle/text()"os))
+      |> maybe_put(:year, cover_year || store_year)
+      |> maybe_put(:publisher, xpath(doc, ~x"//MetronInfo/Publisher/Name/text()"os))
+      |> maybe_put(:page_count, parse_int(xpath(doc, ~x"//MetronInfo/PageCount/text()"os)))
+      |> maybe_put(:summary, xpath(doc, ~x"//MetronInfo/Summary/text()"os))
+      |> maybe_put(:age_rating, normalize_metroninfo_age_rating(age_rating_raw))
+      |> maybe_put(:genre, if(genres != "", do: genres))
+      |> maybe_put(:tags, if(tags != "", do: tags))
+      |> maybe_put(:story_arc, xpath(doc, ~x"//MetronInfo/Arcs/Arc[1]/Name/text()"os))
+      |> maybe_put(:community_rating, community_rating)
+    rescue
+      _ -> %{}
+    catch
+      :exit, _ -> %{}
+    end
+  end
+
+  defp normalize_metroninfo_age_rating("Everyone"), do: :everyone
+  defp normalize_metroninfo_age_rating("Teen"), do: :teen
+  defp normalize_metroninfo_age_rating("Teen Plus"), do: :teen_plus
+  defp normalize_metroninfo_age_rating("Mature"), do: :mature
+  defp normalize_metroninfo_age_rating("Explicit"), do: :explicit
+  defp normalize_metroninfo_age_rating("Adult"), do: :adult
+  defp normalize_metroninfo_age_rating("Unknown"), do: :unknown
+  defp normalize_metroninfo_age_rating(_), do: nil
 
   defp parse_pdf_metadata(path) do
     try do

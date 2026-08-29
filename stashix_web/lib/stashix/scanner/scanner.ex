@@ -8,6 +8,8 @@ defmodule Stashix.Scanner do
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
   @ets_table :scan_tasks
+  @metadata_concurrency 4
+  @thumbnail_concurrency 4
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -15,6 +17,10 @@ defmodule Stashix.Scanner do
 
   def scan_library(library_id, force \\ false) do
     GenServer.cast(__MODULE__, {:scan, library_id, force})
+  end
+
+  def scan_file(library_id, file_path) do
+    GenServer.cast(__MODULE__, {:scan_file, library_id, file_path})
   end
 
   @doc false
@@ -40,13 +46,23 @@ defmodule Stashix.Scanner do
 
   @impl true
   def handle_cast({:scan, library_id, force}, state) do
-    Task.start(fn -> do_scan(library_id, force) end)
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+      do_scan(library_id, force)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast({:scan_file, library_id, file_path}, state) do
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+      do_scan_file(library_id, file_path)
+    end)
+
     {:noreply, state}
   end
 
   defp do_scan(library_id, force) do
     library = Library.get_library!(library_id)
-
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
 
     update_task_status(library_id, %{scanned: 0, total: 0, done: false, collecting: true})
@@ -58,13 +74,44 @@ defmodule Stashix.Scanner do
     update_task_status(library_id, %{scanned: 0, total: total, done: false, collecting: false})
     broadcast_progress(library_id, 0, total)
 
-    files
-    |> Enum.with_index(1)
-    |> Enum.each(fn {file_path, idx} ->
-      process_file(file_path, library, force)
-      update_task_status(library_id, %{scanned: idx, total: total, done: false})
-      broadcast_progress(library_id, idx, total)
-    end)
+    # Pre-warm series cache: 1 query instead of N round-trips during the loop
+    series_cache = Library.load_series_cache(library_id)
+
+    # Stage 1: Parse metadata concurrently (hash + filename + comicinfo)
+    parsed_files =
+      files
+      |> Task.async_stream(&parse_file_metadata/1,
+           max_concurrency: @metadata_concurrency,
+           ordered: true,
+           timeout: 60_000)
+      |> Enum.flat_map(fn
+        {:ok, result} -> [result]
+        {:exit, reason} ->
+          Logger.error("Metadata parse crashed: #{inspect(reason)}")
+          []
+      end)
+
+    # Stage 2: DB upserts serially (prevents series creation races, uses cache)
+    {thumbnail_jobs, _cache} =
+      parsed_files
+      |> Enum.with_index(1)
+      |> Enum.reduce({[], series_cache}, fn {file_meta, idx}, {jobs, cache} ->
+        {job, new_cache} = upsert_book(file_meta, library, force, cache)
+        update_task_status(library_id, %{scanned: idx, total: total, done: false})
+        broadcast_progress(library_id, idx, total)
+        new_jobs = if job, do: [job | jobs], else: jobs
+        {new_jobs, new_cache}
+      end)
+
+    # Stage 3: Generate thumbnails concurrently
+    thumbnail_jobs
+    |> Task.async_stream(
+      fn {book, path} -> generate_thumbnail(book, path) end,
+      max_concurrency: @thumbnail_concurrency,
+      ordered: false,
+      timeout: 120_000
+    )
+    |> Stream.run()
 
     if File.dir?(library.root_path) do
       Library.mark_orphaned_books(library_id, files)
@@ -79,57 +126,73 @@ defmodule Stashix.Scanner do
     Logger.info("Scan complete for library #{library.name}: #{total} files processed")
   end
 
-  defp collect_files(root_path) do
-    case File.ls(root_path) do
-      {:ok, _} ->
-        Path.wildcard(Path.join([root_path, "**", "*"]))
-        |> Enum.filter(fn path ->
-          File.regular?(path) &&
-            String.downcase(Path.extname(path)) in @supported_formats
-        end)
-
-      {:error, reason} ->
-        Logger.error("Cannot access library path #{root_path}: #{inspect(reason)}")
-        []
-    end
-  end
-
-  defp process_file(file_path, library, force) do
+  defp parse_file_metadata(file_path) do
     stat = File.stat!(file_path)
     file_hash = compute_hash(file_path, stat.size)
-    last_modified = stat.mtime |> NaiveDateTime.from_erl!()
-
-    case Library.get_book_by_path(file_path) do
-      nil ->
-        case Library.get_book_by_hash(file_hash) do
-          nil ->
-            import_new_book(file_path, library, file_hash, last_modified, stat.size)
-
-          existing_book ->
-            reimport_book(existing_book, file_path, library, file_hash, last_modified, stat.size)
-        end
-
-      existing_book ->
-        was_deleted = existing_book.deleted_at != nil
-        modified = NaiveDateTime.compare(last_modified, existing_book.last_modified || ~N[1970-01-01 00:00:00]) == :gt
-
-        if force || was_deleted || modified do
-          reimport_book(existing_book, file_path, library, file_hash, last_modified, stat.size)
-        end
-    end
-  end
-
-  defp import_new_book(file_path, library, file_hash, last_modified, file_size) do
+    last_modified = NaiveDateTime.from_erl!(stat.mtime)
     filename = Path.basename(file_path, Path.extname(file_path))
     parsed = Parser.parse_filename(filename)
     comicinfo = Parser.parse_comicinfo(file_path)
-    metadata = Map.merge(parsed, comicinfo)
 
-    series = find_or_create_series(file_path, library, metadata)
+    %{
+      file_path: file_path,
+      file_hash: file_hash,
+      last_modified: last_modified,
+      file_size: stat.size,
+      parsed: parsed,
+      comicinfo: comicinfo,
+      metadata: Map.merge(parsed, comicinfo)
+    }
+  end
 
+  defp upsert_book(
+         %{file_path: file_path, file_hash: file_hash, last_modified: last_modified} = file_meta,
+         library,
+         force,
+         cache
+       ) do
+    case Library.get_book_by_path(file_path) do
+      nil ->
+        case Library.get_book_by_hash(file_hash) do
+          nil -> create_book_from_meta(file_meta, library, cache)
+          existing -> update_book_from_meta(existing, file_meta, library, cache)
+        end
+
+      existing ->
+        was_deleted = existing.deleted_at != nil
+
+        modified =
+          NaiveDateTime.compare(
+            last_modified,
+            existing.last_modified || ~N[1970-01-01 00:00:00]
+          ) == :gt
+
+        if force || was_deleted || modified do
+          update_book_from_meta(existing, file_meta, library, cache)
+        else
+          {nil, cache}
+        end
+    end
+  end
+
+  defp create_book_from_meta(
+         %{
+           file_path: file_path,
+           file_hash: file_hash,
+           last_modified: last_modified,
+           file_size: file_size,
+           parsed: parsed,
+           comicinfo: comicinfo,
+           metadata: metadata
+         },
+         library,
+         cache
+       ) do
+    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
+    filename = Path.basename(file_path, Path.extname(file_path))
     format = file_path |> Path.extname() |> String.downcase() |> String.trim_leading(".") |> String.to_atom()
 
-    book_attrs = %{
+    attrs = %{
       library_id: library.id,
       series_id: series && series.id,
       path: file_path,
@@ -148,23 +211,33 @@ defmodule Stashix.Scanner do
       last_modified: last_modified
     }
 
-    case Library.create_book(book_attrs) do
+    case Library.create_book(attrs) do
       {:ok, book} ->
-        generate_thumbnail(book, file_path)
         Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, book})
+        {{book, file_path}, new_cache}
 
       {:error, reason} ->
         Logger.error("Failed to import #{file_path}: #{inspect(reason)}")
+        {nil, new_cache}
     end
   end
 
-  defp reimport_book(book, file_path, library, file_hash, last_modified, file_size) do
+  defp update_book_from_meta(
+         book,
+         %{
+           file_path: file_path,
+           file_hash: file_hash,
+           last_modified: last_modified,
+           file_size: file_size,
+           parsed: parsed,
+           comicinfo: comicinfo,
+           metadata: metadata
+         },
+         library,
+         cache
+       ) do
+    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
     filename = Path.basename(file_path, Path.extname(file_path))
-    parsed = Parser.parse_filename(filename)
-    comicinfo = Parser.parse_comicinfo(file_path)
-    metadata = Map.merge(parsed, comicinfo)
-
-    series = find_or_create_series(file_path, library, metadata)
 
     attrs = %{
       path: file_path,
@@ -185,14 +258,16 @@ defmodule Stashix.Scanner do
     }
 
     case Library.update_book(book, attrs) do
-      {:ok, updated_book} -> generate_thumbnail(updated_book, file_path)
-      {:error, reason} -> Logger.error("Failed to reimport #{file_path}: #{inspect(reason)}")
+      {:ok, updated_book} -> {{updated_book, file_path}, new_cache}
+      {:error, reason} ->
+        Logger.error("Failed to reimport #{file_path}: #{inspect(reason)}")
+        {nil, new_cache}
     end
   end
 
   @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
 
-  defp find_or_create_series(file_path, library, _metadata) do
+  defp find_or_create_series_cached(file_path, library, cache) do
     parent_dir = Path.dirname(file_path)
     dir_name = Path.basename(parent_dir)
     dir_name_lower = String.downcase(dir_name)
@@ -214,17 +289,60 @@ defmodule Stashix.Scanner do
     if name do
       {clean_name, start_year, end_year, ongoing} = parse_folder_name(name)
 
-      case Library.create_or_find_series(%{
-             library_id: library.id,
-             name: clean_name,
-             path: parent_dir,
-             start_year: start_year,
-             end_year: end_year,
-             ongoing: ongoing
-           }) do
-        {:ok, series} -> series
-        _ -> nil
+      case Map.get(cache, clean_name) do
+        nil ->
+          case Library.create_or_find_series(%{
+                 library_id: library.id,
+                 name: clean_name,
+                 path: parent_dir,
+                 start_year: start_year,
+                 end_year: end_year,
+                 ongoing: ongoing
+               }) do
+            {:ok, series} -> {series, Map.put(cache, clean_name, series)}
+            _ -> {nil, cache}
+          end
+
+        series ->
+          {series, cache}
       end
+    else
+      {nil, cache}
+    end
+  end
+
+  defp do_scan_file(library_id, file_path) do
+    unless File.regular?(file_path) do
+      Logger.warning("FileWatcher: #{file_path} no longer exists, skipping")
+    else
+      library = Library.get_library!(library_id)
+      Logger.info("Scanning file #{file_path}")
+
+      file_meta = parse_file_metadata(file_path)
+      series_cache = Library.load_series_cache(library_id)
+      {job, _cache} = upsert_book(file_meta, library, true, series_cache)
+
+      if job do
+        {book, path} = job
+        generate_thumbnail(book, path)
+      end
+
+      Library.update_series_counts(library_id)
+    end
+  end
+
+  defp collect_files(root_path) do
+    case File.ls(root_path) do
+      {:ok, _} ->
+        Path.wildcard(Path.join([root_path, "**", "*"]))
+        |> Enum.filter(fn path ->
+          File.regular?(path) &&
+            String.downcase(Path.extname(path)) in @supported_formats
+        end)
+
+      {:error, reason} ->
+        Logger.error("Cannot access library path #{root_path}: #{inspect(reason)}")
+        []
     end
   end
 
@@ -245,23 +363,18 @@ defmodule Stashix.Scanner do
   # "Plain Name" → {"Plain Name", nil, nil, false}
   @doc false
   def parse_folder_name(name) do
-    # Trailing non-year parentheticals like (digital), (web), (c2c)
     trailing = ~r/(?:\s*\((?!\d{4}[\-)])[^)]+\))+\s*$/
-
     clean = Regex.replace(trailing, name, "") |> String.trim()
 
     cond do
-      # "Series Name (YYYY-YYYY)" — start and end year
       match = Regex.run(~r/^(.+?)\s*\((\d{4})-(\d{4})\)\s*$/, clean) ->
         [_, base, sy, ey] = match
         {String.trim(base), String.to_integer(sy), String.to_integer(ey), false}
 
-      # "Series Name (YYYY-)" — ongoing
       match = Regex.run(~r/^(.+?)\s*\((\d{4})-\)\s*$/, clean) ->
         [_, base, sy] = match
         {String.trim(base), String.to_integer(sy), nil, true}
 
-      # "Series Name (YYYY)" — single year
       match = Regex.run(~r/^(.+?)\s*\((\d{4})\)\s*$/, clean) ->
         [_, base, sy] = match
         {String.trim(base), String.to_integer(sy), nil, false}

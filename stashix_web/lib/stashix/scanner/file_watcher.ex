@@ -32,9 +32,10 @@ defmodule Stashix.Scanner.FileWatcher do
       library_id = find_library_id(path, state.libraries)
 
       if library_id do
-        cancel_timer(state.debounce[library_id])
-        timer = Process.send_after(self(), {:trigger_scan, library_id}, @debounce_ms)
-        {:noreply, put_in(state, [:debounce, library_id], timer)}
+        {existing_timer, _} = Map.get(state.debounce, path, {nil, nil})
+        cancel_timer(existing_timer)
+        timer = Process.send_after(self(), {:trigger_scan_file, path, library_id}, @debounce_ms)
+        {:noreply, put_in(state, [:debounce, path], {timer, library_id})}
       else
         {:noreply, state}
       end
@@ -48,10 +49,10 @@ defmodule Stashix.Scanner.FileWatcher do
   end
 
   @impl true
-  def handle_info({:trigger_scan, library_id}, state) do
-    Logger.info("FileWatcher triggering scan for library #{library_id}")
-    Stashix.Scanner.scan_library(library_id)
-    {:noreply, put_in(state, [:debounce, library_id], nil)}
+  def handle_info({:trigger_scan_file, path, library_id}, state) do
+    Logger.info("FileWatcher triggering scan for #{path}")
+    Stashix.Scanner.scan_file(library_id, path)
+    {:noreply, Map.delete(state.debounce, path)}
   end
 
   defp load_libraries do
