@@ -223,6 +223,31 @@ defmodule Stashix.Metadata.ParserTest do
     end
   end
 
+  describe "parse_filename/1 — Series - cNN Title (YEAR) pattern" do
+    test "c-prefix chapter with title and year" do
+      r = Parser.parse_filename("Amulet - c01 The Stonekeeper (2008)")
+      assert r[:series] == "Amulet"
+      assert r[:issue_number] == d("1")
+      assert r[:title] == "The Stonekeeper"
+      assert r[:year] == 2008
+    end
+
+    test "hash-prefix chapter with title and year" do
+      r = Parser.parse_filename("Bone - #03 Eyes of the Storm (1993)")
+      assert r[:series] == "Bone"
+      assert r[:issue_number] == d("3")
+      assert r[:title] == "Eyes of the Storm"
+      assert r[:year] == 1993
+    end
+
+    test "en-dash separator variant" do
+      r = Parser.parse_filename("Amulet – c02 The Stonekeeper's Curse (2009)")
+      assert r[:series] == "Amulet"
+      assert r[:issue_number] == d("2")
+      assert r[:year] == 2009
+    end
+  end
+
   describe "parse_filename/1 — ongoing series (YEAR-) pattern" do
     test "c-prefix chapter in ongoing series" do
       r = Parser.parse_filename("Amulet (2008-) c01 The Stonekeeper")

@@ -296,6 +296,27 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series - cNN Title (YEAR)" — e.g. Amulet - c01 The Stonekeeper (2008)
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s*(?:-|–)\s*[#c](\d{1,4})\s+(.+?)\s*\((\d{4})\)/i,
+               clean
+             ) do
+          [_, series, issue, title, year] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
+            |> Map.put(:title, String.trim(title))
+            |> Map.put(:year, String.to_integer(year))
+
+          nil ->
+            result
+        end
+      end
+
     result =
       if map_size(result) > 0 do
         result
