@@ -32,6 +32,21 @@ defmodule Stashix.Metadata.ParserTest do
     end
   end
 
+  describe "parse_filename/1 — Series Vol. NN (YEAR) pattern" do
+    test "standalone volume — title strips Vol. suffix" do
+      r = Parser.parse_filename("Pariah Vol. 01 (2014) (digital) (Minutemen-Slayer)")
+      assert r[:title] == "Pariah"
+      assert r[:volume] == 1
+      assert r[:year] == 2014
+    end
+
+    test "does not steal Series - Vol. N (YEAR) dash pattern" do
+      r = Parser.parse_filename("Some Mag – Vol. 7 (2022)")
+      assert r[:issue_number] == d("7")
+      assert r[:year] == 2022
+    end
+  end
+
   describe "parse_filename/1 — Series N (YEAR) pattern" do
     test "Series N (YEAR)" do
       r = Parser.parse_filename("Batman 001 (1940)")
