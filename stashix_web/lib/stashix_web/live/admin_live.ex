@@ -112,6 +112,16 @@ defmodule StashixWeb.AdminLive do
     end
   end
 
+  def handle_event("delete_library", %{"id" => id}, socket) do
+    library = Library.get_library!(id)
+    Library.delete_library(library)
+
+    {:noreply,
+     socket
+     |> assign(:libraries, Library.list_libraries(%{role: :admin}))
+     |> put_flash(:info, "Library \"#{library.name}\" and all its content deleted")}
+  end
+
   def handle_event("scan_library", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)
     {:noreply, update(socket, :scanning_libraries, &MapSet.put(&1, id))}
@@ -499,6 +509,17 @@ defmodule StashixWeb.AdminLive do
                     >
                       Force Rescan
                     </button>
+                    <button
+                      phx-click="show_confirm"
+                      phx-value-event="delete_library"
+                      phx-value-id={lib.id}
+                      phx-value-title="Delete Library"
+                      phx-value-message={"Delete library \"#{lib.name}\" and ALL its books and series? Book files on disk are never deleted. This cannot be undone."}
+                      phx-value-label="Delete"
+                      class="px-3 py-1.5 text-sm rounded-lg border bg-gray-800 hover:bg-gray-700 text-red-400 border-gray-700"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </div>
 
@@ -564,7 +585,7 @@ defmodule StashixWeb.AdminLive do
                     phx-click="show_confirm"
                     phx-value-event="batch_purge_series"
                     phx-value-title="Purge Series"
-                    phx-value-message={"Permanently delete #{series_sel_count} series and ALL their books? This cannot be undone."}
+                    phx-value-message={"Permanently delete #{series_sel_count} series and ALL their books? Book files on disk are never deleted. This cannot be undone."}
                     phx-value-label="Purge"
                     class="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg"
                   >
@@ -625,7 +646,7 @@ defmodule StashixWeb.AdminLive do
                             phx-value-event="purge_series"
                             phx-value-id={s.id}
                             phx-value-title="Purge Series"
-                            phx-value-message={"Permanently delete \"#{s.name}\" and all its books? This cannot be undone."}
+                            phx-value-message={"Permanently delete \"#{s.name}\" and all its books? Book files on disk are never deleted. This cannot be undone."}
                             phx-value-label="Purge"
                             class="text-red-500 hover:text-red-400 text-xs"
                           >
@@ -660,7 +681,7 @@ defmodule StashixWeb.AdminLive do
                     phx-click="show_confirm"
                     phx-value-event="batch_purge_books"
                     phx-value-title="Purge Books"
-                    phx-value-message={"Permanently delete #{books_sel_count} book(s)? This cannot be undone."}
+                    phx-value-message={"Permanently delete #{books_sel_count} book(s)? Book files on disk are never deleted. This cannot be undone."}
                     phx-value-label="Purge"
                     class="px-3 py-1.5 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg"
                   >
@@ -725,7 +746,7 @@ defmodule StashixWeb.AdminLive do
                             phx-value-event="purge_book"
                             phx-value-id={b.id}
                             phx-value-title="Purge Book"
-                            phx-value-message={"Permanently delete \"#{b.title}\"? This cannot be undone."}
+                            phx-value-message={"Permanently delete \"#{b.title}\"? Book files on disk are never deleted. This cannot be undone."}
                             phx-value-label="Purge"
                             class="text-red-500 hover:text-red-400 text-xs"
                           >

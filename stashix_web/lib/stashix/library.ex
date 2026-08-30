@@ -716,21 +716,31 @@ defmodule Stashix.Library do
   end
 
   def purge_book(book) do
-    Repo.transaction(fn ->
-      Repo.delete_all(from bc in BookCover, where: bc.book_id == ^book.id)
-      Repo.delete!(book)
-    end)
+    cover_paths = from(bc in BookCover, where: bc.book_id == ^book.id, select: bc.path) |> Repo.all()
+
+    result =
+      Repo.transaction(fn ->
+        Repo.delete_all(from bc in BookCover, where: bc.book_id == ^book.id)
+        Repo.delete!(book)
+      end)
+
+    if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
+    result
   end
 
   def purge_series(series) do
-    Repo.transaction(fn ->
-      book_ids =
-        from(b in Book, where: b.series_id == ^series.id, select: b.id) |> Repo.all()
+    book_ids = from(b in Book, where: b.series_id == ^series.id, select: b.id) |> Repo.all()
+    cover_paths = from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
 
-      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
-      Repo.delete_all(from b in Book, where: b.id in ^book_ids)
-      Repo.delete!(series)
-    end)
+    result =
+      Repo.transaction(fn ->
+        Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
+        Repo.delete_all(from b in Book, where: b.id in ^book_ids)
+        Repo.delete!(series)
+      end)
+
+    if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
+    result
   end
 
   def batch_restore_books(ids) do
@@ -739,10 +749,16 @@ defmodule Stashix.Library do
   end
 
   def batch_purge_books(ids) do
-    Repo.transaction(fn ->
-      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^ids)
-      Repo.delete_all(from b in Book, where: b.id in ^ids)
-    end)
+    cover_paths = from(bc in BookCover, where: bc.book_id in ^ids, select: bc.path) |> Repo.all()
+
+    result =
+      Repo.transaction(fn ->
+        Repo.delete_all(from bc in BookCover, where: bc.book_id in ^ids)
+        Repo.delete_all(from b in Book, where: b.id in ^ids)
+      end)
+
+    if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
+    result
   end
 
   def batch_restore_series(ids) do
@@ -756,11 +772,53 @@ defmodule Stashix.Library do
   end
 
   def batch_purge_series(ids) do
-    Repo.transaction(fn ->
-      book_ids = from(b in Book, where: b.series_id in ^ids, select: b.id) |> Repo.all()
-      Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
-      Repo.delete_all(from b in Book, where: b.id in ^book_ids)
-      Repo.delete_all(from s in Series, where: s.id in ^ids)
+    book_ids = from(b in Book, where: b.series_id in ^ids, select: b.id) |> Repo.all()
+    cover_paths = from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
+
+    result =
+      Repo.transaction(fn ->
+        Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
+        Repo.delete_all(from b in Book, where: b.id in ^book_ids)
+        Repo.delete_all(from s in Series, where: s.id in ^ids)
+      end)
+
+    if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
+    result
+  end
+
+  defp delete_cover_files(paths) do
+    cache_dir = Application.get_env(:stashix, :image_cache_dir, "/tmp/stashix/cache/images/resized")
+    cached_files = case File.ls(cache_dir) do
+      {:ok, files} -> files
+      _ -> []
+    end
+
+    Enum.each(paths, fn path ->
+      File.rm(path)
+      prefix = :crypto.hash(:md5, path) |> Base.encode16(case: :lower)
+      cached_files
+      |> Enum.filter(&String.starts_with?(&1, prefix))
+      |> Enum.each(&File.rm(Path.join(cache_dir, &1)))
     end)
+  end
+
+  def delete_library(library) do
+    book_ids =
+      from(b in Book, where: b.library_id == ^library.id, select: b.id) |> Repo.all()
+
+    cover_paths =
+      from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
+
+    result =
+      Repo.transaction(fn ->
+        Repo.delete_all(from bc in BookCover, where: bc.book_id in ^book_ids)
+        Repo.delete_all(from b in Book, where: b.library_id == ^library.id)
+        Repo.delete_all(from s in Series, where: s.library_id == ^library.id)
+        Repo.delete_all(from p in LibraryPermission, where: p.library_id == ^library.id)
+        Repo.delete!(library)
+      end)
+
+    if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
+    result
   end
 end
