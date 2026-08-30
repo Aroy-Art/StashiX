@@ -220,6 +220,12 @@ defmodule Stashix.Metadata.ParserTest do
       r = Parser.parse_filename("Batman 001 (1940) (c2c)")
       assert r[:issue_number] == d("1")
     end
+
+    test "strips (of N) issue count tag" do
+      r = Parser.parse_filename("Aliens - Dust to Dust 01 (of 04) (2018) (digital) (The Magicians-Empire)")
+      assert r[:issue_number] == d("1")
+      assert r[:year] == 2018
+    end
   end
 
   describe "parse_filename/1 — en-dash in filename" do

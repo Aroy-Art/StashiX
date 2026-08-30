@@ -238,7 +238,10 @@ defmodule Stashix.Metadata.Parser do
         nil -> nil
       end
 
-    clean = Regex.replace(@noise_regex, filename, " ") |> String.trim()
+    clean =
+      Regex.replace(@noise_regex, filename, " ")
+      |> then(&Regex.replace(~r/\s*\(of\s+\d+\)\s*/i, &1, " "))
+      |> String.trim()
 
     result = %{}
 
