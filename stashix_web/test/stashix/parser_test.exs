@@ -63,6 +63,15 @@ defmodule Stashix.Metadata.ParserTest do
     end
   end
 
+  describe "parse_filename/1 — Series NN (Publisher-YEAR) pattern" do
+    test "publisher embedded with year in parens" do
+      r = Parser.parse_filename("Jonny Demon 02 (Dark Horse-1994) (Novus Year Three) (Rumor-Novus-HD)")
+      assert r[:series] == "Jonny Demon"
+      assert r[:issue_number] == d("2")
+      assert r[:year] == 1994
+    end
+  end
+
   describe "parse_filename/1 — Series (YEAR) - Chapter N pattern" do
     test "Chapter keyword" do
       r = Parser.parse_filename("Berserk (1989) - Chapter 12")
