@@ -263,17 +263,19 @@ defmodule Stashix.Metadata.Parser do
           result
       end
 
-    # "Series Vol. NN (YEAR)" — e.g. Pariah Vol. 01 (2014)
+    # "Series Vol. NN (YEAR)" or "Series Volume N" — e.g. Pariah Vol. 01 (2014), 9-11 Volume 2
     # Lookbehind prevents matching when dash immediately precedes "Vol." (handled by dash-Vol pattern below)
     result =
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)(?<![–\-])\s+Vol\.?\s+(\d{1,4}(?:\.\d+)?)\s+\((\d{4})\)/i, clean) do
-          [_, series, volume, year] ->
+        case Regex.run(~r/^(.+?)(?<![–\-])\s+Vol(?:ume)?\.?\s+(\d{1,4}(?:\.\d+)?)(?:\s+\((\d{4})\))?/i, clean) do
+          [_, series, volume | rest] ->
+            year = Enum.at(rest, 0)
+
             result
             |> Map.put(:series, String.trim(series))
-            |> Map.put(:year, String.to_integer(year))
+            |> maybe_put(:year, parse_int(year))
             |> Map.put(:volume, parse_int(volume))
 
           nil ->

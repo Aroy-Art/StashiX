@@ -45,6 +45,19 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:issue_number] == d("7")
       assert r[:year] == 2022
     end
+
+    test "Volume keyword (no dot) with year" do
+      r = Parser.parse_filename("9-11 Volume 1 (2002) (c2c) (SuperFriends-DCP)")
+      assert r[:series] == "9-11"
+      assert r[:volume] == 1
+      assert r[:year] == 2002
+    end
+
+    test "Volume keyword without year" do
+      r = Parser.parse_filename("9-11 Volume 2 (ActionComics-DCP)")
+      assert r[:series] == "9-11"
+      assert r[:volume] == 2
+    end
   end
 
   describe "parse_filename/1 — Series N (YEAR) pattern" do
