@@ -80,25 +80,6 @@
       <% end %>
     </nav>
 
-    <%!-- User + sign out --%>
-    <div class="p-3 border-t border-gray-800">
-      <%= if Map.get(assigns, :current_user) do %>
-        <div class="flex items-center gap-2 px-2 py-2 mb-1">
-          <div class="w-7 h-7 rounded-full bg-violet-700 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-            {String.upcase(String.first(@current_user.username || "?"))}
-          </div>
-          <span class="text-sm text-gray-300 truncate">{@current_user.username}</span>
-        </div>
-      <% end %>
-      <form action="/logout" method="post">
-        <input type="hidden" name="_method" value="delete" />
-        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
-        <button type="submit" class="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-800 hover:text-white transition-colors">
-          <.icon name="lucide-log-out" class="w-4 h-4" />
-          Sign Out
-        </button>
-      </form>
-    </div>
   </aside>
 
   <%!-- Library action menus: fixed + JS-positioned so they escape the sidebar's overflow --%>
@@ -144,6 +125,11 @@
   <div class="flex-1 flex flex-col min-w-0">
     <%!-- Top header with search --%>
     <%= if Map.get(assigns, :current_user) do %>
+    <%
+      scan_progress = Map.get(assigns, :sidebar_scan_progress) || %{}
+      active_tasks = scan_progress |> Enum.filter(fn {_id, t} -> not t.done end) |> Enum.map(fn {id, t} -> {id, t} end)
+      lib_names = (Map.get(assigns, :sidebar_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end)
+    %>
     <header class="flex items-center gap-4 px-4 py-3 border-b border-gray-800 bg-gray-900/50">
       <button
         onclick="toggleSidebar()"
@@ -165,9 +151,108 @@
         </div>
       </form>
 
-      <%= if Map.get(assigns, :current_user) && @current_user.role == :admin do %>
-        <a href="/admin" class="text-sm text-gray-400 hover:text-white flex-shrink-0">Admin</a>
+      <div class="ml-auto flex items-center gap-2">
+      <div class="relative flex-shrink-0">
+        <button
+          id="activity-btn"
+          onclick="toggleActivityPanel(event)"
+          class={"relative p-1.5 rounded-lg transition-colors hover:bg-gray-800 flex items-center justify-center #{if active_tasks != [], do: "text-violet-400", else: "text-gray-500"}"}
+          aria-label="Background tasks"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class={if active_tasks != [], do: "animate-pulse"}>
+            <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+          </svg>
+          <%= if active_tasks != [] do %>
+            <span class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-violet-500 rounded-full animate-ping"></span>
+          <% end %>
+        </button>
+        <div
+          id="activity-panel"
+          class="hidden absolute right-0 top-full mt-1 w-72 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden"
+        >
+          <div class="px-3 py-2 border-b border-gray-700">
+            <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Background Tasks</p>
+          </div>
+          <%= if active_tasks == [] do %>
+            <div class="px-3 py-4 text-center">
+              <p class="text-sm text-gray-500">No active tasks</p>
+            </div>
+          <% else %>
+            <%= for {lib_id, task} <- active_tasks do %>
+              <%
+                name = Map.get(lib_names, lib_id, "Library")
+                pct = if task.total > 0, do: round(task.scanned / task.total * 100), else: nil
+              %>
+              <div class="px-3 py-2.5 border-b border-gray-700/60 last:border-0">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <.icon name="lucide-loader-circle" class="w-3 h-3 text-violet-400 animate-spin flex-shrink-0" />
+                    <div class="min-w-0">
+                      <span class="text-sm text-gray-300 truncate block">{name}</span>
+                      <span class="text-[10px] text-gray-500">{if Map.get(task, :phase) == :thumbnails, do: "Generating covers", else: "Scanning files"}</span>
+                    </div>
+                  </div>
+                  <%= if pct do %>
+                    <span class="text-xs text-violet-400 font-mono ml-2 flex-shrink-0">{pct}%</span>
+                  <% end %>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-1">
+                  <%= if pct do %>
+                    <div class="bg-violet-500 h-1 rounded-full transition-all duration-300" style={"width: #{pct}%"}></div>
+                  <% else %>
+                    <div class="bg-violet-500/60 h-1 rounded-full w-1/3 animate-pulse"></div>
+                  <% end %>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">{task.scanned} / {task.total} files</p>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+
+      <%= if Map.get(assigns, :current_user) do %>
+        <div class="w-px h-5 bg-gray-700 flex-shrink-0"></div>
+        <div class="relative flex-shrink-0">
+          <button
+            id="user-menu-btn"
+            onclick="toggleUserMenu(event)"
+            class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+            aria-label="User menu"
+          >
+            <div class="w-7 h-7 rounded-full bg-violet-700 flex items-center justify-center text-xs font-bold text-white">
+              {String.upcase(String.first(@current_user.username || "?"))}
+            </div>
+            <span class="hidden sm:block text-sm text-gray-300">{@current_user.username}</span>
+            <.icon name="lucide-chevron-down" class="w-3.5 h-3.5 text-gray-500" />
+          </button>
+          <div
+            id="user-menu-panel"
+            class="hidden absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden"
+          >
+            <div class="px-3 py-2 border-b border-gray-700">
+              <p class="text-xs text-gray-500 truncate">{@current_user.username}</p>
+            </div>
+            <%= if @current_user.role == :admin do %>
+              <a
+                href="/admin"
+                class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+              >
+                <.icon name="lucide-settings" class="w-4 h-4 shrink-0" />
+                System Settings
+              </a>
+            <% end %>
+            <form action="/logout" method="post">
+              <input type="hidden" name="_method" value="delete" />
+              <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+              <button type="submit" class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors">
+                <.icon name="lucide-log-out" class="w-4 h-4 shrink-0" />
+                Sign Out
+              </button>
+            </form>
+          </div>
+        </div>
       <% end %>
+      </div>
     </header>
     <% end %>
 
@@ -192,6 +277,28 @@
     const backdrop = document.getElementById('sidebar-backdrop');
     sidebar.classList.add('-translate-x-full');
     backdrop.classList.add('hidden');
+  }
+  function toggleUserMenu(ev) {
+    ev.stopPropagation();
+    const panel = document.getElementById('user-menu-panel');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    document.getElementById('activity-panel')?.classList.add('hidden');
+    panel.classList.toggle('hidden');
+    if (isHidden) {
+      window.addEventListener('click', () => panel.classList.add('hidden'), { once: true });
+    }
+  }
+  function toggleActivityPanel(ev) {
+    ev.stopPropagation();
+    const panel = document.getElementById('activity-panel');
+    if (!panel) return;
+    const isHidden = panel.classList.contains('hidden');
+    document.getElementById('user-menu-panel')?.classList.add('hidden');
+    panel.classList.toggle('hidden');
+    if (isHidden) {
+      window.addEventListener('click', () => panel.classList.add('hidden'), { once: true });
+    }
   }
   function toggleLibMenu(ev, btn, id) {
     ev.stopPropagation();

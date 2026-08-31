@@ -74,14 +74,16 @@ defmodule StashixWeb.Live.Hooks do
 
   defp handle_sidebar_scan(_event, _params, socket), do: {:cont, socket}
 
-  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t, done: done}}, socket) do
-    socket = update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: done}))
+  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t, done: done, phase: phase}}, socket) do
+    socket = update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: phase}))
     if done, do: Process.send_after(self(), {:clear_sidebar_scan_progress, id}, 3_000)
     {:cont, socket}
   end
 
-  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
-    {:cont, update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: false}))}
+  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t, done: done}}, socket) do
+    socket = update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: :scan}))
+    if done, do: Process.send_after(self(), {:clear_sidebar_scan_progress, id}, 3_000)
+    {:cont, socket}
   end
 
   defp handle_sidebar_progress({:clear_sidebar_scan_progress, id}, socket) do
