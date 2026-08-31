@@ -89,10 +89,11 @@
     /* gray-950 (#030712) — main page background */
     --background: oklch(0.129 0.027 262);
     --foreground: oklch(0.984 0.002 248);
-    /* gray-900 (#111827) — cards, panels, dropdowns */
+    /* gray-900 (#111827) — cards, panels */
     --card: oklch(0.208 0.022 253);
     --card-foreground: oklch(0.984 0.002 248);
-    --popover: oklch(0.208 0.022 253);
+    /* gray-800 (#1f2937) — dropdowns, popovers */
+    --popover: oklch(0.281 0.021 255);
     --popover-foreground: oklch(0.984 0.002 248);
     /* violet-600 (#7c3aed) — primary action color */
     --primary: oklch(0.541 0.281 293);

@@ -122,7 +122,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Breadcrumbs --%>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-sm">
-          <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
+          <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white transition-colors">
             <.icon name="lucide-chevron-left" class="w-4 h-4" />
             Back
           </button>
@@ -140,9 +140,9 @@ defmodule StashixWeb.SeriesLive do
               Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </.dropdown_menu_trigger>
-            <.dropdown_menu_content class="bg-gray-900 border-gray-700 min-w-44">
+            <.dropdown_menu_content class="bg-gray-800 border-gray-700 min-w-44">
               <.dropdown_menu_item
-                class="hover:bg-gray-800 focus:bg-gray-800 text-gray-300"
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                 on-select={JS.push("rescan_series")}
               >
                 <%= if @scanning do %>
@@ -154,7 +154,7 @@ defmodule StashixWeb.SeriesLive do
                 <% end %>
               </.dropdown_menu_item>
               <.dropdown_menu_item
-                class="hover:bg-gray-800 focus:bg-gray-800 text-amber-400"
+                class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
                 on-select={JS.push("force_rescan_series")}
               >
                 <%= if @scanning do %>

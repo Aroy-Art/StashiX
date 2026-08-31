@@ -108,7 +108,7 @@ defmodule StashixWeb.BookLive do
     <div class="max-w-4xl mx-auto space-y-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-sm">
-          <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
+          <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white transition-colors">
             <.icon name="lucide-chevron-left" class="w-4 h-4" />
             Back
           </button>
@@ -136,9 +136,9 @@ defmodule StashixWeb.BookLive do
               Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </.dropdown_menu_trigger>
-            <.dropdown_menu_content class="bg-gray-900 border-gray-700 min-w-44">
+            <.dropdown_menu_content class="bg-gray-800 border-gray-700 min-w-44">
               <.dropdown_menu_item
-                class="hover:bg-gray-800 focus:bg-gray-800 text-gray-300 disabled:opacity-50"
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 disabled:opacity-50"
                 on-select={JS.push("rescan_book")}
               >
                 <%= if @scanning do %>
@@ -256,9 +256,9 @@ defmodule StashixWeb.BookLive do
                   <.dropdown_menu_trigger class="flex items-center self-stretch px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
                     <.icon name="lucide-chevron-down" class="w-4 h-4" />
                   </.dropdown_menu_trigger>
-                  <.dropdown_menu_content align="end" class="bg-zinc-900 border-zinc-700 min-w-48">
+                  <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
                     <%= if !@fully_read do %>
-                      <.dropdown_menu_item class="hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-300 p-0">
+                      <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 p-0">
                         <a href={~p"/read/#{@book.id}?page=0"} class="flex items-center gap-2 px-2 py-1.5 w-full">
                           <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
                           Read from Beginning
@@ -266,7 +266,7 @@ defmodule StashixWeb.BookLive do
                       </.dropdown_menu_item>
                     <% end %>
                     <.dropdown_menu_item
-                      class="hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-300"
+                      class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                       on-select={JS.push("mark_unread")}
                     >
                       <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" />
