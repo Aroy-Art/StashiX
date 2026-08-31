@@ -43,7 +43,7 @@ defmodule Stashix.MixProject do
       {:floki, ">= 0.30.0", only: :test},
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
-      {:tailwind, "~> 0.2.0", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
       {:lucide,
        github: "lucide-icons/lucide",
        tag: "0.460.0",
@@ -63,7 +63,8 @@ defmodule Stashix.MixProject do
       {:unzip, "~> 0.12"},
       {:cors_plug, "~> 3.0"},
       {:file_system, "~> 1.0"},
-      {:image, "~> 0.54"}
+      {:image, "~> 0.54"},
+      {:salad_ui, "~> 1.0"}
     ]
   end
 

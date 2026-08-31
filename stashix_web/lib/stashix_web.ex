@@ -17,7 +17,7 @@ defmodule StashixWeb do
   those modules here.
   """
 
-  def static_paths, do: ~w(assets fonts images favicon.ico robots.txt)
+  def static_paths, do: ~w(assets fonts images favicon.ico favicon.png robots.txt)
 
   def router do
     quote do
@@ -87,7 +87,34 @@ defmodule StashixWeb do
 
       # HTML escaping functionality
       import Phoenix.HTML
-      # Core UI components
+
+      # SaladUI components (non-conflicting with CoreComponents)
+      import SaladUI.Accordion
+      import SaladUI.Alert
+      import SaladUI.AlertDialog
+      import SaladUI.Avatar
+      import SaladUI.Badge
+      import SaladUI.Card
+      import SaladUI.Checkbox
+      import SaladUI.Collapsible
+      import SaladUI.Dialog
+      import SaladUI.DropdownMenu
+      import SaladUI.HoverCard
+      import SaladUI.Popover
+      import SaladUI.Progress
+      import SaladUI.RadioGroup
+      import SaladUI.ScrollArea
+      import SaladUI.Separator
+      import SaladUI.Sheet
+      import SaladUI.Skeleton
+      import SaladUI.Slider
+      import SaladUI.Switch
+      import SaladUI.Tabs
+      import SaladUI.Toggle
+      import SaladUI.ToggleGroup
+      import SaladUI.Tooltip
+
+      # Core UI components (overrides any SaladUI conflicts)
       import StashixWeb.CoreComponents
 
       # Shortcut for generating JS commands

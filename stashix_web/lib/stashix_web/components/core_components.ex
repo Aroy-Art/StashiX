@@ -571,10 +571,7 @@ defmodule StashixWeb.CoreComponents do
   end
 
   @doc """
-  Renders a [Lucide](https://lucide.dev) icon.
-
-  Icons are extracted from the `deps/lucide` directory and bundled within
-  your compiled app.css by the plugin in your `assets/tailwind.config.js`.
+  Renders a [Lucide](https://lucide.dev) icon as an inline SVG.
 
   ## Examples
 
@@ -584,10 +581,42 @@ defmodule StashixWeb.CoreComponents do
   attr :name, :string, required: true
   attr :class, :string, default: nil
 
-  def icon(%{name: "lucide-" <> _} = assigns) do
+  def icon(%{name: "lucide-" <> icon_name} = assigns) do
+    assigns = assign(assigns, :svg, read_icon(icon_name))
+
     ~H"""
-    <span class={[@name, @class]} aria-hidden="true"></span>
+    <svg
+      :if={@svg}
+      class={["inline-block align-middle", @class]}
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    >
+      {@svg}
+    </svg>
     """
+  end
+
+  @icons_dir Path.expand("../../../deps/lucide/icons", __DIR__)
+
+  defp read_icon(name) do
+    path = Path.join(@icons_dir, "#{name}.svg")
+    case File.read(path) do
+      {:ok, content} ->
+        content
+        |> String.replace(~r/<svg[^>]*>/, "")
+        |> String.replace("</svg>", "")
+        |> String.trim()
+        |> Phoenix.HTML.raw()
+      _ -> nil
+    end
   end
 
   @doc """
