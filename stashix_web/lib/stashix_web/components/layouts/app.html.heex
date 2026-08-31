@@ -92,10 +92,10 @@
               </a>
               <%= if @current_user.role == :admin do %>
                 <.dropdown_menu id={"lib-menu-#{lib.id}"}>
-                  <.dropdown_menu_trigger class="opacity-0 group-hover/lib:opacity-100 focus:opacity-100 p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0">
+                  <.dropdown_menu_trigger class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0">
                     <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
                   </.dropdown_menu_trigger>
-                  <.dropdown_menu_content class="bg-gray-800 border-gray-700 text-gray-300">
+                  <.dropdown_menu_content class="bg-gray-800 border-gray-700 text-gray-300 whitespace-nowrap">
                     <.dropdown_menu_item
                       class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
                       on-select={JS.push("sidebar_scan", value: %{id: lib.id})}
@@ -249,10 +249,6 @@
               <.icon name="lucide-chevron-down" class="w-3.5 h-3.5 text-gray-500" />
             </.dropdown_menu_trigger>
             <.dropdown_menu_content align="end" class="w-48 bg-gray-800 border-gray-700">
-              <.dropdown_menu_label class="text-xs text-gray-500 font-normal truncate">
-                {@current_user.username}
-              </.dropdown_menu_label>
-              <.dropdown_menu_separator class="bg-gray-700" />
               <%= if @current_user.role == :admin do %>
                 <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700">
                   <a href="/admin" class="flex items-center gap-2.5 w-full">

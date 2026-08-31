@@ -81,12 +81,6 @@ defmodule StashixWeb.LibrariesLive do
   end
 
   @impl true
-  def handle_event("scan", %{"id" => library_id}, socket) do
-    Stashix.Scanner.scan_library(library_id)
-    {:noreply, put_flash(socket, :info, "Scan started")}
-  end
-
-  @impl true
   def render(assigns) do
     ~H"""
     <div class="space-y-10">
@@ -118,13 +112,34 @@ defmodule StashixWeb.LibrariesLive do
                 <div class="flex items-start justify-between mb-1">
                   <h3 class="font-semibold text-white truncate">{lib.name}</h3>
                   <%= if @current_user.role == :admin do %>
-                    <button
-                      phx-click="scan"
-                      phx-value-id={lib.id}
-                      class="text-xs text-gray-500 hover:text-white ml-2 flex-shrink-0"
-                    >
-                      Scan
-                    </button>
+                    <.dropdown_menu id={"card-menu-#{lib.id}"}>
+                      <.dropdown_menu_trigger class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all ml-1 flex-shrink-0">
+                        <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
+                      </.dropdown_menu_trigger>
+                      <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 text-gray-300 whitespace-nowrap">
+                        <.dropdown_menu_item
+                          class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+                          on-select={JS.push("sidebar_scan", value: %{id: lib.id})}
+                        >
+                          <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 mr-2 shrink-0" />
+                          Scan for new files
+                        </.dropdown_menu_item>
+                        <.dropdown_menu_item
+                          class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
+                          on-select={JS.push("sidebar_force_scan", value: %{id: lib.id})}
+                        >
+                          <.icon name="lucide-rotate-ccw" class="w-3.5 h-3.5 mr-2 shrink-0" />
+                          Force rescan
+                        </.dropdown_menu_item>
+                        <.dropdown_menu_separator class="bg-gray-700" />
+                        <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700">
+                          <a href="/admin" class="flex items-center w-full">
+                            <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" />
+                            Settings
+                          </a>
+                        </.dropdown_menu_item>
+                      </.dropdown_menu_content>
+                    </.dropdown_menu>
                   <% end %>
                 </div>
 
