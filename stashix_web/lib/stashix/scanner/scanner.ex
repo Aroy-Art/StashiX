@@ -116,14 +116,27 @@ defmodule Stashix.Scanner do
       end)
 
     # Stage 3: Generate thumbnails concurrently
+    thumb_total = length(thumbnail_jobs)
+    if thumb_total > 0 do
+      broadcast_progress(library_id, 0, thumb_total, false, :thumbnails)
+    end
+    {:ok, thumb_counter} = Agent.start_link(fn -> 0 end)
+
     thumbnail_jobs
     |> Task.async_stream(
-      fn {book, path} -> generate_thumbnail(book, path) end,
+      fn {book, path} ->
+        result = generate_thumbnail(book, path)
+        n = Agent.get_and_update(thumb_counter, fn c -> {c + 1, c + 1} end)
+        broadcast_progress(library_id, n, thumb_total, false, :thumbnails)
+        result
+      end,
       max_concurrency: @thumbnail_concurrency,
       ordered: false,
       timeout: 120_000
     )
     |> Stream.run()
+
+    Agent.stop(thumb_counter)
 
     if File.dir?(library.root_path) do
       Library.mark_orphaned_books(library_id, files)
@@ -316,7 +329,19 @@ defmodule Stashix.Scanner do
           end
 
         series ->
-          {series, cache}
+          if series.path != parent_dir or series.ongoing != ongoing do
+            case Library.update_series_folder_meta(series, %{
+                   path: parent_dir,
+                   start_year: start_year,
+                   end_year: end_year,
+                   ongoing: ongoing
+                 }) do
+              {:ok, updated} -> {updated, Map.put(cache, clean_name, updated)}
+              _ -> {series, cache}
+            end
+          else
+            {series, cache}
+          end
       end
     else
       {nil, cache}
@@ -360,14 +385,27 @@ defmodule Stashix.Scanner do
         {new_jobs, new_cache}
       end)
 
+    thumb_total_s = length(thumbnail_jobs)
+    if thumb_total_s > 0 do
+      broadcast_progress(library_id, 0, thumb_total_s, false, :thumbnails)
+    end
+    {:ok, thumb_counter_s} = Agent.start_link(fn -> 0 end)
+
     thumbnail_jobs
     |> Task.async_stream(
-      fn {book, path} -> generate_thumbnail(book, path) end,
+      fn {book, path} ->
+        result = generate_thumbnail(book, path)
+        n = Agent.get_and_update(thumb_counter_s, fn c -> {c + 1, c + 1} end)
+        broadcast_progress(library_id, n, thumb_total_s, false, :thumbnails)
+        result
+      end,
       max_concurrency: @thumbnail_concurrency,
       ordered: false,
       timeout: 120_000
     )
     |> Stream.run()
+
+    Agent.stop(thumb_counter_s)
 
     if series.path && File.dir?(series.path) do
       Library.mark_orphaned_series_books(series_id, files)
@@ -499,11 +537,11 @@ defmodule Stashix.Scanner do
     :ets.insert(@ets_table, {library_id, status})
   end
 
-  defp broadcast_progress(library_id, scanned, total, done \\ false) do
+  defp broadcast_progress(library_id, scanned, total, done \\ false, phase \\ :scan) do
     Phoenix.PubSub.broadcast(
       Stashix.PubSub,
       "scan:#{library_id}",
-      {:scan_progress, %{library_id: library_id, scanned: scanned, total: total, done: done}}
+      {:scan_progress, %{library_id: library_id, scanned: scanned, total: total, done: done, phase: phase}}
     )
   end
 end

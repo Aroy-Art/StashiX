@@ -318,6 +318,12 @@ defmodule Stashix.Library do
     end
   end
 
+  def update_series_folder_meta(series, attrs) do
+    series
+    |> Series.changeset(Map.take(attrs, [:path, :start_year, :end_year, :ongoing]))
+    |> Repo.update()
+  end
+
   def create_book(attrs) do
     %Book{}
     |> Book.changeset(attrs)

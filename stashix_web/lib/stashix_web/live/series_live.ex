@@ -45,7 +45,8 @@ defmodule StashixWeb.SeriesLive do
   defp format_file_size(bytes), do: "#{bytes} B"
 
   defp year_range(%{start_year: nil}), do: nil
-  defp year_range(%{start_year: s, end_year: nil}), do: "#{s}–"
+  defp year_range(%{start_year: s, end_year: nil, ongoing: true}), do: "#{s}–"
+  defp year_range(%{start_year: s, end_year: nil}), do: "#{s}"
   defp year_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
   defp relative_folder(series, library) do
@@ -253,6 +254,20 @@ defmodule StashixWeb.SeriesLive do
             <div>
               <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Issues</p>
               <p class="mt-1 text-sm text-gray-200">{length(@books)}</p>
+            </div>
+            <div>
+              <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Status</p>
+              <%= if @series.ongoing do %>
+                <span class="mt-1 inline-flex items-center gap-1 text-sm text-emerald-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  Ongoing
+                </span>
+              <% else %>
+                <span class="mt-1 inline-flex items-center gap-1 text-sm text-gray-400">
+                  <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                  Completed
+                </span>
+              <% end %>
             </div>
             <%= if yr = year_range(@series) do %>
               <div>

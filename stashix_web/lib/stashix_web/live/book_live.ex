@@ -1,7 +1,7 @@
 defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
-  alias Stashix.Library
+  alias Stashix.{Library, Scanner}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -14,6 +14,10 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
 
+    if connected?(socket) do
+      Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
+    end
+
     {:ok,
      assign(socket,
        page_title: book.title,
@@ -21,7 +25,9 @@ defmodule StashixWeb.BookLive do
        library: library,
        progress: current_page,
        fully_read: fully_read,
-       read_menu_open: false
+       read_menu_open: false,
+       scanning: false,
+       show_admin_menu: false
      )}
   end
 
@@ -66,7 +72,33 @@ defmodule StashixWeb.BookLive do
     library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
   end
 
+  def handle_event("toggle_admin_menu", _params, socket) do
+    {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
+  end
+
+  def handle_event("rescan_book", _params, socket) do
+    book = socket.assigns.book
+    Scanner.scan_file(book.library_id, book.path)
+    {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
+  end
+
   @impl true
+  def handle_info({:scan_progress, %{done: true}}, socket) do
+    book = Library.get_book_with_series(socket.assigns.book.id)
+    progress = Library.get_progress(socket.assigns.current_user.id, book.id)
+    current_page = (progress && progress.current_page) || 0
+    fully_read = book.page_count > 0 && current_page >= book.page_count - 1
+
+    {:noreply,
+     assign(socket,
+       scanning: false,
+       book: book,
+       progress: current_page,
+       fully_read: fully_read,
+       page_title: book.title
+     )}
+  end
+
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
@@ -74,27 +106,58 @@ defmodule StashixWeb.BookLive do
   def render(assigns) do
     ~H"""
     <div class="max-w-4xl mx-auto space-y-6">
-      <div class="flex items-center gap-2 text-sm">
-        <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
-          <.icon name="lucide-chevron-left" class="w-4 h-4" />
-          Back
-        </button>
-        <span class="text-gray-700">/</span>
-        <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
-        <span class="text-gray-700">/</span>
-        <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
-        <%= if @book.series do %>
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2 text-sm">
+          <button onclick="history.back()" class="text-gray-500 hover:text-gray-300 flex items-center gap-1">
+            <.icon name="lucide-chevron-left" class="w-4 h-4" />
+            Back
+          </button>
           <span class="text-gray-700">/</span>
-          <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
-        <% end %>
-        <span class="text-gray-700">/</span>
-        <span class="text-gray-300">
-          <%= if @book.issue_number do %>
-            <span class="hidden sm:inline">Issue </span>#<%= Decimal.to_integer(@book.issue_number) %>
-          <% else %>
-            {@book.title}
+          <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
+          <span class="text-gray-700">/</span>
+          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
+          <%= if @book.series do %>
+            <span class="text-gray-700">/</span>
+            <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300">{@book.series.name}</a>
           <% end %>
-        </span>
+          <span class="text-gray-700">/</span>
+          <span class="text-gray-300">
+            <%= if @book.issue_number do %>
+              <span class="hidden sm:inline">Issue </span>#<%= Decimal.to_integer(@book.issue_number) %>
+            <% else %>
+              {@book.title}
+            <% end %>
+          </span>
+        </div>
+        <%= if @current_user.role == :admin do %>
+          <div class="relative">
+            <button
+              phx-click="toggle_admin_menu"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors"
+            >
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" />
+              Admin
+              <.icon name="lucide-chevron-down" class="w-3 h-3" />
+            </button>
+            <%= if @show_admin_menu do %>
+              <div class="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-gray-700 bg-gray-900 shadow-xl py-1">
+                <button
+                  phx-click="rescan_book"
+                  disabled={@scanning}
+                  class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
+                >
+                  <%= if @scanning do %>
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin text-violet-400" />
+                    Scanning…
+                  <% else %>
+                    <.icon name="lucide-refresh-cw" class="w-4 h-4" />
+                    Rescan Book
+                  <% end %>
+                </button>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
       </div>
 
       <div class="flex gap-6 md:gap-8">
@@ -130,7 +193,11 @@ defmodule StashixWeb.BookLive do
               </a>
               <%= if @book.series.start_year do %>
                 <span class="text-gray-500 text-sm">
-                  ({@book.series.start_year}{if @book.series.end_year, do: "–#{@book.series.end_year}", else: "–"})
+                  ({@book.series.start_year}<%= cond do
+                    @book.series.end_year -> "–#{@book.series.end_year}"
+                    @book.series.ongoing -> "–"
+                    true -> ""
+                  end %>)
                 </span>
               <% end %>
             </div>
