@@ -91,7 +91,7 @@
                 <% end %>
               </a>
               <%= if @current_user.role == :admin do %>
-                <.dropdown_menu id={"lib-menu-#{lib.id}"}>
+                <.dropdown_menu id={"lib-menu-#{lib.id}"} use-portal={true}>
                   <.dropdown_menu_trigger class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0">
                     <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
                   </.dropdown_menu_trigger>
@@ -111,12 +111,10 @@
                       Force rescan
                     </.dropdown_menu_item>
                     <.dropdown_menu_separator class="bg-gray-700" />
-                    <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700">
-                      <a href="/admin" class="flex items-center w-full">
-                        <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" />
-                        Settings
-                      </a>
-                    </.dropdown_menu_item>
+                    <.dropdown_menu_link_item href="/admin" class="hover:bg-gray-700 focus:bg-gray-700">
+                      <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" />
+                      Settings
+                    </.dropdown_menu_link_item>
                   </.dropdown_menu_content>
                 </.dropdown_menu>
               <% end %>
@@ -250,23 +248,15 @@
             </.dropdown_menu_trigger>
             <.dropdown_menu_content align="end" class="w-48 bg-gray-800 border-gray-700">
               <%= if @current_user.role == :admin do %>
-                <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700">
-                  <a href="/admin" class="flex items-center gap-2.5 w-full">
-                    <.icon name="lucide-settings" class="w-4 h-4 shrink-0" /> System Settings
-                  </a>
-                </.dropdown_menu_item>
+                <.dropdown_menu_link_item href="/admin" class="hover:bg-gray-700 focus:bg-gray-700 gap-2.5">
+                  <.icon name="lucide-settings" class="w-4 h-4 shrink-0" /> System Settings
+                </.dropdown_menu_link_item>
               <% end %>
-              <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 p-0">
-                <form action="/logout" method="post" class="w-full">
-                  <input type="hidden" name="_method" value="delete" />
-                  <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
-                  <button
-                    type="submit"
-                    class="flex w-full items-center gap-2.5 px-2 py-1.5 text-sm text-gray-300"
-                  >
-                    <.icon name="lucide-log-out" class="w-4 h-4 shrink-0" /> Sign Out
-                  </button>
-                </form>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 gap-2.5"
+                on-select={JS.dispatch("submit", to: "#logout-form")}
+              >
+                <.icon name="lucide-log-out" class="w-4 h-4 shrink-0" /> Sign Out
               </.dropdown_menu_item>
             </.dropdown_menu_content>
           </.dropdown_menu>
@@ -282,6 +272,14 @@
     </main>
   </div>
 </div>
+
+<%!-- Hidden logout form triggered by user menu on-select --%>
+<%= if Map.get(assigns, :current_user) do %>
+  <form id="logout-form" action="/logout" method="post" class="hidden">
+    <input type="hidden" name="_method" value="delete" />
+    <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+  </form>
+<% end %>
 
 <script>
   function toggleSidebar() {

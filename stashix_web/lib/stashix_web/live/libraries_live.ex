@@ -132,12 +132,10 @@ defmodule StashixWeb.LibrariesLive do
                           Force rescan
                         </.dropdown_menu_item>
                         <.dropdown_menu_separator class="bg-gray-700" />
-                        <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700">
-                          <a href="/admin" class="flex items-center w-full">
-                            <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" />
-                            Settings
-                          </a>
-                        </.dropdown_menu_item>
+                        <.dropdown_menu_link_item href="/admin" class="hover:bg-gray-700 focus:bg-gray-700">
+                          <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" />
+                          Settings
+                        </.dropdown_menu_link_item>
                       </.dropdown_menu_content>
                     </.dropdown_menu>
                   <% end %>
