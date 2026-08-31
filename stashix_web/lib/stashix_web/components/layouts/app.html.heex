@@ -15,9 +15,7 @@
     <%!-- Logo --%>
     <div class="p-4 border-b border-gray-800">
       <a href="/" class="flex items-center gap-2">
-        <div class="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
-          <.icon name="lucide-book-open" class="w-5 h-5 text-white" />
-        </div>
+        <img src={~p"/images/logo.png"} class="w-8 h-8 object-contain" alt="Stashix" />
         <span class="text-white font-bold text-lg">Stashix</span>
       </a>
     </div>
@@ -69,46 +67,13 @@
               <% end %>
             </a>
             <%= if @current_user.role == :admin do %>
-              <div class="relative">
-                <button
-                  phx-click={JS.toggle(to: "#lib-menu-#{lib.id}")}
-                  class="opacity-0 group-hover/lib:opacity-100 focus:opacity-100 p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0"
-                  aria-label="Library actions"
-                >
-                  <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
-                </button>
-                <div
-                  id={"lib-menu-#{lib.id}"}
-                  class="hidden absolute right-0 top-full mt-1 z-50 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden"
-                  phx-click-away={JS.hide(to: "#lib-menu-#{lib.id}")}
-                >
-                  <button
-                    phx-click={JS.hide(to: "#lib-menu-#{lib.id}") |> JS.push("sidebar_scan")}
-                    phx-value-id={lib.id}
-                    class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                  >
-                    <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 shrink-0" />
-                    Scan for new files
-                  </button>
-                  <button
-                    phx-click={JS.hide(to: "#lib-menu-#{lib.id}") |> JS.push("sidebar_force_scan")}
-                    phx-value-id={lib.id}
-                    class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                  >
-                    <.icon name="lucide-rotate-ccw" class="w-3.5 h-3.5 shrink-0" />
-                    Force rescan
-                  </button>
-                  <div class="border-t border-gray-700"></div>
-                  <a
-                    href="/admin"
-                    phx-click={JS.hide(to: "#lib-menu-#{lib.id}")}
-                    class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
-                  >
-                    <.icon name="lucide-settings" class="w-3.5 h-3.5 shrink-0" />
-                    Settings
-                  </a>
-                </div>
-              </div>
+              <button
+                onclick={"toggleLibMenu(event, this, '#{lib.id}')"}
+                class="opacity-0 group-hover/lib:opacity-100 focus:opacity-100 p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0"
+                aria-label="Library actions"
+              >
+                <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
+              </button>
             <% end %>
           </div>
         <% end %>
@@ -135,6 +100,44 @@
       </form>
     </div>
   </aside>
+
+  <%!-- Library action menus: fixed + JS-positioned so they escape the sidebar's overflow --%>
+  <%= if Map.get(assigns, :current_user) && @current_user.role == :admin && Map.get(assigns, :sidebar_libraries) do %>
+    <%= for lib <- @sidebar_libraries do %>
+      <div
+        id={"lib-menu-#{lib.id}"}
+        data-lib-menu
+        class="hidden fixed z-50 w-max min-w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl overflow-hidden"
+        phx-click-away={JS.hide(to: "#lib-menu-#{lib.id}")}
+      >
+        <button
+          phx-click={JS.hide(to: "#lib-menu-#{lib.id}") |> JS.push("sidebar_scan")}
+          phx-value-id={lib.id}
+          class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors whitespace-nowrap"
+        >
+          <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 shrink-0" />
+          Scan for new files
+        </button>
+        <button
+          phx-click={JS.hide(to: "#lib-menu-#{lib.id}") |> JS.push("sidebar_force_scan")}
+          phx-value-id={lib.id}
+          class="flex w-full items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors whitespace-nowrap"
+        >
+          <.icon name="lucide-rotate-ccw" class="w-3.5 h-3.5 shrink-0" />
+          Force rescan
+        </button>
+        <div class="border-t border-gray-700"></div>
+        <a
+          href="/admin"
+          phx-click={JS.hide(to: "#lib-menu-#{lib.id}")}
+          class="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors whitespace-nowrap"
+        >
+          <.icon name="lucide-settings" class="w-3.5 h-3.5 shrink-0" />
+          Settings
+        </a>
+      </div>
+    <% end %>
+  <% end %>
   <% end %>
 
   <%!-- Main area --%>
@@ -189,5 +192,25 @@
     const backdrop = document.getElementById('sidebar-backdrop');
     sidebar.classList.add('-translate-x-full');
     backdrop.classList.add('hidden');
+  }
+  function toggleLibMenu(ev, btn, id) {
+    ev.stopPropagation();
+    const menu = document.getElementById('lib-menu-' + id);
+    if (!menu) return;
+    const show = menu.classList.contains('hidden');
+    document.querySelectorAll('[data-lib-menu]').forEach((m) => m.classList.add('hidden'));
+    if (!show) return;
+    menu.classList.remove('hidden');
+    const r = btn.getBoundingClientRect();
+    const left = Math.max(8, r.right - menu.offsetWidth);
+    let top = r.bottom + 4;
+    if (top + menu.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, r.top - menu.offsetHeight - 4);
+    }
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    const close = () => menu.classList.add('hidden');
+    window.addEventListener('scroll', close, { once: true, capture: true });
+    window.addEventListener('resize', close, { once: true });
   }
 </script>
