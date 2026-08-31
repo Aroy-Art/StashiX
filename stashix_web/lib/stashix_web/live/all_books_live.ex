@@ -129,7 +129,7 @@ defmodule StashixWeb.AllBooksLive do
             </button>
           <% end %>
 
-          <div class="w-px h-5 bg-gray-700"></div>
+          <.separator orientation="vertical" class="h-5 mx-1" />
 
           <form phx-change="sort">
             <select

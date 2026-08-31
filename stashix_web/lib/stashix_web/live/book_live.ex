@@ -130,33 +130,27 @@ defmodule StashixWeb.BookLive do
           </span>
         </div>
         <%= if @current_user.role == :admin do %>
-          <div class="relative">
-            <button
-              phx-click="toggle_admin_menu"
-              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors"
-            >
+          <.dropdown_menu id="book-admin-menu">
+            <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
               <.icon name="lucide-settings" class="w-3.5 h-3.5" />
               Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
-            </button>
-            <%= if @show_admin_menu do %>
-              <div class="absolute right-0 top-full mt-1 z-50 min-w-[180px] rounded-lg border border-gray-700 bg-gray-900 shadow-xl py-1">
-                <button
-                  phx-click="rescan_book"
-                  disabled={@scanning}
-                  class="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-left"
-                >
-                  <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin text-violet-400" />
-                    Scanning…
-                  <% else %>
-                    <.icon name="lucide-refresh-cw" class="w-4 h-4" />
-                    Rescan Book
-                  <% end %>
-                </button>
-              </div>
-            <% end %>
-          </div>
+            </.dropdown_menu_trigger>
+            <.dropdown_menu_content class="bg-gray-900 border-gray-700 min-w-44">
+              <.dropdown_menu_item
+                class="hover:bg-gray-800 focus:bg-gray-800 text-gray-300 disabled:opacity-50"
+                on-select={JS.push("rescan_book")}
+              >
+                <%= if @scanning do %>
+                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin text-violet-400" />
+                  Scanning…
+                <% else %>
+                  <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" />
+                  Rescan Book
+                <% end %>
+              </.dropdown_menu_item>
+            </.dropdown_menu_content>
+          </.dropdown_menu>
         <% end %>
       </div>
 
@@ -222,10 +216,10 @@ defmodule StashixWeb.BookLive do
               {String.upcase(to_string(@book.format))}
             </span>
             <%= if @fully_read do %>
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">
-                <.icon name="lucide-check" class="w-3.5 h-3.5" />
+              <.badge class="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
+                <.icon name="lucide-check" class="w-3 h-3" />
                 Read
-              </span>
+              </.badge>
             <% end %>
           </div>
 
@@ -236,15 +230,13 @@ defmodule StashixWeb.BookLive do
                 <span>Progress</span>
                 <span>{@progress}/{@book.page_count} pages</span>
               </div>
-              <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
-                <div class="h-full bg-violet-500" style={"width: #{round(@progress / @book.page_count * 100)}%"} />
-              </div>
+              <.progress value={round(@progress / @book.page_count * 100)} class="h-1 [&>div]:bg-violet-500 bg-gray-800" />
             </div>
           <% end %>
 
           <%!-- Read button --%>
           <%= if @book.page_count > 0 do %>
-            <div class="relative inline-flex mt-4">
+            <div class="flex mt-4 w-fit">
               <a
                 href={if @fully_read, do: ~p"/read/#{@book.id}?page=0", else: ~p"/read/#{@book.id}"}
                 class={[
@@ -260,34 +252,28 @@ defmodule StashixWeb.BookLive do
                 end}
               </a>
               <%= if @progress > 0 do %>
-                <button
-                  phx-click="toggle_read_menu"
-                  class="inline-flex items-center px-2 py-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors"
-                  aria-label="More reading options"
-                >
-                  <.icon name="lucide-chevron-down" class={"w-4 h-4 transition-transform#{if @read_menu_open, do: " rotate-180", else: ""}"} />
-                </button>
-                <%= if @read_menu_open do %>
-                  <div class="fixed inset-0 z-20" phx-click="close_read_menu" />
-                  <div class="absolute left-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-48">
+                <.dropdown_menu id="read-options-menu" class="flex">
+                  <.dropdown_menu_trigger class="flex items-center self-stretch px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
+                    <.icon name="lucide-chevron-down" class="w-4 h-4" />
+                  </.dropdown_menu_trigger>
+                  <.dropdown_menu_content align="end" class="bg-zinc-900 border-zinc-700 min-w-48">
                     <%= if !@fully_read do %>
-                      <a
-                        href={~p"/read/#{@book.id}?page=0"}
-                        class="flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
-                      >
-                        <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
-                        Read from Beginning
-                      </a>
+                      <.dropdown_menu_item class="hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-300 p-0">
+                        <a href={~p"/read/#{@book.id}?page=0"} class="flex items-center gap-2 px-2 py-1.5 w-full">
+                          <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
+                          Read from Beginning
+                        </a>
+                      </.dropdown_menu_item>
                     <% end %>
-                    <button
-                      phx-click="mark_unread"
-                      class="w-full flex items-center gap-2 px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors text-left"
+                    <.dropdown_menu_item
+                      class="hover:bg-zinc-800 focus:bg-zinc-800 text-zinc-300"
+                      on-select={JS.push("mark_unread")}
                     >
-                      <.icon name="lucide-circle-x" class="w-4 h-4" />
+                      <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" />
                       Mark as Unread
-                    </button>
-                  </div>
-                <% end %>
+                    </.dropdown_menu_item>
+                  </.dropdown_menu_content>
+                </.dropdown_menu>
               <% end %>
             </div>
           <% end %>

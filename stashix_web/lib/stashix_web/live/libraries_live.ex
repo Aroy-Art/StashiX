@@ -99,7 +99,7 @@ defmodule StashixWeb.LibrariesLive do
         </h2>
         <div class="flex flex-wrap gap-4">
           <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
-            <div class="w-72 bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+            <.card class="w-72 bg-gray-900 border-gray-800 overflow-hidden">
               <%!-- Cover mosaic --%>
               <div class="h-28 flex overflow-hidden relative bg-gray-800">
                 <%= for book <- Enum.take(covers, 5) do %>
@@ -114,7 +114,7 @@ defmodule StashixWeb.LibrariesLive do
                 <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
               </div>
 
-              <div class="p-4">
+              <.card_content class="p-4">
                 <div class="flex items-start justify-between mb-1">
                   <h3 class="font-semibold text-white truncate">{lib.name}</h3>
                   <%= if @current_user.role == :admin do %>
@@ -131,11 +131,11 @@ defmodule StashixWeb.LibrariesLive do
                 <p class="text-xs text-gray-500 truncate mb-3">{lib.root_path}</p>
 
                 <div class="flex flex-wrap gap-2 mb-3">
-                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{books} books</span>
-                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{issues} issues</span>
-                  <span class="text-xs bg-violet-900/50 text-violet-300 border border-violet-800 px-2 py-0.5 rounded-full">{series} series</span>
+                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{books} books</.badge>
+                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{issues} issues</.badge>
+                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{series} series</.badge>
                   <%= if total_size > 0 do %>
-                    <span class="text-xs bg-gray-800 text-gray-400 border border-gray-700 px-2 py-0.5 rounded-full">{Stashix.Formatters.format_bytes(total_size)}</span>
+                    <.badge variant="outline" class="bg-gray-800 text-gray-400 border-gray-700 text-xs">{Stashix.Formatters.format_bytes(total_size)}</.badge>
                   <% end %>
                 </div>
 
@@ -156,20 +156,19 @@ defmodule StashixWeb.LibrariesLive do
                         <span>{progress.scanned}/{progress.total}</span>
                       <% end %>
                     </div>
-                    <div class="h-1 bg-gray-800 rounded-full overflow-hidden">
-                      <div
-                        class={"h-full transition-all #{cond do progress.done -> "bg-green-500"; collecting -> "bg-violet-500 animate-pulse w-full"; true -> "bg-violet-500" end}"}
-                        style={if collecting, do: "", else: "width: #{pct}%"}
-                      ></div>
-                    </div>
+                    <.progress
+                      value={if collecting, do: 100, else: pct}
+                      indeterminate={false}
+                      class={"h-1 bg-gray-800 #{cond do progress.done -> "[&>div]:bg-green-500"; collecting -> "[&>div]:bg-violet-500 [&>div]:animate-pulse"; true -> "[&>div]:bg-violet-500" end}"}
+                    />
                   </div>
                 <% end %>
 
                 <a href={~p"/library/#{lib.id}"} class="text-sm text-violet-400 hover:text-violet-300">
                   Browse collection →
                 </a>
-              </div>
-            </div>
+              </.card_content>
+            </.card>
           <% end %>
         </div>
       </section>

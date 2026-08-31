@@ -46,9 +46,9 @@ defmodule StashixWeb.LoginLive do
 
         <div class="bg-gray-900 rounded-xl border border-gray-800 p-8">
           <%= if @error do %>
-            <div class="mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm">
-              {@error}
-            </div>
+            <.alert variant="destructive" class="mb-4">
+              <.alert_description>{@error}</.alert_description>
+            </.alert>
           <% end %>
 
           <form
