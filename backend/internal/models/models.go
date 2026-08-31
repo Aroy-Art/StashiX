@@ -52,11 +52,13 @@ type BookSummary struct {
 	Type        string  `json:"type"`
 	Series      *string `json:"series,omitempty"`
 	IssueNumber *string `json:"issue_number,omitempty"`
+	Volume      *int    `json:"volume,omitempty"`
 	Year        *int    `json:"year,omitempty"`
 	Format      string  `json:"format"`
 	PageCount   int     `json:"page_count"`
 	FileSize    int64   `json:"file_size"`
 	AgeRating   string  `json:"age_rating"`
+	Adult       bool    `json:"adult"`
 	CurrentPage *int    `json:"current_page,omitempty"`
 }
 
@@ -80,6 +82,7 @@ type Imprint struct {
 type Series struct {
 	ID               string                  `json:"id" gorm:"type:uuid;primaryKey;default:gen_random_uuid()"`
 	LibraryID        string                  `json:"library_id" gorm:"type:uuid;not null"`
+	Path             string                  `json:"path" gorm:"not null;default:''"`
 	Name             string                  `json:"name"`
 	SortName         *string                 `json:"sort_name,omitempty"`
 	Volume           *int                    `json:"volume,omitempty"`
@@ -89,6 +92,7 @@ type Series struct {
 	EndYear          *int                    `json:"end_year,omitempty"`
 	Ongoing          bool                    `json:"ongoing"`
 	Adult            bool                    `json:"adult"`
+	AgeRating        string                  `json:"age_rating,omitempty"`
 	IssueCount       *int                    `json:"issue_count,omitempty"`
 	VolumeCount      *int                    `json:"volume_count,omitempty"`
 	Publisher        *string                 `json:"publisher,omitempty"`

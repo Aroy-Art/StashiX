@@ -45,7 +45,16 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 
 	var s models.Series
 	result := h.db.WithContext(ctx).Raw(`
-		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.created_at
+		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.adult, s.created_at,
+		       COALESCE((
+		         SELECT b.age_rating FROM books b
+		         WHERE b.series_id = s.id AND b.deleted_at IS NULL AND b.age_rating != 'unknown'
+		         ORDER BY CASE b.age_rating
+		           WHEN 'explicit'  THEN 0 WHEN 'adult'    THEN 1
+		           WHEN 'mature'    THEN 2 WHEN 'teen_plus' THEN 3
+		           WHEN 'teen'      THEN 4 WHEN 'everyone' THEN 5 ELSE 6 END
+		         LIMIT 1
+		       ), 'unknown') AS age_rating
 		FROM series s
 		WHERE s.id = ?
 		  AND (? = 'admin' OR EXISTS (
@@ -60,7 +69,7 @@ func (h *SeriesHandler) get(ctx context.Context, input *getSeriesInput) (*getSer
 
 	var books []models.BookSummary
 	r2 := h.db.WithContext(ctx).Raw(`
-		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.file_size, b.age_rating,
+		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.volume, b.year, b.format, b.page_count, b.file_size, b.age_rating, b.adult,
 		       rp.current_page
 		FROM books b
 		LEFT JOIN reading_progress rp ON rp.book_id = b.id AND rp.user_id = ?
@@ -129,9 +138,18 @@ func (h *SeriesHandler) listByLibrary(ctx context.Context, input *listSeriesInpu
 
 	var seriesList []models.Series
 	result := h.db.WithContext(ctx).Raw(`
-		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.created_at,
+		SELECT s.id, s.library_id, s.name, s.publisher, s.start_year, s.end_year, s.ongoing, s.adult, s.created_at,
 		       (SELECT b.id FROM books b WHERE b.series_id = s.id ORDER BY CAST(b.issue_number AS REAL) NULLS LAST LIMIT 1) AS cover_book_id,
-		       (SELECT COUNT(*) FROM books b WHERE b.series_id = s.id) AS book_count
+		       (SELECT COUNT(*) FROM books b WHERE b.series_id = s.id) AS book_count,
+		       COALESCE((
+		         SELECT b.age_rating FROM books b
+		         WHERE b.series_id = s.id AND b.deleted_at IS NULL AND b.age_rating != 'unknown'
+		         ORDER BY CASE b.age_rating
+		           WHEN 'explicit'  THEN 0 WHEN 'adult'    THEN 1
+		           WHEN 'mature'    THEN 2 WHEN 'teen_plus' THEN 3
+		           WHEN 'teen'      THEN 4 WHEN 'everyone' THEN 5 ELSE 6 END
+		         LIMIT 1
+		       ), 'unknown') AS age_rating
 		FROM series s
 		LEFT JOIN library_permissions lp ON lp.library_id = s.library_id AND lp.user_id = ?
 		WHERE s.library_id = ?

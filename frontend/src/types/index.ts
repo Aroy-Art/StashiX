@@ -1,6 +1,6 @@
 export type Role = 'admin' | 'user'
 export type BookFormat = 'cbz' | 'cbr' | 'cb7' | 'epub' | 'pdf'
-export type AgeRating = 'unknown' | 'everyone' | 'teen' | 'mature' | 'explicit'
+export type AgeRating = 'unknown' | 'everyone' | 'teen' | 'teen_plus' | 'mature' | 'explicit' | 'adult'
 
 export interface User {
   id: string
@@ -62,6 +62,8 @@ export interface Series {
   start_year?: number
   end_year?: number
   ongoing?: boolean
+  adult?: boolean
+  age_rating?: AgeRating
   created_at: string
   cover_book_id?: string
   book_count?: number
@@ -74,11 +76,13 @@ export interface SeriesBook {
   series?: string
   series_id?: string
   issue_number?: string
+  volume?: number
   year?: number
   format: BookFormat
   page_count: number
   file_size: number
   age_rating: AgeRating
+  adult?: boolean
   current_page?: number
 }
 

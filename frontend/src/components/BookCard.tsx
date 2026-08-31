@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { books as booksApi } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { thumbnailSize } from '@/lib/thumbnail'
@@ -12,6 +14,7 @@ interface BookLike {
   series?: string
   series_id?: string
   issue_number?: string
+  volume?: number
   year?: number
   format: string
   page_count: number
@@ -30,9 +33,9 @@ const FORMAT_LABELS: Record<string, string> = {
 }
 
 export function BookCard({ book, className, to }: BookCardProps) {
-  const href = to ?? (book.series_id ? `/series/${book.series_id}` : `/book/${book.id}`)
+  const linkHref = to ?? (book.series_id ? `/series/${book.series_id}` : `/book/${book.id}`)
   return (
-    <Link to={href} className={cn('group block', className)}>
+    <Link href={linkHref} className={cn('group block', className)}>
       <Card className="card-hover p-0 gap-0">
         {/* Cover */}
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
@@ -86,8 +89,12 @@ export function BookCard({ book, className, to }: BookCardProps) {
           <CardTitle className="text-[13px] font-semibold leading-tight line-clamp-2">
             {book.title ?? book.series}
           </CardTitle>
-          {book.issue_number && (
-            <CardDescription className="mt-0.5">#{book.issue_number}</CardDescription>
+          {(book.volume || book.issue_number) && (
+            <CardDescription className="mt-0.5">
+              {book.volume ? `Vol. ${book.volume}` : ''}
+              {book.volume && book.issue_number ? ' · ' : ''}
+              {book.issue_number ? `#${book.issue_number}` : ''}
+            </CardDescription>
           )}
           {!book.series && book.year && (
             <CardDescription className="mt-0.5">{book.year}</CardDescription>
