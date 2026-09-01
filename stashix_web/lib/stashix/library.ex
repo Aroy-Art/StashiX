@@ -247,8 +247,12 @@ defmodule Stashix.Library do
 
     series =
       from(s in Series,
+        left_join: b in Book,
+          on: b.series_id == s.id and is_nil(b.deleted_at),
         where: ilike(s.name, ^pattern) and is_nil(s.deleted_at),
+        group_by: s.id,
         order_by: [asc: s.name],
+        select: %{s | issue_count: count(b.id)},
         limit: ^limit
       )
       |> Repo.all()
@@ -334,6 +338,15 @@ defmodule Stashix.Library do
     book
     |> Book.changeset(attrs)
     |> Repo.update()
+  end
+
+  def load_books_cache(library_id) do
+    from(b in Book,
+      where: b.library_id == ^library_id,
+      select: {b.path, %{last_modified: b.last_modified, deleted_at: b.deleted_at, file_hash: b.file_hash}}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   def get_book_by_path(path) do

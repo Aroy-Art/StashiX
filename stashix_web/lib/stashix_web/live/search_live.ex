@@ -97,6 +97,7 @@ defmodule StashixWeb.SearchLive do
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   width={300}
                   subtitle={s.start_year && to_string(s.start_year)}
+                  badge={"#{s.issue_count} issues"}
                   type={:series}
                 />
               <% end %>
