@@ -10,13 +10,17 @@ defmodule StashixWeb.Live.Hooks do
       {:ok, user} ->
         libraries = Library.list_libraries(user)
 
-        if connected?(socket) do
-          Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
-        end
+        initial_progress =
+          if connected?(socket) do
+            Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
+            load_active_scan_progress(libraries)
+          else
+            %{}
+          end
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: %{})
+          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress)
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
 
@@ -32,13 +36,17 @@ defmodule StashixWeb.Live.Hooks do
       {:ok, user} when user.role == :admin ->
         libraries = Library.list_libraries(user)
 
-        if connected?(socket) do
-          Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
-        end
+        initial_progress =
+          if connected?(socket) do
+            Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
+            load_active_scan_progress(libraries)
+          else
+            %{}
+          end
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: %{})
+          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress)
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
 
@@ -91,6 +99,16 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_sidebar_progress(_msg, socket), do: {:cont, socket}
+
+  defp load_active_scan_progress(libraries) do
+    library_ids = MapSet.new(libraries, & &1.id)
+
+    Stashix.Scanner.list_active_tasks()
+    |> Enum.filter(&(not &1.done and MapSet.member?(library_ids, &1.library_id)))
+    |> Map.new(fn task ->
+      {task.library_id, %{scanned: task.scanned, total: task.total, done: task.done, phase: Map.get(task, :phase, :scan)}}
+    end)
+  end
 
   defp authenticate_from_session(session) do
     access_token = session["guardian_default_token"]

@@ -98,6 +98,56 @@ class DropdownMenuComponent extends Component {
     };
   }
 
+  skipReinitialize(el) {
+    if (
+      el.getAttribute("data-options") !== this._optionsRaw ||
+      el.getAttribute("data-event-mappings") !== this._eventMappingsRaw
+    ) {
+      return false;
+    }
+
+    // Re-query parts from the freshly-patched DOM so stale refs don't linger.
+    this.trigger = el.querySelector("[data-part='trigger']");
+    this.positioner = el.querySelector("[data-part='positioner']");
+    this.content = this.positioner?.querySelector("[data-part='content']");
+
+    if (this.positionedElement) {
+      this.positionedElement.element = this.positioner;
+      this.positionedElement.reference = this.trigger;
+      if (this.positionedElement.clickOutsideMonitor) {
+        this.positionedElement.clickOutsideMonitor.updateElements([
+          this.positioner,
+          this.trigger,
+        ]);
+      }
+    }
+
+    // LiveView patched the DOM back to server-rendered state (e.g. positioner
+    // got hidden=true again). Re-apply the current JS state so the dropdown
+    // stays open/closed as the component believes it to be.
+    this.allParts = this.queryParts();
+    this.updateUI();
+
+    // Pin position:fixed BEFORE un-hiding so the positioner never enters
+    // normal document flow. If it did, it would shift sibling elements
+    // (including the trigger), making getBoundingClientRect() return a
+    // wrong anchor on the next layout pass.
+    if (this.state === "open" && this.positioner) {
+      this.positioner.style.position = "fixed";
+    }
+
+    this.updatePartsVisibility();
+
+    // Recompute position after browser layout — DOM patch resets inline styles.
+    if (this.state === "open" && this.positionedElement) {
+      window.requestAnimationFrame(() => {
+        if (!this.destroyed) this.positionedElement?.update();
+      });
+    }
+
+    return true;
+  }
+
   initializePositionedElement() {
     if (this.positioner && this.trigger && !this.positionedElement) {
       const side = this.positioner.getAttribute("data-side") || "bottom";
