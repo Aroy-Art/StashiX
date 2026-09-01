@@ -86,12 +86,31 @@ defmodule Stashix.Scanner do
     update_task_status(library_id, %{scanned: 0, total: total, done: false, collecting: false})
     broadcast_progress(library_id, 0, total)
 
-    # Pre-warm series cache: 1 query instead of N round-trips during the loop
+    # Pre-warm series cache and books cache: bulk queries instead of N round-trips
     series_cache = Library.load_series_cache(library_id)
+    books_cache = if force, do: %{}, else: Library.load_books_cache(library_id)
 
-    # Stage 1: Parse metadata concurrently (hash + filename + comicinfo)
+    # Partition: files that need full parse vs unchanged (skip Stage 1 for those)
+    {files_to_parse, files_unchanged} =
+      Enum.split_with(files, fn path ->
+        case Map.get(books_cache, path) do
+          nil -> true
+          %{deleted_at: da} when not is_nil(da) -> true
+          %{last_modified: lm} ->
+            case File.stat(path) do
+              {:ok, stat} -> NaiveDateTime.from_erl!(stat.mtime) != lm
+              _ -> true
+            end
+        end
+      end)
+
+    unchanged_count = length(files_unchanged)
+    Logger.info("[scan] #{unchanged_count} unchanged, #{length(files_to_parse)} need parse")
+    broadcast_progress(library_id, unchanged_count, total)
+
+    # Stage 1: Parse metadata concurrently (hash + filename + comicinfo) — only changed files
     parsed_files =
-      files
+      files_to_parse
       |> Task.async_stream(&parse_file_metadata/1,
            max_concurrency: @metadata_concurrency,
            ordered: true,
@@ -104,9 +123,10 @@ defmodule Stashix.Scanner do
       end)
 
     # Stage 2: DB upserts serially (prevents series creation races, uses cache)
+    # Unchanged files count as already scanned
     {thumbnail_jobs, _cache} =
       parsed_files
-      |> Enum.with_index(1)
+      |> Enum.with_index(unchanged_count + 1)
       |> Enum.reduce({[], series_cache}, fn {file_meta, idx}, {jobs, cache} ->
         {job, new_cache} = upsert_book(file_meta, library, force, cache)
         update_task_status(library_id, %{scanned: idx, total: total, done: false})
@@ -442,8 +462,7 @@ defmodule Stashix.Scanner do
       {:ok, _} ->
         Path.wildcard(Path.join([root_path, "**", "*"]))
         |> Enum.filter(fn path ->
-          File.regular?(path) &&
-            String.downcase(Path.extname(path)) in @supported_formats
+          String.downcase(Path.extname(path)) in @supported_formats
         end)
 
       {:error, reason} ->
