@@ -353,4 +353,27 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:year] == 2023
     end
   end
+
+  describe "parse_filename/1 — Series #NN (MM-YYYY) pattern" do
+    test "hash issue with month-year date" do
+      r = Parser.parse_filename("Clockwork Angels #06 (of 06) (11-2014)")
+      assert r[:series] == "Clockwork Angels"
+      assert r[:issue_number] == d("6")
+      assert r[:year] == 2014
+    end
+
+    test "hash issue with bare year" do
+      r = Parser.parse_filename("Some Series #12 (2019)")
+      assert r[:series] == "Some Series"
+      assert r[:issue_number] == d("12")
+      assert r[:year] == 2019
+    end
+
+    test "hash issue with noise tags" do
+      r = Parser.parse_filename("Saga #001 (Digital) (01-2022)")
+      assert r[:series] == "Saga"
+      assert r[:issue_number] == d("1")
+      assert r[:year] == 2022
+    end
+  end
 end

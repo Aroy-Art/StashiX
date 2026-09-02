@@ -241,6 +241,7 @@ defmodule Stashix.Metadata.Parser do
     clean =
       Regex.replace(@noise_regex, filename, " ")
       |> then(&Regex.replace(~r/\s*\(of\s+\d+\)\s*/i, &1, " "))
+      |> then(&Regex.replace(~r/\((\d{1,2})-(\d{4})\)/, &1, "(\\2)"))
       |> String.trim()
 
     result = %{}
@@ -404,6 +405,23 @@ defmodule Stashix.Metadata.Parser do
             |> Map.put(:series, String.trim(series))
             |> Map.put(:issue_number, parse_decimal(issue))
             |> Map.put(:title, String.trim(title))
+            |> Map.put(:year, String.to_integer(year))
+
+          nil ->
+            result
+        end
+      end
+
+    # "Series #NN (YEAR)" — e.g. "Clockwork Angels #06 (2014)"
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(~r/^(.+?)\s+#(\d{1,4})[^(]*\((\d{4})\)/i, clean) do
+          [_, series, issue, year] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
             |> Map.put(:year, String.to_integer(year))
 
           nil ->
