@@ -6,6 +6,7 @@ defmodule Stashix.Application do
   @impl true
   def start(_type, _args) do
     children = [
+      TwMerge.Cache,
       StashixWeb.Telemetry,
       Stashix.Repo,
       {DNSCluster, query: Application.get_env(:stashix, :dns_cluster_query) || :ignore},

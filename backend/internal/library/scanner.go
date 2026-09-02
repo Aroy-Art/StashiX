@@ -343,8 +343,11 @@ func (s *Scanner) importBook(ctx context.Context, libraryID, path string, sc *se
 	}
 
 	adult := isAdultContent(path)
+	if adult && (meta.AgeRating == "" || meta.AgeRating == "unknown") {
+		meta.AgeRating = "adult"
+	}
 
-	seriesID := s.upsertSeries(ctx, libraryID, meta, publisherID, imprintID, startYear, endYear, ongoing, adult)
+	seriesID := s.upsertSeries(ctx, libraryID, filepath.Dir(path), meta, publisherID, imprintID, startYear, endYear, ongoing, adult)
 	if seriesID != "" && sc != nil && sc.coverPath != "" {
 		s.upsertSeriesCover(ctx, seriesID, sc.coverPath)
 	}
@@ -545,6 +548,10 @@ func buildMeta(_ context.Context, format media.Format, path string, sc *seriesCo
 
 	fileMeta := metadata.ParseFilename(path)
 	if sc != nil && sc.standalone {
+		if fileMeta.Series != "" && fileMeta.IssueNumber != "" {
+			fileMeta.Title = fileMeta.Series
+			fileMeta.IssueNumber = ""
+		}
 		fileMeta.Series = ""
 	}
 
@@ -816,18 +823,19 @@ func (s *Scanner) upsertUniverse(ctx context.Context, name, designation, sourceI
 	return id
 }
 
-func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *metadata.BookMeta, publisherID, imprintID string, startYear, endYear int, ongoing, adult bool) string {
+func (s *Scanner) upsertSeries(ctx context.Context, libraryID, seriesDir string, meta *metadata.BookMeta, publisherID, imprintID string, startYear, endYear int, ongoing, adult bool) string {
 	if meta.Series == "" {
 		return ""
 	}
 	var id string
 	res := s.db.WithContext(ctx).Raw(`
-		INSERT INTO series (library_id, name, sort_name, volume, language, format,
+		INSERT INTO series (library_id, path, name, sort_name, volume, language, format,
 		                    publisher, publisher_id, imprint_id,
 		                    start_year, end_year, ongoing, adult,
 		                    issue_count, volume_count)
-		VALUES (?,?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?)
-		ON CONFLICT (library_id, name) DO UPDATE SET
+		VALUES (?,?,?,?,?,?,?,  ?,?,?,  ?,?,?,?,  ?,?)
+		ON CONFLICT (library_id, path) DO UPDATE SET
+			name        = EXCLUDED.name,
 			sort_name   = COALESCE(EXCLUDED.sort_name,   series.sort_name),
 			volume      = COALESCE(EXCLUDED.volume,      series.volume),
 			language    = EXCLUDED.language,
@@ -842,7 +850,7 @@ func (s *Scanner) upsertSeries(ctx context.Context, libraryID string, meta *meta
 			issue_count = COALESCE(EXCLUDED.issue_count, series.issue_count),
 			volume_count= COALESCE(EXCLUDED.volume_count,series.volume_count)
 		RETURNING id`,
-		libraryID, meta.Series, nullString(meta.SeriesSortName), nullInt(meta.Volume),
+		libraryID, seriesDir, meta.Series, nullString(meta.SeriesSortName), nullInt(meta.Volume),
 		coalesceString(meta.SeriesLanguage, "en"), nullString(meta.SeriesFormat),
 		nullString(meta.Publisher), nullString(publisherID), nullString(imprintID),
 		nullInt(startYear), nullInt(endYear), ongoing, adult,

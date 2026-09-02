@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+'use client'
+
+import { useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Search, Settings, Sun, Moon } from 'lucide-react'
 import { SidebarTrigger } from '@/components/ui/sidebar'
 import { Button } from '@/components/ui/button'
@@ -24,28 +26,21 @@ function initials(firstName: string, lastName: string, username: string): string
 }
 
 export function Header() {
-  const navigate = useNavigate()
+  const router = useRouter()
   const logout = useAuthStore((s) => s.logout)
   const isAdmin = useAuthStore((s) => s.isAdmin)
   const profile = useAuthStore((s) => s.profile)
-  const fetchProfile = useAuthStore((s) => s.fetchProfile)
-  const token = useAuthStore((s) => s.token)
   const { theme, toggleTheme } = useThemeStore()
   const searchRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (token && !profile) fetchProfile()
-  }, [token, profile, fetchProfile])
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault()
     const q = searchRef.current?.value.trim()
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`)
+    if (q) router.push(`/search?q=${encodeURIComponent(q)}`)
   }
 
   function handleLogout() {
-    logout()
-    navigate('/login')
+    logout().catch(() => {}).finally(() => router.push('/login'))
   }
 
   const avatarInitials = profile
@@ -84,7 +79,7 @@ export function Header() {
             variant="ghost"
             size="icon-sm"
             aria-label="Settings"
-            onClick={() => navigate('/settings')}
+            onClick={() => router.push('/settings')}
           >
             <Settings />
           </Button>

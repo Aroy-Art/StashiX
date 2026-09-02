@@ -8,7 +8,9 @@
 
 type Resolver = { resolve: (v: unknown) => void; reject: (e: Error) => void }
 
-const WS_URL = `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+function getWsUrl() {
+  return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`
+}
 
 // Maps WS message type → REST fallback spec
 interface RestFallback {
@@ -71,6 +73,10 @@ class Transport {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private connected = false
 
+  getToken(): string | null {
+    return this.token
+  }
+
   setToken(token: string) {
     this.token = token
     this.connect()
@@ -85,7 +91,7 @@ class Transport {
   private connect() {
     if (!this.token) return
     try {
-      this.ws = new WebSocket(`${WS_URL}?token=${this.token}`)
+      this.ws = new WebSocket(`${getWsUrl()}?token=${this.token}`)
     } catch {
       this.scheduleReconnect()
       return
@@ -207,23 +213,25 @@ class Transport {
   }
 
   async tryRefresh(): Promise<boolean> {
-    const refreshToken = localStorage.getItem('refresh_token')
-    if (!refreshToken) return false
     try {
+      const { getAuthTokens, setAuthTokens, clearAuthTokens } = await import('@/lib/auth-cookie')
+      const tokens = getAuthTokens()
+      if (!tokens?.refresh_token) {
+        this.token = null
+        return false
+      }
       const res = await fetch('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshToken }),
+        body: JSON.stringify({ refresh_token: tokens.refresh_token }),
       })
       if (!res.ok) {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
+        clearAuthTokens()
         this.token = null
         return false
       }
       const data = await res.json() as { access_token: string; refresh_token: string }
-      localStorage.setItem('access_token', data.access_token)
-      localStorage.setItem('refresh_token', data.refresh_token)
+      setAuthTokens({ access_token: data.access_token, refresh_token: data.refresh_token })
       this.token = data.access_token
       return true
     } catch {

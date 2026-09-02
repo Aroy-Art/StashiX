@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { auth as authApi, user as userApi } from '../api/client'
+import { transport } from '@/api/transport'
+import { getAuthTokens, setAuthTokens, clearAuthTokens } from '@/lib/auth-cookie'
 
 interface UserProfile {
   username: string
@@ -11,80 +12,77 @@ interface UserProfile {
 }
 
 interface AuthState {
-  token: string | null
+  isAuthenticated: boolean
+  isLoading: boolean
   isAdmin: boolean
   profile: UserProfile | null
   login: (email: string, password: string) => Promise<void>
-  logout: () => void
-  restore: () => void
-  fetchProfile: () => Promise<void>
+  logout: () => Promise<void>
+  restore: () => Promise<void>
 }
 
-function parseRole(token: string): string {
+async function fetchProfile(): Promise<UserProfile | null> {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload.role ?? 'user'
+    const { user } = await import('@/api/client')
+    const p = await user.profile()
+    return {
+      username: p.username,
+      email: p.email,
+      firstName: p.first_name,
+      lastName: p.last_name,
+      isAdmin: p.is_admin,
+      isStaff: p.is_staff,
+    }
   } catch {
-    return 'user'
+    return null
   }
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: null,
+  isAuthenticated: false,
+  isLoading: true,
   isAdmin: false,
   profile: null,
 
-  async fetchProfile() {
-    try {
-      const p = await userApi.profile()
-      set({
-        isAdmin: p.is_admin,
-        profile: {
-          username: p.username,
-          email: p.email,
-          firstName: p.first_name,
-          lastName: p.last_name,
-          isAdmin: p.is_admin,
-          isStaff: p.is_staff,
-        },
-      })
-    } catch {
-      // profile fetch is best-effort
-    }
-  },
-
   async login(email, password) {
-    const pair = await authApi.login(email, password)
-    const role = parseRole(pair.access_token)
-    set({ token: pair.access_token, isAdmin: role === 'admin' })
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) throw new Error('Invalid credentials')
+    const { access_token, refresh_token } = await res.json() as { access_token: string; refresh_token: string }
+    setAuthTokens({ access_token, refresh_token })
+    transport.setToken(access_token)
+    set({ isAuthenticated: true, isLoading: false })
+    fetchProfile().then((profile) => {
+      if (profile) set({ isAdmin: profile.isAdmin, profile })
+    })
+  },
+
+  async logout() {
+    clearAuthTokens()
+    transport.clearToken()
+    set({ isAuthenticated: false, isLoading: false, isAdmin: false, profile: null })
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {})
+  },
+
+  async restore() {
     try {
-      const p = await userApi.profile()
-      set({
-        isAdmin: p.is_admin,
-        profile: {
-          username: p.username,
-          email: p.email,
-          firstName: p.first_name,
-          lastName: p.last_name,
-          isAdmin: p.is_admin,
-          isStaff: p.is_staff,
-        },
+      const tokens = getAuthTokens()
+      if (!tokens?.access_token) {
+        set({ isAuthenticated: false, isLoading: false })
+        return
+      }
+      transport.setToken(tokens.access_token)
+      set({ isAuthenticated: true })
+      fetchProfile().then((profile) => {
+        if (profile) set({ isAdmin: profile.isAdmin, profile })
       })
     } catch {
-      // profile fetch is best-effort
-    }
-  },
-
-  logout() {
-    authApi.logout()
-    set({ token: null, isAdmin: false, profile: null })
-  },
-
-  restore() {
-    const token = authApi.restoreSession()
-    if (token) {
-      const role = parseRole(token)
-      set({ token, isAdmin: role === 'admin' })
+      set({ isAuthenticated: false })
+    } finally {
+      set({ isLoading: false })
     }
   },
 }))

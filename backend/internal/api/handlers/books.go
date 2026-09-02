@@ -47,7 +47,7 @@ func (h *BooksHandler) get(ctx context.Context, input *getBookInput) (*getBookOu
 	result := h.db.WithContext(ctx).Raw(`
 		SELECT b.id, b.library_id, b.path, b.title, b.type, b.series_id, b.series,
 		       b.issue_number, b.volume, b.year, b.publisher, b.format, b.page_count,
-		       b.file_size, b.age_rating, b.language, b.summary, b.created_at,
+		       b.file_size, b.age_rating, b.adult, b.language, b.summary, b.created_at,
 		       b.deleted_at, rp.current_page
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
@@ -114,7 +114,7 @@ func (h *BooksHandler) listByLibrary(ctx context.Context, input *listByLibraryIn
 	}
 
 	query := fmt.Sprintf(`
-		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.file_size, b.age_rating
+		SELECT b.id, b.title, b.type, b.series, b.issue_number, b.year, b.format, b.page_count, b.file_size, b.age_rating, b.adult
 		FROM books b
 		LEFT JOIN library_permissions lp ON lp.library_id = b.library_id AND lp.user_id=?
 		WHERE b.library_id=?

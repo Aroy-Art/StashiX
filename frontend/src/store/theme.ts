@@ -8,7 +8,10 @@ function getStored(): Theme {
 
 function apply(t: Theme) {
   document.documentElement.classList.toggle('dark', t === 'dark')
-  try { localStorage.setItem('theme', t) } catch {}
+  try {
+    localStorage.setItem('theme', t)
+    document.cookie = `theme=${t}; path=/; SameSite=Lax; max-age=31536000`
+  } catch {}
 }
 
 interface ThemeState {

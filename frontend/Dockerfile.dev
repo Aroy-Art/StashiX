@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+FROM oven/bun:1-alpine
+
+RUN apk add --no-cache libc6-compat git
+
+ARG UID=1000
+ARG GID=1000
+
+WORKDIR /app
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Create dirs with correct ownership before switching user so named volumes
+# are initialized with the right permissions on first mount
+RUN mkdir -p /app/node_modules /app/.next && chown -R ${UID}:${GID} /app
+
+USER ${UID}:${GID}
+
+COPY --chown=${UID}:${GID} package.json bun.lock ./
+RUN bun install
+
+EXPOSE 3000
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["bun", "dev"]

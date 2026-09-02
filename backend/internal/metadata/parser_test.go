@@ -106,6 +106,15 @@ func TestParseFilename(t *testing.T) {
 			wantYear:   1981,
 			wantTitle:  "The Rook #8",
 		},
+		// number in title before " - " subtitle separator must not be treated as issue
+		{
+			name:       "subtitle dash prevents splitting on title number",
+			input:      "The Witcher 2 - XBox Preorder Edition 001 (2012) (digital).cbz",
+			wantSeries: "The Witcher 2 - XBox Preorder Edition",
+			wantIssue:  "1",
+			wantYear:   2012,
+			wantTitle:  "The Witcher 2 - XBox Preorder Edition #1",
+		},
 		// issue number pattern: Series #N (Year)
 		{
 			name:      "series issue with year",
@@ -179,6 +188,62 @@ func TestParseSeriesDir(t *testing.T) {
 			}
 			if got.Ongoing != tc.wantOngoing {
 				t.Errorf("Ongoing: got %v, want %v", got.Ongoing, tc.wantOngoing)
+			}
+		})
+	}
+}
+
+func TestNormalizeRating(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		// MetronInfo canonical values
+		{"Everyone", "everyone"},
+		{"Teen", "teen"},
+		{"Teen Plus", "teen_plus"},
+		{"Mature", "mature"},
+		{"Explicit", "explicit"},
+		{"Adult", "adult"},
+		{"Unknown", "unknown"},
+		// DC 2022
+		{"13+", "teen"},
+		{"15+", "teen_plus"},
+		{"17+", "mature"},
+		// Marvel Current
+		{"All Ages / T", "everyone"},
+		{"T+", "teen"},
+		{"Parental Advisory", "teen_plus"},
+		{"Explicit Content", "mature"},
+		// Marvel 2001
+		{"All Ages", "everyone"},
+		{"PG", "teen"},
+		{"PG+", "teen_plus"},
+		// Marvel 2003
+		{"PSR", "teen"},
+		{"PSR+", "teen_plus"},
+		// Marvel 2005
+		{"All Ages / A", "everyone"},
+		{"Max: Explicit Content", "explicit"},
+		{"Max", "explicit"},
+		// Legacy / misc
+		{"G", "everyone"},
+		{"R", "mature"},
+		{"X", "explicit"},
+		{"NC-17", "explicit"},
+		{"PG-13", "teen"},
+		// Case/whitespace insensitivity
+		{"  ADULT  ", "adult"},
+		{"TEEN PLUS", "teen_plus"},
+		// Unknown pass-through
+		{"", "unknown"},
+		{"MA15+", "unknown"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			if got := normalizeRating(tc.input); got != tc.want {
+				t.Errorf("normalizeRating(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}

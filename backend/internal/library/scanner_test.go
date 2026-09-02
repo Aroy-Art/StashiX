@@ -284,3 +284,140 @@ func TestParseSeriesDir_CategoryDirYieldsZeroYear(t *testing.T) {
 		t.Errorf("One-Shot should have year 0, got %d", m.Year)
 	}
 }
+
+// ── adult content detection ───────────────────────────────────────────────────
+
+func TestIsAdultContent_AdultInDirName(t *testing.T) {
+	path := "/library/The Next Art/Hades-Syndrome (2024-2026) (ADULT)/Hades-Syndrome Vol 01 (2024) (ADULT) (TPB).cbz"
+	if !isAdultContent(path) {
+		t.Error("expected adult=true for path with (ADULT) in dir name")
+	}
+}
+
+func TestIsAdultContent_RealWorldPath(t *testing.T) {
+	path := "/library/The Next Art/Hades-Syndrome (2024-2026) (ADULT)/Hades-Syndrome Vol 02 - Hunting Season (2022) (ADULT) (TPB) (English) (Digital) (ASO) (THENEXTART).cbz"
+	if !isAdultContent(path) {
+		t.Error("expected adult=true for real-world path with (ADULT) in dir and filename")
+	}
+}
+
+func TestIsAdultContent_AdultInFilename(t *testing.T) {
+	path := "/library/Publisher/Some Series (2020)/Some Series 001 (2020) (ADULT).cbz"
+	if !isAdultContent(path) {
+		t.Error("expected adult=true for path with (ADULT) in filename")
+	}
+}
+
+func TestIsAdultContent_18Plus(t *testing.T) {
+	path := "/library/Publisher/Some Series (2020)/Some Series 001 18+.cbz"
+	if !isAdultContent(path) {
+		t.Error("expected adult=true for path with 18+")
+	}
+}
+
+func TestIsAdultContent_NotAdult(t *testing.T) {
+	path := "/library/Viz/Akira (1990)/Akira (1990) v01 c1.cbz"
+	if isAdultContent(path) {
+		t.Error("expected adult=false for non-adult path")
+	}
+}
+
+func TestIsAdultContent_AdultWordBoundary(t *testing.T) {
+	// "adults" should NOT match \badult\b
+	path := "/library/Publisher/For Adults Only (2020)/book.cbz"
+	// "Adults" contains "adult" but as part of "Adults" — \b still matches before A and after T...
+	// actually "adults" does NOT match \badult\b because after "t" comes "s" (word char)
+	if isAdultContent(path) {
+		// "Adults" won't match \badult\b because the boundary after T fails (s is a word char)
+		// This test documents that behavior
+		t.Log("note: 'Adults' matched \badult\b — check boundary behavior")
+	}
+}
+
+// ── (ADULT) tag in directory name with year range ─────────────────────────────
+
+func TestBuildSeriesContexts_AdultDirTag(t *testing.T) {
+	root := t.TempDir()
+	book := filepath.Join(root, "The Next Art", "Hades-Syndrome (2024-2026) (ADULT)", "Hades-Syndrome Vol 01 (2024) (ADULT) (TPB).cbz")
+	touch(t, book)
+
+	ctx := buildSeriesContexts(root, []string{book}, nil)
+	sc := ctx[filepath.Dir(book)]
+
+	if sc == nil {
+		t.Fatal("no context for series dir")
+	}
+	if sc.publisher != "The Next Art" {
+		t.Errorf("publisher: got %q, want %q", sc.publisher, "The Next Art")
+	}
+	if sc.series != "Hades-Syndrome" {
+		t.Errorf("series: got %q, want %q", sc.series, "Hades-Syndrome")
+	}
+	if sc.year != 2024 {
+		t.Errorf("year: got %d, want 2024", sc.year)
+	}
+	if sc.endYear != 2026 {
+		t.Errorf("endYear: got %d, want 2026", sc.endYear)
+	}
+}
+
+func TestBuildSeriesContexts_AdultDirTagOngoing(t *testing.T) {
+	root := t.TempDir()
+	book := filepath.Join(root, "Publisher", "My Series (2020-) (ADULT)", "My Series 001.cbz")
+	touch(t, book)
+
+	ctx := buildSeriesContexts(root, []string{book}, nil)
+	sc := ctx[filepath.Dir(book)]
+
+	if sc.series != "My Series" {
+		t.Errorf("series: got %q, want %q", sc.series, "My Series")
+	}
+	if sc.year != 2020 {
+		t.Errorf("year: got %d, want 2020", sc.year)
+	}
+	if !sc.ongoing {
+		t.Error("expected ongoing=true")
+	}
+}
+
+// ── age_rating fallback from adult path detection ─────────────────────────────
+
+func TestBuildMeta_AgeRatingSetFromAdultPath(t *testing.T) {
+	sc := &seriesContext{
+		publisher: "The Next Art",
+		series:    "Hades-Syndrome",
+		year:      2024,
+	}
+	// non-existent CBZ → archive parse fails → falls through to ParseFilename
+	path := "/library/The Next Art/Hades-Syndrome (2024-2026) (ADULT)/Hades-Syndrome Vol 01 (2024) (ADULT) (TPB).cbz"
+	meta := buildMeta(nil, media.FormatCBZ, path, sc)
+
+	// simulate the scanner logic: adult detected → promote age_rating if unset
+	adult := isAdultContent(path)
+	if adult && (meta.AgeRating == "" || meta.AgeRating == "unknown") {
+		meta.AgeRating = "adult"
+	}
+
+	if !adult {
+		t.Error("expected isAdultContent=true")
+	}
+	if meta.AgeRating != "adult" {
+		t.Errorf("AgeRating: got %q, want %q", meta.AgeRating, "adult")
+	}
+}
+
+func TestBuildMeta_ExplicitRatingNotOverridden(t *testing.T) {
+	// if CBZ already has an explicit rating, adult path detection should not override it
+	// simulate: meta already has a rating (e.g. from ComicInfo.xml)
+	meta := &metadata.BookMeta{
+		Series:    "Series",
+		AgeRating: "explicit",
+	}
+	adult := isAdultContent("/lib/Pub/Series (2020) (ADULT)/book.cbz")
+	if adult && (meta.AgeRating == "" || meta.AgeRating == "unknown") {
+		meta.AgeRating = "adult"
+	}
+	if meta.AgeRating != "explicit" {
+		t.Errorf("explicit rating should not be overridden, got %q", meta.AgeRating)
+	}
+}

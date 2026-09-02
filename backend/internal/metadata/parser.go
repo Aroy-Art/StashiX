@@ -291,8 +291,10 @@ var (
 	reChapter  = regexp.MustCompile(`(?i)^(.+?)(?:\s+\((\d{4})\))?\s+-\s+[Cc]hapter\s+(\d+(?:\.\d+)?)`)
 	reVolTitle = regexp.MustCompile(`(?i)^[Vv]olume\s+(\d+)(?:\s+-\s+(.+))?$`)
 	reVolChap  = regexp.MustCompile(`(?i)^(.+?)\s+v(\d+)\s+c(\d+(?:\.\d+)?)`)
-	reIssueNum = regexp.MustCompile(`(?i)^(.+?)\s+(\d{1,4})(?:\s+\((\d{4})\))?(?:\s+(?:\([^)]+\)|\S+))*\s*$`)
-	reDirYear  = regexp.MustCompile(`\s*\((\d{4})(-(\d{4})?)?\)\s*$`)
+	reSubtitleIssue = regexp.MustCompile(`(?i)^(.*\d+\s*-\s*.+?)\s+(\d{1,4})(?:\s+\((\d{4})\))?(?:\s+(?:\([^)]+\)|\S+))*\s*$`)
+	reIssueNum      = regexp.MustCompile(`(?i)^(.+?)\s+(\d{1,4})(?:\s+\((\d{4})\))?(?:\s+(?:\([^)]+\)|\S+))*\s*$`)
+	reDirYear      = regexp.MustCompile(`\((\d{4})(-(\d{4})?)?\)`)
+	reDirAllTokens = regexp.MustCompile(`\s*\([^)]*\)`)
 )
 
 // ParseZipArchive extracts metadata from a zip-based archive (CBZ, EPUB).
@@ -544,6 +546,17 @@ func ParseFilename(path string) *BookMeta {
 		return meta
 	}
 
+	if m := reSubtitleIssue.FindStringSubmatch(name); m != nil {
+		meta.Series = strings.TrimSpace(m[1])
+		meta.IssueNumber = stripLeadingZeros(m[2])
+		if m[3] != "" {
+			y, _ := strconv.Atoi(m[3])
+			meta.Year = y
+		}
+		meta.Title = meta.Series + " #" + meta.IssueNumber
+		return meta
+	}
+
 	if m := reIssueNum.FindStringSubmatch(name); m != nil {
 		meta.Series = strings.TrimSpace(m[1])
 		meta.IssueNumber = stripLeadingZeros(m[2])
@@ -568,7 +581,7 @@ func ParseFilename(path string) *BookMeta {
 func ParseSeriesDir(name string) *BookMeta {
 	meta := &BookMeta{}
 	if m := reDirYear.FindStringSubmatch(name); m != nil {
-		meta.Series = strings.TrimSpace(reDirYear.ReplaceAllString(name, ""))
+		meta.Series = strings.TrimSpace(reDirAllTokens.ReplaceAllString(name, ""))
 		y, _ := strconv.Atoi(m[1])
 		meta.Year = y
 		if m[2] != "" {
@@ -644,15 +657,15 @@ func stripLeadingZeros(s string) string {
 
 func normalizeRating(r string) string {
 	switch strings.ToLower(strings.TrimSpace(r)) {
-	case "everyone", "g", "all ages":
+	case "everyone", "g", "all ages", "all ages / t", "all ages / a":
 		return "everyone"
-	case "teen", "pg", "pg-13":
+	case "teen", "t", "t+", "pg", "pg-13", "psr", "13+":
 		return "teen"
-	case "teen plus", "teen+":
+	case "teen plus", "teen+", "pg+", "psr+", "parental advisory", "15+":
 		return "teen_plus"
-	case "mature", "r":
+	case "mature", "r", "explicit content", "17+":
 		return "mature"
-	case "explicit", "x", "nc-17":
+	case "explicit", "x", "nc-17", "max", "max: explicit content":
 		return "explicit"
 	case "adult":
 		return "adult"

@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom'
+'use client'
+
+import Link from 'next/link'
 import { series as seriesApi } from '@/api/client'
 import { cn } from '@/lib/utils'
 import { thumbnailSize } from '@/lib/thumbnail'
@@ -15,7 +17,7 @@ interface SeriesCardProps {
 
 export function SeriesCard({ series, className }: SeriesCardProps) {
   return (
-    <Link to={`/series/${series.id}`} className={cn('group block', className)}>
+    <Link href={`/series/${series.id}`} className={cn('group block', className)}>
       <Card className="card-hover p-0 gap-0">
         <div className="relative aspect-[2/3] overflow-hidden bg-muted">
           <img

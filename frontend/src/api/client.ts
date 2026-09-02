@@ -1,11 +1,11 @@
 import axios from 'axios'
 import { transport } from './transport'
-import type { Book, DeletedBook, Library, ScanTask, SearchResult, Series, SeriesDetail, TokenPair } from '../types'
+import type { Book, DeletedBook, Library, ScanTask, SearchResult, Series, SeriesDetail } from '../types'
 
 const http = axios.create({ baseURL: '/api' })
 
 http.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token')
+  const token = transport.getToken()
   if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
@@ -19,7 +19,7 @@ http.interceptors.response.use(
       original._retry = true
       const refreshed = await transport.tryRefresh()
       if (refreshed) {
-        original.headers.Authorization = `Bearer ${localStorage.getItem('access_token')}`
+        original.headers.Authorization = `Bearer ${transport.getToken()}`
         return http(original)
       }
     }
@@ -28,22 +28,27 @@ http.interceptors.response.use(
 )
 
 export const auth = {
-  async login(email: string, password: string): Promise<TokenPair> {
-    const { data } = await http.post<TokenPair>('/auth/login', { email, password })
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('refresh_token', data.refresh_token)
-    transport.setToken(data.access_token)
-    return data
+  async login(email: string, password: string): Promise<{ access_token: string; profile: unknown }> {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (!res.ok) throw new Error('Invalid credentials')
+    return res.json()
   },
-  logout() {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
+  async logout(): Promise<void> {
+    await fetch('/api/auth/logout', { method: 'POST' })
     transport.clearToken()
   },
-  restoreSession() {
-    const token = localStorage.getItem('access_token')
-    if (token) transport.setToken(token)
-    return token
+  async restore(): Promise<{ token: string } | null> {
+    try {
+      const res = await fetch('/api/ws-token')
+      if (!res.ok) return null
+      return res.json()
+    } catch {
+      return null
+    }
   },
 }
 
@@ -57,6 +62,10 @@ export const libraries = {
   },
   async update(libraryId: string, data: { standalone_folders: string[] }): Promise<void> {
     await http.patch(`/libraries/${libraryId}`, data)
+  },
+  async create(data: { name: string; root_path: string; standalone_folders?: string[] }): Promise<Library> {
+    const { data: lib } = await http.post<Library>('/libraries', data)
+    return lib
   },
 }
 
@@ -87,22 +96,15 @@ export const books = {
   },
   async pages(bookId: string): Promise<{ count: number; pages: string[] }> {
     const result = await transport.send<{ count: number; pages: string[] }>('get_pages', { book_id: bookId })
-    const token = localStorage.getItem('access_token')
-    if (token) {
-      result.pages = result.pages.map(u => `${u}?token=${encodeURIComponent(token)}`)
-    }
+    result.pages = result.pages.map((_, i) => `/api/pages/${bookId}/${i}`)
     return result
   },
   updateProgress(bookId: string, page: number): Promise<void> {
     return transport.send('update_progress', { book_id: bookId, page })
   },
   coverUrl(bookId: string, thumbnail?: 'sx' | 's' | 'm' | 'l' | 'lx') {
-    const token = localStorage.getItem('access_token')
-    const params = new URLSearchParams()
-    if (token) params.set('token', token)
-    if (thumbnail) params.set('thumbnail', thumbnail)
-    const qs = params.toString()
-    return `/api/books/${bookId}/cover${qs ? `?${qs}` : ''}`
+    const params = thumbnail ? `?thumbnail=${thumbnail}` : ''
+    return `/api/covers/books/${bookId}${params}`
   },
   fileUrl(bookId: string) {
     return `/api/books/${bookId}/file`
@@ -126,12 +128,8 @@ export const series = {
     return data
   },
   coverUrl(seriesId: string, thumbnail?: 'sx' | 's' | 'm' | 'l' | 'lx') {
-    const token = localStorage.getItem('access_token')
-    const params = new URLSearchParams()
-    if (token) params.set('token', token)
-    if (thumbnail) params.set('thumbnail', thumbnail)
-    const qs = params.toString()
-    return `/api/series/${seriesId}/cover${qs ? `?${qs}` : ''}`
+    const params = thumbnail ? `?thumbnail=${thumbnail}` : ''
+    return `/api/covers/series/${seriesId}${params}`
   },
 }
 
