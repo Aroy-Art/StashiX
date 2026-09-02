@@ -2,6 +2,7 @@ defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Library, Scanner}
+  alias Stashix.Library.Book
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -27,8 +28,24 @@ defmodule StashixWeb.BookLive do
        fully_read: fully_read,
        read_menu_open: false,
        scanning: false,
-       show_admin_menu: false
+       show_admin_menu: false,
+       show_edit_dialog: false,
+       edit_form: nil
      )}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    socket =
+      if params["edit"] == "true" && socket.assigns.current_user.role == :admin do
+        book = socket.assigns.book
+        form = book |> Book.changeset(%{}) |> to_form()
+        assign(socket, show_edit_dialog: true, edit_form: form)
+      else
+        assign(socket, show_edit_dialog: false, edit_form: nil)
+      end
+
+    {:noreply, socket}
   end
 
   @impl true
@@ -76,6 +93,31 @@ defmodule StashixWeb.BookLive do
     {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
   end
 
+  def handle_event("open_edit_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}?edit=true")}
+  end
+
+  def handle_event("close_edit_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}")}
+  end
+
+  def handle_event("save_metadata", %{"book" => params}, socket) do
+    book = socket.assigns.book
+
+    case Library.update_book(book, params) do
+      {:ok, updated_book} ->
+        book = Library.get_book_with_series(updated_book.id)
+
+        {:noreply,
+         socket
+         |> assign(book: book, page_title: book.title)
+         |> push_patch(to: ~p"/book/#{book.id}")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, edit_form: to_form(changeset))}
+    end
+  end
+
   def handle_event("rescan_book", _params, socket) do
     book = socket.assigns.book
     Scanner.scan_file(book.library_id, book.path)
@@ -108,7 +150,7 @@ defmodule StashixWeb.BookLive do
     <div class="max-w-4xl mx-auto space-y-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-sm">
-          <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white transition-colors">
+          <button onclick="history.back()" class="flex items-center gap-1 text-sm px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors">
             <.icon name="lucide-chevron-left" class="w-4 h-4" />
             Back
           </button>
@@ -136,7 +178,14 @@ defmodule StashixWeb.BookLive do
               Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </.dropdown_menu_trigger>
-            <.dropdown_menu_content class="bg-gray-800 border-gray-700 min-w-44">
+            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_edit_dialog")}
+              >
+                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
+                Edit Metadata
+              </.dropdown_menu_item>
               <.dropdown_menu_item
                 class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 disabled:opacity-50"
                 on-select={JS.push("rescan_book")}
@@ -322,6 +371,104 @@ defmodule StashixWeb.BookLive do
         </div>
       </div>
     </div>
+
+    <%!-- Edit Metadata Dialog --%>
+    <%= if @current_user.role == :admin && @show_edit_dialog do %>
+      <.dialog id="edit-metadata-dialog" open={true} on-close={JS.push("close_edit_dialog")}>
+        <.dialog_content class="sm:max-w-xl !bg-gray-900 !border-gray-700 text-white">
+          <.dialog_header>
+            <.dialog_title class="text-white">Edit Metadata</.dialog_title>
+            <.dialog_description class="text-gray-400">
+              Override metadata for this book. Changes persist until the next rescan.
+            </.dialog_description>
+          </.dialog_header>
+
+          <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
+                <input
+                  type="text"
+                  name="book[title]"
+                  value={@edit_form[:title].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Issue #</label>
+                <input
+                  type="text"
+                  name="book[issue_number]"
+                  value={@edit_form[:issue_number].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
+                <input
+                  type="number"
+                  name="book[volume]"
+                  value={@edit_form[:volume].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Year</label>
+                <input
+                  type="number"
+                  name="book[year]"
+                  value={@edit_form[:year].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
+                <input
+                  type="text"
+                  name="book[language]"
+                  value={@edit_form[:language].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+                <select
+                  name="book[age_rating]"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                >
+                  <%= for {label, val} <- [{"Unknown", "unknown"}, {"Everyone", "everyone"}, {"Teen", "teen"}, {"Teen+", "teen_plus"}, {"Mature", "mature"}, {"Adult", "adult"}, {"Explicit", "explicit"}] do %>
+                    <option value={val} selected={to_string(@edit_form[:age_rating].value) == val}>{label}</option>
+                  <% end %>
+                </select>
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
+                <textarea
+                  name="book[summary]"
+                  rows="4"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                >{@edit_form[:summary].value}</textarea>
+              </div>
+            </div>
+
+            <.dialog_footer class="pt-2">
+              <button type="button" phx-click="close_edit_dialog" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                Save Changes
+              </button>
+            </.dialog_footer>
+          </.form>
+        </.dialog_content>
+      </.dialog>
+    <% end %>
     """
   end
 end

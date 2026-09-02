@@ -2,6 +2,7 @@ defmodule StashixWeb.SeriesLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Library, Scanner}
+  alias Stashix.Library.Series
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -34,8 +35,24 @@ defmodule StashixWeb.SeriesLive do
        total_size: total_size,
        cover_book: cover_book,
        scanning: false,
-       show_admin_menu: false
+       show_admin_menu: false,
+       show_edit_dialog: false,
+       edit_form: nil
      )}
+  end
+
+  @impl true
+  def handle_params(params, _uri, socket) do
+    socket =
+      if params["edit"] == "true" && socket.assigns.current_user.role == :admin do
+        series = socket.assigns.series
+        form = series |> Series.changeset(%{}) |> to_form()
+        assign(socket, show_edit_dialog: true, edit_form: form)
+      else
+        assign(socket, show_edit_dialog: false, edit_form: nil)
+      end
+
+    {:noreply, socket}
   end
 
   defp format_file_size(0), do: nil
@@ -60,6 +77,31 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_event("toggle_admin_menu", _, socket) do
     {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
+  end
+
+  def handle_event("open_edit_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}?edit=true")}
+  end
+
+  def handle_event("close_edit_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
+  end
+
+  def handle_event("save_metadata", %{"series" => params}, socket) do
+    series = socket.assigns.series
+
+    case Library.update_series(series, params) do
+      {:ok, updated_series} ->
+        series = Library.get_series_with_books(updated_series.id)
+
+        {:noreply,
+         socket
+         |> assign(series: series, page_title: series.name)
+         |> push_patch(to: ~p"/series/#{series.id}")}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, edit_form: to_form(changeset))}
+    end
   end
 
   def handle_event("rescan_series", _, socket) do
@@ -122,7 +164,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Breadcrumbs --%>
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2 text-sm">
-          <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-gray-600 text-gray-300 hover:border-gray-400 hover:text-white transition-colors">
+          <button onclick="history.back()" class="flex items-center gap-1 text-sm px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors">
             <.icon name="lucide-chevron-left" class="w-4 h-4" />
             Back
           </button>
@@ -140,7 +182,14 @@ defmodule StashixWeb.SeriesLive do
               Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </.dropdown_menu_trigger>
-            <.dropdown_menu_content class="bg-gray-800 border-gray-700 min-w-44">
+            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_edit_dialog")}
+              >
+                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
+                Edit Metadata
+              </.dropdown_menu_item>
               <.dropdown_menu_item
                 class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                 on-select={JS.push("rescan_series")}
@@ -322,6 +371,100 @@ defmodule StashixWeb.SeriesLive do
         <% end %>
       </div>
     </div>
+
+    <%!-- Edit Metadata Dialog --%>
+    <%= if @current_user.role == :admin && @show_edit_dialog do %>
+      <.dialog id="edit-series-dialog" open={true} on-close={JS.push("close_edit_dialog")}>
+        <.dialog_content class="sm:max-w-xl !bg-gray-900 !border-gray-700 text-white">
+          <.dialog_header>
+            <.dialog_title class="text-white">Edit Series Metadata</.dialog_title>
+            <.dialog_description class="text-gray-400">
+              Override metadata for this series. Changes persist until the next rescan.
+            </.dialog_description>
+          </.dialog_header>
+
+          <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
+            <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
+                <input
+                  type="text"
+                  name="series[name]"
+                  value={@edit_form[:name].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
+                <input
+                  type="number"
+                  name="series[volume]"
+                  value={@edit_form[:volume].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
+                <input
+                  type="text"
+                  name="series[language]"
+                  value={@edit_form[:language].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Year</label>
+                <input
+                  type="number"
+                  name="series[start_year]"
+                  value={@edit_form[:start_year].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">End Year</label>
+                <input
+                  type="number"
+                  name="series[end_year]"
+                  value={@edit_form[:end_year].value}
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+
+              <div class="col-span-2 flex items-center gap-3">
+                <input
+                  type="hidden"
+                  name="series[ongoing]"
+                  value="false"
+                />
+                <input
+                  type="checkbox"
+                  id="series_ongoing"
+                  name="series[ongoing]"
+                  value="true"
+                  checked={@edit_form[:ongoing].value}
+                  class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                />
+                <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
+              </div>
+            </div>
+
+            <.dialog_footer class="pt-2">
+              <button type="button" phx-click="close_edit_dialog" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+                Save Changes
+              </button>
+            </.dialog_footer>
+          </.form>
+        </.dialog_content>
+      </.dialog>
+    <% end %>
     """
   end
 end

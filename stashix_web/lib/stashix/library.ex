@@ -322,6 +322,12 @@ defmodule Stashix.Library do
     end
   end
 
+  def update_series(series, attrs) do
+    series
+    |> Series.changeset(attrs)
+    |> Repo.update()
+  end
+
   def update_series_folder_meta(series, attrs) do
     series
     |> Series.changeset(Map.take(attrs, [:path, :start_year, :end_year, :ongoing]))
