@@ -444,16 +444,23 @@ defmodule Stashix.Scanner do
       library = Library.get_library!(library_id)
       Logger.info("Scanning file #{file_path}")
 
+      update_task_status(library_id, %{scanned: 0, total: 1, done: false, collecting: false})
+      broadcast_progress(library_id, 0, 1, false, :file)
+
       file_meta = parse_file_metadata(file_path)
       series_cache = Library.load_series_cache(library_id)
       {job, _cache} = upsert_book(file_meta, library, true, series_cache)
 
       if job do
         {book, path} = job
+        broadcast_progress(library_id, 0, 1, false, :thumbnails)
         generate_thumbnail(book, path)
       end
 
       Library.update_series_counts(library_id)
+
+      update_task_status(library_id, %{scanned: 1, total: 1, done: true})
+      broadcast_progress(library_id, 1, 1, true, :file)
     end
   end
 
