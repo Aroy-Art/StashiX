@@ -8,7 +8,8 @@ defmodule Stashix.Scanner do
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
   @ets_table :scan_tasks
-  @metadata_concurrency 4
+  @metadata_concurrency 16
+  @collect_concurrency 16
   @thumbnail_concurrency 4
 
   def start_link(opts) do
@@ -77,17 +78,14 @@ defmodule Stashix.Scanner do
     library = Library.get_library!(library_id)
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
 
-    update_task_status(library_id, %{scanned: 0, total: 0, done: false, collecting: true})
-    broadcast_progress(library_id, 0, 0)
+    update_task_status(library_id, %{scanned: 0, total: 0, done: false, phase: :collecting})
+    broadcast_progress(library_id, 0, 0, false, :collecting)
 
     files = collect_files(library.root_path)
     total = length(files)
 
-    update_task_status(library_id, %{scanned: 0, total: total, done: false, collecting: false})
-    broadcast_progress(library_id, 0, total)
-
     # Pre-warm series cache and books cache: bulk queries instead of N round-trips
-    series_cache = Library.load_series_cache(library_id)
+    series_cache = Library.load_series_cache(library_id) |> normalize_series_names()
     books_cache = if force, do: %{}, else: Library.load_books_cache(library_id)
 
     # Partition: files that need full parse vs unchanged (skip Stage 1 for those)
@@ -98,15 +96,19 @@ defmodule Stashix.Scanner do
           %{deleted_at: da} when not is_nil(da) -> true
           %{last_modified: lm} ->
             case File.stat(path) do
-              {:ok, stat} -> NaiveDateTime.from_erl!(stat.mtime) != lm
+              {:ok, stat} ->
+                NaiveDateTime.compare(NaiveDateTime.from_erl!(stat.mtime), lm) != :eq
               _ -> true
             end
         end
       end)
 
     unchanged_count = length(files_unchanged)
-    Logger.info("[scan] #{unchanged_count} unchanged, #{length(files_to_parse)} need parse")
-    broadcast_progress(library_id, unchanged_count, total)
+    parse_count = length(files_to_parse)
+    Logger.info("[scan] books_cache=#{map_size(books_cache)} #{unchanged_count} unchanged, #{parse_count} need parse")
+
+    update_task_status(library_id, %{scanned: unchanged_count, total: total, done: false, phase: :parsing})
+    broadcast_progress(library_id, unchanged_count, total, false, :parsing)
 
     # Stage 1: Parse metadata concurrently (hash + filename + comicinfo) — only changed files
     parsed_files =
@@ -125,6 +127,9 @@ defmodule Stashix.Scanner do
     # Between stages: detect renamed series folders via hash matching, update cache
     series_cache = detect_renamed_series(parsed_files, series_cache, library)
 
+    update_task_status(library_id, %{scanned: unchanged_count, total: total, done: false, phase: :importing})
+    broadcast_progress(library_id, unchanged_count, total, false, :importing)
+
     # Stage 2: DB upserts serially (prevents series creation races, uses cache)
     # Unchanged files count as already scanned
     {thumbnail_jobs, _cache} =
@@ -132,8 +137,8 @@ defmodule Stashix.Scanner do
       |> Enum.with_index(unchanged_count + 1)
       |> Enum.reduce({[], series_cache}, fn {file_meta, idx}, {jobs, cache} ->
         {job, new_cache} = upsert_book(file_meta, library, force, cache)
-        update_task_status(library_id, %{scanned: idx, total: total, done: false})
-        broadcast_progress(library_id, idx, total)
+        update_task_status(library_id, %{scanned: idx, total: total, done: false, phase: :importing})
+        broadcast_progress(library_id, idx, total, false, :importing)
         new_jobs = if job, do: [job | jobs], else: jobs
         {new_jobs, new_cache}
       end)
@@ -468,47 +473,98 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp detect_renamed_series(parsed_files, series_cache, library) do
-    parsed_files
-    |> Enum.group_by(fn %{file_path: p} -> Path.dirname(p) end)
-    |> Enum.reduce(series_cache, fn {dir, files}, cache ->
-      if Map.has_key?(cache, dir) do
-        cache
-      else
-        hashes = Enum.map(files, & &1.file_hash)
+  defp normalize_series_names(series_cache) do
+    Enum.reduce(series_cache, series_cache, fn {path, series}, cache ->
+      {clean_name, _, _, _} = parse_folder_name(series.name)
 
-        case Library.find_series_by_book_hashes(library.id, hashes) do
-          nil ->
-            cache
-
-          old_series ->
-            case Library.update_series_folder_meta(old_series, %{path: dir}) do
-              {:ok, updated} ->
-                Logger.info("[scan] Series rename detected: #{old_series.path} → #{dir}")
-                cache
-                |> Map.delete(old_series.path)
-                |> Map.put(dir, updated)
-
-              _ ->
-                cache
-            end
+      if clean_name != series.name do
+        case Library.update_series_folder_meta(series, %{name: clean_name}) do
+          {:ok, updated} -> Map.put(cache, path, updated)
+          _ -> cache
         end
+      else
+        cache
       end
     end)
   end
 
+  defp detect_renamed_series(parsed_files, series_cache, library) do
+    new_dir_files =
+      parsed_files
+      |> Enum.group_by(fn %{file_path: p} -> Path.dirname(p) end)
+      |> Enum.reject(fn {dir, _} -> Map.has_key?(series_cache, dir) end)
+
+    if new_dir_files == [] do
+      series_cache
+    else
+      all_hashes = Enum.flat_map(new_dir_files, fn {_, files} -> Enum.map(files, & &1.file_hash) end)
+      hash_to_series = Library.load_hash_series_map(library.id, all_hashes)
+
+      Enum.reduce(new_dir_files, series_cache, fn {dir, files}, cache ->
+        old_series =
+          files
+          |> Enum.map(& Map.get(hash_to_series, &1.file_hash))
+          |> Enum.reject(&is_nil/1)
+          |> Enum.frequencies_by(& &1.id)
+          |> Enum.max_by(fn {_, count} -> count end, fn -> nil end)
+          |> case do
+            nil -> nil
+            {_id, _} ->
+              files
+              |> Enum.find_value(& Map.get(hash_to_series, &1.file_hash))
+          end
+
+        case old_series && Library.update_series_folder_meta(old_series, %{path: dir}) do
+          {:ok, updated} ->
+            Logger.info("[scan] Series rename detected: #{old_series.path} → #{dir}")
+            cache |> Map.delete(old_series.path) |> Map.put(dir, updated)
+
+          _ ->
+            cache
+        end
+      end)
+    end
+  end
+
   defp collect_files(root_path) do
     case File.ls(root_path) do
-      {:ok, _} ->
-        Path.wildcard(Path.join([root_path, "**", "*"]))
-        |> Enum.filter(fn path ->
-          String.downcase(Path.extname(path)) in @supported_formats
-        end)
-
+      {:ok, _} -> collect_recursive([root_path], [])
       {:error, reason} ->
         Logger.error("Cannot access library path #{root_path}: #{inspect(reason)}")
         []
     end
+  end
+
+  defp collect_recursive([], files), do: files
+
+  defp collect_recursive(dirs, files) do
+    {next_dirs, new_files} =
+      dirs
+      |> Task.async_stream(
+        fn dir ->
+          case File.ls(dir) do
+            {:ok, entries} ->
+              entries
+              |> Enum.map(&Path.join(dir, &1))
+              |> Enum.split_with(&File.dir?/1)
+
+            _ ->
+              {[], []}
+          end
+        end,
+        max_concurrency: @collect_concurrency,
+        ordered: false,
+        timeout: 30_000
+      )
+      |> Enum.reduce({[], []}, fn
+        {:ok, {subdirs, entries}}, {all_dirs, all_files} ->
+          supported = Enum.filter(entries, fn p -> String.downcase(Path.extname(p)) in @supported_formats end)
+          {all_dirs ++ subdirs, all_files ++ supported}
+        _, acc ->
+          acc
+      end)
+
+    collect_recursive(next_dirs, files ++ new_files)
   end
 
   defp resolve_page_count(metadata, file_path, fallback) do

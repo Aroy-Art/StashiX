@@ -308,6 +308,16 @@ defmodule Stashix.Library do
     |> Map.new()
   end
 
+  def load_hash_series_map(library_id, hashes) do
+    from(b in Book,
+      join: s in Series, on: s.id == b.series_id,
+      where: b.library_id == ^library_id and b.file_hash in ^hashes and is_nil(b.deleted_at),
+      select: {b.file_hash, s}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
   def find_series_by_book_hashes(library_id, hashes) do
     series_id =
       from(b in Book,

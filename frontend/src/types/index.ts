@@ -111,4 +111,5 @@ export interface ScanTask {
   scanned: number
   total: number
   done: boolean
+  phase?: 'collecting' | 'parsing' | 'importing' | 'thumbnails' | 'scan' | 'file'
 }

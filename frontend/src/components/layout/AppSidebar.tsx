@@ -213,7 +213,7 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                             <span>{lib.name}</span>
                           </Link>
                         </SidebarMenuButton>
-                        {(scanning.has(lib.id) && !task) || (task && task.total === 0) ? (
+                        {(scanning.has(lib.id) && !task) || (task && (task.phase === 'collecting' || task.phase === 'parsing' || task.total === 0)) ? (
                           <SidebarMenuBadge className={cn('text-volt-3', isAdmin && 'right-7')}>
                             <div className="w-2.5 h-2.5 rounded-full border border-volt-3 border-t-transparent animate-spin" />
                           </SidebarMenuBadge>
@@ -284,30 +284,30 @@ export function AppSidebar({ libraries, activeTasks }: AppSidebarProps) {
                   })}
                   {totalTasks.map((t) => {
                     const lib = libraries.find((l) => l.id === t.library_id)
-                    if (t.total === 0) {
-                      return (
-                        <div key={t.library_id} className="flex items-center gap-2">
-                          <span className="text-[11px] text-muted-foreground truncate flex-1">
-                            {lib?.name ?? 'Library'}
-                          </span>
-                          <div className="w-3 h-3 rounded-full border border-volt-3 border-t-transparent animate-spin shrink-0" />
-                        </div>
-                      )
+                    const phaseLabel: Record<string, string> = {
+                      collecting: 'Collecting files…',
+                      parsing: 'Parsing metadata…',
+                      importing: 'Importing…',
+                      thumbnails: 'Generating thumbnails…',
                     }
-                    const pct = Math.round((t.scanned / t.total) * 100)
+                    const label = phaseLabel[t.phase ?? ''] ?? 'Scanning…'
+                    const indeterminate = !t.total || t.phase === 'collecting' || t.phase === 'parsing'
+                    const pct = indeterminate ? null : Math.round((t.scanned / t.total) * 100)
                     return (
                       <div key={t.library_id}>
                         <div className="flex justify-between text-[11px] mb-1">
-                          <span className="text-muted-foreground truncate">
-                            {lib?.name ?? 'Library'}
-                          </span>
-                          <span className="text-volt-3 font-mono ml-2 shrink-0">{pct}%</span>
+                          <span className="text-muted-foreground truncate">{lib?.name ?? 'Library'}</span>
+                          {pct !== null
+                            ? <span className="text-volt-3 font-mono ml-2 shrink-0">{pct}%</span>
+                            : <div className="w-3 h-3 rounded-full border border-volt-3 border-t-transparent animate-spin shrink-0 self-center" />
+                          }
                         </div>
+                        <div className="text-[10px] text-muted-foreground/60 mb-1">{label}</div>
                         <div className="h-1 rounded-full bg-border overflow-hidden">
-                          <div
-                            className="h-full rounded-full shimmer-bar transition-all duration-300"
-                            style={{ width: `${pct}%` }}
-                          />
+                          {pct !== null
+                            ? <div className="h-full rounded-full shimmer-bar transition-all duration-300" style={{ width: `${pct}%` }} />
+                            : <div className="h-full w-full shimmer-bar animate-pulse" />
+                          }
                         </div>
                       </div>
                     )
