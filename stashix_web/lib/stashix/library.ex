@@ -303,13 +303,30 @@ defmodule Stashix.Library do
   end
 
   def load_series_cache(library_id) do
-    from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at), select: {s.name, s})
+    from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at), select: {s.path, s})
     |> Repo.all()
     |> Map.new()
   end
 
+  def find_series_by_book_hashes(library_id, hashes) do
+    series_id =
+      from(b in Book,
+        where: b.library_id == ^library_id and b.file_hash in ^hashes and is_nil(b.deleted_at),
+        group_by: b.series_id,
+        order_by: [desc: count(b.id)],
+        limit: 1,
+        select: b.series_id
+      )
+      |> Repo.one()
+
+    case series_id do
+      nil -> nil
+      id -> Repo.get(Series, id)
+    end
+  end
+
   def create_or_find_series(attrs) do
-    case Repo.get_by(Series, library_id: attrs.library_id, name: attrs.name) do
+    case Repo.get_by(Series, library_id: attrs.library_id, path: attrs.path) do
       nil ->
         %Series{}
         |> Series.changeset(attrs)
@@ -317,7 +334,7 @@ defmodule Stashix.Library do
 
       series ->
         series
-        |> Series.changeset(Map.take(attrs, [:start_year, :end_year, :ongoing, :path]))
+        |> Series.changeset(Map.take(attrs, [:name, :start_year, :end_year, :ongoing, :path]))
         |> Repo.update()
     end
   end
@@ -330,7 +347,7 @@ defmodule Stashix.Library do
 
   def update_series_folder_meta(series, attrs) do
     series
-    |> Series.changeset(Map.take(attrs, [:path, :start_year, :end_year, :ongoing]))
+    |> Series.changeset(Map.take(attrs, [:name, :path, :start_year, :end_year, :ongoing]))
     |> Repo.update()
   end
 

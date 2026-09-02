@@ -122,6 +122,9 @@ defmodule Stashix.Scanner do
           []
       end)
 
+    # Between stages: detect renamed series folders via hash matching, update cache
+    series_cache = detect_renamed_series(parsed_files, series_cache, library)
+
     # Stage 2: DB upserts serially (prevents series creation races, uses cache)
     # Unchanged files count as already scanned
     {thumbnail_jobs, _cache} =
@@ -334,7 +337,7 @@ defmodule Stashix.Scanner do
     if name do
       {clean_name, start_year, end_year, ongoing} = parse_folder_name(name)
 
-      case Map.get(cache, clean_name) do
+      case Map.get(cache, parent_dir) do
         nil ->
           case Library.create_or_find_series(%{
                  library_id: library.id,
@@ -344,19 +347,20 @@ defmodule Stashix.Scanner do
                  end_year: end_year,
                  ongoing: ongoing
                }) do
-            {:ok, series} -> {series, Map.put(cache, clean_name, series)}
+            {:ok, series} -> {series, Map.put(cache, parent_dir, series)}
             _ -> {nil, cache}
           end
 
         series ->
-          if series.path != parent_dir or series.ongoing != ongoing do
+          if series.ongoing != ongoing or series.name != clean_name do
             case Library.update_series_folder_meta(series, %{
+                   name: clean_name,
                    path: parent_dir,
                    start_year: start_year,
                    end_year: end_year,
                    ongoing: ongoing
                  }) do
-              {:ok, updated} -> {updated, Map.put(cache, clean_name, updated)}
+              {:ok, updated} -> {updated, Map.put(cache, parent_dir, updated)}
               _ -> {series, cache}
             end
           else
@@ -462,6 +466,35 @@ defmodule Stashix.Scanner do
       update_task_status(library_id, %{scanned: 1, total: 1, done: true})
       broadcast_progress(library_id, 1, 1, true, :file)
     end
+  end
+
+  defp detect_renamed_series(parsed_files, series_cache, library) do
+    parsed_files
+    |> Enum.group_by(fn %{file_path: p} -> Path.dirname(p) end)
+    |> Enum.reduce(series_cache, fn {dir, files}, cache ->
+      if Map.has_key?(cache, dir) do
+        cache
+      else
+        hashes = Enum.map(files, & &1.file_hash)
+
+        case Library.find_series_by_book_hashes(library.id, hashes) do
+          nil ->
+            cache
+
+          old_series ->
+            case Library.update_series_folder_meta(old_series, %{path: dir}) do
+              {:ok, updated} ->
+                Logger.info("[scan] Series rename detected: #{old_series.path} → #{dir}")
+                cache
+                |> Map.delete(old_series.path)
+                |> Map.put(dir, updated)
+
+              _ ->
+                cache
+            end
+        end
+      end
+    end)
   end
 
   defp collect_files(root_path) do

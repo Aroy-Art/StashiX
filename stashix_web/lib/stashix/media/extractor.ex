@@ -63,40 +63,48 @@ defmodule Stashix.Media.Extractor do
   end
 
   defp list_rar_pages(path) do
-    case System.cmd("unrar", ["lb", path], stderr_to_stdout: true) do
-      {output, 0} ->
-        pages =
-          output
-          |> String.split("\n", trim: true)
-          |> Enum.filter(fn name ->
-            String.downcase(Path.extname(name)) in @image_exts
-          end)
-          |> Enum.sort()
+    try do
+      case System.cmd("unrar", ["lb", path], stderr_to_stdout: true) do
+        {output, 0} ->
+          pages =
+            output
+            |> String.split("\n", trim: true)
+            |> Enum.filter(fn name ->
+              String.downcase(Path.extname(name)) in @image_exts
+            end)
+            |> Enum.sort()
 
-        {:ok, pages}
+          {:ok, pages}
 
-      {error, _} ->
-        {:error, error}
+        {error, _} ->
+          {:error, error}
+      end
+    rescue
+      ErlangError -> {:error, :unrar_not_found}
     end
   end
 
   defp list_7z_pages(path) do
-    case System.cmd("7z", ["l", "-ba", "-slt", path], stderr_to_stdout: true) do
-      {output, 0} ->
-        pages =
-          output
-          |> String.split("\n", trim: true)
-          |> Enum.filter(&String.starts_with?(&1, "Path = "))
-          |> Enum.map(&String.replace_leading(&1, "Path = ", ""))
-          |> Enum.filter(fn name ->
-            String.downcase(Path.extname(name)) in @image_exts
-          end)
-          |> Enum.sort()
+    try do
+      case System.cmd("7z", ["l", "-ba", "-slt", path], stderr_to_stdout: true) do
+        {output, 0} ->
+          pages =
+            output
+            |> String.split("\n", trim: true)
+            |> Enum.filter(&String.starts_with?(&1, "Path = "))
+            |> Enum.map(&String.replace_leading(&1, "Path = ", ""))
+            |> Enum.filter(fn name ->
+              String.downcase(Path.extname(name)) in @image_exts
+            end)
+            |> Enum.sort()
 
-        {:ok, pages}
+          {:ok, pages}
 
-      {error, _} ->
-        {:error, error}
+        {error, _} ->
+          {:error, error}
+      end
+    rescue
+      ErlangError -> {:error, :p7zip_not_found}
     end
   end
 
@@ -158,9 +166,13 @@ defmodule Stashix.Media.Extractor do
   end
 
   defp extract_rar_page(archive_path, page_name) do
-    case System.cmd("unrar", ["p", "-inul", archive_path, page_name], stderr_to_stdout: false) do
-      {data, 0} -> {:ok, data}
-      {error, _} -> {:error, error}
+    try do
+      case System.cmd("unrar", ["p", "-inul", archive_path, page_name], stderr_to_stdout: false) do
+        {data, 0} -> {:ok, data}
+        {error, _} -> {:error, error}
+      end
+    rescue
+      ErlangError -> {:error, :unrar_not_found}
     end
   end
 
@@ -168,25 +180,31 @@ defmodule Stashix.Media.Extractor do
     tmp = Path.join(System.tmp_dir!(), "stashix_#{:erlang.unique_integer([:positive])}")
     File.mkdir_p!(tmp)
 
-    case System.cmd("7z", ["e", archive_path, page_name, "-o#{tmp}", "-y"],
-           stderr_to_stdout: true
-         ) do
-      {_, 0} ->
-        dest = Path.join(tmp, Path.basename(page_name))
+    try do
+      case System.cmd("7z", ["e", archive_path, page_name, "-o#{tmp}", "-y"],
+             stderr_to_stdout: true
+           ) do
+        {_, 0} ->
+          dest = Path.join(tmp, Path.basename(page_name))
 
-        case File.read(dest) do
-          {:ok, data} ->
-            File.rm_rf!(tmp)
-            {:ok, data}
+          case File.read(dest) do
+            {:ok, data} ->
+              File.rm_rf!(tmp)
+              {:ok, data}
 
-          error ->
-            File.rm_rf!(tmp)
-            error
-        end
+            error ->
+              File.rm_rf!(tmp)
+              error
+          end
 
-      {error, _} ->
+        {error, _} ->
+          File.rm_rf!(tmp)
+          {:error, error}
+      end
+    rescue
+      ErlangError ->
         File.rm_rf!(tmp)
-        {:error, error}
+        {:error, :p7zip_not_found}
     end
   end
 
