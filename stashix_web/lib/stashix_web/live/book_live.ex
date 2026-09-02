@@ -381,6 +381,10 @@ defmodule StashixWeb.BookLive do
             <.dialog_description class="text-gray-400">
               Override metadata for this book. Changes persist until the next rescan.
             </.dialog_description>
+            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+              <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
+              {relative_path(@book, @library)}
+            </p>
           </.dialog_header>
 
           <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">

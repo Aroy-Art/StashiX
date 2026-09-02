@@ -381,6 +381,12 @@ defmodule StashixWeb.SeriesLive do
             <.dialog_description class="text-gray-400">
               Override metadata for this series. Changes persist until the next rescan.
             </.dialog_description>
+            <%= if @series.path do %>
+              <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+                <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
+                {relative_folder(@series, @library)}
+              </p>
+            <% end %>
           </.dialog_header>
 
           <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
