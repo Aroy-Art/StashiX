@@ -796,7 +796,7 @@ defmodule StashixWeb.CoreComponents do
           </div>
         <% end %>
         <%= if @badge do %>
-          <span class="absolute bottom-2 left-2 text-xs bg-black/70 text-gray-300 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <span class="absolute bottom-2 left-2 text-xs bg-gray-800/40 text-gray-300 border-1 border-gray-400/80 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
             {@badge}
           </span>
         <% end %>

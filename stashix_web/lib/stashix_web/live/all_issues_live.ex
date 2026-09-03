@@ -121,6 +121,13 @@ defmodule StashixWeb.AllIssuesLive do
                   true -> nil
                 end
               }
+              badge={
+                cond do
+                  book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                  book.issue_number -> "##{book.issue_number}"
+                  true -> nil
+                end
+              }
               progress={progress}
               type={:book}
             />

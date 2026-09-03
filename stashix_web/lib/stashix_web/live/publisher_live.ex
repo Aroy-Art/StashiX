@@ -302,6 +302,13 @@ defmodule StashixWeb.PublisherLive do
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   width={288}
                   subtitle={if book.series, do: book.series.name}
+                  badge={
+                    cond do
+                      book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                      book.issue_number -> "##{book.issue_number}"
+                      true -> nil
+                    end
+                  }
                   type={:book}
                   class="flex-shrink-0 w-36"
                 />

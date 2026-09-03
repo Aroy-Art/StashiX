@@ -376,6 +376,13 @@ defmodule StashixWeb.SeriesLive do
             cover_url={~p"/api/books/#{book.id}/cover"}
             width={300}
             subtitle={book.year && to_string(book.year)}
+            badge={
+              cond do
+                book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                book.issue_number -> "##{book.issue_number}"
+                true -> nil
+              end
+            }
             progress={progress}
             type={:book}
           />

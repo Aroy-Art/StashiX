@@ -116,6 +116,13 @@ defmodule StashixWeb.SearchLive do
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                   width={300}
                   subtitle={book.series && book.series.name}
+                  badge={
+                    cond do
+                      book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                      book.issue_number -> "##{book.issue_number}"
+                      true -> nil
+                    end
+                  }
                   type={:book}
                 />
               <% end %>
