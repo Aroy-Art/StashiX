@@ -374,6 +374,26 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series - cNN - Title" — e.g. AKIRA - c001 - The Highway (no year)
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s*(?:-|–)\s*[#c](\d{1,4})\s*(?:-|–)\s*(.+?)\s*$/i,
+               clean
+             ) do
+          [_, series, issue, title] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
+            |> Map.put(:title, String.trim(title))
+
+          nil ->
+            result
+        end
+      end
+
     # "Series (YEAR) - Issue N" or "Series (YEAR) - Issue N - Title"
     result =
       if map_size(result) > 0 do

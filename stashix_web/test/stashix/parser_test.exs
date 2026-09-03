@@ -289,6 +289,20 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:issue_number] == d("2")
       assert r[:year] == 2009
     end
+
+    test "double-dash no year — Series - cNN - Title" do
+      r = Parser.parse_filename("AKIRA - c001 - The Highway")
+      assert r[:series] == "AKIRA"
+      assert r[:issue_number] == d("1")
+      assert r[:title] == "The Highway"
+    end
+
+    test "double-dash no year with zero-padded number" do
+      r = Parser.parse_filename("AKIRA - c002 - Pursuit")
+      assert r[:series] == "AKIRA"
+      assert r[:issue_number] == d("2")
+      assert r[:title] == "Pursuit"
+    end
   end
 
   describe "parse_filename/1 — ongoing series (YEAR-) pattern" do
