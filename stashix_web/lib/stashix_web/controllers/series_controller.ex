@@ -1,13 +1,38 @@
 defmodule StashixWeb.SeriesController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
   alias Stashix.Media.ImageResizer
+  alias StashixWeb.Schemas
+
+  operation :index,
+    summary: "List series in library",
+    tags: ["Series"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, description: "Library ID", type: :integer, required: true]],
+    responses: [
+      ok: {"Series list", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{series: %OpenApiSpex.Schema{type: :array, items: Schemas.Series}}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def index(conn, %{"id" => library_id}) do
     series = Library.list_series(library_id)
     json(conn, %{series: Enum.map(series, &series_json/1)})
   end
+
+  operation :show,
+    summary: "Get series with books",
+    tags: ["Series"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Series detail", "application/json", Schemas.SeriesDetail},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def show(conn, %{"id" => id}) do
     series = Library.get_series_with_books(id)
@@ -17,6 +42,18 @@ defmodule StashixWeb.SeriesController do
       books: Enum.map(series.books, &book_summary/1)
     })
   end
+
+  operation :cover,
+    summary: "Get series cover image",
+    tags: ["Series", "Media"],
+    parameters: [
+      id: [in: :path, type: :integer, required: true],
+      w: [in: :query, type: :integer, description: "Resize to width in px"]
+    ],
+    responses: [
+      ok: {"Cover image", "image/jpeg", %OpenApiSpex.Schema{type: :string, format: :binary}},
+      not_found: {"No cover", "application/json", Schemas.Error}
+    ]
 
   def cover(conn, %{"id" => id} = params) do
     case Library.get_series_cover(id) do
@@ -80,7 +117,6 @@ defmodule StashixWeb.SeriesController do
       ongoing: series.ongoing,
       adult: series.adult,
       library_id: series.library_id,
-      publisher_id: series.publisher_id,
       inserted_at: series.inserted_at
     }
   end

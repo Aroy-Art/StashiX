@@ -14,6 +14,7 @@ defmodule StashixWeb.Router do
   pipeline :api do
     plug :accepts, ["json"]
     plug CORSPlug
+    plug OpenApiSpex.Plug.PutApiSpec, module: StashixWeb.ApiSpec
   end
 
   pipeline :media do
@@ -38,6 +39,17 @@ defmodule StashixWeb.Router do
       |> Plug.Conn.send_resp(401, Jason.encode!(%{error: "unauthorized"}))
       |> Plug.Conn.halt()
     end
+  end
+
+  scope "/api" do
+    pipe_through :api
+
+    get "/schema", OpenApiSpex.Plug.RenderSpec, []
+  end
+
+  scope "/api/schema/ui" do
+    get "/swagger", OpenApiSpex.Plug.SwaggerUI, path: "/api/schema"
+    get "/scalar", ScalarPlug, path: "/api/schema/ui/scalar", spec_href: "/api/schema"
   end
 
   scope "/api", StashixWeb do
@@ -105,6 +117,10 @@ defmodule StashixWeb.Router do
     live "/series", AllSeriesLive, :index
     live "/book/:id", BookLive, :show
     live "/series/:id", SeriesLive, :show
+    live "/publisher/:id", PublisherLive, :show
+    live "/publisher/:id/series", PublisherLive, :series
+    live "/publisher/:id/books", PublisherLive, :books
+    live "/publisher/:id/issues", PublisherLive, :issues
     live "/search", SearchLive, :index
     live "/read/:id", ReaderLive, :show
     live "/admin", AdminLive, :index

@@ -1,8 +1,19 @@
 defmodule StashixWeb.AuthController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Accounts
   alias Stashix.Auth.{TokenHelper, Guardian}
+  alias StashixWeb.Schemas
+
+  operation :login,
+    summary: "Authenticate user",
+    tags: ["Auth"],
+    request_body: {"Login credentials", "application/json", Schemas.LoginRequest, required: true},
+    responses: [
+      ok: {"Auth tokens and user", "application/json", Schemas.AuthResponse},
+      unauthorized: {"Invalid credentials", "application/json", Schemas.Error}
+    ]
 
   def login(conn, %{"email" => email, "password" => password}) do
     case Accounts.authenticate_user(email, password) do
@@ -32,6 +43,15 @@ defmodule StashixWeb.AuthController do
         |> json(%{error: "invalid credentials"})
     end
   end
+
+  operation :refresh,
+    summary: "Refresh access token",
+    tags: ["Auth"],
+    request_body: {"Refresh token", "application/json", Schemas.RefreshRequest, required: true},
+    responses: [
+      ok: {"New auth tokens", "application/json", Schemas.AuthResponse},
+      unauthorized: {"Invalid token", "application/json", Schemas.Error}
+    ]
 
   def refresh(conn, %{"refresh_token" => refresh_token}) do
     with {:ok, claims} <- TokenHelper.verify_refresh_token(refresh_token),

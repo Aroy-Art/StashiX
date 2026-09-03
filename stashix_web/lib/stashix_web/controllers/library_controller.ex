@@ -1,7 +1,21 @@
 defmodule StashixWeb.LibraryController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
+  alias StashixWeb.Schemas
+
+  operation :index,
+    summary: "List libraries",
+    tags: ["Libraries"],
+    security: [%{"Bearer" => []}],
+    responses: [
+      ok: {"Library list", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{libraries: %OpenApiSpex.Schema{type: :array, items: Schemas.Library}}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def index(conn, _params) do
     user = Guardian.Plug.current_resource(conn)
@@ -22,6 +36,16 @@ defmodule StashixWeb.LibraryController do
     json(conn, %{libraries: data})
   end
 
+  operation :show,
+    summary: "Get library by ID",
+    tags: ["Libraries"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Library details", "application/json", Schemas.LibraryDetail},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
+
   def show(conn, %{"id" => id}) do
     library = Library.get_library!(id)
 
@@ -35,6 +59,20 @@ defmodule StashixWeb.LibraryController do
       inserted_at: library.inserted_at
     })
   end
+
+  operation :create,
+    summary: "Create library",
+    tags: ["Libraries"],
+    security: [%{"Bearer" => []}],
+    request_body: {"Library params", "application/json", Schemas.LibraryRequest, required: true},
+    responses: [
+      created: {"Created library", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{library: Schemas.Library}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error},
+      unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
+    ]
 
   def create(conn, params) do
     case Library.create_library(params) do
@@ -50,6 +88,21 @@ defmodule StashixWeb.LibraryController do
     end
   end
 
+  operation :update,
+    summary: "Update library",
+    tags: ["Libraries"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    request_body: {"Library params", "application/json", Schemas.LibraryRequest, required: true},
+    responses: [
+      ok: {"Updated library", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{library: Schemas.Library}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error},
+      unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
+    ]
+
   def update(conn, %{"id" => id} = params) do
     library = Library.get_library!(id)
 
@@ -63,6 +116,22 @@ defmodule StashixWeb.LibraryController do
         |> json(%{errors: format_errors(changeset)})
     end
   end
+
+  operation :scan,
+    summary: "Trigger library scan",
+    tags: ["Libraries"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Scan started", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{
+          status: %OpenApiSpex.Schema{type: :string},
+          library_id: %OpenApiSpex.Schema{type: :integer}
+        }
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def scan(conn, %{"id" => id}) do
     Stashix.Scanner.scan_library(id)

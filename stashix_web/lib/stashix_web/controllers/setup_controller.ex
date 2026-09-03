@@ -1,12 +1,31 @@
 defmodule StashixWeb.SetupController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Accounts
   alias Stashix.Auth.TokenHelper
+  alias StashixWeb.Schemas
+
+  operation :status,
+    summary: "Check if initial setup is needed",
+    tags: ["Setup"],
+    responses: [
+      ok: {"Setup status", "application/json", Schemas.SetupStatusResponse}
+    ]
 
   def status(conn, _params) do
     json(conn, %{needs_setup: not Accounts.setup_complete?()})
   end
+
+  operation :create,
+    summary: "Create initial admin account",
+    tags: ["Setup"],
+    request_body: {"Setup credentials", "application/json", Schemas.SetupRequest, required: true},
+    responses: [
+      created: {"Admin created with tokens", "application/json", Schemas.AuthResponse},
+      forbidden: {"Setup already complete", "application/json", Schemas.Error},
+      unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
+    ]
 
   def create(conn, %{"email" => email, "username" => username, "password" => password}) do
     if Accounts.setup_complete?() do

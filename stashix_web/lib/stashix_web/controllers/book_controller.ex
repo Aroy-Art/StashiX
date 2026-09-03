@@ -1,9 +1,30 @@
 defmodule StashixWeb.BookController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
   alias Stashix.Media.Extractor
   alias Stashix.Media.ImageResizer
+  alias StashixWeb.Schemas
+
+  operation :index,
+    summary: "List books in library",
+    tags: ["Books"],
+    security: [%{"Bearer" => []}],
+    parameters: [
+      id: [in: :path, description: "Library ID", type: :integer, required: true],
+      limit: [in: :query, type: :integer, description: "Max results (default 50)"],
+      offset: [in: :query, type: :integer, description: "Pagination offset"],
+      sort: [in: :query, type: :string, description: "Sort field"],
+      type: [in: :query, type: :string, description: "Filter by book type"]
+    ],
+    responses: [
+      ok: {"Book list", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{books: %OpenApiSpex.Schema{type: :array, items: Schemas.Book}}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def index(conn, %{"id" => library_id} = params) do
     opts = [
@@ -17,10 +38,34 @@ defmodule StashixWeb.BookController do
     json(conn, %{books: Enum.map(books, &book_json/1)})
   end
 
+  operation :show,
+    summary: "Get book by ID",
+    tags: ["Books"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Book detail", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{book: Schemas.Book}
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
+
   def show(conn, %{"id" => id}) do
     book = Library.get_book_with_series(id)
     json(conn, %{book: book_json(book)})
   end
+
+  operation :pages,
+    summary: "List page filenames for book",
+    tags: ["Books"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Page list", "application/json", Schemas.PagesResponse},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error},
+      unprocessable_entity: {"Extract error", "application/json", Schemas.Error}
+    ]
 
   def pages(conn, %{"id" => id}) do
     book = Library.get_book!(id)
@@ -35,6 +80,18 @@ defmodule StashixWeb.BookController do
         |> json(%{error: inspect(reason)})
     end
   end
+
+  operation :page,
+    summary: "Get raw page image",
+    tags: ["Books", "Media"],
+    parameters: [
+      id: [in: :path, type: :integer, required: true],
+      n: [in: :path, type: :integer, required: true, description: "0-based page index"]
+    ],
+    responses: [
+      ok: {"Page image binary", "image/jpeg", %OpenApiSpex.Schema{type: :string, format: :binary}},
+      not_found: {"Page not found", "application/json", Schemas.Error}
+    ]
 
   def page(conn, %{"id" => id, "n" => n}) do
     book = Library.get_book!(id)
@@ -56,6 +113,18 @@ defmodule StashixWeb.BookController do
     end
   end
 
+  operation :cover,
+    summary: "Get book cover image",
+    tags: ["Books", "Media"],
+    parameters: [
+      id: [in: :path, type: :integer, required: true],
+      w: [in: :query, type: :integer, description: "Resize to width in px"]
+    ],
+    responses: [
+      ok: {"Cover image", "image/jpeg", %OpenApiSpex.Schema{type: :string, format: :binary}},
+      not_found: {"No cover", "application/json", Schemas.Error}
+    ]
+
   def cover(conn, %{"id" => id} = params) do
     book = Library.get_book!(id) |> Stashix.Repo.preload(:cover)
 
@@ -71,6 +140,23 @@ defmodule StashixWeb.BookController do
         end
     end
   end
+
+  operation :progress,
+    summary: "Update reading progress",
+    tags: ["Books"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    request_body: {"Progress", "application/json", Schemas.ProgressRequest, required: true},
+    responses: [
+      ok: {"Progress saved", "application/json", %OpenApiSpex.Schema{
+        type: :object,
+        properties: %{
+          status: %OpenApiSpex.Schema{type: :string},
+          page: %OpenApiSpex.Schema{type: :integer}
+        }
+      }},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def progress(conn, %{"id" => id} = params) do
     user = Guardian.Plug.current_resource(conn)

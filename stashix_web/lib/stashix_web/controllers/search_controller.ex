@@ -1,7 +1,23 @@
 defmodule StashixWeb.SearchController do
   use StashixWeb, :controller
+  use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
+  alias StashixWeb.Schemas
+
+  operation :search,
+    summary: "Search books",
+    tags: ["Search"],
+    security: [%{"Bearer" => []}],
+    parameters: [
+      q: [in: :query, type: :string, required: true, description: "Search query"],
+      limit: [in: :query, type: :integer, description: "Max results (default 50)"],
+      offset: [in: :query, type: :integer, description: "Pagination offset"]
+    ],
+    responses: [
+      ok: {"Search results", "application/json", Schemas.SearchResult},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
 
   def search(conn, %{"q" => query} = params) do
     opts = [
