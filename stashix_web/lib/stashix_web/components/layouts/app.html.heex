@@ -276,7 +276,7 @@
 
     <main class="flex-1 overflow-auto">
       <.flash_group flash={@flash} />
-      <div class="px-6 py-6">
+      <div class={unless Map.get(assigns, :full_bleed), do: "px-6 py-6"}>
         {@inner_content}
       </div>
     </main>

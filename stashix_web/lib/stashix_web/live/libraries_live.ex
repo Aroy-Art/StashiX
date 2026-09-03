@@ -21,6 +21,7 @@ defmodule StashixWeb.LibrariesLive do
     {:ok,
      assign(socket,
        page_title: "Home",
+       full_bleed: true,
        libraries_data: libraries_data,
        continue_reading: continue_reading,
        next_issue: next_issue,
@@ -93,88 +94,227 @@ defmodule StashixWeb.LibrariesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-10">
+    <div>
 
-      <%!-- Stats + section navigation --%>
-      <%!-- <section>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <a href={~p"/books"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
-            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
-              <.icon name="lucide-book" class="w-5 h-5" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-2xl font-bold text-white">{@total_books}</p>
-              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Books</p>
-            </div>
-            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
+      <%!-- HERO: cinematic spotlight on what you're reading --%>
+      <%= if @continue_reading != [] do %>
+        <% %{book: hero, current_page: hero_page} = hd(@continue_reading) %>
+        <% hero_pct = if hero.page_count && hero.page_count > 1, do: round(min(hero_page / (hero.page_count - 1), 1.0) * 100), else: nil %>
+        <div class="relative flex items-center gap-8 px-8 py-7 overflow-hidden" style="min-height:220px">
+          <div class="absolute inset-0" style="background:linear-gradient(130deg,rgba(76,29,149,0.55) 0%,transparent 65%)"></div>
+          <div class="absolute inset-0" style="background:radial-gradient(ellipse at 16% 55%,rgba(124,92,245,0.2) 0%,transparent 54%)"></div>
+          <div class="absolute inset-x-0 bottom-0 h-14" style="background:linear-gradient(to top,#030712,transparent)"></div>
+
+          <a
+            href={~p"/book/#{hero.id}"}
+            class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
+            style="width:128px;height:192px;background:#1a1040"
+          >
+            <img
+              src={~p"/api/books/#{hero.id}/cover?w=300"}
+              class="w-full h-full object-cover"
+              onerror="this.style.display='none'"
+            />
           </a>
 
-          <a href={~p"/series"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
-            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
-              <.icon name="lucide-layers" class="w-5 h-5" />
+          <div class="relative z-10 flex flex-col gap-2.5 max-w-md">
+            <p class="text-xs font-semibold tracking-widest uppercase text-violet-400">
+              Continue Reading<%= if hero.series, do: " · #{hero.series.name}" %>
+            </p>
+            <h1 class="text-[1.6rem] font-bold text-white leading-tight" style="letter-spacing:-0.3px;text-wrap:balance">
+              <%= if hero.issue_number, do: "##{hero.issue_number} – #{hero.title}", else: hero.title %>
+            </h1>
+            <p class="text-sm text-gray-400">
+              <%= cond do
+                hero.type == "issue" && hero.issue_number && hero.series ->
+                  "Issue #{hero.issue_number} of #{hero.series.issue_count} · #{if hero.page_count, do: "#{hero.page_count} pages", else: ""}"
+                hero.type == "issue" && hero.issue_number ->
+                  "Issue ##{hero.issue_number}"
+                hero.page_count ->
+                  "#{hero.page_count} pages"
+                true -> ""
+              end %>
+            </p>
+            <%= if hero_pct do %>
+              <div class="flex items-center gap-3">
+                <div class="w-44 h-0.5 bg-gray-700 rounded-full overflow-hidden">
+                  <div class="h-full bg-violet-500 rounded-full" style={"width:#{hero_pct}%"}></div>
+                </div>
+                <span class="text-xs text-gray-500">{hero_pct}%</span>
+              </div>
+            <% end %>
+            <div class="flex gap-2 mt-1">
+              <a href={~p"/read/#{hero.id}"} class="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors">
+                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Continue
+              </a>
+              <a href={~p"/book/#{hero.id}"} class="flex items-center px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors">
+                Details
+              </a>
             </div>
-            <div class="min-w-0">
-              <p class="text-2xl font-bold text-white">{@total_series}</p>
-              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Series</p>
-            </div>
-            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
-          </a>
-
-          <a href={~p"/issues"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
-            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
-              <.icon name="lucide-newspaper" class="w-5 h-5" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-2xl font-bold text-white">{@total_issues}</p>
-              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Issues</p>
-            </div>
-            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
-          </a>
+          </div>
         </div>
-      </section> --%>
+      <% end %>
 
-      <%!-- Libraries --%>
-      <section>
-        <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-          Libraries
-        </h2>
-        <div class="flex flex-wrap gap-4">
+      <%!-- STAT STRIP --%>
+      <div class="flex items-center px-8 py-2.5 border-b border-gray-800 bg-gray-900/50">
+        <a href={~p"/books"} class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group">
+          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_books}</span>
+          <span class="text-xs text-gray-500">Books</span>
+        </a>
+        <a href={~p"/series"} class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group">
+          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_series}</span>
+          <span class="text-xs text-gray-500">Series</span>
+        </a>
+        <a href={~p"/issues"} class="flex items-baseline gap-1.5 hover:text-violet-400 transition-colors group">
+          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_issues}</span>
+          <span class="text-xs text-gray-500">Issues</span>
+        </a>
+      </div>
+
+      <%!-- TWO-COLUMN BODY --%>
+      <div class="flex gap-5 p-6 items-start">
+
+        <%!-- Left column: reading queue + up next --%>
+        <div class="flex-1 min-w-0 flex flex-col gap-5">
+
+          <%!-- Continue Reading (secondary items — hero covers the first) --%>
+          <%= if length(@continue_reading) > 1 do %>
+            <section>
+              <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+                Also Reading
+              </h2>
+              <div class="flex flex-col gap-2">
+                <%= for %{book: book, current_page: current_page} <- Enum.drop(@continue_reading, 1) do %>
+                  <% pct = if book.page_count && book.page_count > 1, do: round(min(current_page / (book.page_count - 1), 1.0) * 100), else: nil %>
+                  <a href={~p"/book/#{book.id}"} class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                    <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
+                      <img src={~p"/api/books/#{book.id}/cover?w=120"} class="w-full h-full object-cover" onerror="this.style.display='none'" />
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
+                      <%= if book.series do %>
+                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400">{book.series.name}</p>
+                      <% end %>
+                      <p class="text-sm font-semibold text-white leading-snug">
+                        <%= if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title %>
+                      </p>
+                      <%= if pct do %>
+                        <div class="flex items-center gap-2">
+                          <div class="flex-1 h-px bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full bg-violet-500 rounded-full" style={"width:#{pct}%"}></div>
+                          </div>
+                          <span class="text-[10px] text-gray-500">{pct}%</span>
+                        </div>
+                      <% end %>
+                    </div>
+                  </a>
+                <% end %>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Up Next --%>
+          <%= if @next_issue != [] do %>
+            <section>
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+                  Up Next
+                </h2>
+                <a href={~p"/issues"} class="text-xs text-violet-400 hover:text-violet-300">See all →</a>
+              </div>
+              <div class="flex flex-col gap-2">
+                <%= for book <- Enum.take(@next_issue, 5) do %>
+                  <a href={~p"/book/#{book.id}"} class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                    <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
+                      <img src={~p"/api/books/#{book.id}/cover?w=120"} class="w-full h-full object-cover" onerror="this.style.display='none'" />
+                    </div>
+                    <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                      <%= if book.series do %>
+                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400">{book.series.name}</p>
+                      <% end %>
+                      <p class="text-sm font-semibold text-white leading-snug">
+                        <%= if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title %>
+                      </p>
+                      <p class="text-xs text-gray-500">
+                        <%= cond do
+                          book.type == "issue" && book.issue_number && book.series ->
+                            "Issue #{book.issue_number} of #{book.series.issue_count}"
+                          book.issue_number ->
+                            "Issue ##{book.issue_number}"
+                          true -> ""
+                        end %>
+                      </p>
+                    </div>
+                    <div class="flex-shrink-0 self-center">
+                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-900/40 text-violet-300 border border-violet-800/40">Next</span>
+                    </div>
+                  </a>
+                <% end %>
+              </div>
+            </section>
+          <% end %>
+
+          <%!-- Fallback: no in-progress or queue — show recent across all libraries --%>
+          <%= if @continue_reading == [] && @next_issue == [] do %>
+            <% recent_all = @libraries_data |> Enum.flat_map(& &1.recent_books) |> Enum.take(8) %>
+            <%= if recent_all != [] do %>
+              <section>
+                <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+                  Recent Books
+                </h2>
+                <div class="flex flex-col gap-2">
+                  <%= for book <- recent_all do %>
+                    <a href={~p"/book/#{book.id}"} class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                      <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
+                        <img src={~p"/api/books/#{book.id}/cover?w=120"} class="w-full h-full object-cover" onerror="this.style.display='none'" />
+                      </div>
+                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
+                        <p class="text-sm font-semibold text-white leading-snug">{book.title}</p>
+                        <p class="text-xs text-gray-500">{book.year && to_string(book.year)}</p>
+                      </div>
+                    </a>
+                  <% end %>
+                </div>
+              </section>
+            <% end %>
+          <% end %>
+
+        </div>
+
+        <%!-- Right column: libraries --%>
+        <div class="w-60 flex-shrink-0 flex flex-col gap-3">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2 mb-1">
+            <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+            Libraries
+          </h2>
+
           <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
-            <.card class="w-72 bg-gray-900 border-gray-800 overflow-hidden">
-              <div class="h-28 flex overflow-hidden relative bg-gray-800">
+            <div class="rounded-lg bg-gray-900 border border-gray-800 overflow-hidden hover:border-gray-700 transition-colors">
+              <div class="flex h-14 overflow-hidden relative bg-gray-800">
                 <%= for book <- Enum.take(covers, 5) do %>
                   <div class="flex-1 min-w-0">
-                    <img
-                      src={~p"/api/books/#{book.id}/cover?w=200"}
-                      class="w-full h-full object-cover"
-                      onerror="this.style.display='none'"
-                    />
+                    <img src={~p"/api/books/#{book.id}/cover?w=80"} class="w-full h-full object-cover" onerror="this.style.display='none'" />
                   </div>
                 <% end %>
-                <div class="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
+                <div class="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent"></div>
               </div>
-
-              <.card_content class="p-4">
-                <div class="flex items-start justify-between mb-1">
-                  <h3 class="font-semibold text-white truncate">{lib.name}</h3>
+              <div class="p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <h3 class="text-sm font-semibold text-white">{lib.name}</h3>
                   <%= if @current_user.role == :admin do %>
-                    <.dropdown_menu id={"card-menu-#{lib.id}"}>
+                    <.dropdown_menu id={"home-lib-menu-#{lib.id}"}>
                       <.dropdown_menu_trigger class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all ml-1 flex-shrink-0">
-                        <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
+                        <.icon name="lucide-ellipsis-vertical" class="w-3 h-3" />
                       </.dropdown_menu_trigger>
                       <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 text-gray-300 whitespace-nowrap">
-                        <.dropdown_menu_item
-                          class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
-                          on-select={JS.push("sidebar_scan", value: %{id: lib.id})}
-                        >
+                        <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer" on-select={JS.push("sidebar_scan", value: %{id: lib.id})}>
                           <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 mr-2 shrink-0" />
                           Scan for new files
                         </.dropdown_menu_item>
-                        <.dropdown_menu_item
-                          class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
-                          on-select={JS.push("sidebar_force_scan", value: %{id: lib.id})}
-                        >
+                        <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer" on-select={JS.push("sidebar_force_scan", value: %{id: lib.id})}>
                           <.icon name="lucide-rotate-ccw" class="w-3.5 h-3.5 mr-2 shrink-0" />
                           Force rescan
                         </.dropdown_menu_item>
@@ -187,18 +327,14 @@ defmodule StashixWeb.LibrariesLive do
                     </.dropdown_menu>
                   <% end %>
                 </div>
-
-                <p class="text-xs text-gray-500 truncate mb-3">{lib.root_path}</p>
-
-                <div class="flex flex-wrap gap-2 mb-3">
-                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{books} books</.badge>
-                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{issues} issues</.badge>
-                  <.badge class="bg-violet-900/50 text-violet-300 border-violet-800 text-xs">{series} series</.badge>
+                <div class="flex flex-wrap gap-1.5 mb-2.5">
+                  <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{books} books</span>
+                  <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{issues} issues</span>
+                  <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{series} series</span>
                   <%= if total_size > 0 do %>
-                    <.badge variant="outline" class="bg-gray-800 text-gray-400 border-gray-700 text-xs">{Stashix.Formatters.format_bytes(total_size)}</.badge>
+                    <span class="text-[10px] bg-gray-800 text-gray-400 border border-gray-700 rounded px-1.5 py-0.5">{Stashix.Formatters.format_bytes(total_size)}</span>
                   <% end %>
                 </div>
-
                 <%= if progress = @scan_progress[lib.id] do %>
                   <%
                     collecting = progress.total == 0 and not progress.done
@@ -209,12 +345,10 @@ defmodule StashixWeb.LibrariesLive do
                     end
                     pct = if progress.total > 0, do: round(progress.scanned / progress.total * 100), else: 0
                   %>
-                  <div class={"mb-3 transition-opacity duration-1000 #{if progress.done, do: "opacity-0", else: "opacity-100"}"}>
-                    <div class="flex justify-between text-xs text-gray-500 mb-1">
+                  <div class={"mb-2 transition-opacity duration-1000 #{if progress.done, do: "opacity-0", else: "opacity-100"}"}>
+                    <div class="flex justify-between text-[10px] text-gray-500 mb-1">
                       <span>{label}</span>
-                      <%= if not collecting do %>
-                        <span>{progress.scanned}/{progress.total}</span>
-                      <% end %>
+                      <%= if not collecting do %><span>{progress.scanned}/{progress.total}</span><% end %>
                     </div>
                     <.progress
                       value={if collecting, do: 100, else: pct}
@@ -223,194 +357,116 @@ defmodule StashixWeb.LibrariesLive do
                     />
                   </div>
                 <% end %>
-
-                <a href={~p"/library/#{lib.id}"} class="text-sm text-violet-400 hover:text-violet-300">
-                  Browse collection →
-                </a>
-              </.card_content>
-            </.card>
+                <a href={~p"/library/#{lib.id}"} class="text-xs text-violet-400 hover:text-violet-300">Browse collection →</a>
+              </div>
+            </div>
           <% end %>
         </div>
-      </section>
 
+      </div>
 
-      <%!-- Continue Reading --%>
-      <%= if @continue_reading != [] do %>
-        <section>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-              <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-              Continue Reading
+      <%!-- RECENTLY ADDED SHELF --%>
+      <% recent_books = @libraries_data |> Enum.flat_map(& &1.recent_books) %>
+      <% recent_series = @libraries_data |> Enum.flat_map(& &1.recent_series) %>
+      <% recent_issues = @libraries_data |> Enum.flat_map(& &1.recent_issues) %>
+
+      <%= if recent_books != [] do %>
+        <section class="px-6 pb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+              Recent Books
             </h2>
             <div class="flex gap-1">
-              <button onclick="document.getElementById('continue-reading').scrollBy({left:-600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                <.icon name="lucide-chevron-left" class="w-5 h-5" />
+              <button onclick="document.getElementById('home-recent-books').scrollBy({left:-500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-left" class="w-4 h-4" />
               </button>
-              <button onclick="document.getElementById('continue-reading').scrollBy({left:600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                <.icon name="lucide-chevron-right" class="w-5 h-5" />
+              <button onclick="document.getElementById('home-recent-books').scrollBy({left:500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-right" class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div id="continue-reading" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <%= for %{book: book, current_page: current_page} <- @continue_reading do %>
-              <% progress = if book.page_count && book.page_count > 1, do: current_page / (book.page_count - 1), else: nil %>
+          <div id="home-recent-books" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <%= for book <- recent_books do %>
               <.media_card
                 href={~p"/book/#{book.id}"}
-                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 width={288}
-                subtitle={
-                  cond do
-                    book.type == "issue" && book.issue_number && book.series && book.series.issue_count > 0 ->
-                      "Issue ##{book.issue_number} of #{book.series.issue_count}"
-                    book.type == "issue" && book.issue_number -> "Issue ##{book.issue_number}"
-                    book.type == "issue" -> "Issue"
-                    true -> "Standalone"
-                  end
-                }
-                progress={progress}
+                subtitle={book.year && to_string(book.year)}
                 type={:book}
-                class="flex-shrink-0 w-36"
+                class="flex-shrink-0 w-32"
               />
             <% end %>
           </div>
         </section>
       <% end %>
 
-      <%!-- Next Issue --%>
-      <%= if @next_issue != [] do %>
-        <section>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-              <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-              Up Next
+      <%= if recent_series != [] do %>
+        <section class="px-6 pb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+              Recent Series
             </h2>
             <div class="flex gap-1">
-              <button onclick="document.getElementById('next-issue').scrollBy({left:-600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                <.icon name="lucide-chevron-left" class="w-5 h-5" />
+              <button onclick="document.getElementById('home-recent-series').scrollBy({left:-500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-left" class="w-4 h-4" />
               </button>
-              <button onclick="document.getElementById('next-issue').scrollBy({left:600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                <.icon name="lucide-chevron-right" class="w-5 h-5" />
+              <button onclick="document.getElementById('home-recent-series').scrollBy({left:500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-right" class="w-4 h-4" />
               </button>
             </div>
           </div>
-          <div id="next-issue" class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-            <%= for book <- @next_issue do %>
+          <div id="home-recent-series" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <%= for s <- recent_series do %>
               <.media_card
-                href={~p"/book/#{book.id}"}
-                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
-                cover_url={~p"/api/books/#{book.id}/cover"}
+                href={~p"/series/#{s.id}"}
+                title={s.name}
+                cover_url={~p"/api/series/#{s.id}/cover"}
                 width={288}
-                subtitle={if book.series, do: book.series.name, else: nil}
-                type={:book}
-                class="flex-shrink-0 w-36"
+                subtitle={series_date_range(s)}
+                badge={"#{s.issue_count} issues"}
+                type={:series}
+                class="flex-shrink-0 w-32"
               />
             <% end %>
           </div>
         </section>
       <% end %>
- 
-      <%!-- Per-library recent additions --%>
-      <%= for %{library: lib, recent_books: books, recent_series: series, recent_issues: issues} <- @libraries_data do %>
 
-        <%= if books != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-                {lib.name} — Recent Books
-              </h2>
-              <div class="flex gap-1">
-                <button onclick={"document.getElementById('books-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-left" class="w-5 h-5" />
-                </button>
-                <button onclick={"document.getElementById('books-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-right" class="w-5 h-5" />
-                </button>
-              </div>
+      <%= if recent_issues != [] do %>
+        <section class="px-6 pb-8">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
+              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
+              Recent Issues
+            </h2>
+            <div class="flex gap-1">
+              <button onclick="document.getElementById('home-recent-issues').scrollBy({left:-500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-left" class="w-4 h-4" />
+              </button>
+              <button onclick="document.getElementById('home-recent-issues').scrollBy({left:500,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
+                <.icon name="lucide-chevron-right" class="w-4 h-4" />
+              </button>
             </div>
-            <div id={"books-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for book <- books do %>
-                <.media_card
-                  href={~p"/book/#{book.id}"}
-                  title={book.title}
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={288}
-                  subtitle={book.year && to_string(book.year)}
-                  type={:book}
-                  class="flex-shrink-0 w-36"
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%= if series != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-                {lib.name} — Recent Series
-              </h2>
-              <div class="flex gap-1">
-                <button onclick={"document.getElementById('series-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-left" class="w-5 h-5" />
-                </button>
-                <button onclick={"document.getElementById('series-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-right" class="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <div id={"series-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for s <- series do %>
-                <.media_card
-                  href={~p"/series/#{s.id}"}
-                  title={s.name}
-                  cover_url={~p"/api/series/#{s.id}/cover"}
-                  width={288}
-                  subtitle={series_date_range(s)}
-                  badge={"#{s.issue_count} issues"}
-                  type={:series}
-                  class="flex-shrink-0 w-36"
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%= if issues != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-white flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-                {lib.name} — Recent Issues
-              </h2>
-              <div class="flex gap-1">
-                <button onclick={"document.getElementById('issues-#{lib.id}').scrollBy({left:-600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-left" class="w-5 h-5" />
-                </button>
-                <button onclick={"document.getElementById('issues-#{lib.id}').scrollBy({left:600,behavior:'smooth'})"} class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
-                  <.icon name="lucide-chevron-right" class="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-            <div id={"issues-#{lib.id}"} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for book <- issues do %>
-                <.media_card
-                  href={~p"/book/#{book.id}"}
-                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={288}
-                  subtitle={book.year && to_string(book.year)}
-                  type={:book}
-                  class="flex-shrink-0 w-36"
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
+          </div>
+          <div id="home-recent-issues" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+            <%= for book <- recent_issues do %>
+              <.media_card
+                href={~p"/book/#{book.id}"}
+                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                cover_url={~p"/api/books/#{book.id}/cover"}
+                width={288}
+                subtitle={book.year && to_string(book.year)}
+                type={:book}
+                class="flex-shrink-0 w-32"
+              />
+            <% end %>
+          </div>
+        </section>
       <% end %>
+
     </div>
     """
   end
