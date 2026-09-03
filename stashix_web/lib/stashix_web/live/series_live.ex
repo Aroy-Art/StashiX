@@ -247,8 +247,13 @@ defmodule StashixWeb.SeriesLive do
 
           <%!-- Publisher + year range --%>
           <div class="flex items-center gap-2 mt-1 flex-wrap">
-            <%= if @series.publisher do %>
-              <span class="text-violet-400 text-sm font-medium">{@series.publisher.name}</span>
+            <%= if @series.publishers != [] do %>
+              <span class="text-sm font-medium">
+                <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
+                  <%= if idx > 0 do %><span class="text-gray-500"> / </span><% end %>
+                  <a href={~p"/publisher/#{pub.id}"} class="text-violet-400 hover:text-violet-300 transition-colors">{pub.name}</a>
+                <% end %>
+              </span>
             <% end %>
             <%= if yr = year_range(@series) do %>
               <span class="text-gray-500 text-sm">{yr}</span>
@@ -288,10 +293,15 @@ defmodule StashixWeb.SeriesLive do
 
           <%!-- Metadata grid --%>
           <div class="mt-6 grid grid-cols-2 gap-x-8 gap-y-4">
-            <%= if @series.publisher do %>
+            <%= if @series.publishers != [] do %>
               <div>
                 <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Publisher</p>
-                <p class="mt-1 text-sm text-gray-200">{@series.publisher.name}</p>
+                <p class="mt-1 text-sm text-gray-200">
+                  <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
+                    <%= if idx > 0 do %><span class="text-gray-500"> / </span><% end %>
+                    <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
+                  <% end %>
+                </p>
               </div>
             <% end %>
             <div>

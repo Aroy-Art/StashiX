@@ -330,10 +330,15 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Metadata grid --%>
           <div class="mt-6 grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
-            <%= if @book.publisher do %>
+            <%= if @book.publishers != [] do %>
               <div>
                 <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Publisher</p>
-                <p class="mt-1 text-sm text-gray-200">{@book.publisher.name}</p>
+                <p class="mt-1 text-sm text-gray-200">
+                  <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
+                    <%= if idx > 0 do %><span class="text-gray-500"> / </span><% end %>
+                    <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
+                  <% end %>
+                </p>
               </div>
             <% end %>
             <%= if @book.year do %>

@@ -93,61 +93,17 @@ defmodule StashixWeb.AllBooksLive do
   def render(assigns) do
     ~H"""
     <div class="space-y-6">
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Books</h1>
-          <p class="text-sm text-gray-500 mt-0.5">{@total} standalone books</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <button
-            phx-click="filter_library"
-            phx-value-id=""
-            class={[
-              "px-3 py-1 text-sm rounded-lg border transition-colors",
-              if(is_nil(@library_id),
-                do: "bg-violet-600 border-violet-500 text-white",
-                else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-              )
-            ]}
-          >
-            All Libraries
-          </button>
-          <%= for lib <- @sidebar_libraries do %>
-            <button
-              phx-click="filter_library"
-              phx-value-id={lib.id}
-              class={[
-                "px-3 py-1 text-sm rounded-lg border transition-colors",
-                if(@library_id == lib.id,
-                  do: "bg-violet-600 border-violet-500 text-white",
-                  else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-                )
-              ]}
-            >
-              {lib.name}
-            </button>
-          <% end %>
-
+      <.browse_header title="Books" subtitle={"#{@total} standalone books"}>
+        <:controls>
+          <.library_filter libraries={@sidebar_libraries} selected_id={@library_id} />
           <.separator orientation="vertical" class="h-5 mx-1" />
-
-          <form phx-change="sort">
-            <select
-              name="value"
-              class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
-            >
-              <%= for {label, value} <- @sort_options do %>
-                <option value={value} selected={@sort == value}>{label}</option>
-              <% end %>
-            </select>
-          </form>
-        </div>
-      </div>
+          <.sort_select options={@sort_options} selected={@sort} />
+        </:controls>
+      </.browse_header>
 
       <%= if @books != [] do %>
         <.pagination page={@page} total_pages={@total_pages} />
-
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+        <.media_grid>
           <%= for book <- @books do %>
             <% prog = @progress_map[book.id] %>
             <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
@@ -161,16 +117,12 @@ defmodule StashixWeb.AllBooksLive do
               type={:book}
             />
           <% end %>
-        </div>
-
+        </.media_grid>
         <.pagination page={@page} total_pages={@total_pages} />
       <% end %>
 
       <%= if !@loading && @books == [] do %>
-        <div class="text-center py-16 text-gray-500">
-          <.icon name="lucide-library-big" class="w-12 h-12 mx-auto mb-3 text-gray-700" />
-          <p>No books found.</p>
-        </div>
+        <.browse_empty icon="lucide-library-big" label="No books found." />
       <% end %>
     </div>
     """

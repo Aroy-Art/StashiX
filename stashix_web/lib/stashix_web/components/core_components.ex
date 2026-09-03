@@ -845,6 +845,110 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  # ---------------------------------------------------------------------------
+  # Browse / list-page shared components
+  # ---------------------------------------------------------------------------
+
+  attr :title, :string, required: true
+  attr :subtitle, :string, default: nil
+  slot :controls
+
+  def browse_header(assigns) do
+    ~H"""
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-white">{@title}</h1>
+        <p :if={@subtitle} class="text-sm text-gray-500 mt-0.5">{@subtitle}</p>
+      </div>
+      <div :if={@controls != []} class="flex flex-wrap items-center gap-2">
+        {render_slot(@controls)}
+      </div>
+    </div>
+    """
+  end
+
+  attr :libraries, :list, required: true
+  attr :selected_id, :string, default: nil
+  attr :event, :string, default: "filter_library"
+
+  def library_filter(assigns) do
+    ~H"""
+    <div class="contents">
+      <button
+        phx-click={@event}
+        phx-value-id=""
+        class={[
+          "px-3 py-1 text-sm rounded-lg border transition-colors",
+          if(is_nil(@selected_id),
+            do: "bg-violet-600 border-violet-500 text-white",
+            else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+          )
+        ]}
+      >
+        All Libraries
+      </button>
+      <%= for lib <- @libraries do %>
+        <button
+          phx-click={@event}
+          phx-value-id={lib.id}
+          class={[
+            "px-3 py-1 text-sm rounded-lg border transition-colors",
+            if(@selected_id == lib.id,
+              do: "bg-violet-600 border-violet-500 text-white",
+              else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+            )
+          ]}
+        >
+          {lib.name}
+        </button>
+      <% end %>
+    </div>
+    """
+  end
+
+  attr :options, :list, required: true
+  attr :selected, :string, required: true
+  attr :event, :string, default: "sort"
+
+  def sort_select(assigns) do
+    ~H"""
+    <form phx-change={@event}>
+      <select
+        name="value"
+        class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+      >
+        <%= for {label, value} <- @options do %>
+          <option value={value} selected={@selected == value}>{label}</option>
+        <% end %>
+      </select>
+    </form>
+    """
+  end
+
+  slot :inner_block, required: true
+
+  def media_grid(assigns) do
+    ~H"""
+    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+
+  def browse_empty(assigns) do
+    ~H"""
+    <div class="text-center py-16 text-gray-500">
+      <.icon name={@icon} class="w-12 h-12 mx-auto mb-3 text-gray-700" />
+      <p>{@label}</p>
+    </div>
+    """
+  end
+
+  # ---------------------------------------------------------------------------
+
   attr :page, :integer, required: true
   attr :total_pages, :integer, required: true
   attr :on_page, :string, default: "goto_page"

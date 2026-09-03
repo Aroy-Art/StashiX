@@ -14,13 +14,20 @@ defmodule StashixWeb.LibrariesLive do
     continue_reading = Library.in_progress_books(user.id, 20)
     next_issue = Library.next_issue_books(user.id, 20)
 
+    total_books = Library.count_all_books(type: "standalone")
+    total_issues = Library.count_all_books(type: "issue")
+    total_series = Library.count_all_series([])
+
     {:ok,
      assign(socket,
        page_title: "Home",
        libraries_data: libraries_data,
        continue_reading: continue_reading,
        next_issue: next_issue,
-       scan_progress: %{}
+       scan_progress: %{},
+       total_books: total_books,
+       total_issues: total_issues,
+       total_series: total_series
      )}
   end
 
@@ -76,7 +83,10 @@ defmodule StashixWeb.LibrariesLive do
      assign(socket,
        libraries_data: Enum.map(libraries, &load_library_data/1),
        continue_reading: Library.in_progress_books(user.id, 20),
-       next_issue: Library.next_issue_books(user.id, 20)
+       next_issue: Library.next_issue_books(user.id, 20),
+       total_books: Library.count_all_books(type: "standalone"),
+       total_issues: Library.count_all_books(type: "issue"),
+       total_series: Library.count_all_series([])
      )}
   end
 
@@ -85,7 +95,45 @@ defmodule StashixWeb.LibrariesLive do
     ~H"""
     <div class="space-y-10">
 
-      <%!-- Libraries overview --%>
+      <%!-- Stats + section navigation --%>
+      <%!-- <section>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <a href={~p"/books"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
+              <.icon name="lucide-book" class="w-5 h-5" />
+            </div>
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-white">{@total_books}</p>
+              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Books</p>
+            </div>
+            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
+          </a>
+
+          <a href={~p"/series"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
+              <.icon name="lucide-layers" class="w-5 h-5" />
+            </div>
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-white">{@total_series}</p>
+              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Series</p>
+            </div>
+            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
+          </a>
+
+          <a href={~p"/issues"} class="group flex items-center gap-4 p-5 rounded-xl bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+            <div class="w-10 h-10 flex items-center justify-center rounded-lg bg-violet-900/40 text-violet-400 group-hover:bg-violet-800/60 transition-colors flex-shrink-0">
+              <.icon name="lucide-newspaper" class="w-5 h-5" />
+            </div>
+            <div class="min-w-0">
+              <p class="text-2xl font-bold text-white">{@total_issues}</p>
+              <p class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Issues</p>
+            </div>
+            <.icon name="lucide-chevron-right" class="w-4 h-4 text-gray-600 group-hover:text-violet-400 ml-auto transition-colors" />
+          </a>
+        </div>
+      </section> --%>
+
+      <%!-- Libraries --%>
       <section>
         <h2 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
           <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
@@ -94,7 +142,6 @@ defmodule StashixWeb.LibrariesLive do
         <div class="flex flex-wrap gap-4">
           <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
             <.card class="w-72 bg-gray-900 border-gray-800 overflow-hidden">
-              <%!-- Cover mosaic --%>
               <div class="h-28 flex overflow-hidden relative bg-gray-800">
                 <%= for book <- Enum.take(covers, 5) do %>
                   <div class="flex-1 min-w-0">
@@ -186,6 +233,7 @@ defmodule StashixWeb.LibrariesLive do
         </div>
       </section>
 
+
       <%!-- Continue Reading --%>
       <%= if @continue_reading != [] do %>
         <section>
@@ -215,12 +263,9 @@ defmodule StashixWeb.LibrariesLive do
                   cond do
                     book.type == "issue" && book.issue_number && book.series && book.series.issue_count > 0 ->
                       "Issue ##{book.issue_number} of #{book.series.issue_count}"
-                    book.type == "issue" && book.issue_number ->
-                      "Issue ##{book.issue_number}"
-                    book.type == "issue" ->
-                      "Issue"
-                    true ->
-                      "Standalone"
+                    book.type == "issue" && book.issue_number -> "Issue ##{book.issue_number}"
+                    book.type == "issue" -> "Issue"
+                    true -> "Standalone"
                   end
                 }
                 progress={progress}
@@ -238,7 +283,7 @@ defmodule StashixWeb.LibrariesLive do
           <div class="flex items-center justify-between mb-4">
             <h2 class="text-lg font-semibold text-white flex items-center gap-2">
               <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
-              Next Issue
+              Up Next
             </h2>
             <div class="flex gap-1">
               <button onclick="document.getElementById('next-issue').scrollBy({left:-600,behavior:'smooth'})" class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800">
@@ -264,11 +309,10 @@ defmodule StashixWeb.LibrariesLive do
           </div>
         </section>
       <% end %>
-
-      <%!-- Per-library sections --%>
+ 
+      <%!-- Per-library recent additions --%>
       <%= for %{library: lib, recent_books: books, recent_series: series, recent_issues: issues} <- @libraries_data do %>
 
-        <%!-- Recent Books --%>
         <%= if books != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">
@@ -289,7 +333,7 @@ defmodule StashixWeb.LibrariesLive do
               <%= for book <- books do %>
                 <.media_card
                   href={~p"/book/#{book.id}"}
-                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                  title={book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   width={288}
                   subtitle={book.year && to_string(book.year)}
@@ -301,7 +345,6 @@ defmodule StashixWeb.LibrariesLive do
           </section>
         <% end %>
 
-        <%!-- Recent Series --%>
         <%= if series != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">
@@ -335,7 +378,6 @@ defmodule StashixWeb.LibrariesLive do
           </section>
         <% end %>
 
-        <%!-- Recent Issues --%>
         <%= if issues != [] do %>
           <section>
             <div class="flex items-center justify-between mb-4">

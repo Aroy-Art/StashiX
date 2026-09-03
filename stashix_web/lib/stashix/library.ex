@@ -1,7 +1,7 @@
 defmodule Stashix.Library do
   import Ecto.Query
   alias Stashix.Repo
-  alias Stashix.Library.{Library, Book, Series, BookCover, LibraryPermission, ReadingProgress}
+  alias Stashix.Library.{Library, Book, Series, BookCover, LibraryPermission, ReadingProgress, Publisher}
 
   def list_libraries(user) do
     if user.role == :admin do
@@ -75,7 +75,7 @@ defmodule Stashix.Library do
   def get_book!(id), do: Repo.get!(Book, id)
 
   def get_book_with_series(id) do
-    Repo.get!(Book, id) |> Repo.preload([:series, :cover, :publisher])
+    Repo.get!(Book, id) |> Repo.preload([:series, :cover, :publishers])
   end
 
   def list_series(library_id, opts \\ []) do
@@ -99,14 +99,14 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publisher)
+    Repo.all(query) |> Repo.preload(:publishers)
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
 
   def get_series_with_books(id) do
     books_query = from(b in Book, where: is_nil(b.deleted_at), order_by: [asc: b.issue_number])
-    Repo.get!(Series, id) |> Repo.preload([:publisher, books: {books_query, [:cover]}])
+    Repo.get!(Series, id) |> Repo.preload([:publishers, books: {books_query, [:cover]}])
   end
 
   def update_progress(user_id, book_id, page) do
@@ -365,6 +365,119 @@ defmodule Stashix.Library do
     %Book{}
     |> Book.changeset(attrs)
     |> Repo.insert()
+  end
+
+  def get_publisher!(id), do: Repo.get!(Publisher, id)
+
+  def list_publisher_series(publisher_id, opts \\ []) do
+    sort = Keyword.get(opts, :sort, "title_asc")
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    pub_bin = Ecto.UUID.dump!(publisher_id)
+
+    query =
+      from s in Series,
+        join: sp in "series_publishers", on: sp.series_id == s.id,
+        where: sp.publisher_id == ^pub_bin and is_nil(s.deleted_at),
+        limit: ^limit,
+        offset: ^offset
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [s], desc: s.name)
+        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
+        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "added_asc" -> order_by(query, [s], asc: s.inserted_at)
+        "added_desc" -> order_by(query, [s], desc: s.inserted_at)
+        _ -> order_by(query, [s], asc: s.name)
+      end
+
+    Repo.all(query)
+  end
+
+  def count_publisher_series(publisher_id) do
+    pub_bin = Ecto.UUID.dump!(publisher_id)
+
+    from(s in Series,
+      join: sp in "series_publishers", on: sp.series_id == s.id,
+      where: sp.publisher_id == ^pub_bin and is_nil(s.deleted_at)
+    )
+    |> Repo.aggregate(:count, :id)
+  end
+
+  def list_publisher_books(publisher_id, opts \\ []) do
+    type = Keyword.get(opts, :type, "standalone")
+    sort = Keyword.get(opts, :sort, "title_asc")
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    pub_bin = Ecto.UUID.dump!(publisher_id)
+
+    query =
+      from b in Book,
+        join: bp in "book_publishers", on: bp.book_id == b.id,
+        where: bp.publisher_id == ^pub_bin and is_nil(b.deleted_at) and b.type == ^type,
+        preload: [:cover, :series],
+        limit: ^limit,
+        offset: ^offset
+
+    query =
+      case sort do
+        "title_desc" -> order_by(query, [b], desc: b.title)
+        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
+        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "added_asc" -> order_by(query, [b], asc: b.inserted_at)
+        "added_desc" -> order_by(query, [b], desc: b.inserted_at)
+        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
+        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        _ -> order_by(query, [b], asc: b.title)
+      end
+
+    Repo.all(query)
+  end
+
+  def count_publisher_books(publisher_id, type) do
+    pub_bin = Ecto.UUID.dump!(publisher_id)
+
+    from(b in Book,
+      join: bp in "book_publishers", on: bp.book_id == b.id,
+      where: bp.publisher_id == ^pub_bin and is_nil(b.deleted_at) and b.type == ^type
+    )
+    |> Repo.aggregate(:count, :id)
+  end
+
+  def list_publishers do
+    from(p in Publisher, order_by: [asc: p.name])
+    |> Repo.all()
+  end
+
+  def get_or_create_publisher(name) do
+    case Repo.get_by(Publisher, name: name) do
+      nil ->
+        %Publisher{}
+        |> Publisher.changeset(%{name: name})
+        |> Repo.insert()
+
+      publisher ->
+        {:ok, publisher}
+    end
+  end
+
+  def link_publisher_to_book(book_id, publisher_id) do
+    Repo.insert_all(
+      "book_publishers",
+      [%{book_id: Ecto.UUID.dump!(book_id), publisher_id: Ecto.UUID.dump!(publisher_id)}],
+      on_conflict: :nothing
+    )
+    :ok
+  end
+
+  def link_publisher_to_series(series_id, publisher_id) do
+    Repo.insert_all(
+      "series_publishers",
+      [%{series_id: Ecto.UUID.dump!(series_id), publisher_id: Ecto.UUID.dump!(publisher_id)}],
+      on_conflict: :nothing
+    )
+    :ok
   end
 
   def update_book(book, attrs) do
@@ -724,7 +837,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publisher)
+    Repo.all(query) |> Repo.preload(:publishers)
   end
 
   def count_all_series(opts \\ []) do
