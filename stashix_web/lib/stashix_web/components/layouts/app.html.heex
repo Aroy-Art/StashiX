@@ -11,13 +11,30 @@
     <%!-- Sidebar --%>
     <aside
       id="sidebar"
-      class="fixed inset-y-0 left-0 z-40 w-52 -translate-x-full lg:translate-x-0 lg:relative lg:z-auto flex-shrink-0 bg-gray-900 border-r border-gray-800 flex flex-col h-screen h-dvh transition-transform duration-200"
+      class="fixed inset-y-0 left-0 z-40 w-52 -translate-x-full lg:translate-x-0 lg:relative lg:z-auto flex-shrink-0 bg-gray-950 border-r-2 border-gray-800 flex flex-col h-screen h-dvh transition-transform duration-200"
     >
       <%!-- Logo --%>
-      <div class="p-4 border-b border-gray-800">
+      <div class="p-4 border-b-2 border-gray-800">
         <a href="/" class="flex items-center gap-2">
           <img src={~p"/images/logo.png"} class="w-8 h-8 object-contain" alt="Stashix" />
-          <span class="text-white font-bold text-lg">Stashix</span>
+          <span class="font-bold text-lg relative">
+            <span class="text-white">Stash</span><span class="text-violet-500 [text-shadow:3px_0_18px_rgba(167,139,250,0.9),6px_0_28px_rgba(139,92,246,0.5),0_0_6px_rgba(167,139,250,0.7)]">iX</span>
+            <svg class="absolute left-full translate-x-0.5 top-1/2 -translate-y-[55%] pointer-events-none" width="50" height="18" viewBox="0 0 50 18" fill="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="ix-trail" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85"/>
+                  <stop offset="60%" stop-color="#a78bfa" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+                </linearGradient>
+                <filter id="ix-glow" x="-30%" y="-150%" width="200%" height="400%">
+                  <feGaussianBlur stdDeviation="2.5" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              <path d="M1 13 C16 13, 36 11, 49 2" stroke="url(#ix-trail)" stroke-width="3" stroke-linecap="round" filter="url(#ix-glow)"/>
+              <path d="M1 13 C14 13, 30 11, 44 5" stroke="url(#ix-trail)" stroke-width="1.2" stroke-linecap="round" opacity="0.8"/>
+            </svg>
+          </span>
         </a>
       </div>
 
@@ -25,35 +42,35 @@
       <nav class="flex-1 p-2 overflow-y-auto">
         <a
           href="/"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors mb-1"
         >
           <.icon name="lucide-house" class="w-4 h-4" /> Home
         </a>
 
         <a
           href="/search"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors mb-1"
         >
           <.icon name="lucide-search" class="w-4 h-4" /> Search
         </a>
 
         <a
           href="/books"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors mb-1"
         >
           <.icon name="lucide-library-big" class="w-4 h-4" /> Books
         </a>
 
         <a
           href="/issues"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors mb-1"
         >
           <.icon name="lucide-layers" class="w-4 h-4" /> Issues
         </a>
 
         <a
           href="/series"
-          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mb-1"
+          class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors mb-1"
         >
           <.icon name="lucide-book-copy" class="w-4 h-4" /> Series
         </a>
@@ -61,7 +78,7 @@
         <%!-- Libraries section in sidebar --%>
         <%= if Map.get(assigns, :sidebar_libraries) do %>
           <div class="mt-4 mb-1 px-3">
-            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Libraries</p>
+            <p class="text-xs font-semibold text-violet-500/70 uppercase tracking-wider">Libraries</p>
           </div>
           <%= for lib <- @sidebar_libraries do %>
             <% progress = Map.get(assigns[:sidebar_scan_progress] || %{}, lib.id)
@@ -75,7 +92,7 @@
             <div class="relative group/lib flex items-center mb-1">
               <a
                 href={"/library/#{lib.id}"}
-                class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors min-w-0"
+                class="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-violet-900/20 hover:text-violet-200 transition-colors min-w-0"
               >
                 <.icon
                   name={if scanning, do: "lucide-loader-circle", else: "lucide-folder"}
@@ -92,7 +109,7 @@
               </a>
               <%= if @current_user.role == :admin do %>
                 <.dropdown_menu id={"lib-menu-#{lib.id}"} use-portal={true}>
-                  <.dropdown_menu_trigger class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all mr-1 shrink-0">
+                  <.dropdown_menu_trigger class="p-1.5 rounded text-gray-600 hover:text-violet-300 hover:bg-violet-900/30 transition-all mr-1 shrink-0">
                     <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
                   </.dropdown_menu_trigger>
                   <.dropdown_menu_content class="bg-gray-800 border-gray-700 text-gray-300 whitespace-nowrap">
@@ -142,10 +159,10 @@
 
       lib_names =
         (Map.get(assigns, :sidebar_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end) %>
-      <header class="flex items-center gap-4 px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+      <header class="flex items-center gap-4 px-4 py-3 border-b-2 border-gray-800 bg-gray-950">
         <button
           onclick="toggleSidebar()"
-          class="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors flex-shrink-0"
+          class="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-violet-200 hover:bg-violet-900/20 transition-colors flex-shrink-0"
           aria-label="Toggle sidebar"
         >
           <.icon name="lucide-menu" class="w-5 h-5" />
@@ -161,7 +178,7 @@
               type="search"
               name="q"
               placeholder="Search titles, series, publishers..."
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+              class="w-full bg-gray-900 border border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/70 focus:bg-gray-900"
             />
           </div>
         </form>
@@ -169,7 +186,7 @@
         <div class="ml-auto flex items-center gap-2">
           <%!-- Activity indicator dropdown --%>
           <.dropdown_menu id="activity-menu">
-            <.dropdown_menu_trigger class={"relative p-1.5 rounded-lg transition-colors hover:bg-gray-800 flex items-center justify-center #{if active_tasks != [], do: "text-violet-400", else: "text-gray-500"}"}>
+            <.dropdown_menu_trigger class={"relative p-1.5 rounded-lg transition-colors hover:bg-violet-900/20 flex items-center justify-center #{if active_tasks != [], do: "text-violet-400", else: "text-gray-500 hover:text-violet-300"}"}>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="16"
@@ -245,11 +262,11 @@
             </.dropdown_menu_content>
           </.dropdown_menu>
 
-          <div class="w-px h-5 bg-gray-700 flex-shrink-0"></div>
+          <div class="w-px h-5 bg-gray-800 flex-shrink-0"></div>
 
           <%!-- User menu dropdown --%>
           <.dropdown_menu id="user-menu">
-            <.dropdown_menu_trigger class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+            <.dropdown_menu_trigger class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-violet-900/20 transition-colors">
               <div class="w-7 h-7 rounded-full bg-violet-700 flex items-center justify-center text-xs font-bold text-white">
                 {String.upcase(String.first(@current_user.username || "?"))}
               </div>
