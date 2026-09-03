@@ -34,8 +34,8 @@ defmodule Stashix.Library.Book do
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
-    belongs_to :publisher, Stashix.Library.Publisher
     belongs_to :imprint, Stashix.Library.Imprint
+    many_to_many :publishers, Stashix.Library.Publisher, join_through: "book_publishers"
     has_one :cover, Stashix.Library.BookCover
     has_many :reading_progress, Stashix.Library.ReadingProgress
 
@@ -69,7 +69,6 @@ defmodule Stashix.Library.Book do
       :source_format,
       :library_id,
       :series_id,
-      :publisher_id,
       :imprint_id
     ])
     |> validate_required([:path, :title, :format, :library_id])

@@ -21,8 +21,8 @@ defmodule Stashix.Library.Publisher do
     field :source_id, :string
 
     has_many :imprints, Stashix.Library.Imprint
-    has_many :series, Stashix.Library.Series
-    has_many :books, Stashix.Library.Book
+    many_to_many :series, Stashix.Library.Series, join_through: "series_publishers"
+    many_to_many :books, Stashix.Library.Book, join_through: "book_publishers"
 
     timestamps()
   end

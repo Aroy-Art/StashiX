@@ -266,6 +266,7 @@ defmodule Stashix.Scanner do
 
     case Library.create_book(attrs) do
       {:ok, book} ->
+        link_publisher(book, series, metadata)
         Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, book})
         {{book, file_path}, new_cache}
 
@@ -311,7 +312,10 @@ defmodule Stashix.Scanner do
     }
 
     case Library.update_book(book, attrs) do
-      {:ok, updated_book} -> {{updated_book, file_path}, new_cache}
+      {:ok, updated_book} ->
+        link_publisher(updated_book, series, metadata)
+        {{updated_book, file_path}, new_cache}
+
       {:error, reason} ->
         Logger.error("Failed to reimport #{file_path}: #{inspect(reason)}")
         {nil, new_cache}
@@ -631,6 +635,23 @@ defmodule Stashix.Scanner do
       path = base <> ext
       if File.exists?(path), do: path
     end)
+  end
+
+  defp link_publisher(book, series, metadata) do
+    case Map.get(metadata, :publisher) do
+      nil ->
+        :ok
+
+      name ->
+        case Library.get_or_create_publisher(name) do
+          {:ok, publisher} ->
+            Library.link_publisher_to_book(book.id, publisher.id)
+            if series, do: Library.link_publisher_to_series(series.id, publisher.id)
+
+          _ ->
+            :ok
+        end
+    end
   end
 
   defp compute_hash(file_path, file_size) do

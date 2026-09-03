@@ -35,8 +35,8 @@ defmodule Stashix.Library.Series do
     field :deleted_at, :naive_datetime
 
     belongs_to :library, Stashix.Library.Library
-    belongs_to :publisher, Stashix.Library.Publisher
     has_many :books, Stashix.Library.Book
+    many_to_many :publishers, Stashix.Library.Publisher, join_through: "series_publishers"
     has_many :external_ids, Stashix.Library.SeriesExternalId
 
     timestamps()
@@ -58,8 +58,7 @@ defmodule Stashix.Library.Series do
       :adult,
       :path,
       :deleted_at,
-      :library_id,
-      :publisher_id
+      :library_id
     ])
     |> validate_required([:name, :library_id])
   end
