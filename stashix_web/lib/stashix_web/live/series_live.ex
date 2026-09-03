@@ -162,60 +162,61 @@ defmodule StashixWeb.SeriesLive do
     ~H"""
     <div class="space-y-6">
       <%!-- Breadcrumbs --%>
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2 text-sm">
-          <button onclick="history.back()" class="flex items-center gap-1 text-sm px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors">
-            <.icon name="lucide-chevron-left" class="w-4 h-4" />
-            Back
-          </button>
-          <span class="text-gray-700">/</span>
-          <a href="/" class="text-gray-500 hover:text-gray-300">Home</a>
-          <span class="text-gray-700">/</span>
-          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300">{@library.name}</a>
-          <span class="text-gray-700">/</span>
-          <span class="text-gray-300">{@series.name}</span>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
+        <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0">
+          <.icon name="lucide-chevron-left" class="w-4 h-4" />
+          Back
+        </button>
+        <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
+          <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
+          <span class="text-gray-700 flex-shrink-0">/</span>
+          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300 flex-shrink-0">{@library.name}</a>
+          <span class="text-gray-700 flex-shrink-0">/</span>
+          <span class="text-gray-300 truncate min-w-0">{@series.name}</span>
         </div>
         <%= if @current_user.role == :admin do %>
-          <.dropdown_menu id="series-admin-menu">
-            <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
-              <.icon name="lucide-settings" class="w-3.5 h-3.5" />
-              Admin
-              <.icon name="lucide-chevron-down" class="w-3 h-3" />
-            </.dropdown_menu_trigger>
-            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("open_edit_dialog")}
-              >
-                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
-                Edit Metadata
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("rescan_series")}
-              >
-                <%= if @scanning do %>
-                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin text-violet-400" />
-                  Scanning…
-                <% else %>
-                  <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" />
-                  Rescan Series
-                <% end %>
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
-                on-select={JS.push("force_rescan_series")}
-              >
-                <%= if @scanning do %>
-                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" />
-                  Scanning…
-                <% else %>
-                  <.icon name="lucide-zap" class="w-4 h-4 mr-2" />
-                  Force Rescan
-                <% end %>
-              </.dropdown_menu_item>
-            </.dropdown_menu_content>
-          </.dropdown_menu>
+          <div class="ml-auto">
+            <.dropdown_menu id="series-admin-menu">
+              <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
+                <.icon name="lucide-settings" class="w-3.5 h-3.5" />
+                Admin
+                <.icon name="lucide-chevron-down" class="w-3 h-3" />
+              </.dropdown_menu_trigger>
+              <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("open_edit_dialog")}
+                >
+                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
+                  Edit Metadata
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("rescan_series")}
+                >
+                  <%= if @scanning do %>
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin text-violet-400" />
+                    Scanning…
+                  <% else %>
+                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" />
+                    Rescan Series
+                  <% end %>
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
+                  on-select={JS.push("force_rescan_series")}
+                >
+                  <%= if @scanning do %>
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" />
+                    Scanning…
+                  <% else %>
+                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" />
+                    Force Rescan
+                  <% end %>
+                </.dropdown_menu_item>
+              </.dropdown_menu_content>
+            </.dropdown_menu>
+          </div>
         <% end %>
       </div>
 
