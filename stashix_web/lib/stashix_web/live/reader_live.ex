@@ -179,13 +179,13 @@ defmodule StashixWeb.ReaderLive do
           ]} style="height: 44px;">
             <%!-- Left: back --%>
             <div class="flex items-center min-w-0 w-36">
-              <a
-                href={~p"/book/#{@book.id}"}
+              <button
+                onclick={"history.length > 1 ? history.back() : location.href = '#{~p"/book/#{@book.id}"}'"}
                 class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
               >
                 <.icon name="lucide-arrow-left" class="w-4 h-4" />
                 Back
-              </a>
+              </button>
             </div>
 
             <%!-- Center: title --%>
