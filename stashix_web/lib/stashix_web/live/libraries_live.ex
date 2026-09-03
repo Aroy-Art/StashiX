@@ -100,7 +100,7 @@ defmodule StashixWeb.LibrariesLive do
       <%= if @continue_reading != [] do %>
         <% %{book: hero, current_page: hero_page} = hd(@continue_reading) %>
         <% hero_pct = if hero.page_count && hero.page_count > 1, do: round(min(hero_page / (hero.page_count - 1), 1.0) * 100), else: nil %>
-        <div class="relative flex items-center gap-8 px-8 py-7 overflow-hidden" style="min-height:220px">
+        <div class="relative flex items-center gap-4 sm:gap-8 px-4 sm:px-8 py-5 sm:py-7 overflow-hidden" style="min-height:200px">
           <div class="absolute inset-0" style="background:linear-gradient(130deg,rgba(76,29,149,0.55) 0%,transparent 65%)"></div>
           <div class="absolute inset-0" style="background:radial-gradient(ellipse at 16% 55%,rgba(124,92,245,0.2) 0%,transparent 54%)"></div>
           <div class="absolute inset-x-0 bottom-0 h-14" style="background:linear-gradient(to top,#030712,transparent)"></div>
@@ -108,7 +108,7 @@ defmodule StashixWeb.LibrariesLive do
           <a
             href={~p"/book/#{hero.id}"}
             class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
-            style="width:128px;height:192px;background:#1a1040"
+            style="width:104px;height:156px;background:#1a1040"
           >
             <img
               src={~p"/api/books/#{hero.id}/cover?w=300"}
@@ -117,14 +117,14 @@ defmodule StashixWeb.LibrariesLive do
             />
           </a>
 
-          <div class="relative z-10 flex flex-col gap-2.5 max-w-md">
-            <p class="text-xs font-semibold tracking-widest uppercase text-violet-400">
+          <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
+            <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
               Continue Reading<%= if hero.series, do: " · #{hero.series.name}" %>
             </p>
-            <h1 class="text-[1.6rem] font-bold text-white leading-tight" style="letter-spacing:-0.3px;text-wrap:balance">
+            <h1 class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight" style="letter-spacing:-0.3px;text-wrap:balance">
               <%= if hero.issue_number, do: "##{hero.issue_number} – #{hero.title}", else: hero.title %>
             </h1>
-            <p class="text-sm text-gray-400">
+            <p class="text-xs sm:text-sm text-gray-400">
               <%= cond do
                 hero.type == "issue" && hero.issue_number && hero.series ->
                   "Issue #{hero.issue_number} of #{hero.series.issue_count} · #{if hero.page_count, do: "#{hero.page_count} pages", else: ""}"
@@ -137,18 +137,18 @@ defmodule StashixWeb.LibrariesLive do
             </p>
             <%= if hero_pct do %>
               <div class="flex items-center gap-3">
-                <div class="w-44 h-0.5 bg-gray-700 rounded-full overflow-hidden">
+                <div class="w-32 sm:w-44 h-0.5 bg-gray-700 rounded-full overflow-hidden">
                   <div class="h-full bg-violet-500 rounded-full" style={"width:#{hero_pct}%"}></div>
                 </div>
                 <span class="text-xs text-gray-500">{hero_pct}%</span>
               </div>
             <% end %>
             <div class="flex gap-2 mt-1">
-              <a href={~p"/read/#{hero.id}"} class="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors">
+              <a href={~p"/read/#{hero.id}"} class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors">
                 <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Continue
               </a>
-              <a href={~p"/book/#{hero.id}"} class="flex items-center px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors">
+              <a href={~p"/book/#{hero.id}"} class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors">
                 Details
               </a>
             </div>
@@ -157,7 +157,7 @@ defmodule StashixWeb.LibrariesLive do
       <% end %>
 
       <%!-- STAT STRIP --%>
-      <div class="flex items-center px-8 py-2.5 border-b border-gray-800 bg-gray-900/50">
+      <div class="flex items-center px-4 sm:px-8 py-2.5 border-b border-gray-800 bg-gray-900/50">
         <a href={~p"/books"} class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group">
           <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_books}</span>
           <span class="text-xs text-gray-500">Books</span>
@@ -173,7 +173,7 @@ defmodule StashixWeb.LibrariesLive do
       </div>
 
       <%!-- TWO-COLUMN BODY --%>
-      <div class="flex gap-5 p-6 items-start">
+      <div class="flex flex-col lg:flex-row gap-5 p-4 lg:p-6 items-start">
 
         <%!-- Left column: reading queue + up next --%>
         <div class="flex-1 min-w-0 flex flex-col gap-5">
@@ -285,12 +285,12 @@ defmodule StashixWeb.LibrariesLive do
         </div>
 
         <%!-- Right column: libraries --%>
-        <div class="w-60 flex-shrink-0 flex flex-col gap-3">
-          <h2 class="text-sm font-semibold text-white flex items-center gap-2 mb-1">
+        <div class="w-full lg:w-60 lg:flex-shrink-0 flex flex-col gap-3">
+          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
             <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
             Libraries
           </h2>
-
+          <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
           <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
             <div class="rounded-lg bg-gray-900 border border-gray-800 overflow-hidden hover:border-gray-700 transition-colors">
               <div class="flex h-14 overflow-hidden relative bg-gray-800">
@@ -361,6 +361,7 @@ defmodule StashixWeb.LibrariesLive do
               </div>
             </div>
           <% end %>
+          </div>
         </div>
 
       </div>
@@ -371,7 +372,7 @@ defmodule StashixWeb.LibrariesLive do
       <% recent_issues = @libraries_data |> Enum.flat_map(& &1.recent_issues) %>
 
       <%= if recent_books != [] do %>
-        <section class="px-6 pb-6">
+        <section class="px-4 sm:px-6 pb-6">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-white flex items-center gap-2">
               <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
@@ -403,7 +404,7 @@ defmodule StashixWeb.LibrariesLive do
       <% end %>
 
       <%= if recent_series != [] do %>
-        <section class="px-6 pb-6">
+        <section class="px-4 sm:px-6 pb-6">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-white flex items-center gap-2">
               <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
@@ -436,7 +437,7 @@ defmodule StashixWeb.LibrariesLive do
       <% end %>
 
       <%= if recent_issues != [] do %>
-        <section class="px-6 pb-8">
+        <section class="px-4 sm:px-6 pb-8">
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-white flex items-center gap-2">
               <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
