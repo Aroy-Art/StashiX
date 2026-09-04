@@ -1,7 +1,7 @@
 defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Library, Scanner}
+  alias Stashix.{Formatters, Library, Scanner}
   alias Stashix.Library.Book
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -345,6 +345,12 @@ defmodule StashixWeb.BookLive do
               <div>
                 <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Year</p>
                 <p class="mt-1 text-sm text-gray-200">{@book.year}</p>
+              </div>
+            <% end %>
+            <%= if @book.language do %>
+              <div>
+                <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Language</p>
+                <p class="mt-1 text-sm text-gray-200">{Formatters.language_name(@book.language)}</p>
               </div>
             <% end %>
             <div>
