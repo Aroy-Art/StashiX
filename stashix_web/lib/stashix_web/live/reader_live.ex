@@ -146,271 +146,274 @@ defmodule StashixWeb.ReaderLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="csrf-token" content={Plug.CSRFProtection.get_csrf_token()} />
-        <title>{@page_title} · Stashix</title>
-        <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
-        <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
-        </script>
-        <style>
-          html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
-          .reader-page { cursor: pointer; user-select: none; }
-          .reader-zone-left { cursor: w-resize; }
-          .reader-zone-right { cursor: e-resize; }
-          input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; }
-          input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; border: none; }
-        </style>
-      </head>
-      <body class="bg-black">
-        <div
-          class="relative"
-          style="height: 100dvh;"
-          id="reader-container"
-          phx-hook="ReaderKeyboard"
-        >
-          <%!-- Top bar overlay --%>
-          <div class={[
-            "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-1 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
-            if(@overlay_visible, do: "translate-y-0", else: "-translate-y-full")
-          ]} style="height: 44px;">
-            <%!-- Left: back --%>
-            <div class="flex items-center min-w-0 w-36">
-              <button
-                onclick={"history.length > 1 ? history.back() : location.href = '#{~p"/book/#{@book.id}"}'"}
-                class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
-              >
-                <.icon name="lucide-arrow-left" class="w-4 h-4" />
-                Back
-              </button>
-            </div>
+    <%!-- No <html>/<head>/<body> here: the :browser pipeline already wraps
+         every LiveView in the root layout, which supplies the document, the
+         csrf token and app.js. Emitting a second full document nested inside
+         it made the browser hoist a duplicate <script src="app.js">, which
+         booted a second LiveSocket ("Cannot bind multiple views to the same
+         DOM element") and mounted every hook twice. Two ReaderZoom instances
+         on one element is what kept snapping the zoom back to 1. --%>
+    <style>
+      html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+      .reader-page { cursor: pointer; user-select: none; }
+      /* Own the touch gestures: without this the browser runs its native
+         pinch-zoom on the same fingers and the page jitters. Must be CSS,
+         not an inline style -- LiveView's DOM patch strips those. */
+      #reading-area { touch-action: none; }
+      .reader-zone-left { cursor: w-resize; }
+      .reader-zone-right { cursor: e-resize; }
+      input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; }
+      input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; border: none; }
+    </style>
+    <div
+      class="relative bg-black"
+      style="height: 100dvh;"
+      id="reader-container"
+      phx-hook="ReaderKeyboard"
+    >
+      <%!-- Top bar overlay --%>
+      <div class={[
+        "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-1 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
+        if(@overlay_visible, do: "translate-y-0", else: "-translate-y-full")
+      ]} style="height: 44px;">
+        <%!-- Left: back --%>
+        <div class="flex items-center min-w-0 w-36">
+          <button
+            onclick={"history.length > 1 ? history.back() : location.href = '#{~p"/book/#{@book.id}"}'"}
+            class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
+          >
+            <.icon name="lucide-arrow-left" class="w-4 h-4" />
+            Back
+          </button>
+        </div>
 
-            <%!-- Center: title --%>
-            <div class="flex-1 text-center px-4 min-w-0">
-              <span class="text-white text-sm font-medium truncate block">{@book.title}</span>
-            </div>
+        <%!-- Center: title --%>
+        <div class="flex-1 text-center px-4 min-w-0">
+          <span class="text-white text-sm font-medium truncate block">{@book.title}</span>
+        </div>
 
-            <%!-- Right: controls + page counter --%>
-            <div class="flex items-center gap-2 min-w-0 justify-end">
-              <%!-- View mode dropdown --%>
-              <div class="relative">
-                <button
-                  phx-click="toggle_layout_menu"
-                  class="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
-                >
-                  <.icon name="lucide-columns-2" class="w-4 h-4 flex-shrink-0" />
-                  View Mode
-                  <.icon name="lucide-chevron-down" class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"} />
+        <%!-- Right: controls + page counter --%>
+        <div class="flex items-center gap-2 min-w-0 justify-end">
+          <%!-- View mode dropdown --%>
+          <div class="relative">
+            <button
+              phx-click="toggle_layout_menu"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
+            >
+              <.icon name="lucide-columns-2" class="w-4 h-4 flex-shrink-0" />
+              View Mode
+              <.icon name="lucide-chevron-down" class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"} />
+            </button>
+
+            <%= if @layout_menu_open do %>
+              <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
+              <div class="absolute right-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 w-56">
+                <%!-- Single Page --%>
+                <button phx-click="set_layout" phx-value-layout="single" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                  <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "single", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "single", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="5" y="3" width="14" height="18" rx="1"/>
+                  </svg>
+                  <span class={if(@page_layout == "single", do: "text-white font-medium", else: "text-zinc-300")}>Single Page</span>
                 </button>
-
-                <%= if @layout_menu_open do %>
-                  <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
-                  <div class="absolute right-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 w-56">
-                    <%!-- Single Page --%>
-                    <button phx-click="set_layout" phx-value-layout="single" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "single", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
-                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "single", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                        <rect x="5" y="3" width="14" height="18" rx="1"/>
-                      </svg>
-                      <span class={if(@page_layout == "single", do: "text-white font-medium", else: "text-zinc-300")}>Single Page</span>
-                    </button>
-                    <%!-- Facing Pages --%>
-                    <button phx-click="set_layout" phx-value-layout="double" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "double", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
-                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "double", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                        <rect x="2" y="3" width="9" height="18" rx="1"/>
-                        <rect x="13" y="3" width="9" height="18" rx="1"/>
-                      </svg>
-                      <span class={if(@page_layout == "double", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages</span>
-                    </button>
-                    <%!-- Facing Pages Cover First --%>
-                    <button phx-click="set_layout" phx-value-layout="cover" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
-                      <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "cover", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
-                      <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "cover", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-                        <rect x="8" y="2" width="8" height="10" rx="1"/>
-                        <rect x="2" y="14" width="9" height="10" rx="1"/>
-                        <rect x="13" y="14" width="9" height="10" rx="1"/>
-                      </svg>
-                      <span class={if(@page_layout == "cover", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages (Cover First)</span>
-                    </button>
-                  </div>
-                <% end %>
-              </div>
-
-              <%!-- Fit mode buttons --%>
-              <div class="flex items-center gap-1">
-                <button
-                  phx-click="set_fit"
-                  phx-value-mode="page"
-                  title="Fit page"
-                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "page", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
-                >
-                  <.icon name="lucide-maximize-2" class="w-4 h-4" />
+                <%!-- Facing Pages --%>
+                <button phx-click="set_layout" phx-value-layout="double" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                  <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "double", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "double", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="2" y="3" width="9" height="18" rx="1"/>
+                    <rect x="13" y="3" width="9" height="18" rx="1"/>
+                  </svg>
+                  <span class={if(@page_layout == "double", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages</span>
                 </button>
-                <button
-                  phx-click="set_fit"
-                  phx-value-mode="width"
-                  title="Fit width"
-                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "width", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
-                >
-                  <.icon name="lucide-arrow-left-right" class="w-4 h-4" />
-                </button>
-                <button
-                  phx-click="set_fit"
-                  phx-value-mode="height"
-                  title="Fit height"
-                  class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "height", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
-                >
-                  <.icon name="lucide-arrow-up-down" class="w-4 h-4" />
+                <%!-- Facing Pages Cover First --%>
+                <button phx-click="set_layout" phx-value-layout="cover" class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors">
+                  <span class={["w-3.5 h-3.5 rounded-full border-2 flex-shrink-0", if(@page_layout == "cover", do: "border-violet-500 bg-violet-500", else: "border-zinc-600")]}></span>
+                  <svg xmlns="http://www.w3.org/2000/svg" class={["w-4 h-4 flex-shrink-0", if(@page_layout == "cover", do: "text-violet-400", else: "text-zinc-400")]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="8" y="2" width="8" height="10" rx="1"/>
+                    <rect x="2" y="14" width="9" height="10" rx="1"/>
+                    <rect x="13" y="14" width="9" height="10" rx="1"/>
+                  </svg>
+                  <span class={if(@page_layout == "cover", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages (Cover First)</span>
                 </button>
               </div>
-
-              <%!-- Direction toggle --%>
-              <button
-                phx-click="toggle_direction"
-                title="Toggle reading direction (LTR/RTL)"
-                class="flex items-center px-2.5 py-1.5 rounded text-xs font-mono text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors"
-              >
-                {@direction |> String.upcase()}
-              </button>
-
-              <%!-- Page counter --%>
-              <span class="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
-                {@current_page + 1} / {@page_count}
-              </span>
-            </div>
+            <% end %>
           </div>
 
-          <%!-- Reading area (full viewport) --%>
-          <div class="absolute inset-0 overflow-hidden select-none" id="reading-area" phx-hook="ReaderZoom">
-            <%!-- Click zone: left (prev in LTR, next in RTL) --%>
-            <div
-              class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left reader-click-zone"
-              style="width: 30%;"
-              phx-click={if @direction == "ltr", do: "prev_page", else: "next_page"}
-            />
-
-            <%!-- Click zone: center (toggle overlay) --%>
-            <div
-              class="absolute top-0 bottom-0 z-10 reader-click-zone"
-              style="left: 30%; width: 40%; cursor: default;"
-              phx-click="toggle_overlay"
-            />
-
-            <%!-- Click zone: right (next in LTR, prev in RTL) --%>
-            <div
-              class="absolute right-0 top-0 bottom-0 z-10 reader-zone-right reader-click-zone"
-              style="width: 30%;"
-              phx-click={if @direction == "ltr", do: "next_page", else: "prev_page"}
-            />
-
-            <%!-- Floating zoom controls (Mapbox-style) --%>
-            <div
-              class={[
-                "absolute transition-transform duration-200",
-                if(@overlay_visible, do: "translate-x-0", else: "translate-x-[calc(100%+16px)]")
-              ]}
-              style="top: 56px; right: 16px; z-index: 25;"
+          <%!-- Fit mode buttons --%>
+          <div class="flex items-center gap-1">
+            <button
+              phx-click="set_fit"
+              phx-value-mode="page"
+              title="Fit page"
+              class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "page", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
             >
-              <div class="flex flex-col rounded-md overflow-hidden shadow-xl border border-zinc-700 bg-zinc-900/90 backdrop-blur">
-                <button
-                  onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
-                  title="Zoom in (+)"
-                  class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors border-b border-zinc-700"
-                >
-                  <.icon name="lucide-plus" class="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
-                  title="Zoom out (-)"
-                  class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
-                >
-                  <.icon name="lucide-minus" class="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-
-            <%!-- Pages --%>
-            <div
-              id="reader-pages"
-              class={[
-                "flex items-center justify-center h-full",
-                if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
-              ]}
-              style="transform-origin: center; will-change: transform;"
+              <.icon name="lucide-maximize-2" class="w-4 h-4" />
+            </button>
+            <button
+              phx-click="set_fit"
+              phx-value-mode="width"
+              title="Fit width"
+              class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "width", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
             >
-              <div class="relative flex items-center justify-center h-full" style={if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0), do: "max-width: 50%", else: "max-width: 100%"}>
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
-                  <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-zinc-600" />
-                </div>
-                <img
-                  id="reader-page-main"
-                  phx-hook="PageImage"
-                  src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
-                  alt={"Page #{@current_page + 1}"}
-                  class="object-contain"
-                  style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
-                  draggable="false"
-                />
-              </div>
-              <%= if (@page_layout == "double" || (@page_layout == "cover" && @current_page > 0)) && @current_page + 1 < @page_count do %>
-                <div class="relative flex items-center justify-center h-full" style="max-width: 50%">
-                  <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
-                    <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                    </svg>
-                  </div>
-                  <img
-                    id="reader-page-second"
-                    phx-hook="PageImage"
-                    src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
-                    alt={"Page #{@current_page + 2}"}
-                    class="object-contain"
-                    style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
-                    draggable="false"
-                  />
-                </div>
-              <% end %>
-            </div>
+              <.icon name="lucide-arrow-left-right" class="w-4 h-4" />
+            </button>
+            <button
+              phx-click="set_fit"
+              phx-value-mode="height"
+              title="Fit height"
+              class={["flex items-center px-2 py-1.5 rounded transition-colors", if(@fit_mode == "height", do: "bg-violet-600 text-white", else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700")]}
+            >
+              <.icon name="lucide-arrow-up-down" class="w-4 h-4" />
+            </button>
+          </div>
 
-            <%!-- Preload adjacent pages --%>
-            <div class="hidden" aria-hidden="true">
-              <%= for offset <- preload_offsets(@page_layout) do %>
-                <% p = @current_page + offset %>
-                <%= if p >= 0 && p < @page_count do %>
-                  <img src={~p"/api/books/#{@book.id}/page/#{p}"} />
-                <% end %>
-              <% end %>
-            </div>
+          <%!-- Direction toggle --%>
+          <button
+            phx-click="toggle_direction"
+            title="Toggle reading direction (LTR/RTL)"
+            class="flex items-center px-2.5 py-1.5 rounded text-xs font-mono text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors"
+          >
+            {@direction |> String.upcase()}
+          </button>
 
-            <%!-- Bottom progress bar overlay --%>
-            <div class={[
-              "absolute bottom-0 left-0 right-0 z-30 px-4 py-3 bg-zinc-950/95 backdrop-blur border-t border-zinc-800 transition-transform duration-200",
-              if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
-            ]}>
-              <div class="flex items-center gap-3">
-                <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@current_page + 1}</span>
-                <input
-                  id="page-slider"
-                  type="range"
-                  min="0"
-                  max={@page_count - 1}
-                  value={@current_page}
-                  phx-hook="PageSlider"
-                  class="flex-1 h-1.5 appearance-none bg-zinc-700 rounded-full accent-violet-500 cursor-pointer"
-                  style="outline: none;"
-                />
-                <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@page_count}</span>
-              </div>
-            </div>
+          <%!-- Page counter --%>
+          <span class="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
+            {@current_page + 1} / {@page_count}
+          </span>
+        </div>
+      </div>
+
+      <%!-- Reading area (full viewport) --%>
+      <div class="absolute inset-0 overflow-hidden select-none" id="reading-area" phx-hook="ReaderZoom">
+        <%!-- Click zones. These carry data-action, not phx-click: the
+             ReaderZoom hook owns every pointer interaction in the reading
+             area (tap to navigate, double tap to zoom, drag to pan, pinch)
+             and pushes the event itself once it knows which gesture it
+             was. Side-zone taps fire immediately; only the centre zone
+             waits, since that is where double tap to zoom lives. --%>
+        <%!-- Click zone: left (prev in LTR, next in RTL) --%>
+        <div
+          class="absolute left-0 top-0 bottom-0 z-10 reader-zone-left reader-click-zone"
+          style="width: 22%;"
+          data-action={if @direction == "ltr", do: "prev_page", else: "next_page"}
+        />
+
+        <%!-- Click zone: center (toggle overlay) --%>
+        <div
+          class="absolute top-0 bottom-0 z-10 reader-zone-center reader-click-zone"
+          style="left: 22%; width: 56%; cursor: default;"
+          data-action="toggle_overlay"
+        />
+
+        <%!-- Click zone: right (next in LTR, prev in RTL) --%>
+        <div
+          class="absolute right-0 top-0 bottom-0 z-10 reader-zone-right reader-click-zone"
+          style="width: 22%;"
+          data-action={if @direction == "ltr", do: "next_page", else: "prev_page"}
+        />
+
+        <%!-- Floating zoom controls (Mapbox-style) --%>
+        <div
+          class={[
+            "absolute transition-transform duration-200",
+            if(@overlay_visible, do: "translate-x-0", else: "translate-x-[calc(100%+16px)]")
+          ]}
+          style="top: 56px; right: 16px; z-index: 25;"
+        >
+          <div class="flex flex-col rounded-md overflow-hidden shadow-xl border border-zinc-700 bg-zinc-900/90 backdrop-blur">
+            <button
+              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
+              title="Zoom in (+)"
+              class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors border-b border-zinc-700"
+            >
+              <.icon name="lucide-plus" class="w-3.5 h-3.5" />
+            </button>
+            <button
+              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
+              title="Zoom out (-)"
+              class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+            >
+              <.icon name="lucide-minus" class="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
-      </body>
-    </html>
+
+        <%!-- Pages --%>
+        <div
+          id="reader-pages"
+          class={[
+            "flex items-center justify-center h-full",
+            if(@direction == "rtl", do: "flex-row-reverse", else: "flex-row")
+          ]}
+          style="transform-origin: center; will-change: transform;"
+        >
+          <div class="relative flex items-center justify-center h-full" style={if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0), do: "max-width: 50%", else: "max-width: 100%"}>
+            <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
+              <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-zinc-600" />
+            </div>
+            <img
+              id="reader-page-main"
+              phx-hook="PageImage"
+              src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
+              alt={"Page #{@current_page + 1}"}
+              class="object-contain"
+              style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
+              draggable="false"
+            />
+          </div>
+          <%= if (@page_layout == "double" || (@page_layout == "cover" && @current_page > 0)) && @current_page + 1 < @page_count do %>
+            <div class="relative flex items-center justify-center h-full" style="max-width: 50%">
+              <div class="absolute inset-0 flex items-center justify-center pointer-events-none" style="display: flex;">
+                <svg class="animate-spin h-8 w-8 text-zinc-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+              </div>
+              <img
+                id="reader-page-second"
+                phx-hook="PageImage"
+                src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
+                alt={"Page #{@current_page + 2}"}
+                class="object-contain"
+                style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
+                draggable="false"
+              />
+            </div>
+          <% end %>
+        </div>
+
+        <%!-- Preload adjacent pages --%>
+        <div class="hidden" aria-hidden="true">
+          <%= for offset <- preload_offsets(@page_layout) do %>
+            <% p = @current_page + offset %>
+            <%= if p >= 0 && p < @page_count do %>
+              <img src={~p"/api/books/#{@book.id}/page/#{p}"} />
+            <% end %>
+          <% end %>
+        </div>
+
+        <%!-- Bottom progress bar overlay --%>
+        <div class={[
+          "absolute bottom-0 left-0 right-0 z-30 px-4 py-3 bg-zinc-950/95 backdrop-blur border-t border-zinc-800 transition-transform duration-200",
+          if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
+        ]}>
+          <div class="flex items-center gap-3">
+            <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@current_page + 1}</span>
+            <input
+              id="page-slider"
+              type="range"
+              min="0"
+              max={@page_count - 1}
+              value={@current_page}
+              phx-hook="PageSlider"
+              class="flex-1 h-1.5 appearance-none bg-zinc-700 rounded-full accent-violet-500 cursor-pointer"
+              style="outline: none;"
+            />
+            <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@page_count}</span>
+          </div>
+        </div>
+      </div>
+    </div>
     """
   end
 end
