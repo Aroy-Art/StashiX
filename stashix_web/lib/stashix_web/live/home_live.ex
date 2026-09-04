@@ -1,4 +1,4 @@
-defmodule StashixWeb.LibrariesLive do
+defmodule StashixWeb.HomeLive do
   use StashixWeb, :live_view
 
   alias Stashix.Library
