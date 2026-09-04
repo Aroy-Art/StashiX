@@ -14,12 +14,11 @@
       class="fixed inset-y-0 left-0 z-40 w-52 -translate-x-full lg:translate-x-0 lg:relative lg:z-auto flex-shrink-0 bg-gray-950 border-r-2 border-gray-800 flex flex-col h-screen h-dvh transition-transform duration-200"
     >
       <%!-- Logo --%>
-      <div class="p-4 border-b-2 border-gray-800">
-        <a href="/" class="flex items-center gap-2">
-          <img src={~p"/images/logo.png"} class="w-8 h-8 object-contain" alt="Stashix" />
-          <span class="font-bold text-lg relative">
+      <div class="flex items-center h-16 ps-6 border-b-2 border-gray-800">
+        <a href="/" class="flex items-center">
+          <span class="font-bold text-2xl relative">
             <span class="text-white">Stash</span><span class="text-violet-500 [text-shadow:3px_0_18px_rgba(167,139,250,0.9),6px_0_28px_rgba(139,92,246,0.5),0_0_6px_rgba(167,139,250,0.7)]">iX</span>
-            <svg class="absolute left-full translate-x-0.5 top-1/2 -translate-y-[55%] pointer-events-none" width="50" height="18" viewBox="0 0 50 18" fill="none" aria-hidden="true">
+            <svg class="absolute left-full translate-x-0.5 top-1/2 -translate-y-[38%] pointer-events-none" width="50" height="18" viewBox="0 0 50 18" fill="none" aria-hidden="true">
               <defs>
                 <linearGradient id="ix-trail" x1="0" y1="0" x2="50" y2="0" gradientUnits="userSpaceOnUse">
                   <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85"/>
@@ -159,7 +158,7 @@
 
       lib_names =
         (Map.get(assigns, :sidebar_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end) %>
-      <header class="flex items-center gap-4 px-4 py-3 border-b-2 border-gray-800 bg-gray-950">
+      <header class="flex items-center h-16 gap-4 px-4 border-b-2 border-gray-800 bg-gray-950">
         <button
           onclick="toggleSidebar()"
           class="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-violet-200 hover:bg-violet-900/20 transition-colors flex-shrink-0"

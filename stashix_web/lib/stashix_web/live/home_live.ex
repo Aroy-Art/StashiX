@@ -119,7 +119,7 @@ defmodule StashixWeb.HomeLive do
 
           <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
             <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
-              Continue Reading<%= if hero.series, do: " · #{hero.series.name}" %>
+              Continue Reading<%= if hero.series do %> · <a href={~p"/series/#{hero.series.id}"} class="hover:text-violet-300 transition-colors"><%= hero.series.name %></a><% end %>
             </p>
             <h1 class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight" style="letter-spacing:-0.3px;text-wrap:balance">
               <%= if hero.issue_number, do: "##{hero.issue_number} – #{hero.title}", else: hero.title %>
@@ -456,7 +456,7 @@ defmodule StashixWeb.HomeLive do
             <%= for book <- recent_issues do %>
               <.media_card
                 href={~p"/book/#{book.id}"}
-                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 width={288}
                 subtitle={book.year && to_string(book.year)}
