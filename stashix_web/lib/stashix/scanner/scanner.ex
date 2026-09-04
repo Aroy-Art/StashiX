@@ -266,7 +266,7 @@ defmodule Stashix.Scanner do
 
     case Library.create_book(attrs) do
       {:ok, book} ->
-        link_publisher(book, series, metadata)
+        link_publisher(book, series, enrich_publisher(metadata, file_path, library))
         Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, book})
         {{book, file_path}, new_cache}
 
@@ -313,7 +313,7 @@ defmodule Stashix.Scanner do
 
     case Library.update_book(book, attrs) do
       {:ok, updated_book} ->
-        link_publisher(updated_book, series, metadata)
+        link_publisher(updated_book, series, enrich_publisher(metadata, file_path, library))
         {{updated_book, file_path}, new_cache}
 
       {:error, reason} ->
@@ -635,6 +635,23 @@ defmodule Stashix.Scanner do
       path = base <> ext
       if File.exists?(path), do: path
     end)
+  end
+
+  # Infer publisher from path when XML provides none.
+  # Matches <lib_root>/<publisher>/<series>/file — publisher dir must sit directly under lib root.
+  defp enrich_publisher(metadata, file_path, library) do
+    if Map.has_key?(metadata, :publisher) do
+      metadata
+    else
+      series_dir = Path.dirname(file_path)
+      publisher_dir = Path.dirname(series_dir)
+
+      if Path.dirname(publisher_dir) == library.root_path do
+        Map.put(metadata, :publisher, Path.basename(publisher_dir))
+      else
+        metadata
+      end
+    end
   end
 
   defp link_publisher(book, series, metadata) do
