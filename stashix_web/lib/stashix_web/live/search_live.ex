@@ -141,6 +141,7 @@ defmodule StashixWeb.SearchLive do
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                   width={300}
                   subtitle={book.year && to_string(book.year)}
+                  page_count={book.page_count}
                   type={:book}
                 />
               <% end %>

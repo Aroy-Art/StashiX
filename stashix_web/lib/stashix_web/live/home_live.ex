@@ -395,6 +395,7 @@ defmodule StashixWeb.HomeLive do
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 width={288}
                 subtitle={book.year && to_string(book.year)}
+                page_count={book.page_count}
                 type={:book}
                 class="flex-shrink-0 w-32"
               />

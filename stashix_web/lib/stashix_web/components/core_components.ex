@@ -764,6 +764,7 @@ defmodule StashixWeb.CoreComponents do
   attr :badge, :string, default: nil
   attr :progress, :float, default: nil
   attr :type, :atom, default: :book
+  attr :page_count, :integer, default: nil
   attr :class, :string, default: ""
 
   def media_card(assigns) do
@@ -798,6 +799,12 @@ defmodule StashixWeb.CoreComponents do
         <%= if @badge do %>
           <span class="absolute bottom-2 left-2 text-xs bg-gray-800/40 text-gray-300 border-1 border-gray-400/80 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
             {@badge}
+          </span>
+        <% end %>
+        <%= if @type == :book && @page_count && @page_count > 0 do %>
+          <span class="absolute bottom-2 left-2 flex items-center gap-0.5 text-xs bg-gray-800/40 text-gray-300 border border-gray-400/80 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
+            <.icon name="lucide-sticky-note" class="w-3 h-3 shrink-0" />
+            {@page_count}
           </span>
         <% end %>
         <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
@@ -925,11 +932,12 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  attr :id, :string, default: nil
   slot :inner_block, required: true
 
   def media_grid(assigns) do
     ~H"""
-    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+    <div id={@id} class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
       {render_slot(@inner_block)}
     </div>
     """
@@ -952,6 +960,7 @@ defmodule StashixWeb.CoreComponents do
   attr :page, :integer, required: true
   attr :total_pages, :integer, required: true
   attr :on_page, :string, default: "goto_page"
+  attr :scroll_to, :string, default: nil
 
   def pagination(assigns) do
     assigns = assign(assigns, :pages, pagination_pages(assigns.page, assigns.total_pages))
@@ -960,16 +969,14 @@ defmodule StashixWeb.CoreComponents do
     <%= if @total_pages > 1 do %>
       <div class="flex items-center justify-center gap-1">
         <button
-          phx-click={@on_page}
-          phx-value-page={1}
+          phx-click={page_click(@on_page, 1, @scroll_to)}
           disabled={@page == 1}
           class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <.icon name="lucide-chevron-first" class="w-4 h-4" />
         </button>
         <button
-          phx-click={@on_page}
-          phx-value-page={@page - 1}
+          phx-click={page_click(@on_page, @page - 1, @scroll_to)}
           disabled={@page == 1}
           class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
@@ -978,8 +985,7 @@ defmodule StashixWeb.CoreComponents do
 
         <%= for {p, i} <- Enum.with_index(@pages, 1) do %>
           <button
-            phx-click={@on_page}
-            phx-value-page={p}
+            phx-click={page_click(@on_page, p, @scroll_to)}
             class={[
               "w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors",
               if(i > 5, do: "hidden sm:flex", else: "flex"),
@@ -994,16 +1000,14 @@ defmodule StashixWeb.CoreComponents do
         <% end %>
 
         <button
-          phx-click={@on_page}
-          phx-value-page={@page + 1}
+          phx-click={page_click(@on_page, @page + 1, @scroll_to)}
           disabled={@page == @total_pages}
           class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
           <.icon name="lucide-chevron-right" class="w-4 h-4" />
         </button>
         <button
-          phx-click={@on_page}
-          phx-value-page={@total_pages}
+          phx-click={page_click(@on_page, @total_pages, @scroll_to)}
           disabled={@page == @total_pages}
           class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
         >
@@ -1012,6 +1016,13 @@ defmodule StashixWeb.CoreComponents do
       </div>
     <% end %>
     """
+  end
+
+  defp page_click(event, page, nil), do: JS.push(event, value: %{"page" => to_string(page)})
+
+  defp page_click(event, page, scroll_to) do
+    JS.push(event, value: %{"page" => to_string(page)})
+    |> JS.dispatch("stashix:scroll-to", detail: %{id: scroll_to})
   end
 
   defp pagination_pages(_current, total) when total <= 11, do: Enum.to_list(1..total)

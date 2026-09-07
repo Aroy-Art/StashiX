@@ -287,6 +287,7 @@ defmodule StashixWeb.PublisherLive do
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   width={288}
                   subtitle={book.year && to_string(book.year)}
+                  page_count={book.page_count}
                   type={:book}
                   class="flex-shrink-0 w-36"
                 />
@@ -376,6 +377,7 @@ defmodule StashixWeb.PublisherLive do
                   width={300}
                   subtitle={book.year && to_string(book.year)}
                   progress={progress}
+                  page_count={book.page_count}
                   type={:book}
                 />
               <% end %>

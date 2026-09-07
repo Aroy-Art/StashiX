@@ -285,6 +285,7 @@ defmodule StashixWeb.LibraryLive do
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   width={288}
                   subtitle={book.year && to_string(book.year)}
+                  page_count={book.page_count}
                   type={:book}
                   class="flex-shrink-0 w-36"
                 />
@@ -344,10 +345,10 @@ defmodule StashixWeb.LibraryLive do
         </.browse_header>
 
         <%= if @items != [] do %>
-          <.pagination page={@page} total_pages={@total_pages} />
+          <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
 
           <%= if @live_action == :series do %>
-            <.media_grid>
+            <.media_grid id="content-list">
               <%= for s <- @items do %>
                 <.media_card
                   href={~p"/series/#{s.id}"}
@@ -363,7 +364,7 @@ defmodule StashixWeb.LibraryLive do
           <% end %>
 
           <%= if @live_action == :books do %>
-            <.media_grid>
+            <.media_grid id="content-list">
               <%= for book <- @items do %>
                 <% prog = @progress_map[book.id] %>
                 <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
@@ -374,6 +375,7 @@ defmodule StashixWeb.LibraryLive do
                   width={300}
                   subtitle={book.year && to_string(book.year)}
                   progress={progress}
+                  page_count={book.page_count}
                   type={:book}
                 />
               <% end %>
@@ -381,7 +383,7 @@ defmodule StashixWeb.LibraryLive do
           <% end %>
 
           <%= if @live_action == :issues do %>
-            <.media_grid>
+            <.media_grid id="content-list">
               <%= for book <- @items do %>
                 <% prog = @progress_map[book.id] %>
                 <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
@@ -398,7 +400,7 @@ defmodule StashixWeb.LibraryLive do
             </.media_grid>
           <% end %>
 
-          <.pagination page={@page} total_pages={@total_pages} />
+          <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
         <% end %>
 
         <%= if !@loading && @items == [] do %>
