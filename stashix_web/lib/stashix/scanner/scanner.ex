@@ -630,7 +630,8 @@ defmodule Stashix.Scanner do
   defp save_cover_with_blurhash(book_id, path) do
     blurhash =
       with {:ok, img} <- Image.open(path),
-           {:ok, flat} <- Image.flatten(img),
+           {:ok, small} <- Image.thumbnail(img, 64),
+           {:ok, flat} <- Image.flatten(small),
            {:ok, hash} <- Image.Blurhash.encode(flat, x_components: 4, y_components: 3) do
         hash
       else

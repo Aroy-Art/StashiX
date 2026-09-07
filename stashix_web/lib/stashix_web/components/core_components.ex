@@ -779,7 +779,7 @@ defmodule StashixWeb.CoreComponents do
 
     ~H"""
     <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
-      <div class="aspect-[2/3] bg-gray-800 relative">
+      <div class="aspect-[2/3] bg-gray-800 relative overflow-hidden">
         <%= if @img_src do %>
           <canvas
             :if={@blurhash}

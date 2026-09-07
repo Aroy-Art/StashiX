@@ -18,10 +18,10 @@
     cols.push([lin(dc >> 16), lin((dc >> 8) & 255), lin(dc & 255)])
     for (let i = 1; i < xC * yC; i++) {
       const v = d83(hash.slice(4 + i * 2, 6 + i * 2))
-      const qR = v / 81 | 0
-      const qG = (v / 9 | 0) % 9
-      const qB = v % 9
-      cols.push([sp((qR - 4) / 4) * maxAC, sp((qG - 4) / 4) * maxAC, sp((qB - 4) / 4) * maxAC])
+      const qR = v / 361 | 0
+      const qG = (v / 19 | 0) % 19
+      const qB = v % 19
+      cols.push([sp((qR - 9) / 9) * maxAC, sp((qG - 9) / 9) * maxAC, sp((qB - 9) / 9) * maxAC])
     }
 
     const W = canvas.width, H = canvas.height
