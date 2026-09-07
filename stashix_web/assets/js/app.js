@@ -66,11 +66,25 @@ Hooks.SearchNav = {
       }
     }
 
+    this.onGlobalKeydown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        if (document.activeElement === this.el) {
+          this.el.blur()
+        } else {
+          this.el.focus()
+          this.el.select()
+        }
+      }
+    }
+
     this.el.addEventListener('keydown', this.onKeydown)
+    window.addEventListener('keydown', this.onGlobalKeydown)
   },
 
   destroyed() {
     this.el.removeEventListener('keydown', this.onKeydown)
+    window.removeEventListener('keydown', this.onGlobalKeydown)
   },
 
   setActive(idx, items) {
@@ -544,6 +558,10 @@ Hooks.ReaderZoom = {
     this.indicator.addEventListener("click", () => this.setZoom(1))
     document.body.appendChild(this.indicator)
   }
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"))
 }
 
 // A second copy of this bundle on the page would stand up a second LiveSocket,
