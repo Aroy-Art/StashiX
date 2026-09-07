@@ -957,6 +957,7 @@ defmodule StashixWeb.CoreComponents do
 
   # ---------------------------------------------------------------------------
 
+  attr :id, :string, default: nil
   attr :page, :integer, required: true
   attr :total_pages, :integer, required: true
   attr :on_page, :string, default: "goto_page"
@@ -967,7 +968,7 @@ defmodule StashixWeb.CoreComponents do
 
     ~H"""
     <%= if @total_pages > 1 do %>
-      <div class="flex items-center justify-center gap-1">
+      <div id={@id} class="flex items-center justify-center gap-1">
         <button
           phx-click={page_click(@on_page, 1, @scroll_to)}
           disabled={@page == 1}
