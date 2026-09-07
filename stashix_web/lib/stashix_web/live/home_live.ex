@@ -173,7 +173,7 @@ defmodule StashixWeb.HomeLive do
       </div>
 
       <%!-- TWO-COLUMN BODY --%>
-      <div class="flex flex-col lg:flex-row gap-5 p-4 lg:p-6 items-start">
+      <div class="flex flex-col lg:flex-row gap-5 p-4 lg:p-6 lg:items-start">
 
         <%!-- Left column: reading queue + up next --%>
         <div class="flex-1 min-w-0 flex flex-col gap-5">
@@ -185,7 +185,7 @@ defmodule StashixWeb.HomeLive do
                 <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span>
                 Also Reading
               </h2>
-              <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <%= for %{book: book, current_page: current_page} <- Enum.drop(@continue_reading, 1) do %>
                   <% pct = if book.page_count && book.page_count > 1, do: round(min(current_page / (book.page_count - 1), 1.0) * 100), else: nil %>
                   <a href={~p"/book/#{book.id}"} class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
@@ -224,7 +224,7 @@ defmodule StashixWeb.HomeLive do
                 </h2>
                 <a href={~p"/issues"} class="text-xs text-violet-400 hover:text-violet-300">See all →</a>
               </div>
-              <div class="flex flex-col gap-2">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <%= for book <- Enum.take(@next_issue, 5) do %>
                   <a href={~p"/book/#{book.id}"} class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
                     <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
