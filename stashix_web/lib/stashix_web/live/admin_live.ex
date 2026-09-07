@@ -339,19 +339,6 @@ defmodule StashixWeb.AdminLive do
      |> put_flash(:info, "Series and its books restored")}
   end
 
-  @impl true
-  def handle_info({:scan_progress, %{library_id: id, done: true}}, socket) do
-    {:noreply, update(socket, :scanning_libraries, &MapSet.delete(&1, id))}
-  end
-
-  def handle_info({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
-    {:noreply, update(socket, :scanning_libraries, fn libs ->
-      if t > 0 and s < t, do: MapSet.put(libs, id), else: libs
-    end)}
-  end
-
-  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
-
   def handle_event("pub_vis_search", params, socket) do
     q = Map.get(params, "q") || Map.get(params, "value", "")
 
@@ -485,6 +472,19 @@ defmodule StashixWeb.AdminLive do
         {:noreply, put_flash(socket, :error, "Failed to remove alias")}
     end
   end
+
+  @impl true
+  def handle_info({:scan_progress, %{library_id: id, done: true}}, socket) do
+    {:noreply, update(socket, :scanning_libraries, &MapSet.delete(&1, id))}
+  end
+
+  def handle_info({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
+    {:noreply, update(socket, :scanning_libraries, fn libs ->
+      if t > 0 and s < t, do: MapSet.put(libs, id), else: libs
+    end)}
+  end
+
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   @impl true
   def render(assigns) do

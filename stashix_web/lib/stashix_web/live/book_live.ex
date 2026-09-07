@@ -62,33 +62,6 @@ defmodule StashixWeb.BookLive do
     {:noreply, assign(socket, progress: 0, fully_read: false, read_menu_open: false)}
   end
 
-  defp format_file_size(nil), do: "—"
-  defp format_file_size(0), do: "—"
-
-  defp format_file_size(bytes) do
-    cond do
-      bytes >= 1_073_741_824 -> "#{Float.round(bytes / 1_073_741_824, 1)} GB"
-      bytes >= 1_048_576 -> "#{Float.round(bytes / 1_048_576, 1)} MB"
-      bytes >= 1024 -> "#{Float.round(bytes / 1024, 1)} KB"
-      true -> "#{bytes} B"
-    end
-  end
-
-  defp format_age_rating(:unknown), do: "N/A"
-  defp format_age_rating(:everyone), do: "Everyone"
-  defp format_age_rating(:teen), do: "Teen"
-  defp format_age_rating(:teen_plus), do: "Teen+"
-  defp format_age_rating(:mature), do: "Mature"
-  defp format_age_rating(:adult), do: "Adult"
-  defp format_age_rating(:explicit), do: "Explicit"
-  defp format_age_rating(_), do: "N/A"
-
-  defp book_display_title(book), do: book.title
-
-  defp relative_path(book, library) do
-    library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
-  end
-
   def handle_event("toggle_admin_menu", _params, socket) do
     {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
   end
@@ -143,6 +116,12 @@ defmodule StashixWeb.BookLive do
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
+  defp book_display_title(book), do: book.title
+
+  defp relative_path(book, library) do
+    library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
+  end
 
   @impl true
   def render(assigns) do
@@ -355,7 +334,7 @@ defmodule StashixWeb.BookLive do
             <% end %>
             <div>
               <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Age Rating</p>
-              <p class="mt-1 text-sm text-gray-200">{format_age_rating(@book.age_rating)}</p>
+              <p class="mt-1 text-sm text-gray-200">{Formatters.format_age_rating(@book.age_rating)}</p>
             </div>
             <div>
               <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">Format</p>
@@ -363,7 +342,7 @@ defmodule StashixWeb.BookLive do
             </div>
             <div>
               <p class="text-[10px] font-semibold tracking-widest text-gray-500 uppercase">File Size</p>
-              <p class="mt-1 text-sm text-gray-200">{format_file_size(@book.file_size)}</p>
+              <p class="mt-1 text-sm text-gray-200">{Formatters.format_file_size(@book.file_size) || "—"}</p>
             </div>
           </div>
 

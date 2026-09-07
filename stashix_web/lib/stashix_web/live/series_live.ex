@@ -57,12 +57,6 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, socket}
   end
 
-  defp format_file_size(0), do: nil
-  defp format_file_size(bytes) when bytes >= 1_073_741_824, do: "#{Float.round(bytes / 1_073_741_824, 1)} GB"
-  defp format_file_size(bytes) when bytes >= 1_048_576, do: "#{Float.round(bytes / 1_048_576, 1)} MB"
-  defp format_file_size(bytes) when bytes >= 1024, do: "#{Float.round(bytes / 1024, 1)} KB"
-  defp format_file_size(bytes), do: "#{bytes} B"
-
   defp year_range(%{start_year: nil}), do: nil
   defp year_range(%{start_year: s, end_year: nil, ongoing: true}), do: "#{s}–"
   defp year_range(%{start_year: s, end_year: nil}), do: "#{s}"
@@ -155,7 +149,6 @@ defmodule StashixWeb.SeriesLive do
     end)
   end
 
-  defp issue_label(nil), do: nil
   defp issue_label(%{issue_number: nil}), do: nil
   defp issue_label(%{issue_number: n}), do: "##{Decimal.to_integer(n)}"
 
@@ -371,7 +364,7 @@ defmodule StashixWeb.SeriesLive do
             end %>
           </p>
         </div>
-        <%= if fs = format_file_size(@total_size) do %>
+        <%= if fs = Formatters.format_file_size(@total_size) do %>
           <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
             <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Size</p>
             <p class="text-gray-300">{fs}</p>
@@ -442,6 +435,7 @@ defmodule StashixWeb.SeriesLive do
               }
               progress={progress}
               type={:book}
+              blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
         </div>
