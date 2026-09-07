@@ -99,8 +99,8 @@ defmodule StashixWeb.AllSeriesLive do
       </.browse_header>
 
       <%= if @series != [] do %>
-        <.pagination page={@page} total_pages={@total_pages} />
-        <.media_grid>
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
+        <.media_grid id="content-list">
           <%= for s <- @series do %>
             <.media_card
               href={~p"/series/#{s.id}"}
@@ -113,7 +113,7 @@ defmodule StashixWeb.AllSeriesLive do
             />
           <% end %>
         </.media_grid>
-        <.pagination page={@page} total_pages={@total_pages} />
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
       <% end %>
 
       <%= if !@loading && @series == [] do %>

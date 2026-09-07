@@ -20,9 +20,13 @@ defmodule StashixWeb.Live.Hooks do
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress)
+          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress, navbar_search_query: "", navbar_search_results: [])
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
+          |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
+          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, _uri, sock ->
+            {:cont, assign(sock, navbar_search_query: "", navbar_search_results: [])}
+          end)
 
         {:cont, socket}
 
@@ -46,9 +50,13 @@ defmodule StashixWeb.Live.Hooks do
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress)
+          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress, navbar_search_query: "", navbar_search_results: [])
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
+          |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
+          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, _uri, sock ->
+            {:cont, assign(sock, navbar_search_query: "", navbar_search_results: [])}
+          end)
 
         {:cont, socket}
 
@@ -69,6 +77,42 @@ defmodule StashixWeb.Live.Hooks do
         {:cont, assign(socket, :current_user, nil)}
     end
   end
+
+  defp handle_navbar_search("navbar_search", %{"value" => q}, socket)
+       when q == socket.assigns.navbar_search_query do
+    {:halt, socket}
+  end
+
+  defp handle_navbar_search("navbar_search", %{"value" => q}, socket) do
+    results =
+      if String.length(q) >= 2 do
+        %{series: series, issues: issues, books: books} = Library.search_all(q, limit: 12)
+
+        flat =
+          Enum.map(series, fn s ->
+            %{type: :series, id: s.id, label: s.name, sub: if(s.issue_count > 0, do: "#{s.issue_count} issues"), cover: true}
+          end) ++
+          Enum.map(issues, fn b ->
+            label = if b.issue_number, do: "##{b.issue_number} – #{b.title}", else: b.title
+            %{type: :issue, id: b.id, label: label, sub: b.series && b.series.name, cover: not is_nil(b.cover)}
+          end) ++
+          Enum.map(books, fn b ->
+            %{type: :book, id: b.id, label: b.title, sub: b.year && to_string(b.year), cover: not is_nil(b.cover)}
+          end)
+
+        Enum.take(flat, 12)
+      else
+        []
+      end
+
+    {:halt, assign(socket, navbar_search_query: q, navbar_search_results: results)}
+  end
+
+  defp handle_navbar_search("navbar_search_clear", _params, socket) do
+    {:halt, assign(socket, navbar_search_query: "", navbar_search_results: [])}
+  end
+
+  defp handle_navbar_search(_event, _params, socket), do: {:cont, socket}
 
   defp handle_sidebar_scan("sidebar_scan", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)

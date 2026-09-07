@@ -104,8 +104,8 @@ defmodule StashixWeb.AllIssuesLive do
       </.browse_header>
 
       <%= if @books != [] do %>
-        <.pagination page={@page} total_pages={@total_pages} />
-        <.media_grid>
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
+        <.media_grid id="content-list">
           <%= for book <- @books do %>
             <% prog = @progress_map[book.id] %>
             <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
@@ -133,7 +133,7 @@ defmodule StashixWeb.AllIssuesLive do
             />
           <% end %>
         </.media_grid>
-        <.pagination page={@page} total_pages={@total_pages} />
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
       <% end %>
 
       <%= if !@loading && @books == [] do %>

@@ -40,6 +40,58 @@ import "./ui/components/tooltip.js";
 
 let Hooks = { SaladUI: SaladUIHook }
 
+Hooks.SearchNav = {
+  mounted() {
+    this.activeIndex = -1
+
+    this.onKeydown = (e) => {
+      const items = Array.from(this.el.parentElement?.querySelectorAll('a[data-result]') ?? [])
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if (items.length === 0) return
+        e.preventDefault()
+        const next = e.key === 'ArrowDown'
+          ? Math.min(this.activeIndex + 1, items.length - 1)
+          : Math.max(this.activeIndex - 1, -1)
+        this.setActive(next, items)
+      } else if (e.key === 'Enter' && this.activeIndex >= 0 && items[this.activeIndex]) {
+        e.preventDefault()
+        window.location.href = items[this.activeIndex].href
+      } else if (e.key === 'Escape') {
+        this.activeIndex = -1
+        this.el.blur()
+      } else {
+        this.activeIndex = -1
+        items.forEach(el => this.clearActive(el))
+      }
+    }
+
+    this.el.addEventListener('keydown', this.onKeydown)
+  },
+
+  destroyed() {
+    this.el.removeEventListener('keydown', this.onKeydown)
+  },
+
+  setActive(idx, items) {
+    items.forEach((el, i) => {
+      if (i === idx) {
+        el.style.backgroundColor = 'rgb(31 41 55)'
+        el.style.color = '#fff'
+      } else {
+        this.clearActive(el)
+      }
+    })
+    this.activeIndex = idx
+    if (idx >= 0 && items[idx]) items[idx].scrollIntoView({ block: 'nearest' })
+  },
+
+  clearActive(el) {
+    el.style.backgroundColor = ''
+    el.style.color = ''
+  }
+}
+
 Hooks.CoverImage = {
   mounted() {
     this.el.style.transition = 'opacity 0.2s ease'
@@ -519,6 +571,11 @@ if (window.__stashixBooted) {
   topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
   window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
   window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+  window.addEventListener("stashix:scroll-to", (e) => {
+    const el = document.getElementById(e.detail.id)
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
+  })
 
   // connect if there are any LiveViews on the page
   liveSocket.connect()

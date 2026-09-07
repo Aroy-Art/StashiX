@@ -62,9 +62,9 @@ defmodule StashixWeb.AllPublishersLive do
       <.browse_header title="Publishers" subtitle={"#{@total} publishers"} />
 
       <%= if @publishers != [] do %>
-        <.pagination page={@page} total_pages={@total_pages} />
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div id="content-list" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <%= for pub <- @publishers do %>
             <% stats = Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
             <% cover_ids = Map.get(@covers_map, pub.id, []) %>
@@ -122,7 +122,7 @@ defmodule StashixWeb.AllPublishersLive do
           <% end %>
         </div>
 
-        <.pagination page={@page} total_pages={@total_pages} />
+        <.pagination page={@page} total_pages={@total_pages} scroll_to="content-list" />
       <% end %>
 
       <%= if !@loading && @publishers == [] do %>
