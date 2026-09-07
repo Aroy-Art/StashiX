@@ -110,6 +110,7 @@ defmodule StashixWeb.AllSeriesLive do
               subtitle={series_date_range(s)}
               badge={"#{s.issue_count} issues"}
               type={:series}
+              blurhash={s.cover_blurhash}
             />
           <% end %>
         </.media_grid>

@@ -33,6 +33,7 @@ defmodule Stashix.Library.Series do
     field :adult, :boolean, default: false
     field :path, :string
     field :deleted_at, :naive_datetime
+    field :cover_blurhash, :string, virtual: true
 
     belongs_to :library, Stashix.Library.Library
     has_many :books, Stashix.Library.Book

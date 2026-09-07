@@ -104,7 +104,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publishers)
+    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes()
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
@@ -261,6 +261,7 @@ defmodule Stashix.Library do
         limit: ^limit
       )
       |> Repo.all()
+      |> attach_series_blurhashes()
 
     %{
       series: series,
@@ -430,7 +431,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query)
+    Repo.all(query) |> attach_series_blurhashes()
   end
 
   def count_publisher_series(publisher_id) do
@@ -745,18 +746,42 @@ defmodule Stashix.Library do
     Repo.get_by(Book, file_hash: hash)
   end
 
-  def create_or_update_cover(book_id, path) do
+  def create_or_update_cover(book_id, path, blurhash \\ nil) do
+    attrs = %{book_id: book_id, path: path, blurhash: blurhash}
+
     case Repo.get_by(BookCover, book_id: book_id) do
       nil ->
         %BookCover{}
-        |> BookCover.changeset(%{book_id: book_id, path: path})
+        |> BookCover.changeset(attrs)
         |> Repo.insert()
 
       cover ->
         cover
-        |> BookCover.changeset(%{path: path})
+        |> BookCover.changeset(Map.delete(attrs, :book_id))
         |> Repo.update()
     end
+  end
+
+  def series_cover_blurhash_map([]), do: %{}
+
+  def series_cover_blurhash_map(series_ids) do
+    from(bc in BookCover,
+      join: b in Book, on: b.id == bc.book_id and is_nil(b.deleted_at),
+      where: b.series_id in ^series_ids,
+      distinct: [asc: b.series_id],
+      order_by: [asc: b.series_id, asc_nulls_last: b.issue_number, asc: b.inserted_at],
+      select: {b.series_id, bc.blurhash}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  defp attach_series_blurhashes([]), do: []
+
+  defp attach_series_blurhashes(series) do
+    ids = Enum.map(series, & &1.id)
+    bh_map = series_cover_blurhash_map(ids)
+    Enum.map(series, fn s -> %{s | cover_blurhash: Map.get(bh_map, s.id)} end)
   end
 
   def set_library_permission(attrs) do
@@ -838,6 +863,7 @@ defmodule Stashix.Library do
       select: %{s | issue_count: count(b.id)}
     )
     |> Repo.all()
+    |> attach_series_blurhashes()
   end
 
   def recent_issues(library_id, limit \\ 10) do
@@ -1079,7 +1105,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publishers)
+    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes()
   end
 
   def count_all_series(opts \\ []) do

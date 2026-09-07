@@ -116,6 +116,7 @@ defmodule StashixWeb.AllBooksLive do
               progress={progress}
               page_count={book.page_count}
               type={:book}
+              blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
         </.media_grid>

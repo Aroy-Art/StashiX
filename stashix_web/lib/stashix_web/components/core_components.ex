@@ -765,6 +765,7 @@ defmodule StashixWeb.CoreComponents do
   attr :progress, :float, default: nil
   attr :type, :atom, default: :book
   attr :page_count, :integer, default: nil
+  attr :blurhash, :string, default: nil
   attr :class, :string, default: ""
 
   def media_card(assigns) do
@@ -780,12 +781,22 @@ defmodule StashixWeb.CoreComponents do
     <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
       <div class="aspect-[2/3] bg-gray-800 relative">
         <%= if @img_src do %>
+          <canvas
+            :if={@blurhash}
+            id={"bh-#{@cover_id}"}
+            width="32"
+            height="48"
+            class="absolute inset-0 w-full h-full"
+            style="filter:blur(6px);transform:scale(1.05)"
+          ></canvas>
           <img
             id={@cover_id}
             phx-hook="CoverImage"
             src={@img_src}
             alt={@title}
             class="w-full h-full object-cover"
+            data-blurhash={@blurhash}
+            data-canvas-id={"bh-#{@cover_id}"}
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
           />
           <div class="w-full h-full hidden items-center justify-center text-gray-600">

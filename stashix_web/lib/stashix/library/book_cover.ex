@@ -7,6 +7,7 @@ defmodule Stashix.Library.BookCover do
 
   schema "book_covers" do
     field :path, :string
+    field :blurhash, :string
 
     belongs_to :book, Stashix.Library.Book
 
@@ -15,7 +16,7 @@ defmodule Stashix.Library.BookCover do
 
   def changeset(cover, attrs) do
     cover
-    |> cast(attrs, [:path, :book_id])
+    |> cast(attrs, [:path, :blurhash, :book_id])
     |> validate_required([:path, :book_id])
     |> unique_constraint(:book_id)
   end

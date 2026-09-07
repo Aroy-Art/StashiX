@@ -20,6 +20,7 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import "../vendor/blurhash"
 import SaladUI from "./ui/index.js";
 import { SaladUIHook } from "./ui/core/hook.js";
 import "./ui/components/accordion.js";
@@ -108,14 +109,42 @@ Hooks.SearchNav = {
 
 Hooks.CoverImage = {
   mounted() {
-    this.el.style.transition = 'opacity 0.2s ease'
+    const hash = this.el.dataset.blurhash
+    const canvasId = this.el.dataset.canvasId
+    this.canvas = canvasId ? document.getElementById(canvasId) : null
+
+    if (hash && this.canvas) {
+      try { window.decodeBlurhash(hash, this.canvas) } catch (_) {}
+    }
+
     this.el.style.opacity = '0'
-    const reveal = () => { this.el.style.opacity = '1' }
+    this.el.style.transition = 'opacity 0.3s ease'
+
+    const reveal = () => {
+      this.el.style.opacity = '1'
+      if (this.canvas) {
+        this.canvas.style.transition = 'opacity 0.3s ease'
+        this.canvas.style.opacity = '0'
+        const c = this.canvas
+        setTimeout(() => { if (c.parentNode) c.parentNode.removeChild(c) }, 350)
+        this.canvas = null
+      }
+    }
+
     if (this.el.complete && this.el.naturalWidth > 0) {
       reveal()
     } else {
       this.el.addEventListener('load', reveal, { once: true })
-      this.el.addEventListener('error', reveal, { once: true })
+      this.el.addEventListener('error', () => {
+        this.el.style.opacity = '1'
+        if (this.canvas) this.canvas.style.opacity = '0'
+      }, { once: true })
+    }
+  },
+
+  destroyed() {
+    if (this.canvas && this.canvas.parentNode) {
+      this.canvas.parentNode.removeChild(this.canvas)
     }
   }
 }

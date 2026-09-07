@@ -130,6 +130,7 @@ defmodule StashixWeb.AllIssuesLive do
               }
               progress={progress}
               type={:book}
+              blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
         </.media_grid>

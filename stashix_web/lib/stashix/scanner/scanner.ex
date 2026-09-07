@@ -621,10 +621,23 @@ defmodule Stashix.Scanner do
       end
 
     case result do
-      :ok -> Library.create_or_update_cover(book.id, dest)
-      {:ok, _} -> Library.create_or_update_cover(book.id, dest)
+      :ok -> save_cover_with_blurhash(book.id, dest)
+      {:ok, _} -> save_cover_with_blurhash(book.id, dest)
       {:error, reason} -> Logger.warning("Thumbnail failed for #{file_path}: #{inspect(reason)}")
     end
+  end
+
+  defp save_cover_with_blurhash(book_id, path) do
+    blurhash =
+      with {:ok, img} <- Image.open(path),
+           {:ok, flat} <- Image.flatten(img),
+           {:ok, hash} <- Image.Blurhash.encode(flat, x_components: 4, y_components: 3) do
+        hash
+      else
+        _ -> nil
+      end
+
+    Library.create_or_update_cover(book_id, path, blurhash)
   end
 
   @doc false

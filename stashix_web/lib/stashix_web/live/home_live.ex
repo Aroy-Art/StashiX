@@ -397,6 +397,7 @@ defmodule StashixWeb.HomeLive do
                 subtitle={book.year && to_string(book.year)}
                 page_count={book.page_count}
                 type={:book}
+                blurhash={book.cover && book.cover.blurhash}
                 class="flex-shrink-0 w-32"
               />
             <% end %>
@@ -430,6 +431,7 @@ defmodule StashixWeb.HomeLive do
                 subtitle={series_date_range(s)}
                 badge={"#{s.issue_count} issues"}
                 type={:series}
+                blurhash={s.cover_blurhash}
                 class="flex-shrink-0 w-32"
               />
             <% end %>
@@ -469,6 +471,7 @@ defmodule StashixWeb.HomeLive do
                   end
                 }
                 type={:book}
+                blurhash={book.cover && book.cover.blurhash}
                 class="flex-shrink-0 w-32"
               />
             <% end %>

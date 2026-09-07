@@ -258,6 +258,7 @@ defmodule StashixWeb.LibraryLive do
                   subtitle={series_date_range(s)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
+                  blurhash={s.cover_blurhash}
                   class="flex-shrink-0 w-36"
                 />
               <% end %>
@@ -287,6 +288,7 @@ defmodule StashixWeb.LibraryLive do
                   subtitle={book.year && to_string(book.year)}
                   page_count={book.page_count}
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                   class="flex-shrink-0 w-36"
                 />
               <% end %>
@@ -322,6 +324,7 @@ defmodule StashixWeb.LibraryLive do
                     end
                   }
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                   class="flex-shrink-0 w-36"
                 />
               <% end %>
@@ -358,6 +361,7 @@ defmodule StashixWeb.LibraryLive do
                   subtitle={series_date_range(s)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
+                  blurhash={s.cover_blurhash}
                 />
               <% end %>
             </.media_grid>
@@ -377,6 +381,7 @@ defmodule StashixWeb.LibraryLive do
                   progress={progress}
                   page_count={book.page_count}
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                 />
               <% end %>
             </.media_grid>
@@ -395,6 +400,7 @@ defmodule StashixWeb.LibraryLive do
                   subtitle={if book.series, do: book.series.name, else: book.year && to_string(book.year)}
                   progress={progress}
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                 />
               <% end %>
             </.media_grid>

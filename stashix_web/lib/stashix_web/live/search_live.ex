@@ -99,6 +99,7 @@ defmodule StashixWeb.SearchLive do
                   subtitle={s.start_year && to_string(s.start_year)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
+                  blurhash={s.cover_blurhash}
                 />
               <% end %>
             </div>
@@ -124,6 +125,7 @@ defmodule StashixWeb.SearchLive do
                     end
                   }
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                 />
               <% end %>
             </div>
@@ -143,6 +145,7 @@ defmodule StashixWeb.SearchLive do
                   subtitle={book.year && to_string(book.year)}
                   page_count={book.page_count}
                   type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
                 />
               <% end %>
             </div>
