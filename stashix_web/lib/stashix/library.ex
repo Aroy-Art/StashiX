@@ -482,8 +482,44 @@ defmodule Stashix.Library do
   end
 
   def list_publishers do
-    from(p in Publisher, where: is_nil(p.canonical_publisher_id), order_by: [asc: p.name])
+    from(p in Publisher,
+      where: is_nil(p.canonical_publisher_id) and not p.hidden,
+      order_by: [asc: p.name]
+    )
     |> Repo.all()
+  end
+
+  def list_all_publishers do
+    from(p in Publisher, order_by: [asc: p.name])
+    |> Repo.all()
+  end
+
+  def list_all_publishers_admin(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 50)
+    page = Keyword.get(opts, :page, 1)
+    search = Keyword.get(opts, :search, "")
+
+    base =
+      if search != "" do
+        term = "%#{search}%"
+        from(p in Publisher, where: ilike(p.name, ^term), order_by: [asc: p.name])
+      else
+        from(p in Publisher, order_by: [asc: p.name])
+      end
+
+    total = Repo.aggregate(base, :count, :id)
+    items =
+      Repo.all(from p in base, limit: ^limit, offset: ^((page - 1) * limit))
+      |> Repo.preload(:canonical)
+    {items, total}
+  end
+
+  def toggle_publisher_hidden(publisher_id) do
+    pub = Repo.get!(Publisher, publisher_id)
+
+    pub
+    |> Publisher.changeset(%{hidden: !pub.hidden})
+    |> Repo.update()
   end
 
   def list_publishers_with_aliases do
@@ -537,7 +573,7 @@ defmodule Stashix.Library do
   end
 
   def count_publishers do
-    from(p in Publisher, where: is_nil(p.canonical_publisher_id))
+    from(p in Publisher, where: is_nil(p.canonical_publisher_id) and not p.hidden)
     |> Repo.aggregate(:count, :id)
   end
 
@@ -546,7 +582,7 @@ defmodule Stashix.Library do
     offset = Keyword.get(opts, :offset, 0)
 
     from(p in Publisher,
-      where: is_nil(p.canonical_publisher_id),
+      where: is_nil(p.canonical_publisher_id) and not p.hidden,
       order_by: [asc: p.name],
       limit: ^limit,
       offset: ^offset

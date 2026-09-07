@@ -19,6 +19,7 @@ defmodule Stashix.Library.Publisher do
     field :name, :string
     field :source, Ecto.Enum, values: @information_sources
     field :source_id, :string
+    field :hidden, :boolean, default: false
 
     has_many :imprints, Stashix.Library.Imprint
     many_to_many :series, Stashix.Library.Series, join_through: "series_publishers"
@@ -32,7 +33,7 @@ defmodule Stashix.Library.Publisher do
 
   def changeset(publisher, attrs) do
     publisher
-    |> cast(attrs, [:name, :source, :source_id, :canonical_publisher_id])
+    |> cast(attrs, [:name, :source, :source_id, :canonical_publisher_id, :hidden])
     |> validate_required([:name])
     |> unique_constraint(:name)
   end

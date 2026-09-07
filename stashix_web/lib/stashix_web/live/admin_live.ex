@@ -7,15 +7,9 @@ defmodule StashixWeb.AdminLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    users = Accounts.list_users()
-    libraries = Library.list_libraries(%{role: :admin})
-
     {:ok,
      assign(socket,
-       page_title: "Admin",
-       users: users,
-       libraries: libraries,
-       tab: "users",
+       admin_sidebar: true,
        user_form: to_form(%{"email" => "", "username" => "", "password" => "", "role" => "user"}),
        library_form: to_form(%{"name" => "", "root_path" => ""}),
        errors: %{},
@@ -29,44 +23,79 @@ defmodule StashixWeb.AdminLive do
        pending_confirm: nil,
        scanning_libraries: MapSet.new(),
        publishers: [],
+       all_publishers: [],
        publishers_with_aliases: [],
        alias_source_id: nil,
        alias_target_id: nil,
-       alias_pending: false
+       alias_source_query: "",
+       alias_target_query: "",
+       alias_pending: false,
+       publisher_tab: "aliases",
+       pub_vis_search: "",
+       pub_vis_page: 1,
+       pub_vis_publishers: [],
+       pub_vis_total: 0,
+       pub_vis_stats: %{},
+       users: [],
+       libraries: []
      )}
   end
 
   @impl true
-  def handle_params(%{"tab" => tab}, _uri, socket)
-      when tab in ~w(users libraries cleanup publishers) do
-    socket =
-      case tab do
-        "cleanup" ->
-          socket
-          |> assign(:deleted_books, Library.list_all_deleted_books())
-          |> assign(:deleted_series, Library.list_all_deleted_series())
-          |> assign(:selected_books, MapSet.new())
-          |> assign(:selected_series, MapSet.new())
-
-        "publishers" ->
-          socket
-          |> assign(:publishers, Library.list_publishers())
-          |> assign(:publishers_with_aliases, Library.list_publishers_with_aliases())
-
-        _ ->
-          socket
-      end
-
-    {:noreply, assign(socket, :tab, tab)}
+  def handle_params(params, _uri, socket) do
+    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
 
-  def handle_params(_params, _uri, socket), do: {:noreply, socket}
+  defp apply_action(socket, :index, _params) do
+    push_navigate(socket, to: ~p"/admin/users")
+  end
+
+  defp apply_action(socket, :users, _params) do
+    socket
+    |> assign(:page_title, "Admin · Users")
+    |> assign(:users, Accounts.list_users())
+    |> assign(:libraries, Library.list_libraries(%{role: :admin}))
+  end
+
+  defp apply_action(socket, :libraries, _params) do
+    socket
+    |> assign(:page_title, "Admin · Libraries")
+    |> assign(:libraries, Library.list_libraries(%{role: :admin}))
+  end
+
+  defp apply_action(socket, :cleanup, _params) do
+    socket
+    |> assign(:page_title, "Admin · Cleanup")
+    |> assign(:deleted_books, Library.list_all_deleted_books())
+    |> assign(:deleted_series, Library.list_all_deleted_series())
+    |> assign(:selected_books, MapSet.new())
+    |> assign(:selected_series, MapSet.new())
+  end
+
+  defp apply_action(socket, :publishers, params) do
+    tab = if Map.get(params, "tab") in ["aliases", "visibility"], do: params["tab"], else: "aliases"
+
+    socket
+    |> assign(:page_title, "Admin · Publishers")
+    |> assign(:publisher_tab, tab)
+    |> assign(:publishers, Library.list_publishers())
+    |> assign(:publishers_with_aliases, Library.list_publishers_with_aliases())
+    |> load_vis_publishers()
+  end
+
+  defp load_vis_publishers(socket) do
+    search = socket.assigns[:pub_vis_search] || ""
+    page = socket.assigns[:pub_vis_page] || 1
+    {pubs, total} = Library.list_all_publishers_admin(search: search, page: page, limit: 50)
+    stats = Library.publisher_stats(Enum.map(pubs, & &1.id))
+
+    socket
+    |> assign(:pub_vis_publishers, pubs)
+    |> assign(:pub_vis_total, total)
+    |> assign(:pub_vis_stats, stats)
+  end
 
   @impl true
-  def handle_event("set_tab", %{"tab" => tab}, socket) do
-    {:noreply, push_patch(socket, to: ~p"/admin?tab=#{tab}")}
-  end
-
   def handle_event("toggle_user_form", _params, socket) do
     {:noreply, update(socket, :show_user_form, &(!&1))}
   end
@@ -323,12 +352,70 @@ defmodule StashixWeb.AdminLive do
 
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
+  def handle_event("pub_vis_search", params, socket) do
+    q = Map.get(params, "q") || Map.get(params, "value", "")
+
+    {:noreply,
+     socket
+     |> assign(:pub_vis_search, q)
+     |> assign(:pub_vis_page, 1)
+     |> load_vis_publishers()}
+  end
+
+  def handle_event("pub_vis_page", %{"page" => page}, socket) do
+    {:noreply,
+     socket
+     |> assign(:pub_vis_page, String.to_integer(page))
+     |> load_vis_publishers()}
+  end
+
   def handle_event("set_alias_source", %{"id" => id}, socket) do
-    {:noreply, assign(socket, alias_source_id: id, alias_pending: false)}
+    {:noreply, assign(socket, alias_source_id: id, alias_source_query: "", alias_pending: false)}
   end
 
   def handle_event("set_alias_target", %{"id" => id}, socket) do
-    {:noreply, assign(socket, alias_target_id: id, alias_pending: false)}
+    {:noreply, assign(socket, alias_target_id: id, alias_target_query: "", alias_pending: false)}
+  end
+
+  def handle_event("clear_alias_source", _params, socket) do
+    {:noreply, assign(socket, alias_source_id: nil, alias_source_query: "", alias_pending: false)}
+  end
+
+  def handle_event("clear_alias_target", _params, socket) do
+    {:noreply, assign(socket, alias_target_id: nil, alias_target_query: "", alias_pending: false)}
+  end
+
+  def handle_event("alias_source_input", %{"key" => "Enter", "value" => q}, socket) do
+    result =
+      socket.assigns.publishers
+      |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(q)))
+      |> List.first()
+
+    case result do
+      nil -> {:noreply, socket}
+      pub -> {:noreply, assign(socket, alias_source_id: pub.id, alias_source_query: "", alias_pending: false)}
+    end
+  end
+
+  def handle_event("alias_source_input", %{"value" => q}, socket) do
+    {:noreply, assign(socket, alias_source_query: q, alias_source_id: nil)}
+  end
+
+  def handle_event("alias_target_input", %{"key" => "Enter", "value" => q}, socket) do
+    result =
+      socket.assigns.publishers
+      |> Enum.reject(&(&1.id == socket.assigns.alias_source_id))
+      |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(q)))
+      |> List.first()
+
+    case result do
+      nil -> {:noreply, socket}
+      pub -> {:noreply, assign(socket, alias_target_id: pub.id, alias_target_query: "", alias_pending: false)}
+    end
+  end
+
+  def handle_event("alias_target_input", %{"value" => q}, socket) do
+    {:noreply, assign(socket, alias_target_query: q, alias_target_id: nil)}
   end
 
   def handle_event("preview_alias", _params, socket) do
@@ -365,6 +452,22 @@ defmodule StashixWeb.AdminLive do
     end
   end
 
+  def handle_event("toggle_publisher_hidden", %{"id" => id}, socket) do
+    case Library.toggle_publisher_hidden(id) do
+      {:ok, pub} ->
+        publishers = Library.list_publishers()
+
+        {:noreply,
+         socket
+         |> assign(publishers: publishers)
+         |> load_vis_publishers()
+         |> put_flash(:info, if(pub.hidden, do: "\"#{pub.name}\" hidden", else: "\"#{pub.name}\" visible"))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to update publisher")}
+    end
+  end
+
   def handle_event("remove_alias", %{"id" => id}, socket) do
     pub = Enum.find(socket.assigns.publishers_with_aliases, &(&1.id == id))
 
@@ -388,29 +491,10 @@ defmodule StashixWeb.AdminLive do
     ~H"""
     <.confirm_dialog confirm={@pending_confirm} />
     <div class="space-y-6">
-      <h1 class="text-2xl font-bold text-white">Admin Panel</h1>
-
-      <div class="flex gap-2 border-b border-gray-800 pb-0">
-        <%= for {label, tab} <- [{"Users", "users"}, {"Libraries", "libraries"}, {"Cleanup", "cleanup"}, {"Publishers", "publishers"}] do %>
-          <button
-            phx-click="set_tab"
-            phx-value-tab={tab}
-            class={[
-              "px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors",
-              if(@tab == tab,
-                do: "border-indigo-500 text-indigo-400",
-                else: "border-transparent text-gray-500 hover:text-gray-300"
-              )
-            ]}
-          >
-            {label}
-          </button>
-        <% end %>
-      </div>
-
-      <%= if @tab == "users" do %>
+      <%= if @live_action == :users do %>
         <div class="space-y-4">
-          <div class="flex justify-end">
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">Users</h1>
             <button
               phx-click="toggle_user_form"
               class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
@@ -496,9 +580,10 @@ defmodule StashixWeb.AdminLive do
         </div>
       <% end %>
 
-      <%= if @tab == "libraries" do %>
+      <%= if @live_action == :libraries do %>
         <div class="space-y-4">
-          <div class="flex justify-end">
+          <div class="flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-white">Libraries</h1>
             <button
               phx-click="toggle_library_form"
               class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
@@ -626,7 +711,7 @@ defmodule StashixWeb.AdminLive do
         </div>
       <% end %>
 
-      <%= if @tab == "cleanup" do %>
+      <%= if @live_action == :cleanup do %>
         <%
           all_series_ids = Enum.map(@deleted_series, & &1.id) |> MapSet.new()
           all_books_ids = Enum.map(@deleted_books, & &1.id) |> MapSet.new()
@@ -636,6 +721,7 @@ defmodule StashixWeb.AdminLive do
           books_sel_count = MapSet.size(@selected_books)
         %>
         <div class="space-y-8">
+          <h1 class="text-2xl font-bold text-white">Cleanup</h1>
           <%!-- Series section --%>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
@@ -833,122 +919,382 @@ defmodule StashixWeb.AdminLive do
           </div>
         </div>
       <% end %>
-      <%= if @tab == "publishers" do %>
+      <%= if @live_action == :publishers do %>
         <% alias_pub = Enum.find(@publishers, &(&1.id == @alias_source_id))
            master_pub = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
-        <div class="space-y-8 max-w-lg">
+        <div class="space-y-6">
+          <h1 class="text-2xl font-bold text-white">Publishers</h1>
 
-          <%!-- Set alias --%>
-          <div class="space-y-4">
-            <div>
-              <h2 class="text-lg font-semibold text-white mb-1">Link Publisher Alias</h2>
-              <p class="text-sm text-gray-500">Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.</p>
-            </div>
-
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Alias (will be hidden)</label>
-              <form phx-change="set_alias_source">
-                <select id="alias-source-select" name="id" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500">
-                  <option value="">— select publisher —</option>
-                  <%= for p <- @publishers do %>
-                    <option value={p.id} selected={p.id == @alias_source_id}>{p.name}</option>
-                  <% end %>
-                </select>
-              </form>
-            </div>
-
-            <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Master (kept, shown in listings)</label>
-              <form phx-change="set_alias_target">
-                <select id="alias-target-select" name="id" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500">
-                  <option value="">— select publisher —</option>
-                  <%= for p <- @publishers, p.id != @alias_source_id do %>
-                    <option value={p.id} selected={p.id == @alias_target_id}>{p.name}</option>
-                  <% end %>
-                </select>
-              </form>
-            </div>
-
-            <%= if !@alias_pending do %>
-              <button
-                phx-click="preview_alias"
-                disabled={is_nil(@alias_source_id) || is_nil(@alias_target_id)}
-                class="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+          <%!-- Tab bar --%>
+          <div class="flex gap-2 border-b border-gray-800">
+            <%= for {label, tab} <- [{"Aliases", "aliases"}, {"Visibility", "visibility"}] do %>
+              <.link
+                patch={~p"/admin/publishers?tab=#{tab}"}
+                class={[
+                  "px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors",
+                  if(@publisher_tab == tab,
+                    do: "border-violet-500 text-violet-400",
+                    else: "border-transparent text-gray-500 hover:text-gray-300"
+                  )
+                ]}
               >
-                Link as Alias
-              </button>
-            <% else %>
-              <div class="rounded-lg border border-violet-800/60 bg-violet-950/30 p-4 space-y-3">
-                <p class="text-sm text-violet-300 font-medium">Confirm alias link</p>
-                <p class="text-sm text-gray-400">
-                  <span class="text-white font-medium">"{alias_pub && alias_pub.name}"</span>
-                  will become an alias of
-                  <span class="text-white font-medium">"{master_pub && master_pub.name}"</span>.
-                  No data is deleted — this can be undone.
-                </p>
-                <div class="flex gap-2">
-                  <button phx-click="confirm_set_alias" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors">
-                    Confirm
-                  </button>
-                  <button phx-click="cancel_alias" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              </div>
+                {label}
+              </.link>
             <% end %>
           </div>
 
-          <%!-- Current aliases --%>
-          <div>
-            <h3 class="text-sm font-medium text-gray-400 mb-2">
-              Current aliases
-              <%= if @publishers_with_aliases != [] do %>
-                <span class="text-gray-600">({length(@publishers_with_aliases)})</span>
-              <% end %>
-            </h3>
-            <div class="rounded-lg border border-gray-800 overflow-hidden">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b border-gray-800 bg-gray-900/50">
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Master</th>
-                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Alias</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-800">
-                  <%= if @publishers_with_aliases == [] do %>
-                    <tr>
-                      <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-600">No aliases configured</td>
-                    </tr>
+          <%!-- Aliases tab --%>
+          <%= if @publisher_tab == "aliases" do %>
+            <div class="space-y-8 max-w-lg">
+              <%!-- Set alias --%>
+              <div class="space-y-4">
+                <div>
+                  <h2 class="text-base font-semibold text-white mb-1">Link Publisher Alias</h2>
+                  <p class="text-sm text-gray-500">Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.</p>
+                </div>
+
+                <%!-- Alias source picker --%>
+                <div class="space-y-1.5">
+                  <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Alias (will be hidden)</label>
+                  <%= if @alias_source_id do %>
+                    <% src = Enum.find(@publishers, &(&1.id == @alias_source_id)) %>
+                    <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
+                      <span class="text-white">{src && src.name}</span>
+                      <button phx-click="clear_alias_source" class="text-gray-500 hover:text-white ml-2 flex-shrink-0">
+                        <.icon name="lucide-x" class="w-4 h-4" />
+                      </button>
+                    </div>
                   <% else %>
-                    <%= for p <- @publishers_with_aliases do %>
+                    <div class="relative">
+                      <input
+                        type="text"
+                        value={@alias_source_query}
+                        placeholder="Search publishers…"
+                        phx-keyup="alias_source_input"
+                        autocomplete="off"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                      />
+                      <%= if @alias_source_query != "" do %>
+                        <%
+                          src_results =
+                            @publishers
+                            |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(@alias_source_query)))
+                            |> Enum.take(8)
+                        %>
+                        <div
+                          class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
+                          onmousedown="event.preventDefault()"
+                        >
+                          <%= if src_results == [] do %>
+                            <div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>
+                          <% else %>
+                            <%= for {p, i} <- Enum.with_index(src_results) do %>
+                              <button
+                                phx-click="set_alias_source"
+                                phx-value-id={p.id}
+                                class={["w-full text-left px-3 py-2 text-sm transition-colors",
+                                  if(i == 0, do: "bg-gray-700/60 text-white hover:bg-gray-700", else: "text-gray-300 hover:bg-gray-700 hover:text-white")
+                                ]}
+                              >{p.name}</button>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <%!-- Alias target picker --%>
+                <div class="space-y-1.5">
+                  <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Master (kept, shown in listings)</label>
+                  <%= if @alias_target_id do %>
+                    <% tgt = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
+                    <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
+                      <span class="text-white">{tgt && tgt.name}</span>
+                      <button phx-click="clear_alias_target" class="text-gray-500 hover:text-white ml-2 flex-shrink-0">
+                        <.icon name="lucide-x" class="w-4 h-4" />
+                      </button>
+                    </div>
+                  <% else %>
+                    <div class="relative">
+                      <input
+                        type="text"
+                        value={@alias_target_query}
+                        placeholder="Search publishers…"
+                        phx-keyup="alias_target_input"
+                        autocomplete="off"
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                      />
+                      <%= if @alias_target_query != "" do %>
+                        <%
+                          tgt_results =
+                            @publishers
+                            |> Enum.reject(&(&1.id == @alias_source_id))
+                            |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(@alias_target_query)))
+                            |> Enum.take(8)
+                        %>
+                        <div
+                          class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
+                          onmousedown="event.preventDefault()"
+                        >
+                          <%= if tgt_results == [] do %>
+                            <div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>
+                          <% else %>
+                            <%= for {p, i} <- Enum.with_index(tgt_results) do %>
+                              <button
+                                phx-click="set_alias_target"
+                                phx-value-id={p.id}
+                                class={["w-full text-left px-3 py-2 text-sm transition-colors",
+                                  if(i == 0, do: "bg-gray-700/60 text-white hover:bg-gray-700", else: "text-gray-300 hover:bg-gray-700 hover:text-white")
+                                ]}
+                              >{p.name}</button>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+
+                <%= if !@alias_pending do %>
+                  <button
+                    phx-click="preview_alias"
+                    disabled={is_nil(@alias_source_id) || is_nil(@alias_target_id)}
+                    class="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm rounded-lg transition-colors"
+                  >
+                    Link as Alias
+                  </button>
+                <% else %>
+                  <div class="rounded-lg border border-violet-800/60 bg-violet-950/30 p-4 space-y-3">
+                    <p class="text-sm text-violet-300 font-medium">Confirm alias link</p>
+                    <p class="text-sm text-gray-400">
+                      <span class="text-white font-medium">"{alias_pub && alias_pub.name}"</span>
+                      will become an alias of
+                      <span class="text-white font-medium">"{master_pub && master_pub.name}"</span>.
+                      No data is deleted — this can be undone.
+                    </p>
+                    <div class="flex gap-2">
+                      <button phx-click="confirm_set_alias" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors">
+                        Confirm
+                      </button>
+                      <button phx-click="cancel_alias" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                <% end %>
+              </div>
+
+              <%!-- Current aliases --%>
+              <div>
+                <h3 class="text-sm font-medium text-gray-400 mb-2">
+                  Current aliases
+                  <%= if @publishers_with_aliases != [] do %>
+                    <span class="text-gray-600">({length(@publishers_with_aliases)})</span>
+                  <% end %>
+                </h3>
+                <div class="rounded-lg border border-gray-800 overflow-hidden">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-gray-800 bg-gray-900/50">
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Master</th>
+                        <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Alias</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-800">
+                      <%= if @publishers_with_aliases == [] do %>
+                        <tr>
+                          <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-600">No aliases configured</td>
+                        </tr>
+                      <% else %>
+                        <%= for p <- @publishers_with_aliases do %>
+                          <tr class="group hover:bg-gray-800/40 transition-colors">
+                            <td class="px-3 py-2">
+                              <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-300 hover:text-violet-300 transition-colors">
+                                {p.canonical && p.canonical.name}
+                              </a>
+                            </td>
+                            <td class="px-3 py-2">
+                              <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-400 hover:text-violet-300 transition-colors">
+                                {p.name}
+                              </a>
+                            </td>
+                            <td class="px-3 py-2 text-right">
+                              <button
+                                phx-click="remove_alias"
+                                phx-value-id={p.id}
+                                class="text-xs text-red-500 hover:text-red-400"
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        <% end %>
+                      <% end %>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <%!-- Visibility tab --%>
+          <%= if @publisher_tab == "visibility" do %>
+            <%
+              per_page = 50
+              total_pages = max(1, ceil(@pub_vis_total / per_page))
+            %>
+            <div class="space-y-3">
+              <%!-- Search bar --%>
+              <form phx-submit="pub_vis_search" class="max-w-sm">
+                <div class="relative">
+                  <.icon name="lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  <input
+                    type="search"
+                    name="q"
+                    value={@pub_vis_search}
+                    placeholder="Filter publishers…"
+                    autocomplete="off"
+                    phx-change="pub_vis_search"
+                    phx-debounce="200"
+                    class="w-full bg-gray-900 border border-gray-800 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/70"
+                  />
+                </div>
+              </form>
+
+              <%!-- Count + top pagination --%>
+              <div class="flex items-center justify-between">
+                <p class="text-xs text-gray-500">
+                  {@pub_vis_total} publisher{if @pub_vis_total == 1, do: "", else: "s"}
+                  <%= if @pub_vis_search != "" do %>
+                    matching <span class="text-gray-400">"{@pub_vis_search}"</span>
+                  <% end %>
+                </p>
+                <%= if total_pages > 1 do %>
+                  <div class="flex gap-1">
+                    <button
+                      phx-click="pub_vis_page"
+                      phx-value-page={@pub_vis_page - 1}
+                      disabled={@pub_vis_page <= 1}
+                      class="px-2.5 py-1 rounded text-sm text-gray-400 bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >‹</button>
+                    <%= for pg <- max(1, @pub_vis_page - 2)..min(total_pages, @pub_vis_page + 2) do %>
+                      <button
+                        phx-click="pub_vis_page"
+                        phx-value-page={pg}
+                        class={["px-2.5 py-1 rounded text-sm border transition-colors",
+                          if(pg == @pub_vis_page,
+                            do: "bg-violet-600 border-violet-500 text-white",
+                            else: "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
+                          )
+                        ]}
+                      >{pg}</button>
+                    <% end %>
+                    <button
+                      phx-click="pub_vis_page"
+                      phx-value-page={@pub_vis_page + 1}
+                      disabled={@pub_vis_page >= total_pages}
+                      class="px-2.5 py-1 rounded text-sm text-gray-400 bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >›</button>
+                  </div>
+                <% end %>
+              </div>
+
+              <div class="rounded-lg border border-gray-800 overflow-hidden">
+                <table class="w-full text-sm">
+                  <thead>
+                    <tr class="border-b border-gray-800 bg-gray-900/50">
+                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Name</th>
+                      <th class="px-3 py-2 text-left text-xs font-medium text-gray-500">Status</th>
+                      <th class="px-3 py-2 text-right text-xs font-medium text-gray-500">Series</th>
+                      <th class="px-3 py-2 text-right text-xs font-medium text-gray-500">Books</th>
+                      <th class="px-3 py-2 text-right text-xs font-medium text-gray-500">Issues</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-800">
+                    <%= for p <- @pub_vis_publishers do %>
+                      <% stats = Map.get(@pub_vis_stats, p.id, %{series_count: 0, books_count: 0, issues_count: 0})
+                         master_hidden = p.canonical && p.canonical.hidden
+                         effectively_hidden = p.hidden || master_hidden %>
                       <tr class="group hover:bg-gray-800/40 transition-colors">
                         <td class="px-3 py-2">
-                          <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-300 hover:text-violet-300 transition-colors">
-                            {p.canonical && p.canonical.name}
-                          </a>
-                        </td>
-                        <td class="px-3 py-2">
-                          <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-400 hover:text-violet-300 transition-colors">
+                          <a href={~p"/publisher/#{p.id}"} class={"hover:text-violet-300 transition-colors #{if effectively_hidden, do: "text-gray-600 line-through", else: "text-gray-300"}"}>
                             {p.name}
                           </a>
                         </td>
+                        <td class="px-3 py-2">
+                          <%= cond do %>
+                            <% p.hidden -> %>
+                              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700">Hidden</span>
+                            <% master_hidden -> %>
+                              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700">Alias · Hidden</span>
+                            <% not is_nil(p.canonical_publisher_id) -> %>
+                              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-gray-700">Alias</span>
+                            <% true -> %>
+                              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 border border-violet-800/40">Visible</span>
+                          <% end %>
+                        </td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.series_count}</td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.books_count}</td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.issues_count}</td>
                         <td class="px-3 py-2 text-right">
-                          <button
-                            phx-click="remove_alias"
-                            phx-value-id={p.id}
-                            class="text-xs text-red-500 hover:text-red-400"
-                          >
-                            Remove
-                          </button>
+                          <%= if is_nil(p.canonical_publisher_id) do %>
+                            <button
+                              phx-click="toggle_publisher_hidden"
+                              phx-value-id={p.id}
+                              class={"text-xs transition-colors #{if p.hidden, do: "text-violet-400 hover:text-violet-300", else: "text-gray-500 hover:text-red-400"}"}
+                            >
+                              {if p.hidden, do: "Show", else: "Hide"}
+                            </button>
+                          <% end %>
                         </td>
                       </tr>
                     <% end %>
-                  <% end %>
-                </tbody>
-              </table>
+                    <%= if @pub_vis_publishers == [] do %>
+                      <tr>
+                        <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-600">No publishers found</td>
+                      </tr>
+                    <% end %>
+                  </tbody>
+                </table>
+              </div>
+
+              <%!-- Bottom pagination --%>
+              <%= if total_pages > 1 do %>
+                <div class="flex items-center justify-between pt-1">
+                  <p class="text-xs text-gray-500">Page {@pub_vis_page} of {total_pages}</p>
+                  <div class="flex gap-1">
+                    <button
+                      phx-click="pub_vis_page"
+                      phx-value-page={@pub_vis_page - 1}
+                      disabled={@pub_vis_page <= 1}
+                      class="px-2.5 py-1 rounded text-sm text-gray-400 bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >‹</button>
+                    <%= for pg <- max(1, @pub_vis_page - 2)..min(total_pages, @pub_vis_page + 2) do %>
+                      <button
+                        phx-click="pub_vis_page"
+                        phx-value-page={pg}
+                        class={["px-2.5 py-1 rounded text-sm border transition-colors",
+                          if(pg == @pub_vis_page,
+                            do: "bg-violet-600 border-violet-500 text-white",
+                            else: "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
+                          )
+                        ]}
+                      >{pg}</button>
+                    <% end %>
+                    <button
+                      phx-click="pub_vis_page"
+                      phx-value-page={@pub_vis_page + 1}
+                      disabled={@pub_vis_page >= total_pages}
+                      class="px-2.5 py-1 rounded text-sm text-gray-400 bg-gray-800 border border-gray-700 hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    >›</button>
+                  </div>
+                </div>
+              <% end %>
             </div>
-          </div>
+          <% end %>
 
         </div>
       <% end %>
