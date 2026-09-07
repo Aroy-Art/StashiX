@@ -38,7 +38,11 @@ defmodule StashixWeb.PublisherLive do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    publisher = Library.get_publisher!(id)
+    publisher = Library.get_publisher_with_aliases!(id)
+
+    if publisher.canonical_publisher_id do
+      {:ok, push_navigate(socket, to: ~p"/publisher/#{publisher.canonical_publisher_id}")}
+    else
 
     series_count = Library.count_publisher_series(id)
     books_count = Library.count_publisher_books(id, "standalone")
@@ -60,6 +64,7 @@ defmodule StashixWeb.PublisherLive do
        progress_map: %{},
        loading: true
      )}
+    end
   end
 
   @impl true
@@ -196,6 +201,14 @@ defmodule StashixWeb.PublisherLive do
         <%!-- Overview --%>
         <div>
           <h1 class="text-2xl md:text-3xl font-bold text-white">{@publisher.name}</h1>
+          <%= if @publisher.aliases != [] do %>
+            <p class="mt-1 text-sm text-gray-500">
+              Also known as:
+              <%= for {a, i} <- Enum.with_index(@publisher.aliases) do %>
+                <span class="text-gray-400">{a.name}<%= if i < length(@publisher.aliases) - 1 do %>, <% end %></span>
+              <% end %>
+            </p>
+          <% end %>
         </div>
 
         <%!-- Stat / nav tiles --%>

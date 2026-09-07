@@ -369,16 +369,49 @@ defmodule Stashix.Library do
 
   def get_publisher!(id), do: Repo.get!(Publisher, id)
 
+  def get_publisher_with_aliases!(id) do
+    Repo.get!(Publisher, id) |> Repo.preload([:aliases, :canonical])
+  end
+
+  def set_publisher_alias(alias_id, master_id) when alias_id == master_id,
+    do: {:error, :same_publisher}
+
+  def set_publisher_alias(alias_id, master_id) do
+    Repo.get!(Publisher, alias_id)
+    |> Publisher.changeset(%{canonical_publisher_id: master_id})
+    |> Repo.update()
+  end
+
+  def remove_publisher_alias(publisher_id) do
+    Repo.get!(Publisher, publisher_id)
+    |> Publisher.changeset(%{canonical_publisher_id: nil})
+    |> Repo.update()
+  end
+
+  # Returns all binary UUIDs for a publisher: the master + any aliases
+  defp publisher_id_bins(publisher_id) do
+    alias_bins =
+      from(p in Publisher,
+        where: p.canonical_publisher_id == ^publisher_id,
+        select: p.id
+      )
+      |> Repo.all()
+      |> Enum.map(&Ecto.UUID.dump!/1)
+
+    [Ecto.UUID.dump!(publisher_id) | alias_bins]
+  end
+
   def list_publisher_series(publisher_id, opts \\ []) do
     sort = Keyword.get(opts, :sort, "title_asc")
     limit = Keyword.get(opts, :limit, 48)
     offset = Keyword.get(opts, :offset, 0)
-    pub_bin = Ecto.UUID.dump!(publisher_id)
+    pub_bins = publisher_id_bins(publisher_id)
 
     query =
       from s in Series,
         join: sp in "series_publishers", on: sp.series_id == s.id,
-        where: sp.publisher_id == ^pub_bin and is_nil(s.deleted_at),
+        where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
+        distinct: true,
         limit: ^limit,
         offset: ^offset
 
@@ -396,11 +429,12 @@ defmodule Stashix.Library do
   end
 
   def count_publisher_series(publisher_id) do
-    pub_bin = Ecto.UUID.dump!(publisher_id)
+    pub_bins = publisher_id_bins(publisher_id)
 
     from(s in Series,
       join: sp in "series_publishers", on: sp.series_id == s.id,
-      where: sp.publisher_id == ^pub_bin and is_nil(s.deleted_at)
+      where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
+      distinct: true
     )
     |> Repo.aggregate(:count, :id)
   end
@@ -410,12 +444,13 @@ defmodule Stashix.Library do
     sort = Keyword.get(opts, :sort, "title_asc")
     limit = Keyword.get(opts, :limit, 48)
     offset = Keyword.get(opts, :offset, 0)
-    pub_bin = Ecto.UUID.dump!(publisher_id)
+    pub_bins = publisher_id_bins(publisher_id)
 
     query =
       from b in Book,
         join: bp in "book_publishers", on: bp.book_id == b.id,
-        where: bp.publisher_id == ^pub_bin and is_nil(b.deleted_at) and b.type == ^type,
+        where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
+        distinct: true,
         preload: [:cover, :series],
         limit: ^limit,
         offset: ^offset
@@ -436,18 +471,184 @@ defmodule Stashix.Library do
   end
 
   def count_publisher_books(publisher_id, type) do
-    pub_bin = Ecto.UUID.dump!(publisher_id)
+    pub_bins = publisher_id_bins(publisher_id)
 
     from(b in Book,
       join: bp in "book_publishers", on: bp.book_id == b.id,
-      where: bp.publisher_id == ^pub_bin and is_nil(b.deleted_at) and b.type == ^type
+      where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
+      distinct: true
     )
     |> Repo.aggregate(:count, :id)
   end
 
   def list_publishers do
-    from(p in Publisher, order_by: [asc: p.name])
+    from(p in Publisher, where: is_nil(p.canonical_publisher_id), order_by: [asc: p.name])
     |> Repo.all()
+  end
+
+  def list_publishers_with_aliases do
+    from(p in Publisher,
+      where: not is_nil(p.canonical_publisher_id),
+      preload: :canonical,
+      order_by: [asc: p.name]
+    )
+    |> Repo.all()
+  end
+
+  def merge_publishers(source_id, target_id) when source_id == target_id,
+    do: {:error, :same_publisher}
+
+  def merge_publishers(source_id, target_id) do
+    source_bin = Ecto.UUID.dump!(source_id)
+    target_bin = Ecto.UUID.dump!(target_id)
+
+    Repo.transaction(fn ->
+      book_ids =
+        from(bp in "book_publishers", where: bp.publisher_id == ^source_bin, select: bp.book_id)
+        |> Repo.all()
+
+      if book_ids != [] do
+        Repo.insert_all(
+          "book_publishers",
+          Enum.map(book_ids, &%{book_id: &1, publisher_id: target_bin}),
+          on_conflict: :nothing
+        )
+      end
+
+      series_ids =
+        from(sp in "series_publishers",
+          where: sp.publisher_id == ^source_bin,
+          select: sp.series_id
+        )
+        |> Repo.all()
+
+      if series_ids != [] do
+        Repo.insert_all(
+          "series_publishers",
+          Enum.map(series_ids, &%{series_id: &1, publisher_id: target_bin}),
+          on_conflict: :nothing
+        )
+      end
+
+      from(bp in "book_publishers", where: bp.publisher_id == ^source_bin) |> Repo.delete_all()
+      from(sp in "series_publishers", where: sp.publisher_id == ^source_bin) |> Repo.delete_all()
+      Repo.get!(Publisher, source_id) |> Repo.delete!()
+    end)
+  end
+
+  def count_publishers do
+    from(p in Publisher, where: is_nil(p.canonical_publisher_id))
+    |> Repo.aggregate(:count, :id)
+  end
+
+  def list_publishers_paginated(opts \\ []) do
+    limit = Keyword.get(opts, :limit, 24)
+    offset = Keyword.get(opts, :offset, 0)
+
+    from(p in Publisher,
+      where: is_nil(p.canonical_publisher_id),
+      order_by: [asc: p.name],
+      limit: ^limit,
+      offset: ^offset
+    )
+    |> Repo.all()
+  end
+
+  def publisher_stats(publisher_ids) when publisher_ids == [], do: %{}
+
+  def publisher_stats(publisher_ids) do
+    # Build map of all IDs (master + aliases) -> master ID
+    alias_rows =
+      from(p in Publisher,
+        where: p.canonical_publisher_id in ^publisher_ids,
+        select: {p.canonical_publisher_id, p.id}
+      )
+      |> Repo.all()
+
+    id_to_master =
+      publisher_ids
+      |> Enum.into(%{}, &{&1, &1})
+      |> Map.merge(Map.new(alias_rows, fn {master, alias_id} -> {alias_id, master} end))
+
+    all_bins = Map.keys(id_to_master) |> Enum.map(&Ecto.UUID.dump!/1)
+
+    sum_by_master = fn rows ->
+      Enum.reduce(rows, %{}, fn {raw_id, count}, acc ->
+        master_id = Map.get(id_to_master, Ecto.UUID.cast!(raw_id))
+        Map.update(acc, master_id, count, &(&1 + count))
+      end)
+    end
+
+    series_counts =
+      from(sp in "series_publishers",
+        join: s in Series, on: s.id == sp.series_id,
+        where: sp.publisher_id in ^all_bins and is_nil(s.deleted_at),
+        group_by: sp.publisher_id,
+        select: {sp.publisher_id, count(s.id)}
+      )
+      |> Repo.all()
+      |> sum_by_master.()
+
+    books_counts =
+      from(bp in "book_publishers",
+        join: b in Book, on: b.id == bp.book_id,
+        where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "standalone",
+        group_by: bp.publisher_id,
+        select: {bp.publisher_id, count(b.id)}
+      )
+      |> Repo.all()
+      |> sum_by_master.()
+
+    issues_counts =
+      from(bp in "book_publishers",
+        join: b in Book, on: b.id == bp.book_id,
+        where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "issue",
+        group_by: bp.publisher_id,
+        select: {bp.publisher_id, count(b.id)}
+      )
+      |> Repo.all()
+      |> sum_by_master.()
+
+    Enum.into(publisher_ids, %{}, fn id ->
+      {id,
+       %{
+         series_count: Map.get(series_counts, id, 0),
+         books_count: Map.get(books_counts, id, 0),
+         issues_count: Map.get(issues_counts, id, 0)
+       }}
+    end)
+  end
+
+  def publisher_sample_covers(publisher_ids) when publisher_ids == [], do: %{}
+
+  def publisher_sample_covers(publisher_ids) do
+    alias_rows =
+      from(p in Publisher,
+        where: p.canonical_publisher_id in ^publisher_ids,
+        select: {p.canonical_publisher_id, p.id}
+      )
+      |> Repo.all()
+
+    id_to_master =
+      publisher_ids
+      |> Enum.into(%{}, &{&1, &1})
+      |> Map.merge(Map.new(alias_rows, fn {master, alias_id} -> {alias_id, master} end))
+
+    all_bins = Map.keys(id_to_master) |> Enum.map(&Ecto.UUID.dump!/1)
+
+    from(bp in "book_publishers",
+      join: b in Book, on: b.id == bp.book_id,
+      where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at),
+      select: {bp.publisher_id, bp.book_id}
+    )
+    |> Repo.all()
+    |> Enum.group_by(
+      fn {pub_id, _} -> Map.get(id_to_master, Ecto.UUID.cast!(pub_id)) end,
+      fn {_, book_id} -> Ecto.UUID.cast!(book_id) end
+    )
+    |> Enum.into(%{}, fn {master_id, book_ids} ->
+      {master_id, book_ids |> Enum.uniq() |> Enum.shuffle() |> Enum.take(5)}
+    end)
   end
 
   def get_or_create_publisher(name) do

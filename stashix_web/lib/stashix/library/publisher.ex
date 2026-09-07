@@ -24,12 +24,15 @@ defmodule Stashix.Library.Publisher do
     many_to_many :series, Stashix.Library.Series, join_through: "series_publishers"
     many_to_many :books, Stashix.Library.Book, join_through: "book_publishers"
 
+    belongs_to :canonical, __MODULE__, foreign_key: :canonical_publisher_id
+    has_many :aliases, __MODULE__, foreign_key: :canonical_publisher_id
+
     timestamps()
   end
 
   def changeset(publisher, attrs) do
     publisher
-    |> cast(attrs, [:name, :source, :source_id])
+    |> cast(attrs, [:name, :source, :source_id, :canonical_publisher_id])
     |> validate_required([:name])
     |> unique_constraint(:name)
   end
