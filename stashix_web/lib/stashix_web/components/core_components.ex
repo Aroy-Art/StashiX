@@ -12,10 +12,12 @@ defmodule StashixWeb.CoreComponents do
   See the [Tailwind CSS documentation](https://tailwindcss.com) to learn
   how to customize them or feel free to swap in another framework altogether.
 
-  Icons are provided by [lucide](https://lucide.dev). See `icon/1` for usage.
+  Icons are provided by `StashixUi.Icon`. See its docs for usage.
   """
   use Phoenix.Component
   use Gettext, backend: StashixWeb.Gettext
+
+  import StashixUi.Icon
 
   alias Phoenix.LiveView.JS
 
@@ -568,55 +570,6 @@ defmodule StashixWeb.CoreComponents do
       </.link>
     </div>
     """
-  end
-
-  @doc """
-  Renders a [Lucide](https://lucide.dev) icon as an inline SVG.
-
-  ## Examples
-
-      <.icon name="lucide-x" />
-      <.icon name="lucide-refresh-cw" class="w-4 h-4 animate-spin" />
-  """
-  attr :name, :string, required: true
-  attr :class, :string, default: nil
-
-  def icon(%{name: "lucide-" <> icon_name} = assigns) do
-    assigns = assign(assigns, :svg, read_icon(icon_name))
-
-    ~H"""
-    <svg
-      :if={@svg}
-      class={["inline-block align-middle", @class]}
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      stroke-width="2"
-      stroke-linecap="round"
-      stroke-linejoin="round"
-    >
-      {@svg}
-    </svg>
-    """
-  end
-
-  @icons_dir Path.expand("../../../deps/lucide/icons", __DIR__)
-
-  defp read_icon(name) do
-    path = Path.join(@icons_dir, "#{name}.svg")
-    case File.read(path) do
-      {:ok, content} ->
-        content
-        |> String.replace(~r/<svg[^>]*>/, "")
-        |> String.replace("</svg>", "")
-        |> String.trim()
-        |> Phoenix.HTML.raw()
-      _ -> nil
-    end
   end
 
   @doc """

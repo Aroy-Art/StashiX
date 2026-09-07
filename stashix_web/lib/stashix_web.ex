@@ -114,6 +114,9 @@ defmodule StashixWeb do
       import SaladUI.ToggleGroup
       import SaladUI.Tooltip
 
+      # Icon component (both lucide- and hero- prefixes)
+      import StashixUi.Icon
+
       # Core UI components (overrides any SaladUI conflicts)
       import StashixWeb.CoreComponents
 
