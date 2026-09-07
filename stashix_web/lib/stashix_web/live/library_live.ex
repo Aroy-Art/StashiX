@@ -7,68 +7,171 @@ defmodule StashixWeb.LibraryLive do
 
   @page_size 48
 
+  @series_sort_options [
+    {"A → Z", "title_asc"},
+    {"Z → A", "title_desc"},
+    {"Year ↑", "year_asc"},
+    {"Year ↓", "year_desc"},
+    {"Date Added ↓", "added_desc"},
+    {"Date Added ↑", "added_asc"}
+  ]
+
+  @books_sort_options [
+    {"A → Z", "title_asc"},
+    {"Z → A", "title_desc"},
+    {"Year ↑", "year_asc"},
+    {"Year ↓", "year_desc"},
+    {"Date Added ↓", "added_desc"},
+    {"Date Added ↑", "added_asc"}
+  ]
+
+  @issues_sort_options [
+    {"A → Z", "title_asc"},
+    {"Z → A", "title_desc"},
+    {"Issue # ↑", "issue_asc"},
+    {"Issue # ↓", "issue_desc"},
+    {"Year ↑", "year_asc"},
+    {"Year ↓", "year_desc"},
+    {"Date Added ↓", "added_desc"},
+    {"Date Added ↑", "added_asc"}
+  ]
+
   @impl true
   def mount(%{"id" => library_id}, _session, socket) do
-    library = Library.get_library!(library_id)
-
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library_id}")
     end
+
+    library = Library.get_library!(library_id)
+    series_count = Library.count_series(library_id)
+    books_count = Library.count_books(library_id)
+    issues_count = Library.count_issues(library_id)
 
     {:ok,
      assign(socket,
        page_title: library.name,
        library: library,
-       filter: "all",
+       series_count: series_count,
+       books_count: books_count,
+       issues_count: issues_count,
+       items: [],
+       total: 0,
+       total_pages: 1,
+       page: 1,
        sort: "title_asc",
-       page: 0,
-       books: [],
-       series: [],
+       sort_options: @series_sort_options,
        progress_map: %{},
        loading: true
-     )
-     |> load_content("all", 0)}
+     )}
   end
 
   @impl true
-  def handle_params(%{"filter" => filter}, _uri, socket) do
-    {:noreply, load_content(socket, filter, 0) |> assign(filter: filter, page: 0)}
-  end
-
-  def handle_params(_params, _uri, socket), do: {:noreply, socket}
-
-  @impl true
-  def handle_event("filter", %{"value" => filter}, socket) do
-    {:noreply, load_content(assign(socket, filter: filter, page: 0), filter, 0)}
-  end
-
-  def handle_event("sort", %{"value" => sort}, socket) do
-    {:noreply, load_content(assign(socket, sort: sort, page: 0), socket.assigns.filter, 0)}
-  end
-
-  def handle_event("load_more", _params, socket) do
-    next_page = socket.assigns.page + 1
-    library_id = socket.assigns.library.id
-    filter = socket.assigns.filter
-    sort = socket.assigns.sort
+  def handle_params(params, _uri, socket) do
+    page = max(1, String.to_integer(params["page"] || "1"))
+    sort = params["sort"] || "title_asc"
+    lib_id = socket.assigns.library.id
     user_id = socket.assigns.current_user.id
-    opts = filter_opts(filter, next_page, sort)
-    new_books = Library.list_books(library_id, opts)
-    new_progress = Library.progress_map(user_id, Enum.map(new_books, & &1.id))
 
-    {:noreply,
-     socket
-     |> update(:books, &(&1 ++ new_books))
-     |> update(:progress_map, &Map.merge(&1, new_progress))
-     |> assign(:page, next_page)}
+    socket =
+      case socket.assigns.live_action do
+        :show ->
+          recent_series = Library.list_series(lib_id, limit: 20, sort: "added_desc")
+          recent_books = Library.list_books(lib_id, type: "standalone", limit: 20, sort: "added_desc")
+          recent_issues = Library.list_books(lib_id, type: "issue", limit: 20, sort: "added_desc")
+
+          assign(socket,
+            recent_series: recent_series,
+            recent_books: recent_books,
+            recent_issues: recent_issues,
+            loading: false
+          )
+
+        :series ->
+          opts = [sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
+          items = Library.list_series(lib_id, opts)
+          total = socket.assigns.series_count
+
+          assign(socket,
+            items: items,
+            total: total,
+            total_pages: max(1, ceil(total / @page_size)),
+            page: page,
+            sort: sort,
+            sort_options: @series_sort_options,
+            progress_map: %{},
+            loading: false
+          )
+
+        :books ->
+          opts = [type: "standalone", sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
+          items = Library.list_books(lib_id, opts)
+          total = socket.assigns.books_count
+          progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
+
+          assign(socket,
+            items: items,
+            total: total,
+            total_pages: max(1, ceil(total / @page_size)),
+            page: page,
+            sort: sort,
+            sort_options: @books_sort_options,
+            progress_map: progress_map,
+            loading: false
+          )
+
+        :issues ->
+          opts = [type: "issue", sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
+          items = Library.list_books(lib_id, opts)
+          total = socket.assigns.issues_count
+          progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
+
+          assign(socket,
+            items: items,
+            total: total,
+            total_pages: max(1, ceil(total / @page_size)),
+            page: page,
+            sort: sort,
+            sort_options: @issues_sort_options,
+            progress_map: progress_map,
+            loading: false
+          )
+      end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("sort", %{"value" => sort}, socket) do
+    {:noreply, push_patch(socket, to: sub_path(socket, 1, sort))}
+  end
+
+  def handle_event("goto_page", %{"page" => p}, socket) do
+    page = String.to_integer(p) |> max(1) |> min(socket.assigns.total_pages)
+    {:noreply, push_patch(socket, to: sub_path(socket, page, socket.assigns.sort))}
   end
 
   @impl true
   def handle_info({:scan_progress, _progress}, socket), do: {:noreply, socket}
 
   def handle_info({:book_added, _book}, socket) do
-    {:noreply, load_content(socket, socket.assigns.filter, 0)}
+    {:noreply, push_patch(socket, to: sub_path(socket, 1, socket.assigns.sort))}
   end
+
+  defp sub_path(socket, page, sort) do
+    id = socket.assigns.library.id
+    params = %{page: page, sort: sort}
+
+    case socket.assigns.live_action do
+      :series -> ~p"/library/#{id}/series?#{params}"
+      :books -> ~p"/library/#{id}/books?#{params}"
+      :issues -> ~p"/library/#{id}/issues?#{params}"
+      _ -> ~p"/library/#{id}"
+    end
+  end
+
+  defp section_label(:series), do: "Series"
+  defp section_label(:books), do: "Books"
+  defp section_label(:issues), do: "Issues"
 
   defp series_date_range(%{start_year: nil}), do: nil
   defp series_date_range(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
@@ -76,159 +179,234 @@ defmodule StashixWeb.LibraryLive do
   defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
   defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
-  defp load_content(socket, filter, page) do
-    library_id = socket.assigns.library.id
-    user_id = socket.assigns.current_user.id
-    sort = socket.assigns.sort
-    opts = filter_opts(filter, page, sort)
-
-    books =
-      if filter in ["all", "issues", "standalone"] do
-        Library.list_books(library_id, opts)
-      else
-        []
-      end
-
-    series =
-      if filter in ["all", "series"] do
-        Library.list_series(library_id, sort: sort)
-      else
-        []
-      end
-
-    progress_map = Library.progress_map(user_id, Enum.map(books, & &1.id))
-
-    assign(socket, books: books, series: series, progress_map: progress_map, loading: false)
-  end
-
-  defp sort_options("issues") do
-    [
-      {"A → Z", "title_asc"},
-      {"Z → A", "title_desc"},
-      {"Issue # ↑", "issue_asc"},
-      {"Issue # ↓", "issue_desc"},
-      {"Year ↑", "year_asc"},
-      {"Year ↓", "year_desc"},
-      {"Date Added ↓", "added_desc"},
-      {"Date Added ↑", "added_asc"}
-    ]
-  end
-
-  defp sort_options(_filter) do
-    [
-      {"A → Z", "title_asc"},
-      {"Z → A", "title_desc"},
-      {"Year ↑", "year_asc"},
-      {"Year ↓", "year_desc"},
-      {"Date Added ↓", "added_desc"},
-      {"Date Added ↑", "added_asc"}
-    ]
-  end
-
-  defp filter_opts("issues", page, sort),
-    do: [type: "issue", limit: @page_size, offset: page * @page_size, sort: sort]
-
-  defp filter_opts("standalone", page, sort),
-    do: [type: "standalone", limit: @page_size, offset: page * @page_size, sort: sort]
-
-  defp filter_opts(_, page, sort), do: [limit: @page_size, offset: page * @page_size, sort: sort]
-
   @impl true
   def render(assigns) do
     ~H"""
     <div class="space-y-6">
-      <div class="flex items-center justify-between">
-        <div>
-          <a href="/" class="text-gray-500 hover:text-gray-300 text-sm">← Libraries</a>
-          <h1 class="text-2xl font-bold text-white mt-1">{@library.name}</h1>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <div class="flex gap-2">
-            <%= for {label, value} <- [{"All", "all"}, {"Series", "series"}, {"Issues", "issues"}, {"Standalone", "standalone"}] do %>
-              <button
-                phx-click="filter"
-                phx-value-value={value}
-                class={[
-                  "px-3 py-1 text-sm rounded-lg border transition-colors",
-                  if(@filter == value,
-                    do: "bg-indigo-600 border-indigo-500 text-white",
-                    else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-                  )
-                ]}
-              >
-                {label}
-              </button>
-            <% end %>
-          </div>
-
-          <.separator orientation="vertical" class="h-5 mx-1" />
-
-          <form phx-change="sort">
-            <select
-              name="value"
-              class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
-            >
-              <%= for {label, value} <- sort_options(@filter) do %>
-                <option value={value} selected={@sort == value}>{label}</option>
-              <% end %>
-            </select>
-          </form>
+      <%!-- Breadcrumb --%>
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
+        <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0">
+          <.icon name="lucide-chevron-left" class="w-4 h-4" />
+          Back
+        </button>
+        <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
+          <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
+          <span class="text-gray-700 flex-shrink-0">/</span>
+          <%= if @live_action != :show do %>
+            <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300 flex-shrink-0">{@library.name}</a>
+            <span class="text-gray-700 flex-shrink-0">/</span>
+            <span class="text-gray-300 truncate min-w-0">{section_label(@live_action)}</span>
+          <% else %>
+            <span class="text-gray-300 truncate min-w-0">{@library.name}</span>
+          <% end %>
         </div>
       </div>
 
-      <%= if @series != [] && @filter in ["all", "series"] do %>
-        <section>
-          <h2 class="text-lg font-semibold text-gray-300 mb-3">Series</h2>
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            <%= for s <- @series do %>
-              <.media_card
-                href={~p"/series/#{s.id}"}
-                title={s.name}
-                cover_url={~p"/api/series/#{s.id}/cover"}
-                width={300}
-                subtitle={series_date_range(s)}
-                badge={"#{s.issue_count} issues"}
-                type={:series}
-              />
-            <% end %>
-          </div>
-        </section>
-      <% end %>
-
-      <%= if @books != [] && @filter in ["all", "issues", "standalone"] do %>
-        <section>
-          <h2 class="text-lg font-semibold text-gray-300 mb-3">Books</h2>
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
-            <%= for book <- @books do %>
-              <% prog = @progress_map[book.id] %>
-              <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
-              <.media_card
-                href={~p"/book/#{book.id}"}
-                title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
-                cover_url={~p"/api/books/#{book.id}/cover"}
-                width={300}
-                subtitle={book.year && to_string(book.year)}
-                progress={progress}
-                type={:book}
-              />
-            <% end %>
-          </div>
-          <div class="mt-6 text-center">
-            <button
-              phx-click="load_more"
-              class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg border border-gray-700"
-            >
-              Load More
-            </button>
-          </div>
-        </section>
-      <% end %>
-
-      <%= if !@loading && @books == [] && @series == [] do %>
-        <div class="text-center py-16 text-gray-500">
-          <p>No items found. Try scanning the library.</p>
+      <%= if @live_action == :show do %>
+        <%!-- Overview --%>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-bold text-white">{@library.name}</h1>
         </div>
+
+        <%!-- Stat / nav tiles --%>
+        <div class="flex flex-wrap gap-2">
+          <%= if @series_count > 0 do %>
+            <a href={~p"/library/#{@library.id}/series"} class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+              <.icon name="lucide-layers" class="w-4 h-4 text-violet-400 flex-shrink-0" />
+              <span class="text-sm font-semibold text-white">{@series_count}</span>
+              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Series</span>
+              <.icon name="lucide-chevron-right" class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors" />
+            </a>
+          <% end %>
+          <%= if @books_count > 0 do %>
+            <a href={~p"/library/#{@library.id}/books"} class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+              <.icon name="lucide-book" class="w-4 h-4 text-violet-400 flex-shrink-0" />
+              <span class="text-sm font-semibold text-white">{@books_count}</span>
+              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Books</span>
+              <.icon name="lucide-chevron-right" class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors" />
+            </a>
+          <% end %>
+          <%= if @issues_count > 0 do %>
+            <a href={~p"/library/#{@library.id}/issues"} class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all">
+              <.icon name="lucide-newspaper" class="w-4 h-4 text-violet-400 flex-shrink-0" />
+              <span class="text-sm font-semibold text-white">{@issues_count}</span>
+              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Issues</span>
+              <.icon name="lucide-chevron-right" class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors" />
+            </a>
+          <% end %>
+        </div>
+
+        <%!-- Recent Series --%>
+        <%= if @recent_series != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                Series
+              </h2>
+              <%= if @series_count > 20 do %>
+                <a href={~p"/library/#{@library.id}/series"} class="text-sm text-violet-400 hover:text-violet-300">View all →</a>
+              <% end %>
+            </div>
+            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for s <- @recent_series do %>
+                <.media_card
+                  href={~p"/series/#{s.id}"}
+                  title={s.name}
+                  cover_url={~p"/api/series/#{s.id}/cover"}
+                  width={288}
+                  subtitle={series_date_range(s)}
+                  badge={"#{s.issue_count} issues"}
+                  type={:series}
+                  class="flex-shrink-0 w-36"
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Recent Books --%>
+        <%= if @recent_books != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                Books
+              </h2>
+              <%= if @books_count > 20 do %>
+                <a href={~p"/library/#{@library.id}/books"} class="text-sm text-violet-400 hover:text-violet-300">View all →</a>
+              <% end %>
+            </div>
+            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for book <- @recent_books do %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={book.title}
+                  cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={288}
+                  subtitle={book.year && to_string(book.year)}
+                  type={:book}
+                  class="flex-shrink-0 w-36"
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%!-- Recent Issues --%>
+        <%= if @recent_issues != [] do %>
+          <section>
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
+                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span>
+                Issues
+              </h2>
+              <%= if @issues_count > 20 do %>
+                <a href={~p"/library/#{@library.id}/issues"} class="text-sm text-violet-400 hover:text-violet-300">View all →</a>
+              <% end %>
+            </div>
+            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              <%= for book <- @recent_issues do %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                  cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={288}
+                  subtitle={if book.series, do: book.series.name}
+                  badge={
+                    cond do
+                      book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                      book.issue_number -> "##{book.issue_number}"
+                      true -> nil
+                    end
+                  }
+                  type={:book}
+                  class="flex-shrink-0 w-36"
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
+        <%= if @series_count == 0 && @books_count == 0 && @issues_count == 0 do %>
+          <.browse_empty icon="lucide-library" label="No content in this library. Try scanning." />
+        <% end %>
+
+      <% else %>
+        <%!-- Sub-page: Series / Books / Issues --%>
+        <.browse_header
+          title={@library.name}
+          subtitle={"#{@total} #{section_label(@live_action) |> String.downcase()}"}
+        >
+          <:controls>
+            <.sort_select options={@sort_options} selected={@sort} />
+          </:controls>
+        </.browse_header>
+
+        <%= if @items != [] do %>
+          <.pagination page={@page} total_pages={@total_pages} />
+
+          <%= if @live_action == :series do %>
+            <.media_grid>
+              <%= for s <- @items do %>
+                <.media_card
+                  href={~p"/series/#{s.id}"}
+                  title={s.name}
+                  cover_url={~p"/api/series/#{s.id}/cover"}
+                  width={300}
+                  subtitle={series_date_range(s)}
+                  badge={"#{s.issue_count} issues"}
+                  type={:series}
+                />
+              <% end %>
+            </.media_grid>
+          <% end %>
+
+          <%= if @live_action == :books do %>
+            <.media_grid>
+              <%= for book <- @items do %>
+                <% prog = @progress_map[book.id] %>
+                <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={book.title}
+                  cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={300}
+                  subtitle={book.year && to_string(book.year)}
+                  progress={progress}
+                  type={:book}
+                />
+              <% end %>
+            </.media_grid>
+          <% end %>
+
+          <%= if @live_action == :issues do %>
+            <.media_grid>
+              <%= for book <- @items do %>
+                <% prog = @progress_map[book.id] %>
+                <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
+                <.media_card
+                  href={~p"/book/#{book.id}"}
+                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                  cover_url={~p"/api/books/#{book.id}/cover"}
+                  width={300}
+                  subtitle={if book.series, do: book.series.name, else: book.year && to_string(book.year)}
+                  progress={progress}
+                  type={:book}
+                />
+              <% end %>
+            </.media_grid>
+          <% end %>
+
+          <.pagination page={@page} total_pages={@total_pages} />
+        <% end %>
+
+        <%= if !@loading && @items == [] do %>
+          <.browse_empty
+            icon={if @live_action == :series, do: "lucide-layers", else: "lucide-book"}
+            label={"No #{section_label(@live_action) |> String.downcase()} found."}
+          />
+        <% end %>
       <% end %>
     </div>
     """

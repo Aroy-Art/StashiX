@@ -111,7 +111,10 @@ defmodule StashixWeb.Router do
     pipe_through :browser
 
     live "/", HomeLive, :index
-    live "/library/:id", LibraryLive, :index
+    live "/library/:id", LibraryLive, :show
+    live "/library/:id/series", LibraryLive, :series
+    live "/library/:id/books", LibraryLive, :books
+    live "/library/:id/issues", LibraryLive, :issues
     live "/books", AllBooksLive, :index
     live "/issues", AllIssuesLive, :index
     live "/series", AllSeriesLive, :index

@@ -80,6 +80,8 @@ defmodule Stashix.Library do
 
   def list_series(library_id, opts \\ []) do
     sort = Keyword.get(opts, :sort, "title_asc")
+    limit = Keyword.get(opts, :limit)
+    offset = Keyword.get(opts, :offset, 0)
 
     query =
       from s in Series,
@@ -87,7 +89,10 @@ defmodule Stashix.Library do
           on: b.series_id == s.id and is_nil(b.deleted_at),
         where: s.library_id == ^library_id and is_nil(s.deleted_at),
         group_by: s.id,
-        select: %{s | issue_count: count(b.id)}
+        select: %{s | issue_count: count(b.id)},
+        offset: ^offset
+
+    query = if limit, do: limit(query, ^limit), else: query
 
     query =
       case sort do
