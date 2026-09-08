@@ -65,6 +65,12 @@ defmodule StashixWeb.BookLive do
     {:noreply, assign(socket, progress: 0, fully_read: false, read_menu_open: false)}
   end
 
+  def handle_event("mark_read", _params, socket) do
+    book = socket.assigns.book
+    Library.update_progress(socket.assigns.current_user.id, book.id, book.page_count)
+    {:noreply, assign(socket, progress: book.page_count, fully_read: true, read_menu_open: false)}
+  end
+
   def handle_event("toggle_admin_menu", _params, socket) do
     {:noreply, assign(socket, show_admin_menu: !socket.assigns.show_admin_menu)}
   end
@@ -282,10 +288,7 @@ defmodule StashixWeb.BookLive do
             <div class="flex items-center gap-0">
               <a
                 href={if @fully_read, do: ~p"/read/#{@book.id}?page=0", else: ~p"/read/#{@book.id}"}
-                class={[
-                  "inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors",
-                  if(@progress > 0, do: "rounded-l-lg", else: "rounded-lg")
-                ]}
+                class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-l-lg transition-colors"
               >
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {cond do
@@ -294,31 +297,40 @@ defmodule StashixWeb.BookLive do
                   true -> "Read"
                 end}
               </a>
-              <%= if @progress > 0 do %>
-                <.dropdown_menu id="read-options-menu" class="flex">
-                  <.dropdown_menu_trigger class="flex items-center self-stretch px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
-                    <.icon name="lucide-chevron-down" class="w-4 h-4" />
-                  </.dropdown_menu_trigger>
-                  <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
-                    <%= if !@fully_read do %>
-                      <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 p-0">
-                        <a
-                          href={~p"/read/#{@book.id}?page=0"}
-                          class="flex items-center gap-2 px-2 py-1.5 w-full"
-                        >
-                          <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from Beginning
-                        </a>
-                      </.dropdown_menu_item>
-                    <% end %>
-                    <.dropdown_menu_item
-                      class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                      on-select={JS.push("mark_unread")}
-                    >
-                      <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
-                    </.dropdown_menu_item>
-                  </.dropdown_menu_content>
-                </.dropdown_menu>
-              <% end %>
+              <.dropdown_menu id="read-options-menu" class="flex">
+                <.dropdown_menu_trigger class="flex items-center py-3 px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
+                  <.icon name="lucide-chevron-down" class="w-4 h-4" />
+                </.dropdown_menu_trigger>
+                <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
+                  <a
+                    href={~p"/read/#{@book.id}?page=0"}
+                    hidden={@progress == 0 || @fully_read}
+                    class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                  >
+                    <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
+                  </a>
+                  <button
+                    phx-click={
+                      JS.push("mark_read")
+                      |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                    }
+                    hidden={@fully_read}
+                    class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                  >
+                    <.icon name="lucide-check-circle" class="w-4 h-4 mr-2" /> Mark as Read
+                  </button>
+                  <button
+                    phx-click={
+                      JS.push("mark_unread")
+                      |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                    }
+                    hidden={!@fully_read && @progress == 0}
+                    class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                  >
+                    <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
+                  </button>
+                </.dropdown_menu_content>
+              </.dropdown_menu>
             </div>
           <% end %>
         </div>
