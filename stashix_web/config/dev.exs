@@ -56,6 +56,7 @@ config :stashix, StashixWeb.Endpoint,
 # Watch static and templates for browser reloading.
 config :stashix, StashixWeb.Endpoint,
   live_reload: [
+    reload_page_on_css_changes: true,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
@@ -67,7 +68,7 @@ config :stashix, StashixWeb.Endpoint,
 config :stashix, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
-config :logger, :console, format: "[$level] $message\n"
+config :logger, :console, format: "$date $time [$level] $message\n"
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.

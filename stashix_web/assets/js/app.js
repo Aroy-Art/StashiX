@@ -590,7 +590,16 @@ Hooks.ReaderZoom = {
 }
 
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"))
+  const noCache = document.querySelector('meta[name="sw-no-cache"]')?.content === "true"
+  const swUrl = "/sw.js" + (noCache ? "?nocache=1" : "")
+  window.addEventListener("load", async () => {
+    const regs = await navigator.serviceWorker.getRegistrations()
+    for (const reg of regs) {
+      const url = reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || ""
+      if (noCache !== url.includes("nocache=1")) await reg.unregister()
+    }
+    navigator.serviceWorker.register(swUrl)
+  })
 }
 
 // A second copy of this bundle on the page would stand up a second LiveSocket,

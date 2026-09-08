@@ -10,5 +10,8 @@ defmodule StashixWeb.Layouts do
   """
   use StashixWeb, :html
 
+  @dev_routes Application.compile_env(:stashix, :dev_routes, false)
+  def dev_routes, do: @dev_routes
+
   embed_templates "layouts/*"
 end
