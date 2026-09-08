@@ -18,7 +18,7 @@ COPY lib lib
 RUN MIX_ENV=prod mix assets.deploy
 RUN MIX_ENV=prod mix release
 
-FROM alpine:3.20
+FROM alpine:3.24
 
 RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip unrar vips
 
