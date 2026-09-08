@@ -28,8 +28,7 @@ defmodule StashixUi.Textarea do
   attr :name, :any, default: nil
   attr :value, :any
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :class, :any, default: nil
   attr :rest, :global, include: ~w(disabled form rows cols)

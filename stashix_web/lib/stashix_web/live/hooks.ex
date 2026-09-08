@@ -20,7 +20,13 @@ defmodule StashixWeb.Live.Hooks do
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress, navbar_search_query: "", navbar_search_results: [])
+          |> assign(
+            current_user: user,
+            sidebar_libraries: libraries,
+            sidebar_scan_progress: initial_progress,
+            navbar_search_query: "",
+            navbar_search_results: []
+          )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
@@ -50,7 +56,13 @@ defmodule StashixWeb.Live.Hooks do
 
         socket =
           socket
-          |> assign(current_user: user, sidebar_libraries: libraries, sidebar_scan_progress: initial_progress, navbar_search_query: "", navbar_search_results: [])
+          |> assign(
+            current_user: user,
+            sidebar_libraries: libraries,
+            sidebar_scan_progress: initial_progress,
+            navbar_search_query: "",
+            navbar_search_results: []
+          )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
@@ -90,15 +102,34 @@ defmodule StashixWeb.Live.Hooks do
 
         flat =
           Enum.map(series, fn s ->
-            %{type: :series, id: s.id, label: s.name, sub: if(s.issue_count > 0, do: "#{s.issue_count} issues"), cover: true}
+            %{
+              type: :series,
+              id: s.id,
+              label: s.name,
+              sub: if(s.issue_count > 0, do: "#{s.issue_count} issues"),
+              cover: true
+            }
           end) ++
-          Enum.map(issues, fn b ->
-            label = if b.issue_number, do: "##{b.issue_number} – #{b.title}", else: b.title
-            %{type: :issue, id: b.id, label: label, sub: b.series && b.series.name, cover: not is_nil(b.cover)}
-          end) ++
-          Enum.map(books, fn b ->
-            %{type: :book, id: b.id, label: b.title, sub: b.year && to_string(b.year), cover: not is_nil(b.cover)}
-          end)
+            Enum.map(issues, fn b ->
+              label = if b.issue_number, do: "##{b.issue_number} – #{b.title}", else: b.title
+
+              %{
+                type: :issue,
+                id: b.id,
+                label: label,
+                sub: b.series && b.series.name,
+                cover: not is_nil(b.cover)
+              }
+            end) ++
+            Enum.map(books, fn b ->
+              %{
+                type: :book,
+                id: b.id,
+                label: b.title,
+                sub: b.year && to_string(b.year),
+                cover: not is_nil(b.cover)
+              }
+            end)
 
         Enum.take(flat, 12)
       else
@@ -126,14 +157,32 @@ defmodule StashixWeb.Live.Hooks do
 
   defp handle_sidebar_scan(_event, _params, socket), do: {:cont, socket}
 
-  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t, done: done, phase: phase}}, socket) do
-    socket = update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: phase}))
+  defp handle_sidebar_progress(
+         {:scan_progress, %{library_id: id, scanned: s, total: t, done: done, phase: phase}},
+         socket
+       ) do
+    socket =
+      update(
+        socket,
+        :sidebar_scan_progress,
+        &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: phase})
+      )
+
     if done, do: Process.send_after(self(), {:clear_sidebar_scan_progress, id}, 3_000)
     {:cont, socket}
   end
 
-  defp handle_sidebar_progress({:scan_progress, %{library_id: id, scanned: s, total: t, done: done}}, socket) do
-    socket = update(socket, :sidebar_scan_progress, &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: :scan}))
+  defp handle_sidebar_progress(
+         {:scan_progress, %{library_id: id, scanned: s, total: t, done: done}},
+         socket
+       ) do
+    socket =
+      update(
+        socket,
+        :sidebar_scan_progress,
+        &Map.put(&1, id, %{scanned: s, total: t, done: done, phase: :scan})
+      )
+
     if done, do: Process.send_after(self(), {:clear_sidebar_scan_progress, id}, 3_000)
     {:cont, socket}
   end
@@ -150,7 +199,13 @@ defmodule StashixWeb.Live.Hooks do
     Stashix.Scanner.list_active_tasks()
     |> Enum.filter(&(not &1.done and MapSet.member?(library_ids, &1.library_id)))
     |> Map.new(fn task ->
-      {task.library_id, %{scanned: task.scanned, total: task.total, done: task.done, phase: Map.get(task, :phase, :scan)}}
+      {task.library_id,
+       %{
+         scanned: task.scanned,
+         total: task.total,
+         done: task.done,
+         phase: Map.get(task, :phase, :scan)
+       }}
     end)
   end
 

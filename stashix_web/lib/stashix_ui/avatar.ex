@@ -114,9 +114,7 @@ defmodule StashixUi.Avatar do
   def avatar_fallback(assigns) do
     ~H"""
     <span
-      class={
-        classes(["flex h-full w-full items-center justify-center rounded-full bg-muted", @class])
-      }
+      class={classes(["flex h-full w-full items-center justify-center rounded-full bg-muted", @class])}
       {@rest}
     >
       {render_slot(@inner_block)}

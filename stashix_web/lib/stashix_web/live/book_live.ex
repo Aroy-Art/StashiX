@@ -127,7 +127,8 @@ defmodule StashixWeb.BookLive do
   defp book_display_title(book), do: book.title
 
   defp relative_path(book, library) do
-    library.name <> "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
+    library.name <>
+      "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
   end
 
   @impl true
@@ -136,22 +137,30 @@ defmodule StashixWeb.BookLive do
     <div class="max-w-4xl mx-auto space-y-8">
       <%!-- Breadcrumbs --%>
       <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
-        <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0">
-          <.icon name="lucide-chevron-left" class="w-4 h-4" />
-          Back
+        <button
+          onclick="history.back()"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0"
+        >
+          <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
         </button>
         <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
           <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
           <span class="text-gray-700 flex-shrink-0">/</span>
-          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300 flex-shrink-0">{@library.name}</a>
+          <a
+            href={~p"/library/#{@library.id}"}
+            class="text-gray-500 hover:text-gray-300 flex-shrink-0"
+          >{@library.name}</a>
           <%= if @book.series do %>
             <span class="text-gray-700 flex-shrink-0">/</span>
-            <a href={~p"/series/#{@book.series.id}"} class="text-gray-500 hover:text-gray-300 flex-shrink-0">{@book.series.name}</a>
+            <a
+              href={~p"/series/#{@book.series.id}"}
+              class="text-gray-500 hover:text-gray-300 flex-shrink-0"
+            >{@book.series.name}</a>
           <% end %>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <span class="text-gray-300 truncate min-w-0">
             <%= if @book.issue_number do %>
-              <span class="hidden sm:inline">Issue </span>#<%= Decimal.to_integer(@book.issue_number) %>
+              <span class="hidden sm:inline">Issue </span>#{Decimal.to_integer(@book.issue_number)}
             <% else %>
               {@book.title}
             <% end %>
@@ -161,8 +170,7 @@ defmodule StashixWeb.BookLive do
           <div class="ml-auto">
             <.dropdown_menu id="book-admin-menu">
               <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
-                <.icon name="lucide-settings" class="w-3.5 h-3.5" />
-                Admin
+                <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
                 <.icon name="lucide-chevron-down" class="w-3 h-3" />
               </.dropdown_menu_trigger>
               <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
@@ -170,19 +178,19 @@ defmodule StashixWeb.BookLive do
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                   on-select={JS.push("open_edit_dialog")}
                 >
-                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
-                  Edit Metadata
+                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 disabled:opacity-50"
                   on-select={JS.push("rescan_book")}
                 >
                   <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin text-violet-400" />
-                    Scanning…
+                    <.icon
+                      name="lucide-loader-circle"
+                      class="w-4 h-4 mr-2 animate-spin text-violet-400"
+                    /> Scanning…
                   <% else %>
-                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" />
-                    Rescan Book
+                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Book
                   <% end %>
                 </.dropdown_menu_item>
               </.dropdown_menu_content>
@@ -193,7 +201,6 @@ defmodule StashixWeb.BookLive do
 
       <%!-- Editorial header — cover floats left, info BFC beside it, summary wraps below --%>
       <div class="overflow-hidden">
-
         <%!-- Cover — floated left --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
           <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3]">
@@ -215,7 +222,6 @@ defmodule StashixWeb.BookLive do
 
         <%!-- BFC wrapper: forced beside the float --%>
         <div class="overflow-hidden pt-1">
-
           <%!-- Series eyebrow --%>
           <%= if @book.series do %>
             <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
@@ -224,11 +230,11 @@ defmodule StashixWeb.BookLive do
               </a>
               <%= if @book.series.start_year do %>
                 <span class="text-gray-600 normal-case tracking-normal font-normal ml-1">
-                  (<%= @book.series.start_year %><%= cond do
+                  ({@book.series.start_year}{cond do
                     @book.series.end_year -> "–#{@book.series.end_year}"
                     @book.series.ongoing -> "–"
                     true -> ""
-                  end %>)
+                  end})
                 </span>
               <% end %>
             </p>
@@ -236,7 +242,10 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Title --%>
           <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight mb-3">
-            <%= if @book.issue_number do %>#<%= Decimal.to_integer(@book.issue_number) %> – <% end %>{book_display_title(@book)}
+            <%= if @book.issue_number do %>
+              #{Decimal.to_integer(@book.issue_number)} –
+            <% end %>
+            {book_display_title(@book)}
           </h1>
 
           <%!-- Status row --%>
@@ -251,8 +260,7 @@ defmodule StashixWeb.BookLive do
             <% end %>
             <%= if @fully_read do %>
               <.badge class="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
-                <.icon name="lucide-check" class="w-3 h-3" />
-                Read
+                <.icon name="lucide-check" class="w-3 h-3" /> Read
               </.badge>
             <% else %>
               <%= if @progress > 0 && @book.page_count > 0 do %>
@@ -263,7 +271,10 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Progress bar --%>
           <%= if !@fully_read && @progress > 0 && @book.page_count > 0 do %>
-            <.progress value={round(@progress / @book.page_count * 100)} class="h-1 [&>div]:bg-violet-500 bg-gray-800 mb-5 rounded-full" />
+            <.progress
+              value={round(@progress / @book.page_count * 100)}
+              class="h-1 [&>div]:bg-violet-500 bg-gray-800 mb-5 rounded-full"
+            />
           <% end %>
 
           <%!-- Read button --%>
@@ -291,9 +302,11 @@ defmodule StashixWeb.BookLive do
                   <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
                     <%= if !@fully_read do %>
                       <.dropdown_menu_item class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 p-0">
-                        <a href={~p"/read/#{@book.id}?page=0"} class="flex items-center gap-2 px-2 py-1.5 w-full">
-                          <.icon name="lucide-rotate-ccw" class="w-4 h-4" />
-                          Read from Beginning
+                        <a
+                          href={~p"/read/#{@book.id}?page=0"}
+                          class="flex items-center gap-2 px-2 py-1.5 w-full"
+                        >
+                          <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from Beginning
                         </a>
                       </.dropdown_menu_item>
                     <% end %>
@@ -301,8 +314,7 @@ defmodule StashixWeb.BookLive do
                       class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                       on-select={JS.push("mark_unread")}
                     >
-                      <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" />
-                      Mark as Unread
+                      <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
                     </.dropdown_menu_item>
                   </.dropdown_menu_content>
                 </.dropdown_menu>
@@ -321,10 +333,14 @@ defmodule StashixWeb.BookLive do
       <div class="flex flex-wrap gap-px bg-gray-800 rounded-lg overflow-hidden text-xs">
         <%= if @book.publishers != [] do %>
           <div class="flex-1 min-w-[9rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Publisher</p>
+            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
+              Publisher
+            </p>
             <p class="text-gray-300">
               <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
-                <%= if idx > 0 do %><span class="text-gray-600"> / </span><% end %>
+                <%= if idx > 0 do %>
+                  <span class="text-gray-600"> / </span>
+                <% end %>
                 <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
               <% end %>
             </p>
@@ -354,12 +370,16 @@ defmodule StashixWeb.BookLive do
         <% end %>
         <%= if @book.language do %>
           <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Language</p>
+            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
+              Language
+            </p>
             <p class="text-gray-300">{Formatters.language_name(@book.language)}</p>
           </div>
         <% end %>
         <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Age Rating</p>
+          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
+            Age Rating
+          </p>
           <p class="text-gray-300">{Formatters.format_age_rating(@book.age_rating)}</p>
         </div>
       </div>
@@ -404,11 +424,17 @@ defmodule StashixWeb.BookLive do
               <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5">
                 <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Previous</p>
                 <p class="text-base font-bold text-white leading-tight tracking-tight">
-                  <%= if @prev_book.issue_number do %>#<%= Decimal.to_integer(@prev_book.issue_number) %><% end %>
+                  <%= if @prev_book.issue_number do %>
+                    #{Decimal.to_integer(@prev_book.issue_number)}
+                  <% end %>
                 </p>
-                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors"><%= @prev_book.title %></p>
+                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors">
+                  {@prev_book.title}
+                </p>
                 <p class="text-[10px] text-gray-600 mt-0.5">
-                  <%= [@prev_book.year, (@prev_book.page_count > 0 && "#{@prev_book.page_count} pp")] |> Enum.filter(& &1) |> Enum.join(" · ") %>
+                  {[@prev_book.year, @prev_book.page_count > 0 && "#{@prev_book.page_count} pp"]
+                  |> Enum.filter(& &1)
+                  |> Enum.join(" · ")}
                 </p>
               </div>
             </a>
@@ -444,11 +470,17 @@ defmodule StashixWeb.BookLive do
               <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5 text-right">
                 <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Next</p>
                 <p class="text-base font-bold text-white leading-tight tracking-tight">
-                  <%= if @next_book.issue_number do %>#<%= Decimal.to_integer(@next_book.issue_number) %><% end %>
+                  <%= if @next_book.issue_number do %>
+                    #{Decimal.to_integer(@next_book.issue_number)}
+                  <% end %>
                 </p>
-                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors"><%= @next_book.title %></p>
+                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors">
+                  {@next_book.title}
+                </p>
                 <p class="text-[10px] text-gray-600 mt-0.5">
-                  <%= [@next_book.year, (@next_book.page_count > 0 && "#{@next_book.page_count} pp")] |> Enum.filter(& &1) |> Enum.join(" · ") %>
+                  {[@next_book.year, @next_book.page_count > 0 && "#{@next_book.page_count} pp"]
+                  |> Enum.filter(& &1)
+                  |> Enum.join(" · ")}
                 </p>
               </div>
             </a>
@@ -533,7 +565,9 @@ defmodule StashixWeb.BookLive do
                   class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 >
                   <%= for {label, val} <- [{"Unknown", "unknown"}, {"Everyone", "everyone"}, {"Teen", "teen"}, {"Teen+", "teen_plus"}, {"Mature", "mature"}, {"Adult", "adult"}, {"Explicit", "explicit"}] do %>
-                    <option value={val} selected={to_string(@edit_form[:age_rating].value) == val}>{label}</option>
+                    <option value={val} selected={to_string(@edit_form[:age_rating].value) == val}>
+                      {label}
+                    </option>
                   <% end %>
                 </select>
               </div>
@@ -549,10 +583,17 @@ defmodule StashixWeb.BookLive do
             </div>
 
             <.dialog_footer class="pt-2">
-              <button type="button" phx-click="close_edit_dialog" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors">
+              <button
+                type="button"
+                phx-click="close_edit_dialog"
+                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors"
+              >
                 Cancel
               </button>
-              <button type="submit" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              >
                 Save Changes
               </button>
             </.dialog_footer>

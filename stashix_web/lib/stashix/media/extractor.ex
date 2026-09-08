@@ -122,7 +122,9 @@ defmodule Stashix.Media.Extractor do
               end
             end) || 0
 
-          page_names = Enum.map(1..max(pages, 1), &"page-#{String.pad_leading(to_string(&1), 4, "0")}.jpg")
+          page_names =
+            Enum.map(1..max(pages, 1), &"page-#{String.pad_leading(to_string(&1), 4, "0")}.jpg")
+
           {:ok, page_names}
 
         {error, _} ->
@@ -181,9 +183,7 @@ defmodule Stashix.Media.Extractor do
     File.mkdir_p!(tmp)
 
     try do
-      case System.cmd("7z", ["e", archive_path, page_name, "-o#{tmp}", "-y"],
-             stderr_to_stdout: true
-           ) do
+      case System.cmd("7z", ["e", archive_path, page_name, "-o#{tmp}", "-y"], stderr_to_stdout: true) do
         {_, 0} ->
           dest = Path.join(tmp, Path.basename(page_name))
 
@@ -222,7 +222,17 @@ defmodule Stashix.Media.Extractor do
     try do
       case System.cmd(
              "pdftoppm",
-             ["-jpeg", "-r", "150", "-f", to_string(page_num), "-l", to_string(page_num), archive_path, out_prefix],
+             [
+               "-jpeg",
+               "-r",
+               "150",
+               "-f",
+               to_string(page_num),
+               "-l",
+               to_string(page_num),
+               archive_path,
+               out_prefix
+             ],
              stderr_to_stdout: true
            ) do
         {_, 0} ->

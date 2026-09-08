@@ -76,7 +76,8 @@ defmodule StashixWeb.AdminLive do
   end
 
   defp apply_action(socket, :publishers, params) do
-    tab = if Map.get(params, "tab") in ["aliases", "visibility"], do: params["tab"], else: "aliases"
+    tab =
+      if Map.get(params, "tab") in ["aliases", "visibility"], do: params["tab"], else: "aliases"
 
     socket
     |> assign(:page_title, "Admin · Publishers")
@@ -112,7 +113,12 @@ defmodule StashixWeb.AdminLive do
         %{"email" => email, "username" => username, "password" => password, "role" => role},
         socket
       ) do
-    case Accounts.create_user(%{email: email, username: username, password: password, role: String.to_atom(role)}) do
+    case Accounts.create_user(%{
+           email: email,
+           username: username,
+           password: password,
+           role: String.to_atom(role)
+         }) do
       {:ok, _user} ->
         {:noreply,
          socket
@@ -177,6 +183,7 @@ defmodule StashixWeb.AdminLive do
 
   def handle_event("backfill_blurhashes", _params, socket) do
     Stashix.Scanner.backfill_blurhashes()
+
     {:noreply, put_flash(socket, :info, "Blurhash backfill started — check server logs for progress")}
   end
 
@@ -356,7 +363,11 @@ defmodule StashixWeb.AdminLive do
     end
   end
 
-  def handle_event("set_permission", %{"user_id" => user_id, "library_id" => library_id} = params, socket) do
+  def handle_event(
+        "set_permission",
+        %{"user_id" => user_id, "library_id" => library_id} = params,
+        socket
+      ) do
     can_read = Map.get(params, "can_read") == "true"
     max_age_rating = Map.get(params, "max_age_rating", "unknown")
 
@@ -423,8 +434,11 @@ defmodule StashixWeb.AdminLive do
       |> List.first()
 
     case result do
-      nil -> {:noreply, socket}
-      pub -> {:noreply, assign(socket, alias_source_id: pub.id, alias_source_query: "", alias_pending: false)}
+      nil ->
+        {:noreply, socket}
+
+      pub ->
+        {:noreply, assign(socket, alias_source_id: pub.id, alias_source_query: "", alias_pending: false)}
     end
   end
 
@@ -440,8 +454,11 @@ defmodule StashixWeb.AdminLive do
       |> List.first()
 
     case result do
-      nil -> {:noreply, socket}
-      pub -> {:noreply, assign(socket, alias_target_id: pub.id, alias_target_query: "", alias_pending: false)}
+      nil ->
+        {:noreply, socket}
+
+      pub ->
+        {:noreply, assign(socket, alias_target_id: pub.id, alias_target_query: "", alias_pending: false)}
     end
   end
 
@@ -492,7 +509,10 @@ defmodule StashixWeb.AdminLive do
          socket
          |> assign(publishers: publishers)
          |> load_vis_publishers()
-         |> put_flash(:info, if(pub.hidden, do: "\"#{pub.name}\" hidden", else: "\"#{pub.name}\" visible"))}
+         |> put_flash(
+           :info,
+           if(pub.hidden, do: "\"#{pub.name}\" hidden", else: "\"#{pub.name}\" visible")
+         )}
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Failed to update publisher")}
@@ -523,9 +543,10 @@ defmodule StashixWeb.AdminLive do
   end
 
   def handle_info({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
-    {:noreply, update(socket, :scanning_libraries, fn libs ->
-      if t > 0 and s < t, do: MapSet.put(libs, id), else: libs
-    end)}
+    {:noreply,
+     update(socket, :scanning_libraries, fn libs ->
+       if t > 0 and s < t, do: MapSet.put(libs, id), else: libs
+     end)}
   end
 
   def handle_info({:clear_saved_perm, key}, socket) do
@@ -557,26 +578,52 @@ defmodule StashixWeb.AdminLive do
               <form phx-submit="create_user" class="grid grid-cols-2 gap-4">
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Email</label>
-                  <input type="email" name="email" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                  <input
+                    type="email"
+                    name="email"
+                    required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Username</label>
-                  <input type="text" name="username" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                  <input
+                    type="text"
+                    name="username"
+                    required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Password</label>
-                  <input type="password" name="password" required minlength="8" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500" />
+                  <input
+                    type="password"
+                    name="password"
+                    required
+                    minlength="8"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Role</label>
-                  <select name="role" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500">
+                  <select
+                    name="role"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                  >
                     <option value="user">User</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div class="col-span-2 flex gap-2 justify-end">
-                  <button type="button" phx-click="toggle_user_form" class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Cancel</button>
-                  <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Create</button>
+                  <button
+                    type="button"
+                    phx-click="toggle_user_form"
+                    class="px-3 py-1.5 text-sm text-gray-400 hover:text-white"
+                  >Cancel</button>
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
+                  >Create</button>
                 </div>
               </form>
             </div>
@@ -594,17 +641,18 @@ defmodule StashixWeb.AdminLive do
               </thead>
               <tbody>
                 <%= for user <- @users do %>
-                  <%
-                    perm_open = @selected_perm_user_id == user.id
-                    age_ratings = [:unknown, :everyone, :teen, :teen_plus, :mature, :adult, :explicit]
-                  %>
+                  <% perm_open = @selected_perm_user_id == user.id
+                  age_ratings = [:unknown, :everyone, :teen, :teen_plus, :mature, :adult, :explicit] %>
                   <tr class="border-b border-gray-800">
                     <td class="px-4 py-3 text-white">{user.username}</td>
                     <td class="px-4 py-3 text-gray-400">{user.email}</td>
                     <td class="px-4 py-3">
                       <span class={[
                         "px-2 py-0.5 rounded text-xs font-medium",
-                        if(user.role == :admin, do: "bg-indigo-900 text-indigo-300", else: "bg-gray-800 text-gray-400")
+                        if(user.role == :admin,
+                          do: "bg-indigo-900 text-indigo-300",
+                          else: "bg-gray-800 text-gray-400"
+                        )
                       ]}>
                         {user.role}
                       </span>
@@ -615,8 +663,12 @@ defmodule StashixWeb.AdminLive do
                           <button
                             phx-click="show_user_permissions"
                             phx-value-id={user.id}
-                            class={["text-xs transition-colors",
-                              if(perm_open, do: "text-indigo-400 hover:text-indigo-300", else: "text-gray-400 hover:text-white")
+                            class={[
+                              "text-xs transition-colors",
+                              if(perm_open,
+                                do: "text-indigo-400 hover:text-indigo-300",
+                                else: "text-gray-400 hover:text-white"
+                              )
                             ]}
                           >
                             Permissions
@@ -642,16 +694,19 @@ defmodule StashixWeb.AdminLive do
                     <tr class="border-b border-gray-800 bg-gray-950">
                       <td colspan="4" class="px-4 py-4">
                         <div class="space-y-2">
-                          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Library Access for {user.username}</p>
+                          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                            Library Access for {user.username}
+                          </p>
                           <%= if @libraries == [] do %>
                             <p class="text-sm text-gray-600">No libraries configured.</p>
                           <% else %>
                             <%= for lib <- @libraries do %>
                               <% perm = Map.get(@user_permissions, lib.id)
-                                 saved = MapSet.member?(@saved_permissions, "#{user.id}-#{lib.id}")
-                                 current_rating = if perm, do: perm.max_age_rating, else: :unknown
-                                 rating_opts = Enum.map(age_ratings, &{Formatters.format_age_rating(&1), &1})
-                              %>
+                              saved = MapSet.member?(@saved_permissions, "#{user.id}-#{lib.id}")
+                              current_rating = if perm, do: perm.max_age_rating, else: :unknown
+
+                              rating_opts =
+                                Enum.map(age_ratings, &{Formatters.format_age_rating(&1), &1}) %>
                               <form
                                 phx-change="set_permission"
                                 class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-900 border border-gray-800"
@@ -673,8 +728,7 @@ defmodule StashixWeb.AdminLive do
                                       value="true"
                                       checked={perm != nil && perm.can_read}
                                       class="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                                    />
-                                    Can read
+                                    /> Can read
                                   </label>
                                   <select
                                     id={"rating-#{user.id}-#{lib.id}-#{current_rating}"}
@@ -724,15 +778,34 @@ defmodule StashixWeb.AdminLive do
               <form phx-submit="create_library" class="space-y-4">
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Name</label>
-                  <input type="text" name="name" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="My Comics" />
+                  <input
+                    type="text"
+                    name="name"
+                    required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    placeholder="My Comics"
+                  />
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Root Path</label>
-                  <input type="text" name="root_path" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500" placeholder="/libraries/comics" />
+                  <input
+                    type="text"
+                    name="root_path"
+                    required
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
+                    placeholder="/libraries/comics"
+                  />
                 </div>
                 <div class="flex gap-2 justify-end">
-                  <button type="button" phx-click="toggle_library_form" class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Cancel</button>
-                  <button type="submit" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Create</button>
+                  <button
+                    type="button"
+                    phx-click="toggle_library_form"
+                    class="px-3 py-1.5 text-sm text-gray-400 hover:text-white"
+                  >Cancel</button>
+                  <button
+                    type="submit"
+                    class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
+                  >Create</button>
                 </div>
               </form>
             </div>
@@ -751,9 +824,7 @@ defmodule StashixWeb.AdminLive do
                       </p>
                     <% end %>
                   </div>
-                  <%
-                    scanning = MapSet.member?(@scanning_libraries, lib.id)
-                  %>
+                  <% scanning = MapSet.member?(@scanning_libraries, lib.id) %>
                   <div class="flex gap-2 items-center">
                     <button
                       phx-click="edit_library"
@@ -766,15 +837,16 @@ defmodule StashixWeb.AdminLive do
                       phx-click="scan_library"
                       phx-value-id={lib.id}
                       disabled={scanning}
-                      class={["px-3 py-1.5 text-sm rounded-lg border flex items-center gap-1.5",
+                      class={[
+                        "px-3 py-1.5 text-sm rounded-lg border flex items-center gap-1.5",
                         if(scanning,
                           do: "bg-gray-900 text-gray-500 border-gray-800 cursor-not-allowed",
                           else: "bg-gray-800 hover:bg-gray-700 text-gray-300 border-gray-700"
-                        )]}
+                        )
+                      ]}
                     >
                       <%= if scanning do %>
-                        <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" />
-                        Scanning...
+                        <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" /> Scanning...
                       <% else %>
                         Scan
                       <% end %>
@@ -783,11 +855,13 @@ defmodule StashixWeb.AdminLive do
                       phx-click="force_scan_library"
                       phx-value-id={lib.id}
                       disabled={scanning}
-                      class={["px-3 py-1.5 text-sm rounded-lg border",
+                      class={[
+                        "px-3 py-1.5 text-sm rounded-lg border",
                         if(scanning,
                           do: "bg-gray-900 text-gray-600 border-gray-800 cursor-not-allowed",
                           else: "bg-gray-800 hover:bg-gray-700 text-amber-400 border-gray-700"
-                        )]}
+                        )
+                      ]}
                     >
                       Force Rescan
                     </button>
@@ -818,15 +892,22 @@ defmodule StashixWeb.AdminLive do
                           name="standalone_folders"
                           rows="4"
                           class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm font-mono focus:outline-none focus:border-violet-500"
-                          placeholder={"Default built-in: one-shot, one shot, oneshot\nAdd extras here, e.g.:\nAnnuals\nSpecials"}
+                          placeholder="Default built-in: one-shot, one shot, oneshot\nAdd extras here, e.g.:\nAnnuals\nSpecials"
                         >{Enum.join(lib.standalone_folders, "\n")}</textarea>
                         <p class="text-xs text-gray-600 mt-1">
                           Built-in defaults (always active): <span class="text-gray-500">one-shot, one shot, oneshot</span>
                         </p>
                       </div>
                       <div class="flex gap-2 justify-end">
-                        <button type="button" phx-click="cancel_edit_library" class="px-3 py-1.5 text-sm text-gray-400 hover:text-white">Cancel</button>
-                        <button type="submit" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg">Save</button>
+                        <button
+                          type="button"
+                          phx-click="cancel_edit_library"
+                          class="px-3 py-1.5 text-sm text-gray-400 hover:text-white"
+                        >Cancel</button>
+                        <button
+                          type="submit"
+                          class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg"
+                        >Save</button>
                       </div>
                     </form>
                   </div>
@@ -838,22 +919,19 @@ defmodule StashixWeb.AdminLive do
       <% end %>
 
       <%= if @live_action == :cleanup do %>
-        <%
-          all_series_ids = Enum.map(@deleted_series, & &1.id) |> MapSet.new()
-          all_books_ids = Enum.map(@deleted_books, & &1.id) |> MapSet.new()
-          all_series_selected = @deleted_series != [] and @selected_series == all_series_ids
-          all_books_selected = @deleted_books != [] and @selected_books == all_books_ids
-          series_sel_count = MapSet.size(@selected_series)
-          books_sel_count = MapSet.size(@selected_books)
-        %>
+        <% all_series_ids = Enum.map(@deleted_series, & &1.id) |> MapSet.new()
+        all_books_ids = Enum.map(@deleted_books, & &1.id) |> MapSet.new()
+        all_series_selected = @deleted_series != [] and @selected_series == all_series_ids
+        all_books_selected = @deleted_books != [] and @selected_books == all_books_ids
+        series_sel_count = MapSet.size(@selected_series)
+        books_sel_count = MapSet.size(@selected_books) %>
         <div class="space-y-8">
           <h1 class="text-2xl font-bold text-white">Cleanup</h1>
           <%!-- Series section --%>
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold text-white">
-                Deleted Series
-                <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_series)})</span>
+                Deleted Series <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_series)})</span>
               </h2>
               <%= if series_sel_count > 0 do %>
                 <div class="flex items-center gap-3">
@@ -915,7 +993,9 @@ defmodule StashixWeb.AdminLive do
                         </td>
                         <td class="px-4 py-3 text-white">{s.name}</td>
                         <td class="px-4 py-3 text-gray-400">{s.library.name}</td>
-                        <td class="px-4 py-3 text-gray-500 text-xs">{Calendar.strftime(s.deleted_at, "%Y-%m-%d %H:%M")}</td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">
+                          {Calendar.strftime(s.deleted_at, "%Y-%m-%d %H:%M")}
+                        </td>
                         <td class="px-4 py-3 text-right flex gap-3 justify-end">
                           <button
                             phx-click="restore_series"
@@ -948,8 +1028,7 @@ defmodule StashixWeb.AdminLive do
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-semibold text-white">
-                Deleted Books
-                <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_books)})</span>
+                Deleted Books <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_books)})</span>
               </h2>
               <%= if books_sel_count > 0 do %>
                 <div class="flex items-center gap-3">
@@ -1012,10 +1091,19 @@ defmodule StashixWeb.AdminLive do
                           />
                         </td>
                         <td class="px-4 py-3 text-white">{b.title}</td>
-                        <td class="px-4 py-3 text-gray-400">{if b.series, do: b.series.name, else: "—"}</td>
+                        <td class="px-4 py-3 text-gray-400">
+                          {if b.series, do: b.series.name, else: "—"}
+                        </td>
                         <td class="px-4 py-3 text-gray-400">{b.library.name}</td>
-                        <td class="px-4 py-3 text-gray-600 text-xs font-mono truncate max-w-xs" title={b.path}>{b.path}</td>
-                        <td class="px-4 py-3 text-gray-500 text-xs">{Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}</td>
+                        <td
+                          class="px-4 py-3 text-gray-600 text-xs font-mono truncate max-w-xs"
+                          title={b.path}
+                        >
+                          {b.path}
+                        </td>
+                        <td class="px-4 py-3 text-gray-500 text-xs">
+                          {Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}
+                        </td>
                         <td class="px-4 py-3 text-right flex gap-3 justify-end">
                           <button
                             phx-click="restore_book"
@@ -1047,7 +1135,7 @@ defmodule StashixWeb.AdminLive do
       <% end %>
       <%= if @live_action == :publishers do %>
         <% alias_pub = Enum.find(@publishers, &(&1.id == @alias_source_id))
-           master_pub = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
+        master_pub = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
         <div class="space-y-6">
           <h1 class="text-2xl font-bold text-white">Publishers</h1>
 
@@ -1076,7 +1164,9 @@ defmodule StashixWeb.AdminLive do
               <div class="space-y-4">
                 <div>
                   <h2 class="text-base font-semibold text-white mb-1">Link Publisher Alias</h2>
-                  <p class="text-sm text-gray-500">Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.</p>
+                  <p class="text-sm text-gray-500">
+                    Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.
+                  </p>
                 </div>
 
                 <%!-- Alias source picker --%>
@@ -1086,7 +1176,10 @@ defmodule StashixWeb.AdminLive do
                     <% src = Enum.find(@publishers, &(&1.id == @alias_source_id)) %>
                     <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
                       <span class="text-white">{src && src.name}</span>
-                      <button phx-click="clear_alias_source" class="text-gray-500 hover:text-white ml-2 flex-shrink-0">
+                      <button
+                        phx-click="clear_alias_source"
+                        class="text-gray-500 hover:text-white ml-2 flex-shrink-0"
+                      >
                         <.icon name="lucide-x" class="w-4 h-4" />
                       </button>
                     </div>
@@ -1101,12 +1194,15 @@ defmodule StashixWeb.AdminLive do
                         class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
                       />
                       <%= if @alias_source_query != "" do %>
-                        <%
-                          src_results =
-                            @publishers
-                            |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(@alias_source_query)))
-                            |> Enum.take(8)
-                        %>
+                        <% src_results =
+                          @publishers
+                          |> Enum.filter(
+                            &String.contains?(
+                              String.downcase(&1.name),
+                              String.downcase(@alias_source_query)
+                            )
+                          )
+                          |> Enum.take(8) %>
                         <div
                           class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
                           onmousedown="event.preventDefault()"
@@ -1118,8 +1214,12 @@ defmodule StashixWeb.AdminLive do
                               <button
                                 phx-click="set_alias_source"
                                 phx-value-id={p.id}
-                                class={["w-full text-left px-3 py-2 text-sm transition-colors",
-                                  if(i == 0, do: "bg-gray-700/60 text-white hover:bg-gray-700", else: "text-gray-300 hover:bg-gray-700 hover:text-white")
+                                class={[
+                                  "w-full text-left px-3 py-2 text-sm transition-colors",
+                                  if(i == 0,
+                                    do: "bg-gray-700/60 text-white hover:bg-gray-700",
+                                    else: "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                  )
                                 ]}
                               >{p.name}</button>
                             <% end %>
@@ -1137,7 +1237,10 @@ defmodule StashixWeb.AdminLive do
                     <% tgt = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
                     <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
                       <span class="text-white">{tgt && tgt.name}</span>
-                      <button phx-click="clear_alias_target" class="text-gray-500 hover:text-white ml-2 flex-shrink-0">
+                      <button
+                        phx-click="clear_alias_target"
+                        class="text-gray-500 hover:text-white ml-2 flex-shrink-0"
+                      >
                         <.icon name="lucide-x" class="w-4 h-4" />
                       </button>
                     </div>
@@ -1152,13 +1255,16 @@ defmodule StashixWeb.AdminLive do
                         class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
                       />
                       <%= if @alias_target_query != "" do %>
-                        <%
-                          tgt_results =
-                            @publishers
-                            |> Enum.reject(&(&1.id == @alias_source_id))
-                            |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(@alias_target_query)))
-                            |> Enum.take(8)
-                        %>
+                        <% tgt_results =
+                          @publishers
+                          |> Enum.reject(&(&1.id == @alias_source_id))
+                          |> Enum.filter(
+                            &String.contains?(
+                              String.downcase(&1.name),
+                              String.downcase(@alias_target_query)
+                            )
+                          )
+                          |> Enum.take(8) %>
                         <div
                           class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
                           onmousedown="event.preventDefault()"
@@ -1170,8 +1276,12 @@ defmodule StashixWeb.AdminLive do
                               <button
                                 phx-click="set_alias_target"
                                 phx-value-id={p.id}
-                                class={["w-full text-left px-3 py-2 text-sm transition-colors",
-                                  if(i == 0, do: "bg-gray-700/60 text-white hover:bg-gray-700", else: "text-gray-300 hover:bg-gray-700 hover:text-white")
+                                class={[
+                                  "w-full text-left px-3 py-2 text-sm transition-colors",
+                                  if(i == 0,
+                                    do: "bg-gray-700/60 text-white hover:bg-gray-700",
+                                    else: "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                  )
                                 ]}
                               >{p.name}</button>
                             <% end %>
@@ -1195,15 +1305,20 @@ defmodule StashixWeb.AdminLive do
                     <p class="text-sm text-violet-300 font-medium">Confirm alias link</p>
                     <p class="text-sm text-gray-400">
                       <span class="text-white font-medium">"{alias_pub && alias_pub.name}"</span>
-                      will become an alias of
-                      <span class="text-white font-medium">"{master_pub && master_pub.name}"</span>.
+                      will become an alias of <span class="text-white font-medium">"{master_pub && master_pub.name}"</span>.
                       No data is deleted — this can be undone.
                     </p>
                     <div class="flex gap-2">
-                      <button phx-click="confirm_set_alias" class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors">
+                      <button
+                        phx-click="confirm_set_alias"
+                        class="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-sm rounded-lg transition-colors"
+                      >
                         Confirm
                       </button>
-                      <button phx-click="cancel_alias" class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors">
+                      <button
+                        phx-click="cancel_alias"
+                        class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded-lg transition-colors"
+                      >
                         Cancel
                       </button>
                     </div>
@@ -1231,18 +1346,26 @@ defmodule StashixWeb.AdminLive do
                     <tbody class="divide-y divide-gray-800">
                       <%= if @publishers_with_aliases == [] do %>
                         <tr>
-                          <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-600">No aliases configured</td>
+                          <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-600">
+                            No aliases configured
+                          </td>
                         </tr>
                       <% else %>
                         <%= for p <- @publishers_with_aliases do %>
                           <tr class="group hover:bg-gray-800/40 transition-colors">
                             <td class="px-3 py-2">
-                              <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-300 hover:text-violet-300 transition-colors">
+                              <a
+                                href={~p"/publisher/#{p.canonical_publisher_id}"}
+                                class="text-gray-300 hover:text-violet-300 transition-colors"
+                              >
                                 {p.canonical && p.canonical.name}
                               </a>
                             </td>
                             <td class="px-3 py-2">
-                              <a href={~p"/publisher/#{p.canonical_publisher_id}"} class="text-gray-400 hover:text-violet-300 transition-colors">
+                              <a
+                                href={~p"/publisher/#{p.canonical_publisher_id}"}
+                                class="text-gray-400 hover:text-violet-300 transition-colors"
+                              >
                                 {p.name}
                               </a>
                             </td>
@@ -1267,15 +1390,16 @@ defmodule StashixWeb.AdminLive do
 
           <%!-- Visibility tab --%>
           <%= if @publisher_tab == "visibility" do %>
-            <%
-              per_page = 50
-              total_pages = max(1, ceil(@pub_vis_total / per_page))
-            %>
+            <% per_page = 50
+            total_pages = max(1, ceil(@pub_vis_total / per_page)) %>
             <div class="space-y-3">
               <%!-- Search bar --%>
               <form phx-submit="pub_vis_search" class="max-w-sm">
                 <div class="relative">
-                  <.icon name="lucide-search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  <.icon
+                    name="lucide-search"
+                    class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                  />
                   <input
                     type="search"
                     name="q"
@@ -1309,7 +1433,8 @@ defmodule StashixWeb.AdminLive do
                       <button
                         phx-click="pub_vis_page"
                         phx-value-page={pg}
-                        class={["px-2.5 py-1 rounded text-sm border transition-colors",
+                        class={[
+                          "px-2.5 py-1 rounded text-sm border transition-colors",
                           if(pg == @pub_vis_page,
                             do: "bg-violet-600 border-violet-500 text-white",
                             else: "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
@@ -1341,12 +1466,21 @@ defmodule StashixWeb.AdminLive do
                   </thead>
                   <tbody class="divide-y divide-gray-800">
                     <%= for p <- @pub_vis_publishers do %>
-                      <% stats = Map.get(@pub_vis_stats, p.id, %{series_count: 0, books_count: 0, issues_count: 0})
-                         master_hidden = p.canonical && p.canonical.hidden
-                         effectively_hidden = p.hidden || master_hidden %>
+                      <% stats =
+                        Map.get(@pub_vis_stats, p.id, %{
+                          series_count: 0,
+                          books_count: 0,
+                          issues_count: 0
+                        })
+
+                      master_hidden = p.canonical && p.canonical.hidden
+                      effectively_hidden = p.hidden || master_hidden %>
                       <tr class="group hover:bg-gray-800/40 transition-colors">
                         <td class="px-3 py-2">
-                          <a href={~p"/publisher/#{p.id}"} class={"hover:text-violet-300 transition-colors #{if effectively_hidden, do: "text-gray-600 line-through", else: "text-gray-300"}"}>
+                          <a
+                            href={~p"/publisher/#{p.id}"}
+                            class={"hover:text-violet-300 transition-colors #{if effectively_hidden, do: "text-gray-600 line-through", else: "text-gray-300"}"}
+                          >
                             {p.name}
                           </a>
                         </td>
@@ -1362,9 +1496,15 @@ defmodule StashixWeb.AdminLive do
                               <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 border border-violet-800/40">Visible</span>
                           <% end %>
                         </td>
-                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.series_count}</td>
-                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.books_count}</td>
-                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">{stats.issues_count}</td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
+                          {stats.series_count}
+                        </td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
+                          {stats.books_count}
+                        </td>
+                        <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
+                          {stats.issues_count}
+                        </td>
                         <td class="px-3 py-2 text-right">
                           <%= if is_nil(p.canonical_publisher_id) do %>
                             <button
@@ -1380,7 +1520,9 @@ defmodule StashixWeb.AdminLive do
                     <% end %>
                     <%= if @pub_vis_publishers == [] do %>
                       <tr>
-                        <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-600">No publishers found</td>
+                        <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-600">
+                          No publishers found
+                        </td>
                       </tr>
                     <% end %>
                   </tbody>
@@ -1402,7 +1544,8 @@ defmodule StashixWeb.AdminLive do
                       <button
                         phx-click="pub_vis_page"
                         phx-value-page={pg}
-                        class={["px-2.5 py-1 rounded text-sm border transition-colors",
+                        class={[
+                          "px-2.5 py-1 rounded text-sm border transition-colors",
                           if(pg == @pub_vis_page,
                             do: "bg-violet-600 border-violet-500 text-white",
                             else: "bg-gray-800 border-gray-700 text-gray-400 hover:bg-gray-700"
@@ -1421,7 +1564,6 @@ defmodule StashixWeb.AdminLive do
               <% end %>
             </div>
           <% end %>
-
         </div>
       <% end %>
     </div>

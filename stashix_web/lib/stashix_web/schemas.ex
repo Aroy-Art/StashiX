@@ -20,7 +20,10 @@ defmodule StashixWeb.Schemas do
       title: "ValidationErrors",
       type: :object,
       properties: %{
-        errors: %Schema{type: :object, additionalProperties: %Schema{type: :array, items: %Schema{type: :string}}}
+        errors: %Schema{
+          type: :object,
+          additionalProperties: %Schema{type: :array, items: %Schema{type: :string}}
+        }
       }
     })
   end

@@ -20,8 +20,7 @@ if System.get_env("PHX_SERVER") || System.get_env("MIX_ENV") == "prod" do
   config :stashix, StashixWeb.Endpoint, server: true
 end
 
-config :stashix, Stashix.Auth.Guardian,
-  secret_key: System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
+config :stashix, Stashix.Auth.Guardian, secret_key: System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
 
 if config_env() == :prod do
   database_url =

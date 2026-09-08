@@ -466,42 +466,7 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(
-               ~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/,
-               clean
-             ) do
-          [_, series, year | rest] ->
-            volume = Enum.at(rest, 0)
-            issue = Enum.at(rest, 1)
-
-            result
-            |> Map.put(:series, String.trim(series))
-            |> Map.put(:year, String.to_integer(year))
-            |> maybe_put(:volume, parse_int(volume))
-            |> maybe_put(:issue_number, parse_decimal(issue))
-
-          nil ->
-            case Regex.run(~r/^(.+?)\s+v(\d+)\s+(?:[#c]?(\d{1,4})(?:\.\d+)?)?/i, clean) do
-              [_, series, volume | rest] ->
-                issue = Enum.at(rest, 0)
-
-                result
-                |> Map.put(:series, String.trim(series))
-                |> maybe_put(:volume, parse_int(volume))
-                |> maybe_put(:issue_number, parse_decimal(issue))
-
-              nil ->
-                case Regex.run(~r/^(.+?)\s+[#c]?(\d{1,4})(?:\.\d+)?$/i, clean) do
-                  [_, series, issue] ->
-                    result
-                    |> Map.put(:series, String.trim(series))
-                    |> maybe_put(:issue_number, parse_decimal(issue))
-
-                  nil ->
-                    Map.put(result, :title, clean)
-                end
-            end
-        end
+        match_filename_fallback(result, clean)
       end
 
     result = maybe_put(result, :source_format, source_format)
@@ -510,6 +475,42 @@ defmodule Stashix.Metadata.Parser do
       Map.put_new(result, :title, Map.get(result, :series, clean))
     else
       result
+    end
+  end
+
+  defp match_filename_fallback(result, clean) do
+    with nil <- match_year_pattern(result, clean),
+         nil <- match_volume_pattern(result, clean),
+         nil <- match_issue_pattern(result, clean) do
+      Map.put(result, :title, clean)
+    end
+  end
+
+  defp match_year_pattern(result, clean) do
+    with [_, series, year | rest] <-
+           Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/, clean) do
+      result
+      |> Map.put(:series, String.trim(series))
+      |> Map.put(:year, String.to_integer(year))
+      |> maybe_put(:volume, parse_int(Enum.at(rest, 0)))
+      |> maybe_put(:issue_number, parse_decimal(Enum.at(rest, 1)))
+    end
+  end
+
+  defp match_volume_pattern(result, clean) do
+    with [_, series, volume | rest] <- Regex.run(~r/^(.+?)\s+v(\d+)\s+(?:[#c]?(\d{1,4})(?:\.\d+)?)?/i, clean) do
+      result
+      |> Map.put(:series, String.trim(series))
+      |> maybe_put(:volume, parse_int(volume))
+      |> maybe_put(:issue_number, parse_decimal(Enum.at(rest, 0)))
+    end
+  end
+
+  defp match_issue_pattern(result, clean) do
+    with [_, series, issue] <- Regex.run(~r/^(.+?)\s+[#c]?(\d{1,4})(?:\.\d+)?$/i, clean) do
+      result
+      |> Map.put(:series, String.trim(series))
+      |> maybe_put(:issue_number, parse_decimal(issue))
     end
   end
 

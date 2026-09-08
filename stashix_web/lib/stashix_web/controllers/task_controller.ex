@@ -9,10 +9,12 @@ defmodule StashixWeb.TaskController do
     tags: ["Tasks"],
     security: [%{"Bearer" => []}],
     responses: [
-      ok: {"Task list", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{tasks: %OpenApiSpex.Schema{type: :array, items: Schemas.Task}}
-      }},
+      ok:
+        {"Task list", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{tasks: %OpenApiSpex.Schema{type: :array, items: Schemas.Task}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 

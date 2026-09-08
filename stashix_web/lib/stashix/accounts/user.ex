@@ -51,9 +51,7 @@ defmodule Stashix.Accounts.User do
 
   defp hash_password(changeset), do: changeset
 
-  defp maybe_hash_password(
-         %Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset
-       ) do
+  defp maybe_hash_password(%Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset) do
     put_change(changeset, :password_hash, Bcrypt.hash_pwd_salt(password))
   end
 

@@ -56,6 +56,7 @@ defmodule StashixWeb.AllBooksLive do
 
   def handle_event("goto_page", %{"page" => p}, socket) do
     page = String.to_integer(p) |> max(1) |> min(socket.assigns.total_pages)
+
     {:noreply, push_patch(socket, to: build_path(page, socket.assigns.sort, socket.assigns.library_id))}
   end
 
@@ -106,7 +107,10 @@ defmodule StashixWeb.AllBooksLive do
         <.media_grid>
           <%= for book <- @books do %>
             <% prog = @progress_map[book.id] %>
-            <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
+            <% progress =
+              if prog && book.page_count && book.page_count > 1,
+                do: prog / (book.page_count - 1),
+                else: nil %>
             <.media_card
               href={~p"/book/#{book.id}"}
               title={book.title}

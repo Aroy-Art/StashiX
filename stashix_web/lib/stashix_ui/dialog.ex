@@ -70,8 +70,7 @@ defmodule StashixUi.Dialog do
 
   attr :"on-close", :any,
     default: nil,
-    doc:
-      "Handler for dialog closed event. Support both server event handler and JS command struct"
+    doc: "Handler for dialog closed event. Support both server event handler and JS command struct"
 
   slot :inner_block, required: true
 

@@ -44,8 +44,7 @@ defmodule StashixUi.Switch do
   attr :disabled, :boolean, default: false
   attr :"on-checked-changed", :any, default: nil, doc: "Handler for value change event"
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:active]"
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:active]"
 
   attr :rest, :global
 

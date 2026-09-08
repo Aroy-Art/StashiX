@@ -113,7 +113,11 @@ defmodule StashixWeb.SearchLive do
               <%= for book <- @results.issues do %>
                 <.media_card
                   href={~p"/book/#{book.id}"}
-                  title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
+                  title={
+                    if book.issue_number,
+                      do: "##{book.issue_number} – #{book.title}",
+                      else: book.title
+                  }
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                   width={300}
                   subtitle={book.series && book.series.name}

@@ -10,10 +10,12 @@ defmodule StashixWeb.AdminUserController do
     tags: ["Admin"],
     security: [%{"Bearer" => []}],
     responses: [
-      ok: {"User list", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{users: %OpenApiSpex.Schema{type: :array, items: Schemas.User}}
-      }},
+      ok:
+        {"User list", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{users: %OpenApiSpex.Schema{type: :array, items: Schemas.User}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -42,10 +44,12 @@ defmodule StashixWeb.AdminUserController do
     security: [%{"Bearer" => []}],
     request_body: {"User params", "application/json", Schemas.SetupRequest, required: true},
     responses: [
-      created: {"Created user", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{user: Schemas.User}
-      }},
+      created:
+        {"Created user", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{user: Schemas.User}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error},
       unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
     ]
@@ -55,7 +59,15 @@ defmodule StashixWeb.AdminUserController do
       {:ok, user} ->
         conn
         |> put_status(:created)
-        |> json(%{user: %{id: user.id, email: user.email, username: user.username, display_name: user.display_name, role: user.role}})
+        |> json(%{
+          user: %{
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            display_name: user.display_name,
+            role: user.role
+          }
+        })
 
       {:error, changeset} ->
         conn
@@ -69,15 +81,17 @@ defmodule StashixWeb.AdminUserController do
     tags: ["Admin"],
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, type: :integer, required: true]],
-    request_body: {"User params", "application/json", %OpenApiSpex.Schema{
-      type: :object,
-      properties: %{
-        email: %OpenApiSpex.Schema{type: :string},
-        username: %OpenApiSpex.Schema{type: :string},
-        password: %OpenApiSpex.Schema{type: :string},
-        role: %OpenApiSpex.Schema{type: :string, enum: ["admin", "user"]}
-      }
-    }, required: true},
+    request_body:
+      {"User params", "application/json",
+       %OpenApiSpex.Schema{
+         type: :object,
+         properties: %{
+           email: %OpenApiSpex.Schema{type: :string},
+           username: %OpenApiSpex.Schema{type: :string},
+           password: %OpenApiSpex.Schema{type: :string},
+           role: %OpenApiSpex.Schema{type: :string, enum: ["admin", "user"]}
+         }
+       }, required: true},
     responses: [
       ok: {"Updated user", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{user: Schemas.User}}},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error},
@@ -89,7 +103,15 @@ defmodule StashixWeb.AdminUserController do
 
     case Accounts.update_user(user, params) do
       {:ok, updated} ->
-        json(conn, %{user: %{id: updated.id, email: updated.email, username: updated.username, display_name: updated.display_name, role: updated.role}})
+        json(conn, %{
+          user: %{
+            id: updated.id,
+            email: updated.email,
+            username: updated.username,
+            display_name: updated.display_name,
+            role: updated.role
+          }
+        })
 
       {:error, changeset} ->
         conn
@@ -104,7 +126,12 @@ defmodule StashixWeb.AdminUserController do
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, type: :integer, required: true]],
     responses: [
-      ok: {"Deleted", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{status: %OpenApiSpex.Schema{type: :string}}}},
+      ok:
+        {"Deleted", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{status: %OpenApiSpex.Schema{type: :string}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -112,8 +139,11 @@ defmodule StashixWeb.AdminUserController do
     user = Accounts.get_user!(id)
 
     case Accounts.delete_user(user) do
-      {:ok, _} -> json(conn, %{status: "deleted"})
-      {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
+      {:ok, _} ->
+        json(conn, %{status: "deleted"})
+
+      {:error, reason} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
     end
   end
 
@@ -124,7 +154,12 @@ defmodule StashixWeb.AdminUserController do
     parameters: [id: [in: :path, type: :integer, required: true]],
     request_body: {"Permissions", "application/json", Schemas.PermissionsRequest, required: true},
     responses: [
-      ok: {"Permissions set", "application/json", %OpenApiSpex.Schema{type: :object, properties: %{status: %OpenApiSpex.Schema{type: :string}}}},
+      ok:
+        {"Permissions set", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{status: %OpenApiSpex.Schema{type: :string}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error},
       unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
     ]
@@ -138,8 +173,11 @@ defmodule StashixWeb.AdminUserController do
     }
 
     case Library.set_library_permission(attrs) do
-      {:ok, _} -> json(conn, %{status: "ok"})
-      {:error, changeset} -> conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
+      {:ok, _} ->
+        json(conn, %{status: "ok"})
+
+      {:error, changeset} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{errors: format_errors(changeset)})
     end
   end
 

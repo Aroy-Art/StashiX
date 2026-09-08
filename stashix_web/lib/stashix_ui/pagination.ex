@@ -239,8 +239,7 @@ defmodule StashixUi.Pagination do
 
   @variants %{
     variant: %{
-      "outline" =>
-        "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
+      "outline" => "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground",
       "ghost" => "hover:bg-accent hover:text-accent-foreground"
     },
     size: %{

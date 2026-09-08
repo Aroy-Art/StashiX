@@ -78,7 +78,9 @@ defmodule Stashix.Metadata.ParserTest do
 
   describe "parse_filename/1 — Series NN (Publisher-YEAR) pattern" do
     test "publisher embedded with year in parens" do
-      r = Parser.parse_filename("Jonny Demon 02 (Dark Horse-1994) (Novus Year Three) (Rumor-Novus-HD)")
+      r =
+        Parser.parse_filename("Jonny Demon 02 (Dark Horse-1994) (Novus Year Three) (Rumor-Novus-HD)")
+
       assert r[:series] == "Jonny Demon"
       assert r[:issue_number] == d("2")
       assert r[:year] == 1994
@@ -136,12 +138,13 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:year] == 1994
       assert r[:issue_number] == d("2")
     end
-
   end
 
   describe "parse_filename/1 — Series NN - Title (Publisher YEAR) pattern" do
     test "user-reported filename" do
-      r = Parser.parse_filename("The Bank 01 - The Waterloo Insider (Cinebook 2025) (webrip) (MagicMan-DCP)")
+      r =
+        Parser.parse_filename("The Bank 01 - The Waterloo Insider (Cinebook 2025) (webrip) (MagicMan-DCP)")
+
       assert r[:series] == "The Bank"
       assert r[:issue_number] == d("1")
       assert r[:title] == "The Waterloo Insider"
@@ -235,7 +238,9 @@ defmodule Stashix.Metadata.ParserTest do
     end
 
     test "strips (of N) issue count tag" do
-      r = Parser.parse_filename("Aliens - Dust to Dust 01 (of 04) (2018) (digital) (The Magicians-Empire)")
+      r =
+        Parser.parse_filename("Aliens - Dust to Dust 01 (of 04) (2018) (digital) (The Magicians-Empire)")
+
       assert r[:issue_number] == d("1")
       assert r[:year] == 2018
     end
@@ -243,7 +248,9 @@ defmodule Stashix.Metadata.ParserTest do
 
   describe "parse_filename/1 — en-dash in filename" do
     test "en-dash separator produces clean title (no stray UTF-8 bytes)" do
-      r = Parser.parse_filename("Metal Hurlant 02 – Space Stares Back (2025) (digital) (juvecube)")
+      r =
+        Parser.parse_filename("Metal Hurlant 02 – Space Stares Back (2025) (digital) (juvecube)")
+
       assert r[:series] == "Metal Hurlant"
       assert r[:issue_number] == d("2")
       assert r[:title] == "Space Stares Back"
@@ -344,13 +351,19 @@ defmodule Stashix.Metadata.ParserTest do
 
   describe "parse_filename/1 — Vol. NNN after dash pattern" do
     test "Vol. NNN followed by year" do
-      r = Parser.parse_filename("Heavy Metal Magazine #202011 - Vol. 302 (2020) (2 covers) (Digital) (Mephisto-Empire)")
+      r =
+        Parser.parse_filename("Heavy Metal Magazine #202011 - Vol. 302 (2020) (2 covers) (Digital) (Mephisto-Empire)")
+
       assert r[:issue_number] == d("302")
       assert r[:year] == 2020
     end
 
     test "Vol. NNN with subtitle before year" do
-      r = Parser.parse_filename("Heavy Metal Magazine #201806 - Vol. 290: Deadly Special (2018) (4 covers) (Digital) (Mephisto-Empire)")
+      r =
+        Parser.parse_filename(
+          "Heavy Metal Magazine #201806 - Vol. 290: Deadly Special (2018) (4 covers) (Digital) (Mephisto-Empire)"
+        )
+
       assert r[:issue_number] == d("290")
       assert r[:year] == 2018
     end

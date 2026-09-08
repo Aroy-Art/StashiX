@@ -206,9 +206,7 @@ defmodule StashixUi.Toast do
       >
       </ol>
 
-      <template :for={tpl <- @template} data-part="toast-template" data-name={tpl.name}>{render_slot(
-        tpl
-      )}</template>
+      <template :for={tpl <- @template} data-part="toast-template" data-name={tpl.name}>{render_slot(tpl)}</template>
     </div>
 
     <.toast_flash

@@ -65,7 +65,10 @@ defmodule StashixWeb.SeriesLive do
   defp year_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
   defp relative_folder(series, library) do
-    library.name <> "/" <> (String.replace_prefix(series.path || "", library.root_path, "") |> String.trim_leading("/"))
+    library.name <>
+      "/" <>
+      (String.replace_prefix(series.path || "", library.root_path, "")
+       |> String.trim_leading("/"))
   end
 
   @impl true
@@ -95,7 +98,12 @@ defmodule StashixWeb.SeriesLive do
 
         {:noreply,
          socket
-         |> assign(series: series, books: books, page_title: series.name, summary_info: derive_summary(series, books))
+         |> assign(
+           series: series,
+           books: books,
+           page_title: series.name,
+           summary_info: derive_summary(series, books)
+         )
          |> push_patch(to: ~p"/series/#{series.id}")}
 
       {:error, changeset} ->
@@ -140,29 +148,42 @@ defmodule StashixWeb.SeriesLive do
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   defp find_continue_book(books, progress_map) do
-    issue_sorted = Enum.sort_by(books, fn b ->
-      if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-    end)
-    in_progress = Enum.find(issue_sorted, fn b ->
-      prog = progress_map[b.id]
-      prog && prog > 0 && b.page_count && prog < b.page_count - 1
-    end)
-    in_progress || Enum.find(issue_sorted, fn b ->
-      prog = progress_map[b.id]
-      is_nil(prog) || prog == 0
-    end)
+    issue_sorted =
+      Enum.sort_by(books, fn b ->
+        if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
+      end)
+
+    in_progress =
+      Enum.find(issue_sorted, fn b ->
+        prog = progress_map[b.id]
+        prog && prog > 0 && b.page_count && prog < b.page_count - 1
+      end)
+
+    in_progress ||
+      Enum.find(issue_sorted, fn b ->
+        prog = progress_map[b.id]
+        is_nil(prog) || prog == 0
+      end)
   end
 
-  defp derive_summary(%{summary: s}, _books) when is_binary(s) and s != "", do: %{text: s, source: nil}
+  defp derive_summary(%{summary: s}, _books) when is_binary(s) and s != "",
+    do: %{text: s, source: nil}
 
   defp derive_summary(_series, books) do
-    issue_sorted = Enum.sort_by(books, fn b ->
-      if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-    end)
+    issue_sorted =
+      Enum.sort_by(books, fn b ->
+        if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
+      end)
 
     case Enum.find(issue_sorted, fn b -> b.summary && b.summary != "" end) do
-      nil -> nil
-      book -> %{text: book.summary, source: book.issue_number && "##{Decimal.to_integer(book.issue_number)}"}
+      nil ->
+        nil
+
+      book ->
+        %{
+          text: book.summary,
+          source: book.issue_number && "##{Decimal.to_integer(book.issue_number)}"
+        }
     end
   end
 
@@ -174,12 +195,18 @@ defmodule StashixWeb.SeriesLive do
   defp sort_books(books, "year_asc"), do: Enum.sort_by(books, &(&1.year || 0))
   defp sort_books(books, "year_desc"), do: Enum.sort_by(books, &(&1.year || 0), :desc)
   defp sort_books(books, "added_asc"), do: Enum.sort_by(books, & &1.inserted_at, NaiveDateTime)
-  defp sort_books(books, "added_desc"), do: Enum.sort_by(books, & &1.inserted_at, {:desc, NaiveDateTime})
+
+  defp sort_books(books, "added_desc"),
+    do: Enum.sort_by(books, & &1.inserted_at, {:desc, NaiveDateTime})
 
   defp sort_books(books, "issue_desc") do
-    Enum.sort_by(books, fn b ->
-      if b.issue_number, do: Decimal.to_float(b.issue_number), else: -1.0
-    end, :desc)
+    Enum.sort_by(
+      books,
+      fn b ->
+        if b.issue_number, do: Decimal.to_float(b.issue_number), else: -1.0
+      end,
+      :desc
+    )
   end
 
   defp sort_books(books, _) do
@@ -194,14 +221,19 @@ defmodule StashixWeb.SeriesLive do
     <div class="max-w-4xl mx-auto space-y-8">
       <%!-- Breadcrumbs --%>
       <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
-        <button onclick="history.back()" class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0">
-          <.icon name="lucide-chevron-left" class="w-4 h-4" />
-          Back
+        <button
+          onclick="history.back()"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0"
+        >
+          <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
         </button>
         <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
           <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
           <span class="text-gray-700 flex-shrink-0">/</span>
-          <a href={~p"/library/#{@library.id}"} class="text-gray-500 hover:text-gray-300 flex-shrink-0">{@library.name}</a>
+          <a
+            href={~p"/library/#{@library.id}"}
+            class="text-gray-500 hover:text-gray-300 flex-shrink-0"
+          >{@library.name}</a>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <span class="text-gray-300 truncate min-w-0">{@series.name}</span>
         </div>
@@ -209,8 +241,7 @@ defmodule StashixWeb.SeriesLive do
           <div class="ml-auto">
             <.dropdown_menu id="series-admin-menu">
               <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
-                <.icon name="lucide-settings" class="w-3.5 h-3.5" />
-                Admin
+                <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
                 <.icon name="lucide-chevron-down" class="w-3 h-3" />
               </.dropdown_menu_trigger>
               <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
@@ -218,19 +249,19 @@ defmodule StashixWeb.SeriesLive do
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                   on-select={JS.push("open_edit_dialog")}
                 >
-                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" />
-                  Edit Metadata
+                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
                   on-select={JS.push("rescan_series")}
                 >
                   <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin text-violet-400" />
-                    Scanning…
+                    <.icon
+                      name="lucide-loader-circle"
+                      class="w-4 h-4 mr-2 animate-spin text-violet-400"
+                    /> Scanning…
                   <% else %>
-                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" />
-                    Rescan Series
+                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Series
                   <% end %>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
@@ -238,11 +269,9 @@ defmodule StashixWeb.SeriesLive do
                   on-select={JS.push("force_rescan_series")}
                 >
                   <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" />
-                    Scanning…
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
                   <% else %>
-                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" />
-                    Force Rescan
+                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
                   <% end %>
                 </.dropdown_menu_item>
               </.dropdown_menu_content>
@@ -253,7 +282,6 @@ defmodule StashixWeb.SeriesLive do
 
       <%!-- Editorial header — cover floats left, info BFC sits beside it, summary wraps below --%>
       <div class="overflow-hidden">
-
         <%!-- Cover — floated left; inline style bypasses Tailwind purge; aspect-ratio gives immediate height --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
           <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3]">
@@ -275,12 +303,13 @@ defmodule StashixWeb.SeriesLive do
 
         <%!-- BFC wrapper: forced beside the float, never overlaps it --%>
         <div class="overflow-hidden pt-1">
-
           <%!-- Publisher eyebrow --%>
           <%= if @series.publishers != [] do %>
             <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
               <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
-                <%= if idx > 0 do %><span class="text-violet-800"> / </span><% end %>
+                <%= if idx > 0 do %>
+                  <span class="text-violet-800"> / </span>
+                <% end %>
                 <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</a>
               <% end %>
             </p>
@@ -299,13 +328,11 @@ defmodule StashixWeb.SeriesLive do
             <% end %>
             <%= if @series.ongoing do %>
               <.badge class="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-                Ongoing
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Ongoing
               </.badge>
             <% else %>
               <.badge variant="outline" class="text-gray-400 border-gray-600 gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span>
-                Completed
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span> Completed
               </.badge>
             <% end %>
           </div>
@@ -313,7 +340,12 @@ defmodule StashixWeb.SeriesLive do
           <%!-- Read buttons --%>
           <%= if @continue_book do %>
             <% has_progress = @progress_map[@continue_book.id] && @progress_map[@continue_book.id] > 0 %>
-            <% first_book = List.first(Enum.sort_by(@books, fn b -> if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0 end)) %>
+            <% first_book =
+              List.first(
+                Enum.sort_by(@books, fn b ->
+                  if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
+                end)
+              ) %>
             <div class="flex items-center gap-3 flex-wrap">
               <a
                 href={~p"/read/#{@continue_book.id}"}
@@ -321,9 +353,9 @@ defmodule StashixWeb.SeriesLive do
               >
                 <.icon name="lucide-play" class="w-4 h-4" />
                 <%= if has_progress do %>
-                  Continue<%= if lbl = issue_label(@continue_book), do: " — #{lbl}" %>
+                  Continue{if lbl = issue_label(@continue_book), do: " — #{lbl}"}
                 <% else %>
-                  Start Reading<%= if lbl = issue_label(@continue_book), do: " — #{lbl}" %>
+                  Start Reading{if lbl = issue_label(@continue_book), do: " — #{lbl}"}
                 <% end %>
               </a>
               <%= if has_progress && first_book && first_book.id != @continue_book.id do %>
@@ -331,8 +363,7 @@ defmodule StashixWeb.SeriesLive do
                   href={~p"/read/#{first_book.id}"}
                   class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white text-sm font-medium rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
                 >
-                  <.icon name="lucide-book-open" class="w-4 h-4" />
-                  Read from #1
+                  <.icon name="lucide-book-open" class="w-4 h-4" /> Read from #1
                 </a>
               <% end %>
             </div>
@@ -352,10 +383,14 @@ defmodule StashixWeb.SeriesLive do
       <div class="flex flex-wrap gap-px bg-gray-800 rounded-lg overflow-hidden text-xs">
         <%= if @series.publishers != [] do %>
           <div class="flex-1 min-w-[9rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Publisher</p>
+            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
+              Publisher
+            </p>
             <p class="text-gray-300">
               <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
-                <%= if idx > 0 do %><span class="text-gray-600"> / </span><% end %>
+                <%= if idx > 0 do %>
+                  <span class="text-gray-600"> / </span>
+                <% end %>
                 <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
               <% end %>
             </p>
@@ -377,16 +412,18 @@ defmodule StashixWeb.SeriesLive do
         </div>
         <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
           <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Years</p>
-          <p class="text-gray-300"><%= year_range(@series) || "—" %></p>
+          <p class="text-gray-300">{year_range(@series) || "—"}</p>
         </div>
         <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
           <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Pages</p>
           <p class="text-gray-300">
-            <%= if @total_pages > 0 do
-              :erlang.integer_to_list(@total_pages) |> List.to_string() |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+            {if @total_pages > 0 do
+              :erlang.integer_to_list(@total_pages)
+              |> List.to_string()
+              |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
             else
               "—"
-            end %>
+            end}
           </p>
         </div>
         <%= if fs = Formatters.format_file_size(@total_size) do %>
@@ -403,7 +440,9 @@ defmodule StashixWeb.SeriesLive do
         <% end %>
         <%= if @series.language do %>
           <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Language</p>
+            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
+              Language
+            </p>
             <p class="text-gray-300">{Formatters.language_name(@series.language)}</p>
           </div>
         <% end %>
@@ -446,7 +485,10 @@ defmodule StashixWeb.SeriesLive do
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
           <%= for book <- @books do %>
             <% prog = @progress_map[book.id] %>
-            <% progress = if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1), else: nil %>
+            <% progress =
+              if prog && book.page_count && book.page_count > 1,
+                do: prog / (book.page_count - 1),
+                else: nil %>
             <.media_card
               href={~p"/book/#{book.id}"}
               title={book.title}
@@ -567,10 +609,17 @@ defmodule StashixWeb.SeriesLive do
             </div>
 
             <.dialog_footer class="pt-2">
-              <button type="button" phx-click="close_edit_dialog" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors">
+              <button
+                type="button"
+                phx-click="close_edit_dialog"
+                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors"
+              >
                 Cancel
               </button>
-              <button type="submit" class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors">
+              <button
+                type="submit"
+                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
+              >
                 Save Changes
               </button>
             </.dialog_footer>

@@ -44,13 +44,7 @@ defmodule Stashix.MixProject do
       {:phoenix_live_dashboard, "~> 0.8.3"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
-      {:lucide,
-       github: "lucide-icons/lucide",
-       tag: "0.460.0",
-       sparse: "icons",
-       app: false,
-       compile: false,
-       depth: 1},
+      {:lucide, github: "lucide-icons/lucide", tag: "0.460.0", sparse: "icons", app: false, compile: false, depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
       {:gettext, "~> 0.26"},
@@ -67,7 +61,7 @@ defmodule Stashix.MixProject do
       {:salad_ui, "~> 1.0"},
       {:open_api_spex, "~> 3.21"},
       {:scalar_plug, "~> 0.2.0"},
-      {:ex_doc, "~> 0.40", only: :dev, runtime: false }
+      {:ex_doc, "~> 0.40", only: :dev, runtime: false}
     ]
   end
 

@@ -16,18 +16,35 @@ defmodule StashixWeb.SetupLive do
          account_errors: %{},
          library_errors: %{},
          trigger_submit: false,
-         account_form: to_form(%{"email" => "", "username" => "", "password" => "", "password_confirmation" => ""}),
+         account_form:
+           to_form(%{
+             "email" => "",
+             "username" => "",
+             "password" => "",
+             "password_confirmation" => ""
+           }),
          library_form: to_form(%{"library_name" => "", "library_path" => ""})
        ), layout: {StashixWeb.Layouts, :root}}
     end
   end
 
   @impl true
-  def handle_event("next", %{"email" => email, "username" => username, "password" => password, "password_confirmation" => confirmation} = params, socket) do
+  def handle_event(
+        "next",
+        %{
+          "email" => email,
+          "username" => username,
+          "password" => password,
+          "password_confirmation" => confirmation
+        } = params,
+        socket
+      ) do
     errors =
       %{}
       |> then(fn e -> if email == "", do: Map.put(e, :email, ["can't be blank"]), else: e end)
-      |> then(fn e -> if username == "", do: Map.put(e, :username, ["can't be blank"]), else: e end)
+      |> then(fn e ->
+        if username == "", do: Map.put(e, :username, ["can't be blank"]), else: e
+      end)
       |> then(fn e ->
         if String.length(password) < 8,
           do: Map.put(e, :password, ["must be at least 8 characters"]),
@@ -76,7 +93,10 @@ defmodule StashixWeb.SetupLive do
           <div class="flex items-center gap-2">
             <div class={[
               "w-7 h-7 rounded-full flex items-center justify-center text-sm font-medium",
-              if(@step == :account, do: "bg-indigo-600 text-white", else: "bg-indigo-900 text-indigo-300")
+              if(@step == :account,
+                do: "bg-indigo-600 text-white",
+                else: "bg-indigo-900 text-indigo-300"
+              )
             ]}>
               1
             </div>
@@ -154,7 +174,9 @@ defmodule StashixWeb.SetupLive do
                   class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                 />
                 <%= if @account_errors[:password_confirmation] do %>
-                  <p class="text-red-400 text-xs mt-1">{List.first(@account_errors[:password_confirmation])}</p>
+                  <p class="text-red-400 text-xs mt-1">
+                    {List.first(@account_errors[:password_confirmation])}
+                  </p>
                 <% end %>
               </div>
 
@@ -191,7 +213,9 @@ defmodule StashixWeb.SetupLive do
                   class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                 />
                 <%= if @library_errors[:library_name] do %>
-                  <p class="text-red-400 text-xs mt-1">{List.first(@library_errors[:library_name])}</p>
+                  <p class="text-red-400 text-xs mt-1">
+                    {List.first(@library_errors[:library_name])}
+                  </p>
                 <% end %>
               </div>
 
@@ -205,9 +229,13 @@ defmodule StashixWeb.SetupLive do
                   placeholder="/mnt/comics"
                   class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                 />
-                <p class="text-gray-500 text-xs mt-1">Absolute path to the folder containing your books</p>
+                <p class="text-gray-500 text-xs mt-1">
+                  Absolute path to the folder containing your books
+                </p>
                 <%= if @library_errors[:library_path] do %>
-                  <p class="text-red-400 text-xs mt-1">{List.first(@library_errors[:library_path])}</p>
+                  <p class="text-red-400 text-xs mt-1">
+                    {List.first(@library_errors[:library_path])}
+                  </p>
                 <% end %>
               </div>
 

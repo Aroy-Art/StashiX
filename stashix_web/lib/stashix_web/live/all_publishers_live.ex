@@ -66,9 +66,13 @@ defmodule StashixWeb.AllPublishersLive do
 
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           <%= for pub <- @publishers do %>
-            <% stats = Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
+            <% stats =
+              Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
             <% cover_ids = Map.get(@covers_map, pub.id, []) %>
-            <a href={~p"/publisher/#{pub.id}"} class="group block rounded-xl border border-gray-800 bg-gray-900 hover:border-violet-700/60 hover:bg-gray-800/60 overflow-hidden transition-all">
+            <a
+              href={~p"/publisher/#{pub.id}"}
+              class="group block rounded-xl border border-gray-800 bg-gray-900 hover:border-violet-700/60 hover:bg-gray-800/60 overflow-hidden transition-all"
+            >
               <%!-- Cover strip --%>
               <div class="flex h-24 bg-gray-950 overflow-hidden">
                 <%= if cover_ids == [] do %>

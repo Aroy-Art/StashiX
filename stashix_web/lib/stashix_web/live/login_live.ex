@@ -8,7 +8,9 @@ defmodule StashixWeb.LoginLive do
   @impl true
   def mount(_params, session, socket) do
     token = session["guardian_default_token"]
-    already_authed = token && match?({:ok, _}, Stashix.Auth.TokenHelper.resource_from_token(token))
+
+    already_authed =
+      token && match?({:ok, _}, Stashix.Auth.TokenHelper.resource_from_token(token))
 
     if already_authed do
       {:ok, redirect(socket, to: "/")}
@@ -27,7 +29,11 @@ defmodule StashixWeb.LoginLive do
   def handle_event("login", %{"login" => login, "password" => password}, socket) do
     case Accounts.authenticate_user(login, password) do
       {:ok, _user} ->
-        {:noreply, assign(socket, trigger_submit: true, form: to_form(%{"login" => login, "password" => password}))}
+        {:noreply,
+         assign(socket,
+           trigger_submit: true,
+           form: to_form(%{"login" => login, "password" => password})
+         )}
 
       {:error, _} ->
         {:noreply, assign(socket, error: "Invalid email/username or password")}

@@ -12,10 +12,12 @@ defmodule StashixWeb.SeriesController do
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, description: "Library ID", type: :integer, required: true]],
     responses: [
-      ok: {"Series list", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{series: %OpenApiSpex.Schema{type: :array, items: Schemas.Series}}
-      }},
+      ok:
+        {"Series list", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{series: %OpenApiSpex.Schema{type: :array, items: Schemas.Series}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -71,24 +73,8 @@ defmodule StashixWeb.SeriesController do
 
   defp serve_image(conn, path, w) when is_binary(w) do
     case Integer.parse(w) do
-      {width, _} when width > 0 ->
-        format = if webp_supported?(conn), do: :webp, else: :jpeg
-        content_type = if format == :webp, do: "image/webp", else: "image/jpeg"
-
-        case ImageResizer.resize(path, width, format) do
-          {:ok, resized_path} ->
-            conn
-            |> put_resp_content_type(content_type)
-            |> put_resp_header("cache-control", "public, max-age=86400")
-            |> put_resp_header("vary", "Accept")
-            |> send_file(200, resized_path)
-
-          {:error, _} ->
-            serve_image(conn, path, nil)
-        end
-
-      _ ->
-        serve_image(conn, path, nil)
+      {width, _} when width > 0 -> serve_resized(conn, path, width)
+      _ -> serve_image(conn, path, nil)
     end
   end
 
@@ -97,6 +83,23 @@ defmodule StashixWeb.SeriesController do
     |> put_resp_content_type(MIME.from_path(path))
     |> put_resp_header("cache-control", "public, max-age=86400")
     |> send_file(200, path)
+  end
+
+  defp serve_resized(conn, path, width) do
+    format = if webp_supported?(conn), do: :webp, else: :jpeg
+    content_type = if format == :webp, do: "image/webp", else: "image/jpeg"
+
+    case ImageResizer.resize(path, width, format) do
+      {:ok, resized_path} ->
+        conn
+        |> put_resp_content_type(content_type)
+        |> put_resp_header("cache-control", "public, max-age=86400")
+        |> put_resp_header("vary", "Accept")
+        |> send_file(200, resized_path)
+
+      {:error, _} ->
+        serve_image(conn, path, nil)
+    end
   end
 
   defp webp_supported?(conn) do

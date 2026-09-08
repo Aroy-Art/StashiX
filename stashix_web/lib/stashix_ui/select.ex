@@ -69,8 +69,7 @@ defmodule StashixUi.Select do
   attr :"on-open", :any, default: nil, doc: "Handler for select open event"
   attr :"on-close", :any, default: nil, doc: "Handler for select closed event"
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :label, :string,
     default: nil,

@@ -10,10 +10,12 @@ defmodule StashixWeb.LibraryController do
     tags: ["Libraries"],
     security: [%{"Bearer" => []}],
     responses: [
-      ok: {"Library list", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{libraries: %OpenApiSpex.Schema{type: :array, items: Schemas.Library}}
-      }},
+      ok:
+        {"Library list", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{libraries: %OpenApiSpex.Schema{type: :array, items: Schemas.Library}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -66,10 +68,12 @@ defmodule StashixWeb.LibraryController do
     security: [%{"Bearer" => []}],
     request_body: {"Library params", "application/json", Schemas.LibraryRequest, required: true},
     responses: [
-      created: {"Created library", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{library: Schemas.Library}
-      }},
+      created:
+        {"Created library", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{library: Schemas.Library}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error},
       unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
     ]
@@ -95,10 +99,12 @@ defmodule StashixWeb.LibraryController do
     parameters: [id: [in: :path, type: :integer, required: true]],
     request_body: {"Library params", "application/json", Schemas.LibraryRequest, required: true},
     responses: [
-      ok: {"Updated library", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{library: Schemas.Library}
-      }},
+      ok:
+        {"Updated library", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{library: Schemas.Library}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error},
       unprocessable_entity: {"Validation errors", "application/json", Schemas.ValidationErrors}
     ]
@@ -123,13 +129,15 @@ defmodule StashixWeb.LibraryController do
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, type: :integer, required: true]],
     responses: [
-      ok: {"Scan started", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{
-          status: %OpenApiSpex.Schema{type: :string},
-          library_id: %OpenApiSpex.Schema{type: :integer}
-        }
-      }},
+      ok:
+        {"Scan started", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             status: %OpenApiSpex.Schema{type: :string},
+             library_id: %OpenApiSpex.Schema{type: :integer}
+           }
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 

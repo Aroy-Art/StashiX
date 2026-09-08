@@ -28,11 +28,21 @@ defmodule StashixWeb.SessionController do
     if Accounts.setup_complete?() do
       redirect(conn, to: ~p"/login")
     else
-      %{"email" => email, "username" => username, "password" => password,
-        "library_name" => library_name, "library_path" => library_path} = params
+      %{
+        "email" => email,
+        "username" => username,
+        "password" => password,
+        "library_name" => library_name,
+        "library_path" => library_path
+      } = params
 
       with {:ok, user} <-
-             Accounts.create_user(%{email: email, username: username, password: password, role: :admin}),
+             Accounts.create_user(%{
+               email: email,
+               username: username,
+               password: password,
+               role: :admin
+             }),
            {:ok, library} <-
              Stashix.Library.create_library(%{name: library_name, root_path: library_path}) do
         Stashix.Scanner.scan_library(library.id)

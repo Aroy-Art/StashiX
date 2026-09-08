@@ -121,33 +121,43 @@ defmodule Stashix.Scanner do
     {files_to_parse, files_unchanged} =
       Enum.split_with(files, fn path ->
         case Map.get(books_cache, path) do
-          nil -> true
-          %{deleted_at: da} when not is_nil(da) -> true
+          nil ->
+            true
+
+          %{deleted_at: da} when not is_nil(da) ->
+            true
+
           %{last_modified: lm} ->
-            case File.stat(path) do
-              {:ok, stat} ->
-                NaiveDateTime.compare(NaiveDateTime.from_erl!(stat.mtime), lm) != :eq
-              _ -> true
-            end
+            file_changed?(path, lm)
         end
       end)
 
     unchanged_count = length(files_unchanged)
     parse_count = length(files_to_parse)
+
     Logger.info("[scan] books_cache=#{map_size(books_cache)} #{unchanged_count} unchanged, #{parse_count} need parse")
 
-    update_task_status(library_id, %{scanned: unchanged_count, total: total, done: false, phase: :parsing})
+    update_task_status(library_id, %{
+      scanned: unchanged_count,
+      total: total,
+      done: false,
+      phase: :parsing
+    })
+
     broadcast_progress(library_id, unchanged_count, total, false, :parsing)
 
     # Stage 1: Parse metadata concurrently (hash + filename + comicinfo) — only changed files
     parsed_files =
       files_to_parse
       |> Task.async_stream(&parse_file_metadata/1,
-           max_concurrency: @metadata_concurrency,
-           ordered: true,
-           timeout: 60_000)
+        max_concurrency: @metadata_concurrency,
+        ordered: true,
+        timeout: 60_000
+      )
       |> Enum.flat_map(fn
-        {:ok, result} -> [result]
+        {:ok, result} ->
+          [result]
+
         {:exit, reason} ->
           Logger.error("Metadata parse crashed: #{inspect(reason)}")
           []
@@ -156,7 +166,13 @@ defmodule Stashix.Scanner do
     # Between stages: detect renamed series folders via hash matching, update cache
     series_cache = detect_renamed_series(parsed_files, series_cache, library)
 
-    update_task_status(library_id, %{scanned: unchanged_count, total: total, done: false, phase: :importing})
+    update_task_status(library_id, %{
+      scanned: unchanged_count,
+      total: total,
+      done: false,
+      phase: :importing
+    })
+
     broadcast_progress(library_id, unchanged_count, total, false, :importing)
 
     # Stage 2: DB upserts serially (prevents series creation races, uses cache)
@@ -166,7 +182,14 @@ defmodule Stashix.Scanner do
       |> Enum.with_index(unchanged_count + 1)
       |> Enum.reduce({[], series_cache}, fn {file_meta, idx}, {jobs, cache} ->
         {job, new_cache} = upsert_book(file_meta, library, force, cache)
-        update_task_status(library_id, %{scanned: idx, total: total, done: false, phase: :importing})
+
+        update_task_status(library_id, %{
+          scanned: idx,
+          total: total,
+          done: false,
+          phase: :importing
+        })
+
         broadcast_progress(library_id, idx, total, false, :importing)
         new_jobs = if job, do: [job | jobs], else: jobs
         {new_jobs, new_cache}
@@ -174,9 +197,11 @@ defmodule Stashix.Scanner do
 
     # Stage 3: Generate thumbnails concurrently
     thumb_total = length(thumbnail_jobs)
+
     if thumb_total > 0 do
       broadcast_progress(library_id, 0, thumb_total, false, :thumbnails)
     end
+
     {:ok, thumb_counter} = Agent.start_link(fn -> 0 end)
 
     thumbnail_jobs
@@ -272,7 +297,13 @@ defmodule Stashix.Scanner do
        ) do
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
     filename = Path.basename(file_path, Path.extname(file_path))
-    format = file_path |> Path.extname() |> String.downcase() |> String.trim_leading(".") |> String.to_atom()
+
+    format =
+      file_path
+      |> Path.extname()
+      |> String.downcase()
+      |> String.trim_leading(".")
+      |> String.to_atom()
 
     attrs = %{
       library_id: library.id,
@@ -427,11 +458,14 @@ defmodule Stashix.Scanner do
     parsed_files =
       files
       |> Task.async_stream(&parse_file_metadata/1,
-           max_concurrency: @metadata_concurrency,
-           ordered: true,
-           timeout: 60_000)
+        max_concurrency: @metadata_concurrency,
+        ordered: true,
+        timeout: 60_000
+      )
       |> Enum.flat_map(fn
-        {:ok, result} -> [result]
+        {:ok, result} ->
+          [result]
+
         {:exit, reason} ->
           Logger.error("Metadata parse crashed: #{inspect(reason)}")
           []
@@ -448,9 +482,11 @@ defmodule Stashix.Scanner do
       end)
 
     thumb_total_s = length(thumbnail_jobs)
+
     if thumb_total_s > 0 do
       broadcast_progress(library_id, 0, thumb_total_s, false, :thumbnails)
     end
+
     {:ok, thumb_counter_s} = Agent.start_link(fn -> 0 end)
 
     thumbnail_jobs
@@ -530,21 +566,25 @@ defmodule Stashix.Scanner do
     if new_dir_files == [] do
       series_cache
     else
-      all_hashes = Enum.flat_map(new_dir_files, fn {_, files} -> Enum.map(files, & &1.file_hash) end)
+      all_hashes =
+        Enum.flat_map(new_dir_files, fn {_, files} -> Enum.map(files, & &1.file_hash) end)
+
       hash_to_series = Library.load_hash_series_map(library.id, all_hashes)
 
       Enum.reduce(new_dir_files, series_cache, fn {dir, files}, cache ->
         old_series =
           files
-          |> Enum.map(& Map.get(hash_to_series, &1.file_hash))
+          |> Enum.map(&Map.get(hash_to_series, &1.file_hash))
           |> Enum.reject(&is_nil/1)
           |> Enum.frequencies_by(& &1.id)
           |> Enum.max_by(fn {_, count} -> count end, fn -> nil end)
           |> case do
-            nil -> nil
+            nil ->
+              nil
+
             {_id, _} ->
               files
-              |> Enum.find_value(& Map.get(hash_to_series, &1.file_hash))
+              |> Enum.find_value(&Map.get(hash_to_series, &1.file_hash))
           end
 
         case old_series && Library.update_series_folder_meta(old_series, %{path: dir}) do
@@ -561,7 +601,9 @@ defmodule Stashix.Scanner do
 
   defp collect_files(root_path) do
     case File.ls(root_path) do
-      {:ok, _} -> collect_recursive([root_path], [])
+      {:ok, _} ->
+        collect_recursive([root_path], [])
+
       {:error, reason} ->
         Logger.error("Cannot access library path #{root_path}: #{inspect(reason)}")
         []
@@ -591,8 +633,13 @@ defmodule Stashix.Scanner do
       )
       |> Enum.reduce({[], []}, fn
         {:ok, {subdirs, entries}}, {all_dirs, all_files} ->
-          supported = Enum.filter(entries, fn p -> String.downcase(Path.extname(p)) in @supported_formats end)
+          supported =
+            Enum.filter(entries, fn p ->
+              String.downcase(Path.extname(p)) in @supported_formats
+            end)
+
           {all_dirs ++ subdirs, all_files ++ supported}
+
         _, acc ->
           acc
       end)
@@ -602,7 +649,9 @@ defmodule Stashix.Scanner do
 
   defp resolve_page_count(metadata, file_path, fallback) do
     case Map.get(metadata, :page_count) do
-      n when is_integer(n) and n > 0 -> n
+      n when is_integer(n) and n > 0 ->
+        n
+
       _ ->
         case Extractor.get_page_count(file_path) do
           n when n > 0 -> n
@@ -726,6 +775,13 @@ defmodule Stashix.Scanner do
 
       {:error, _} ->
         prefix <> "unknown"
+    end
+  end
+
+  defp file_changed?(path, lm) do
+    case File.stat(path) do
+      {:ok, stat} -> NaiveDateTime.compare(NaiveDateTime.from_erl!(stat.mtime), lm) != :eq
+      _ -> true
     end
   end
 
