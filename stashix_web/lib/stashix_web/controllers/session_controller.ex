@@ -4,8 +4,11 @@ defmodule StashixWeb.SessionController do
   alias Stashix.Accounts
   alias Stashix.Auth.TokenHelper
 
-  def create(conn, %{"email" => email, "password" => password}) do
-    case Accounts.authenticate_user(email, password) do
+  def create(conn, params) do
+    login = Map.get(params, "login") || Map.get(params, "email", "")
+    password = Map.get(params, "password", "")
+
+    case Accounts.authenticate_user(login, password) do
       {:ok, user} ->
         {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 

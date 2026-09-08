@@ -8,6 +8,7 @@ defmodule Stashix.Accounts.User do
   schema "users" do
     field :email, :string
     field :username, :string
+    field :display_name, :string
     field :password, :string, virtual: true
     field :password_hash, :string
     field :role, Ecto.Enum, values: [:admin, :user], default: :user
@@ -21,10 +22,11 @@ defmodule Stashix.Accounts.User do
 
   def changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :username, :password, :role, :birth_date])
+    |> cast(attrs, [:email, :username, :display_name, :password, :role, :birth_date])
     |> validate_required([:email, :username, :password])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     |> validate_length(:username, min: 2, max: 50)
+    |> validate_length(:display_name, max: 100)
     |> validate_length(:password, min: 8)
     |> unique_constraint(:email)
     |> unique_constraint(:username)
@@ -33,9 +35,10 @@ defmodule Stashix.Accounts.User do
 
   def update_changeset(user, attrs) do
     user
-    |> cast(attrs, [:email, :username, :password, :role, :birth_date])
+    |> cast(attrs, [:email, :username, :display_name, :password, :role, :birth_date])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must be a valid email")
     |> validate_length(:username, min: 2, max: 50)
+    |> validate_length(:display_name, max: 100)
     |> validate_length(:password, min: 8)
     |> unique_constraint(:email)
     |> unique_constraint(:username)

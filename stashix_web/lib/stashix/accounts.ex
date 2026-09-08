@@ -14,6 +14,10 @@ defmodule Stashix.Accounts do
     Repo.get_by(User, email: String.downcase(email))
   end
 
+  def get_user_by_username(username) do
+    Repo.get_by(User, username: username)
+  end
+
   def list_users do
     Repo.all(User)
   end
@@ -34,8 +38,11 @@ defmodule Stashix.Accounts do
     Repo.delete(user)
   end
 
-  def authenticate_user(email, password) do
-    user = get_user_by_email(email)
+  def authenticate_user(login, password) do
+    user =
+      if String.contains?(login, "@"),
+        do: get_user_by_email(login),
+        else: get_user_by_username(login)
 
     cond do
       user && Bcrypt.verify_pass(password, user.password_hash) ->

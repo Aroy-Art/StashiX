@@ -16,7 +16,7 @@ defmodule StashixWeb.LoginLive do
       {:ok,
        assign(socket,
          page_title: "Login",
-         form: to_form(%{"email" => "", "password" => ""}),
+         form: to_form(%{"login" => "", "password" => ""}),
          error: nil,
          trigger_submit: false
        ), layout: {StashixWeb.Layouts, :root}}
@@ -24,13 +24,13 @@ defmodule StashixWeb.LoginLive do
   end
 
   @impl true
-  def handle_event("login", %{"email" => email, "password" => password}, socket) do
-    case Accounts.authenticate_user(email, password) do
+  def handle_event("login", %{"login" => login, "password" => password}, socket) do
+    case Accounts.authenticate_user(login, password) do
       {:ok, _user} ->
-        {:noreply, assign(socket, trigger_submit: true, form: to_form(%{"email" => email, "password" => password}))}
+        {:noreply, assign(socket, trigger_submit: true, form: to_form(%{"login" => login, "password" => password}))}
 
       {:error, _} ->
-        {:noreply, assign(socket, error: "Invalid email or password")}
+        {:noreply, assign(socket, error: "Invalid email/username or password")}
     end
   end
 
@@ -61,14 +61,15 @@ defmodule StashixWeb.LoginLive do
           >
             <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Email</label>
+              <label class="block text-sm font-medium text-gray-300 mb-1">Email or Username</label>
               <input
-                type="email"
-                name="email"
-                value={@form["email"].value}
+                type="text"
+                name="login"
+                value={@form["login"].value}
                 required
+                autocomplete="username"
                 class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                placeholder="you@example.com"
+                placeholder="you@example.com or username"
               />
             </div>
 

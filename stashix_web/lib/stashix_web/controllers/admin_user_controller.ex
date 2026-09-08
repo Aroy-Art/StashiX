@@ -27,6 +27,7 @@ defmodule StashixWeb.AdminUserController do
             id: u.id,
             email: u.email,
             username: u.username,
+            display_name: u.display_name,
             role: u.role,
             birth_date: u.birth_date,
             inserted_at: u.inserted_at
@@ -54,7 +55,7 @@ defmodule StashixWeb.AdminUserController do
       {:ok, user} ->
         conn
         |> put_status(:created)
-        |> json(%{user: %{id: user.id, email: user.email, username: user.username, role: user.role}})
+        |> json(%{user: %{id: user.id, email: user.email, username: user.username, display_name: user.display_name, role: user.role}})
 
       {:error, changeset} ->
         conn
@@ -88,7 +89,7 @@ defmodule StashixWeb.AdminUserController do
 
     case Accounts.update_user(user, params) do
       {:ok, updated} ->
-        json(conn, %{user: %{id: updated.id, email: updated.email, username: updated.username, role: updated.role}})
+        json(conn, %{user: %{id: updated.id, email: updated.email, username: updated.username, display_name: updated.display_name, role: updated.role}})
 
       {:error, changeset} ->
         conn

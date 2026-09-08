@@ -15,8 +15,11 @@ defmodule StashixWeb.AuthController do
       unauthorized: {"Invalid credentials", "application/json", Schemas.Error}
     ]
 
-  def login(conn, %{"email" => email, "password" => password}) do
-    case Accounts.authenticate_user(email, password) do
+  def login(conn, params) do
+    login = Map.get(params, "login") || Map.get(params, "email", "")
+    password = Map.get(params, "password", "")
+
+    case Accounts.authenticate_user(login, password) do
       {:ok, user} ->
         case TokenHelper.generate_tokens(user) do
           {:ok, access_token, refresh_token} ->
@@ -75,6 +78,7 @@ defmodule StashixWeb.AuthController do
       id: user.id,
       email: user.email,
       username: user.username,
+      display_name: user.display_name,
       role: user.role
     }
   end
