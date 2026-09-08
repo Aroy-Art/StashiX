@@ -358,10 +358,12 @@ defmodule StashixWeb.BookLive do
       </div>
 
       <%!-- File path --%>
-      <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
-        <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
-        {relative_path(@book, @library)}
-      </div>
+      <%= if @current_user.role == :admin do %>
+        <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
+          <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+          {relative_path(@book, @library)}
+        </div>
+      <% end %>
     </div>
 
     <%!-- Edit Metadata Dialog --%>
