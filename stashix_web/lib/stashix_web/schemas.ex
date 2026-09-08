@@ -32,9 +32,10 @@ defmodule StashixWeb.Schemas do
       title: "User",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         email: %Schema{type: :string, format: :email},
         username: %Schema{type: :string},
+        display_name: %Schema{type: :string, nullable: true},
         role: %Schema{type: :string, enum: ["admin", "user"]},
         birth_date: %Schema{type: :string, format: :date, nullable: true},
         inserted_at: %Schema{type: :string, format: :"date-time", nullable: true}
@@ -50,10 +51,10 @@ defmodule StashixWeb.Schemas do
       title: "LoginRequest",
       type: :object,
       properties: %{
-        email: %Schema{type: :string, format: :email},
+        login: %Schema{type: :string, description: "Email address or username"},
         password: %Schema{type: :string, format: :password}
       },
-      required: [:email, :password]
+      required: [:login, :password]
     })
   end
 
@@ -120,7 +121,7 @@ defmodule StashixWeb.Schemas do
       title: "Library",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
         root_path: %Schema{type: :string},
         book_count: %Schema{type: :integer},
@@ -138,7 +139,7 @@ defmodule StashixWeb.Schemas do
       title: "LibraryDetail",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
         root_path: %Schema{type: :string},
         standalone_folders: %Schema{type: :boolean},
@@ -172,7 +173,7 @@ defmodule StashixWeb.Schemas do
       title: "Book",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         title: %Schema{type: :string},
         path: %Schema{type: :string},
         format: %Schema{type: :string, enum: ["cbz", "cbr", "pdf", "epub"]},
@@ -185,8 +186,8 @@ defmodule StashixWeb.Schemas do
         age_rating: %Schema{type: :string, nullable: true},
         type: %Schema{type: :string, nullable: true},
         file_size: %Schema{type: :integer, nullable: true},
-        series_id: %Schema{type: :integer, nullable: true},
-        library_id: %Schema{type: :integer},
+        series_id: %Schema{type: :string, format: :uuid, nullable: true},
+        library_id: %Schema{type: :string, format: :uuid},
         has_cover: %Schema{type: :boolean},
         inserted_at: %Schema{type: :string, format: :"date-time"}
       },
@@ -201,7 +202,7 @@ defmodule StashixWeb.Schemas do
       title: "BookSummary",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         title: %Schema{type: :string},
         issue_number: %Schema{type: :number, nullable: true},
         volume: %Schema{type: :integer, nullable: true},
@@ -219,7 +220,7 @@ defmodule StashixWeb.Schemas do
       title: "Series",
       type: :object,
       properties: %{
-        id: %Schema{type: :integer},
+        id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
         sort_name: %Schema{type: :string, nullable: true},
         volume: %Schema{type: :integer, nullable: true},
@@ -228,7 +229,7 @@ defmodule StashixWeb.Schemas do
         issue_count: %Schema{type: :integer, nullable: true},
         ongoing: %Schema{type: :boolean, nullable: true},
         adult: %Schema{type: :boolean},
-        library_id: %Schema{type: :integer},
+        library_id: %Schema{type: :string, format: :uuid},
         inserted_at: %Schema{type: :string, format: :"date-time"}
       },
       required: [:id, :name, :library_id]
@@ -259,7 +260,7 @@ defmodule StashixWeb.Schemas do
         id: %Schema{type: :string},
         type: %Schema{type: :string},
         status: %Schema{type: :string},
-        library_id: %Schema{type: :integer, nullable: true},
+        library_id: %Schema{type: :string, format: :uuid, nullable: true},
         started_at: %Schema{type: :string, format: :"date-time", nullable: true}
       }
     })
@@ -279,12 +280,12 @@ defmodule StashixWeb.Schemas do
           items: %Schema{
             type: :object,
             properties: %{
-              id: %Schema{type: :integer},
+              id: %Schema{type: :string, format: :uuid},
               title: %Schema{type: :string},
               format: %Schema{type: :string},
               issue_number: %Schema{type: :number, nullable: true},
-              series_id: %Schema{type: :integer, nullable: true},
-              library_id: %Schema{type: :integer},
+              series_id: %Schema{type: :string, format: :uuid, nullable: true},
+              library_id: %Schema{type: :string, format: :uuid},
               year: %Schema{type: :integer, nullable: true}
             }
           }
@@ -328,7 +329,7 @@ defmodule StashixWeb.Schemas do
       title: "PermissionsRequest",
       type: :object,
       properties: %{
-        library_id: %Schema{type: :integer},
+        library_id: %Schema{type: :string, format: :uuid},
         can_read: %Schema{type: :boolean},
         max_age_rating: %Schema{type: :string, nullable: true}
       }
