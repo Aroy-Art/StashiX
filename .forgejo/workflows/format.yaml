@@ -1,0 +1,55 @@
+name: Format
+
+on:
+  push:
+    paths:
+      - "stashix_web/lib/**"
+      - "stashix_web/mix.exs"
+      - "stashix_web/.formatter.exs"
+      - ".forgejo/workflows/format.yaml"
+  pull_request:
+    paths:
+      - "stashix_web/lib/**"
+      - "stashix_web/mix.exs"
+      - "stashix_web/.formatter.exs"
+      - ".forgejo/workflows/format.yaml"
+
+jobs:
+  format:
+    runs-on: act-ubuntu-24.04-amd64
+
+    steps:
+      - name: checkout code
+        uses: https://code.forgejo.org/actions/checkout@v7
+
+      - name: install elixir
+        shell: sh
+        run: |
+          sudo add-apt-repository ppa:rabbitmq/rabbitmq-erlang
+          sudo apt-get update -q
+          sudo apt-get install -y elixir erlang
+
+      - name: install hex and rebar
+        shell: sh
+        run: mix local.hex --force && mix local.rebar --force
+
+      - name: cache deps
+        uses: https://code.forgejo.org/actions/cache@v6
+        with:
+          path: |
+            stashix_web/deps
+            stashix_web/_build
+            ~/.hex
+            ~/.mix
+          key: ${{ runner.os }}-mix-${{ hashFiles('stashix_web/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: install dependencies
+        shell: sh
+        working-directory: stashix_web
+        run: mix deps.get
+
+      - name: check formatting
+        shell: sh
+        working-directory: stashix_web
+        run: mix format --check-formatted
