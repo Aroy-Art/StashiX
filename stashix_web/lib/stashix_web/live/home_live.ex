@@ -28,8 +28,48 @@ defmodule StashixWeb.HomeLive do
        scan_progress: %{},
        total_books: total_books,
        total_issues: total_issues,
-       total_series: total_series
+       total_series: total_series,
+       spotlight: pick_spotlight(libraries_data, continue_reading),
+       recommendations: pick_recommendations(libraries_data)
      )}
+  end
+
+  defp pick_spotlight(_libraries_data, [_ | _]), do: nil
+
+  defp pick_spotlight(libraries_data, []) do
+    all_books = Enum.flat_map(libraries_data, & &1.recent_books)
+    all_series = Enum.flat_map(libraries_data, & &1.recent_series)
+
+    candidates =
+      Enum.map(all_books, &{:book, &1}) ++ Enum.map(all_series, &{:series, &1})
+
+    case candidates do
+      [] ->
+        nil
+
+      _ ->
+        case Enum.random(candidates) do
+          {:book, book} -> {:book, Stashix.Repo.preload(book, :series)}
+          other -> other
+        end
+    end
+  end
+
+  defp pick_recommendations(libraries_data) do
+    books =
+      libraries_data
+      |> Enum.flat_map(& &1.recent_books)
+      |> Enum.shuffle()
+      |> Enum.take(2)
+      |> Stashix.Repo.preload(:series)
+
+    series =
+      libraries_data
+      |> Enum.flat_map(& &1.recent_series)
+      |> Enum.shuffle()
+      |> Enum.take(2)
+
+    %{books: books, series: series}
   end
 
   defp series_date_range(%{start_year: nil}), do: nil
@@ -91,15 +131,19 @@ defmodule StashixWeb.HomeLive do
   def handle_info({:book_added, _book}, socket) do
     user = socket.assigns.current_user
     libraries = Library.list_libraries(user)
+    libraries_data = Enum.map(libraries, &load_library_data/1)
+    continue_reading = Library.in_progress_books(user.id, 20)
 
     {:noreply,
      assign(socket,
-       libraries_data: Enum.map(libraries, &load_library_data/1),
-       continue_reading: Library.in_progress_books(user.id, 20),
+       libraries_data: libraries_data,
+       continue_reading: continue_reading,
        next_issue: Library.next_issue_books(user.id, 20),
        total_books: Library.count_all_books(type: "standalone"),
        total_issues: Library.count_all_books(type: "issue"),
-       total_series: Library.count_all_series([])
+       total_series: Library.count_all_series([]),
+       spotlight: pick_spotlight(libraries_data, continue_reading),
+       recommendations: pick_recommendations(libraries_data)
      )}
   end
 
@@ -107,6 +151,121 @@ defmodule StashixWeb.HomeLive do
   def render(assigns) do
     ~H"""
     <div>
+      <%!-- HERO: random spotlight when no reading in progress --%>
+      <%= if @continue_reading == [] && @spotlight != nil do %>
+        <% {spotlight_type, spotlight_item} = @spotlight %>
+        <div
+          class="relative flex items-center gap-4 sm:gap-8 px-4 sm:px-8 py-5 sm:py-7 overflow-hidden"
+          style="min-height:200px"
+        >
+          <div
+            class="absolute inset-0"
+            style="background:linear-gradient(130deg,rgba(76,29,149,0.55) 0%,transparent 65%)"
+          >
+          </div>
+          <div
+            class="absolute inset-0"
+            style="background:radial-gradient(ellipse at 16% 55%,rgba(124,92,245,0.2) 0%,transparent 54%)"
+          >
+          </div>
+          <div
+            class="absolute inset-x-0 bottom-0 h-14"
+            style="background:linear-gradient(to top,#030712,transparent)"
+          >
+          </div>
+
+          <%= if spotlight_type == :book do %>
+            <a
+              href={~p"/book/#{spotlight_item.id}"}
+              class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
+              style="width:104px;height:156px;background:#1a1040"
+            >
+              <img
+                src={~p"/api/books/#{spotlight_item.id}/cover?w=300"}
+                class="w-full h-full object-cover"
+                onerror="this.style.display='none'"
+              />
+            </a>
+            <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
+              <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
+                Discover<%= if spotlight_item.series do %>
+                  ·
+                  <a
+                    href={~p"/series/#{spotlight_item.series.id}"}
+                    class="hover:text-violet-300 transition-colors"
+                  >{spotlight_item.series.name}</a>
+                <% end %>
+              </p>
+              <h1
+                class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight"
+                style="letter-spacing:-0.3px;text-wrap:balance"
+              >
+                {if spotlight_item.issue_number,
+                  do: "##{spotlight_item.issue_number} – #{spotlight_item.title}",
+                  else: spotlight_item.title}
+              </h1>
+              <p class="text-xs sm:text-sm text-gray-400">
+                {if spotlight_item.page_count, do: "#{spotlight_item.page_count} pages", else: ""}
+              </p>
+              <div class="flex gap-2 mt-1">
+                <a
+                  href={~p"/read/#{spotlight_item.id}"}
+                  class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
+                >
+                  <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                  Start Reading
+                </a>
+                <a
+                  href={~p"/book/#{spotlight_item.id}"}
+                  class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors"
+                >
+                  Details
+                </a>
+              </div>
+            </div>
+          <% else %>
+            <a
+              href={~p"/series/#{spotlight_item.id}"}
+              class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
+              style="width:104px;height:156px;background:#1a1040"
+            >
+              <img
+                src={~p"/api/series/#{spotlight_item.id}/cover?w=300"}
+                class="w-full h-full object-cover"
+                onerror="this.style.display='none'"
+              />
+            </a>
+            <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
+              <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
+                Discover · Series
+              </p>
+              <h1
+                class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight"
+                style="letter-spacing:-0.3px;text-wrap:balance"
+              >
+                {spotlight_item.name}
+              </h1>
+              <p class="text-xs sm:text-sm text-gray-400">
+                {[
+                  "#{spotlight_item.issue_count} issues",
+                  series_date_range(spotlight_item)
+                ]
+                |> Enum.reject(&is_nil/1)
+                |> Enum.join(" · ")}
+              </p>
+              <div class="flex gap-2 mt-1">
+                <a
+                  href={~p"/series/#{spotlight_item.id}"}
+                  class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
+                >
+                  Browse Series
+                </a>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
       <%!-- HERO: cinematic spotlight on what you're reading --%>
       <%= if @continue_reading != [] do %>
         <% %{book: hero, current_page: hero_page} = hd(@continue_reading) %>
@@ -336,32 +495,87 @@ defmodule StashixWeb.HomeLive do
             </section>
           <% end %>
 
-          <%!-- Fallback: no in-progress or queue — show recent across all libraries --%>
+          <%!-- Recommendations when nothing in progress or queued --%>
           <%= if @continue_reading == [] && @next_issue == [] do %>
-            <% recent_all = @libraries_data |> Enum.flat_map(& &1.recent_books) |> Enum.take(8) %>
-            <%= if recent_all != [] do %>
+            <% rec_books = @recommendations.books %>
+            <% rec_series = @recommendations.series %>
+            <%= if rec_books != [] || rec_series != [] do %>
               <section>
                 <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Recent Books
+                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Start Reading
                 </h2>
-                <div class="flex flex-col gap-2">
-                  <%= for book <- recent_all do %>
-                    <a
-                      href={~p"/book/#{book.id}"}
-                      class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors"
-                    >
-                      <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <%= for book <- rec_books do %>
+                    <div class="flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                      <a
+                        href={~p"/book/#{book.id}"}
+                        class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800 hover:scale-[1.02] transition-transform duration-200"
+                      >
                         <img
-                          src={~p"/api/books/#{book.id}/cover?w=120"}
+                          src={~p"/api/books/#{book.id}/cover?w=160"}
                           class="w-full h-full object-cover"
                           onerror="this.style.display='none'"
                         />
+                      </a>
+                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                        <%= if book.series && !is_struct(book.series, Ecto.Association.NotLoaded) do %>
+                          <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
+                            {book.series.name}
+                          </p>
+                        <% end %>
+                        <p class="text-sm font-semibold text-white leading-snug">
+                          {if book.issue_number,
+                            do: "##{book.issue_number} – #{book.title}",
+                            else: book.title}
+                        </p>
+                        <p class="text-xs text-gray-500">
+                          {[book.year && to_string(book.year), book.page_count && "#{book.page_count} pages"]
+                          |> Enum.reject(&is_nil/1)
+                          |> Enum.join(" · ")}
+                        </p>
+                        <a
+                          href={~p"/read/#{book.id}"}
+                          class="mt-0.5 self-start flex items-center gap-1 px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
+                        >
+                          <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
+                          Read
+                        </a>
                       </div>
-                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                        <p class="text-sm font-semibold text-white leading-snug">{book.title}</p>
-                        <p class="text-xs text-gray-500">{book.year && to_string(book.year)}</p>
+                    </div>
+                  <% end %>
+                  <%= for s <- rec_series do %>
+                    <div class="flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                      <a
+                        href={~p"/series/#{s.id}"}
+                        class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800 hover:scale-[1.02] transition-transform duration-200"
+                      >
+                        <img
+                          src={~p"/api/series/#{s.id}/cover?w=160"}
+                          class="w-full h-full object-cover"
+                          onerror="this.style.display='none'"
+                        />
+                      </a>
+                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
+                          Series
+                        </p>
+                        <p class="text-sm font-semibold text-white leading-snug">{s.name}</p>
+                        <p class="text-xs text-gray-500">
+                          {[
+                            "#{s.issue_count} issues",
+                            series_date_range(s)
+                          ]
+                          |> Enum.reject(&is_nil/1)
+                          |> Enum.join(" · ")}
+                        </p>
+                        <a
+                          href={~p"/series/#{s.id}"}
+                          class="mt-0.5 self-start px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
+                        >
+                          Browse
+                        </a>
                       </div>
-                    </a>
+                    </div>
                   <% end %>
                 </div>
               </section>
