@@ -216,7 +216,7 @@ defmodule StashixWeb.BookLive do
                 {@book.series.name}
               </a>
               <%= if @book.series.start_year do %>
-                <span class="text-violet-800 normal-case tracking-normal font-normal ml-1">
+                <span class="text-gray-600 normal-case tracking-normal font-normal ml-1">
                   (<%= @book.series.start_year %><%= cond do
                     @book.series.end_year -> "–#{@book.series.end_year}"
                     @book.series.ongoing -> "–"
