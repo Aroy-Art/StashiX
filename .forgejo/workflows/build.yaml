@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "stashix_web/**"
+      - ".forgejo/workflows/build.yaml"
+  pull_request:
+    paths:
+      - "stashix_web/**"
+      - ".forgejo/workflows/build.yaml"
+
+jobs:
+  build:
+    runs-on: act-ubuntu-24.04-amd64
+
+    steps:
+      - name: checkout code
+        uses: https://code.forgejo.org/actions/checkout@v7
+
+      - name: build docker image
+        uses: https://code.forgejo.org/forgejo/docker-build-push@v1
+        with:
+          context: stashix_web
+          tags: stashix:latest
+          push: false
