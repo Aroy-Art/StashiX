@@ -495,8 +495,8 @@ defmodule StashixWeb.HomeLive do
             </section>
           <% end %>
 
-          <%!-- Recommendations when nothing in progress or queued --%>
-          <%= if @continue_reading == [] && @next_issue == [] do %>
+          <%!-- Recommendations when left column is sparse --%>
+          <%= if @next_issue == [] || length(@continue_reading) <= 1 do %>
             <% rec_books = @recommendations.books %>
             <% rec_series = @recommendations.series %>
             <%= if rec_books != [] || rec_series != [] do %>
@@ -506,17 +506,15 @@ defmodule StashixWeb.HomeLive do
                 </h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <%= for book <- rec_books do %>
-                    <div class="flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <a
-                        href={~p"/book/#{book.id}"}
-                        class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800 hover:scale-[1.02] transition-transform duration-200"
-                      >
+                    <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                      <a href={~p"/book/#{book.id}"} class="absolute inset-0 rounded-lg z-10"></a>
+                      <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
                           src={~p"/api/books/#{book.id}/cover?w=160"}
                           class="w-full h-full object-cover"
                           onerror="this.style.display='none'"
                         />
-                      </a>
+                      </div>
                       <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                         <%= if book.series && !is_struct(book.series, Ecto.Association.NotLoaded) do %>
                           <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
@@ -535,7 +533,7 @@ defmodule StashixWeb.HomeLive do
                         </p>
                         <a
                           href={~p"/read/#{book.id}"}
-                          class="mt-0.5 self-start flex items-center gap-1 px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
+                          class="relative z-20 mt-0.5 self-start flex items-center gap-1 px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
                         >
                           <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                           Read
@@ -544,17 +542,15 @@ defmodule StashixWeb.HomeLive do
                     </div>
                   <% end %>
                   <%= for s <- rec_series do %>
-                    <div class="flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <a
-                        href={~p"/series/#{s.id}"}
-                        class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800 hover:scale-[1.02] transition-transform duration-200"
-                      >
+                    <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
+                      <a href={~p"/series/#{s.id}"} class="absolute inset-0 rounded-lg z-10"></a>
+                      <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
                           src={~p"/api/series/#{s.id}/cover?w=160"}
                           class="w-full h-full object-cover"
                           onerror="this.style.display='none'"
                         />
-                      </a>
+                      </div>
                       <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
                         <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
                           Series
@@ -570,7 +566,7 @@ defmodule StashixWeb.HomeLive do
                         </p>
                         <a
                           href={~p"/series/#{s.id}"}
-                          class="mt-0.5 self-start px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
+                          class="relative z-20 mt-0.5 self-start px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
                         >
                           Browse
                         </a>
