@@ -14,6 +14,7 @@ defmodule StashixWeb.BookLive do
     progress = Library.get_progress(socket.assigns.current_user.id, id)
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
+    {prev_book, next_book} = Library.get_adjacent_books(book)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
@@ -26,6 +27,8 @@ defmodule StashixWeb.BookLive do
        library: library,
        progress: current_page,
        fully_read: fully_read,
+       prev_book: prev_book,
+       next_book: next_book,
        read_menu_open: false,
        scanning: false,
        show_admin_menu: false,
@@ -104,13 +107,17 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
 
+    {prev_book, next_book} = Library.get_adjacent_books(book)
+
     {:noreply,
      assign(socket,
        scanning: false,
        book: book,
        progress: current_page,
        fully_read: fully_read,
-       page_title: book.title
+       page_title: book.title,
+       prev_book: prev_book,
+       next_book: next_book
      )}
   end
 
@@ -362,6 +369,92 @@ defmodule StashixWeb.BookLive do
         <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
           <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
           {relative_path(@book, @library)}
+        </div>
+      <% end %>
+
+      <%!-- Prev / Next navigation --%>
+      <%= if @prev_book || @next_book do %>
+        <div class="flex gap-2">
+          <%= if @prev_book do %>
+            <a
+              href={~p"/book/#{@prev_book.id}"}
+              class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 bg-linear-to-l from-gray-900 to-gray-700/60"
+            >
+              <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
+                <%= if @prev_book.blurhash do %>
+                  <canvas
+                    id={"bh-nav-prev-#{@prev_book.id}"}
+                    width="32"
+                    height="48"
+                    class="absolute inset-0 w-full h-full"
+                    style="filter:blur(6px);transform:scale(1.05)"
+                  ></canvas>
+                <% end %>
+                <img
+                  id={"nav-prev-#{@prev_book.id}"}
+                  phx-hook="CoverImage"
+                  src={~p"/api/books/#{@prev_book.id}/cover?w=120"}
+                  alt=""
+                  class="w-full h-full object-contain block"
+                  data-blurhash={@prev_book.blurhash}
+                  data-canvas-id={"bh-nav-prev-#{@prev_book.id}"}
+                  onerror="this.style.display='none'"
+                />
+              </div>
+              <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5">
+                <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Previous</p>
+                <p class="text-base font-bold text-white leading-tight tracking-tight">
+                  <%= if @prev_book.issue_number do %>#<%= Decimal.to_integer(@prev_book.issue_number) %><% end %>
+                </p>
+                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors"><%= @prev_book.title %></p>
+                <p class="text-[10px] text-gray-600 mt-0.5">
+                  <%= [@prev_book.year, (@prev_book.page_count > 0 && "#{@prev_book.page_count} pp")] |> Enum.filter(& &1) |> Enum.join(" · ") %>
+                </p>
+              </div>
+            </a>
+          <% else %>
+            <div class="flex-1" />
+          <% end %>
+          <%= if @next_book do %>
+            <a
+              href={~p"/book/#{@next_book.id}"}
+              class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 flex-row-reverse bg-linear-to-r from-gray-900 to-gray-700/60"
+            >
+              <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
+                <%= if @next_book.blurhash do %>
+                  <canvas
+                    id={"bh-nav-next-#{@next_book.id}"}
+                    width="32"
+                    height="48"
+                    class="absolute inset-0 w-full h-full"
+                    style="filter:blur(6px);transform:scale(1.05)"
+                  ></canvas>
+                <% end %>
+                <img
+                  id={"nav-next-#{@next_book.id}"}
+                  phx-hook="CoverImage"
+                  src={~p"/api/books/#{@next_book.id}/cover?w=120"}
+                  alt=""
+                  class="w-full h-full object-contain block"
+                  data-blurhash={@next_book.blurhash}
+                  data-canvas-id={"bh-nav-next-#{@next_book.id}"}
+                  onerror="this.style.display='none'"
+                />
+              </div>
+              <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5 text-right">
+                <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Next</p>
+                <p class="text-base font-bold text-white leading-tight tracking-tight">
+                  <%= if @next_book.issue_number do %>#<%= Decimal.to_integer(@next_book.issue_number) %><% end %>
+                </p>
+                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors"><%= @next_book.title %></p>
+                <p class="text-[10px] text-gray-600 mt-0.5">
+                  <%= [@next_book.year, (@next_book.page_count > 0 && "#{@next_book.page_count} pp")] |> Enum.filter(& &1) |> Enum.join(" · ") %>
+                </p>
+              </div>
+            </a>
+          <% else %>
+            <div class="flex-1" />
+          <% end %>
         </div>
       <% end %>
     </div>

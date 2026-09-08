@@ -78,6 +78,28 @@ defmodule Stashix.Library do
     Repo.get!(Book, id) |> Repo.preload([:series, :cover, :publishers])
   end
 
+  def get_adjacent_books(%{series_id: nil}), do: {nil, nil}
+
+  def get_adjacent_books(%{series_id: _series_id, issue_number: nil}), do: {nil, nil}
+
+  def get_adjacent_books(%{id: id, series_id: series_id, issue_number: _issue_number}) do
+    siblings =
+      from(b in Book,
+        left_join: c in BookCover, on: c.book_id == b.id,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
+        order_by: [asc: b.issue_number],
+        select: %{id: b.id, issue_number: b.issue_number, title: b.title, year: b.year, page_count: b.page_count, blurhash: c.blurhash}
+      )
+      |> Repo.all()
+
+    idx = Enum.find_index(siblings, &(&1.id == id))
+
+    prev = idx && idx > 0 && Enum.at(siblings, idx - 1)
+    next = idx && Enum.at(siblings, idx + 1)
+
+    {prev || nil, next || nil}
+  end
+
   def list_series(library_id, opts \\ []) do
     sort = Keyword.get(opts, :sort, "title_asc")
     limit = Keyword.get(opts, :limit)
@@ -791,6 +813,12 @@ defmodule Stashix.Library do
     ids = Enum.map(series, & &1.id)
     bh_map = series_cover_blurhash_map(ids)
     Enum.map(series, fn s -> %{s | cover_blurhash: Map.get(bh_map, s.id)} end)
+  end
+
+  def list_user_permissions(user_id) do
+    from(p in LibraryPermission, where: p.user_id == ^user_id)
+    |> Repo.all()
+    |> Map.new(&{&1.library_id, &1})
   end
 
   def set_library_permission(attrs) do

@@ -1,7 +1,7 @@
 defmodule StashixWeb.AdminLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Accounts, Library}
+  alias Stashix.{Accounts, Formatters, Library}
 
   on_mount {StashixWeb.Live.Hooks, :require_admin}
 
@@ -37,7 +37,10 @@ defmodule StashixWeb.AdminLive do
        pub_vis_total: 0,
        pub_vis_stats: %{},
        users: [],
-       libraries: []
+       libraries: [],
+       selected_perm_user_id: nil,
+       user_permissions: %{},
+       saved_permissions: MapSet.new()
      )}
   end
 
@@ -344,6 +347,42 @@ defmodule StashixWeb.AdminLive do
      |> put_flash(:info, "Series and its books restored")}
   end
 
+  def handle_event("show_user_permissions", %{"id" => id}, socket) do
+    if socket.assigns.selected_perm_user_id == id do
+      {:noreply, assign(socket, selected_perm_user_id: nil, user_permissions: %{})}
+    else
+      permissions = Library.list_user_permissions(id)
+      {:noreply, assign(socket, selected_perm_user_id: id, user_permissions: permissions)}
+    end
+  end
+
+  def handle_event("set_permission", %{"user_id" => user_id, "library_id" => library_id} = params, socket) do
+    can_read = Map.get(params, "can_read") == "true"
+    max_age_rating = Map.get(params, "max_age_rating", "unknown")
+
+    attrs = %{
+      user_id: user_id,
+      library_id: library_id,
+      can_read: can_read,
+      max_age_rating: max_age_rating
+    }
+
+    case Library.set_library_permission(attrs) do
+      {:ok, _} ->
+        permissions = Library.list_user_permissions(user_id)
+        key = "#{user_id}-#{library_id}"
+        Process.send_after(self(), {:clear_saved_perm, key}, 3000)
+
+        {:noreply,
+         socket
+         |> assign(:user_permissions, permissions)
+         |> update(:saved_permissions, &MapSet.put(&1, key))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Failed to update permission")}
+    end
+  end
+
   def handle_event("pub_vis_search", params, socket) do
     q = Map.get(params, "q") || Map.get(params, "value", "")
 
@@ -489,6 +528,10 @@ defmodule StashixWeb.AdminLive do
     end)}
   end
 
+  def handle_info({:clear_saved_perm, key}, socket) do
+    {:noreply, update(socket, :saved_permissions, &MapSet.delete(&1, key))}
+  end
+
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   @impl true
@@ -551,7 +594,11 @@ defmodule StashixWeb.AdminLive do
               </thead>
               <tbody>
                 <%= for user <- @users do %>
-                  <tr class="border-b border-gray-800 last:border-0">
+                  <%
+                    perm_open = @selected_perm_user_id == user.id
+                    age_ratings = [:unknown, :everyone, :teen, :teen_plus, :mature, :adult, :explicit]
+                  %>
+                  <tr class="border-b border-gray-800">
                     <td class="px-4 py-3 text-white">{user.username}</td>
                     <td class="px-4 py-3 text-gray-400">{user.email}</td>
                     <td class="px-4 py-3">
@@ -563,21 +610,87 @@ defmodule StashixWeb.AdminLive do
                       </span>
                     </td>
                     <td class="px-4 py-3 text-right">
-                      <%= if user.id != @current_user.id do %>
-                        <button
-                          phx-click="show_confirm"
-                          phx-value-event="delete_user"
-                          phx-value-id={user.id}
-                          phx-value-title="Delete User"
-                          phx-value-message={"Delete user \"#{user.username}\"? This cannot be undone."}
-                          phx-value-label="Delete"
-                          class="text-red-500 hover:text-red-400 text-xs"
-                        >
-                          Delete
-                        </button>
-                      <% end %>
+                      <div class="flex items-center gap-3 justify-end">
+                        <%= if user.role != :admin do %>
+                          <button
+                            phx-click="show_user_permissions"
+                            phx-value-id={user.id}
+                            class={["text-xs transition-colors",
+                              if(perm_open, do: "text-indigo-400 hover:text-indigo-300", else: "text-gray-400 hover:text-white")
+                            ]}
+                          >
+                            Permissions
+                          </button>
+                        <% end %>
+                        <%= if user.id != @current_user.id do %>
+                          <button
+                            phx-click="show_confirm"
+                            phx-value-event="delete_user"
+                            phx-value-id={user.id}
+                            phx-value-title="Delete User"
+                            phx-value-message={"Delete user \"#{user.username}\"? This cannot be undone."}
+                            phx-value-label="Delete"
+                            class="text-red-500 hover:text-red-400 text-xs"
+                          >
+                            Delete
+                          </button>
+                        <% end %>
+                      </div>
                     </td>
                   </tr>
+                  <%= if perm_open do %>
+                    <tr class="border-b border-gray-800 bg-gray-950">
+                      <td colspan="4" class="px-4 py-4">
+                        <div class="space-y-2">
+                          <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Library Access for {user.username}</p>
+                          <%= if @libraries == [] do %>
+                            <p class="text-sm text-gray-600">No libraries configured.</p>
+                          <% else %>
+                            <%= for lib <- @libraries do %>
+                              <% perm = Map.get(@user_permissions, lib.id)
+                                 saved = MapSet.member?(@saved_permissions, "#{user.id}-#{lib.id}")
+                                 current_rating = if perm, do: perm.max_age_rating, else: :unknown
+                                 rating_opts = Enum.map(age_ratings, &{Formatters.format_age_rating(&1), &1})
+                              %>
+                              <form
+                                phx-change="set_permission"
+                                class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-900 border border-gray-800"
+                              >
+                                <input type="hidden" name="user_id" value={user.id} />
+                                <input type="hidden" name="library_id" value={lib.id} />
+                                <div>
+                                  <p class="text-sm text-white">{lib.name}</p>
+                                  <p class="text-xs text-gray-600">{lib.root_path}</p>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                  <%= if saved do %>
+                                    <span class="text-xs text-emerald-400 font-medium">✓ Saved</span>
+                                  <% end %>
+                                  <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
+                                    <input
+                                      type="checkbox"
+                                      name="can_read"
+                                      value="true"
+                                      checked={perm != nil && perm.can_read}
+                                      class="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                                    />
+                                    Can read
+                                  </label>
+                                  <select
+                                    id={"rating-#{user.id}-#{lib.id}-#{current_rating}"}
+                                    name="max_age_rating"
+                                    class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
+                                  >
+                                    {Phoenix.HTML.Form.options_for_select(rating_opts, current_rating)}
+                                  </select>
+                                </div>
+                              </form>
+                            <% end %>
+                          <% end %>
+                        </div>
+                      </td>
+                    </tr>
+                  <% end %>
                 <% end %>
               </tbody>
             </table>
