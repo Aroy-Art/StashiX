@@ -40,13 +40,13 @@ defmodule Stashix.Formatters do
   def format_file_size(bytes), do: format_bytes(bytes, :decimal)
 
   @doc "Formats a content age rating atom as a human-readable string."
-  def format_age_rating(:unknown), do: "N/A"
-  def format_age_rating(:everyone), do: "Everyone"
-  def format_age_rating(:teen), do: "Teen"
-  def format_age_rating(:teen_plus), do: "Teen+"
-  def format_age_rating(:mature), do: "Mature"
-  def format_age_rating(:adult), do: "Adult"
-  def format_age_rating(:explicit), do: "Explicit"
+  def format_age_rating(:unknown), do: "N/A (No age limit)"
+  def format_age_rating(:everyone), do: "Everyone (0+)"
+  def format_age_rating(:teen), do: "Teen (13+)"
+  def format_age_rating(:teen_plus), do: "Teen+ (15+)"
+  def format_age_rating(:mature), do: "Mature (18+)"
+  def format_age_rating(:adult), do: "Adult (18+)"
+  def format_age_rating(:explicit), do: "Explicit (18+)"
   def format_age_rating(_), do: "N/A"
 
   @doc """
