@@ -1,3 +1,6 @@
+---
+name: stashix-dev
+
 services:
   db:
     image: postgres:18-alpine
@@ -18,7 +21,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     ports:
-      - "5050:80"
+      - "5051:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@stashix.dev
       PGADMIN_DEFAULT_PASSWORD: stashix

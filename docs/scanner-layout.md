@@ -8,13 +8,13 @@ tmp/booklib → Lib root
 │       └── The Disavowed 003 (2026) (digital) (Knight Ripper-Empire).cbz
 ├── New American Library → Publisher
 │   └── One-Shot
-│       └── Stephen King's Creepshow [Signet] (1982).cbz → Single book no series, name, date
+│       └── Stephen King's Creepshow [Signet] (1982).cbz → Standalone book no series, name "Stephen King's Creepshow", date
 ├── Semmel Verlach → Publisher
 │   └── One-Shot
-│       └── Gazoline and the Red Planet (1991).cbz → Single book no series, name, date
+│       └── Gazoline and the Red Planet (1991).cbz → Standalone book no series, name, date
 ├── TOKYOPOP  → Publisher
 │   └── One-Shot → Books that are single and dont have a series
-│       └── NOiSE (2007).cbz → Single book no series, name, date
+│       └── NOiSE (2007).cbz → Standalone book no series, name, date
 └── Viz Graphic Novels → Publisher
     ├── AD Police (1994) → Series Name, Start Date, No end date
     │   ├── AD Police (1994) - Chapter 1.cbz → No Volume, first issue, Date
@@ -34,24 +34,24 @@ tmp/booklib → Lib root
     │   ├── cover.jpg → Series Cover image
     │   └── index.json
     └── Battle Angel Alita (1994-1998) → Series Name, Start Date, End Date
-        ├── Volume 1 - Rusty Angel.cbz → Volume 1, Issue 1, No date
-        ├── Volume 1 - Rusty Angel.jpg → Issue 1 cover image 
-        ├── Volume 2 - Tears of an Angel.cbz → Volume 1, Issue 2, No date
-        ├── Volume 2 - Tears of an Angel.jpg → Issue 2 cover image
-        ├── Volume 3 - Killing Angel.cbz
-        ├── Volume 3 - Killing Angel.jpg
-        ├── Volume 4 - Angel of Victory.cbz
-        ├── Volume 4 - Angel of Victory.jpg
-        ├── Volume 5 - Angel of Redemption.cbz
-        ├── Volume 5 - Angel of Redemption.jpg
-        ├── Volume 6 - Angel of Death.cbz
-        ├── Volume 6 - Angel of Death.jpg
-        ├── Volume 7 - Angel of Chaos.cbz
-        ├── Volume 7 - Angel of Chaos.jpg
-        ├── Volume 8 - Fallen Angel.cbz
-        ├── Volume 8 - Fallen Angel.jpg
-        ├── Volume 9 - Angel's Ascension.cbz
-        └── Volume 9 - Angel's Ascension.jpg
+        ├── Issue 1 - Rusty Angel (1994).cbz, Issue 1, Name "Rusty Angel", Date
+        ├── Issue 1 - Rusty Angel (1994).jpg, Cover for issue 1
+        ├── Issue 2 - Tears of an Angel (1994).cbz
+        ├── Issue 2 - Tears of an Angel (1994).jpg
+        ├── Issue 3 - Killing Angel (1995).cbz
+        ├── Issue 3 - Killing Angel (1995).jpg
+        ├── Issue 4 - Angel of Victory (1995).cbz
+        ├── Issue 4 - Angel of Victory (1995).jpg
+        ├── Issue 5 - Angel of Redemption (1996).cbz
+        ├── Issue 5 - Angel of Redemption (1996).jpg
+        ├── Issue 6 - Angel of Death (1996).cbz
+        ├── Issue 6 - Angel of Death (1996).jpg
+        ├── Issue 7 - Angel of Chaos (1997).cbz
+        ├── Issue 7 - Angel of Chaos (1997).jpg
+        ├── Issue 8 - Fallen Angel (1997).cbz
+        ├── Issue 8 - Fallen Angel (1997).jpg
+        ├── Issue 9 - Angel's Ascension (1998).cbz
+        └── Issue 9 - Angel's Ascension (1998).jpg
 ```
 
 

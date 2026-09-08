@@ -1,1 +1,0 @@
-ALTER TABLE series DROP COLUMN IF EXISTS ongoing;

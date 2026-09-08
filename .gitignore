@@ -25,3 +25,10 @@ tmp/
 
 # TypeScript build cache
 *.tsbuildinfo
+
+# Elixir tools
+.elixir-tools/
+erl_crash.dump
+
+# File watcher logs
+watch_*
