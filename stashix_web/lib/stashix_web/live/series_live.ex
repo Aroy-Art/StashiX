@@ -19,6 +19,7 @@ defmodule StashixWeb.SeriesLive do
     book_ids = Enum.map(series.books, & &1.id)
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
     continue_book = find_continue_book(books, progress_map)
+    summary_info = derive_summary(series, books)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
@@ -36,6 +37,7 @@ defmodule StashixWeb.SeriesLive do
        total_size: total_size,
        cover_book: cover_book,
        continue_book: continue_book,
+       summary_info: summary_info,
        scanning: false,
        show_admin_menu: false,
        show_edit_dialog: false,
@@ -89,10 +91,11 @@ defmodule StashixWeb.SeriesLive do
     case Library.update_series(series, params) do
       {:ok, updated_series} ->
         series = Library.get_series_with_books(updated_series.id)
+        books = sort_books(series.books, socket.assigns.sort)
 
         {:noreply,
          socket
-         |> assign(series: series, page_title: series.name)
+         |> assign(series: series, books: books, page_title: series.name, summary_info: derive_summary(series, books))
          |> push_patch(to: ~p"/series/#{series.id}")}
 
       {:error, changeset} ->
@@ -128,7 +131,8 @@ defmodule StashixWeb.SeriesLive do
        total_pages: total_pages,
        total_size: total_size,
        cover_book: List.first(books),
-       continue_book: find_continue_book(books, progress_map)
+       continue_book: find_continue_book(books, progress_map),
+       summary_info: derive_summary(series, books)
      )}
   end
 
@@ -147,6 +151,19 @@ defmodule StashixWeb.SeriesLive do
       prog = progress_map[b.id]
       is_nil(prog) || prog == 0
     end)
+  end
+
+  defp derive_summary(%{summary: s}, _books) when is_binary(s) and s != "", do: %{text: s, source: nil}
+
+  defp derive_summary(_series, books) do
+    issue_sorted = Enum.sort_by(books, fn b ->
+      if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
+    end)
+
+    case Enum.find(issue_sorted, fn b -> b.summary && b.summary != "" end) do
+      nil -> nil
+      book -> %{text: book.summary, source: book.issue_number && "##{Decimal.to_integer(book.issue_number)}"}
+    end
   end
 
   defp issue_label(%{issue_number: nil}), do: nil
@@ -234,11 +251,11 @@ defmodule StashixWeb.SeriesLive do
         <% end %>
       </div>
 
-      <%!-- Editorial header --%>
-      <div class="flex gap-6 md:gap-10 items-start">
+      <%!-- Editorial header — cover floats left, info BFC sits beside it, summary wraps below --%>
+      <div class="overflow-hidden">
 
-        <%!-- Cover — natural proportions, no aspect-ratio constraint --%>
-        <div class="w-40 md:w-52 flex-shrink-0">
+        <%!-- Cover — floated left --%>
+        <div class="float-left w-40 md:w-52 mr-6 md:mr-10 mb-4">
           <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)]">
             <%= if @cover_book && @cover_book.cover do %>
               <img
@@ -256,8 +273,8 @@ defmodule StashixWeb.SeriesLive do
           </div>
         </div>
 
-        <%!-- Info --%>
-        <div class="flex-1 min-w-0 pt-1">
+        <%!-- BFC wrapper: forced beside the float, never overlaps it --%>
+        <div class="overflow-hidden pt-1">
 
           <%!-- Publisher eyebrow --%>
           <%= if @series.publishers != [] do %>
@@ -321,6 +338,14 @@ defmodule StashixWeb.SeriesLive do
             </div>
           <% end %>
         </div>
+
+        <%!-- Summary — outside BFC wrapper, so it continues beside the float then expands below --%>
+        <%= if @summary_info do %>
+          <p class="text-sm text-gray-400 leading-relaxed mt-5">{@summary_info.text}</p>
+          <%= if @summary_info.source do %>
+            <p class="mt-1.5 text-[11px] text-gray-600 italic">From issue {@summary_info.source}</p>
+          <% end %>
+        <% end %>
       </div>
 
       <%!-- Full-width metadata strip --%>
@@ -469,6 +494,16 @@ defmodule StashixWeb.SeriesLive do
                   value={@edit_form[:name].value}
                   class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
+                <textarea
+                  name="series[summary]"
+                  rows="4"
+                  placeholder="Leave blank to inherit from first issue with a summary…"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                >{@edit_form[:summary].value}</textarea>
               </div>
 
               <div>

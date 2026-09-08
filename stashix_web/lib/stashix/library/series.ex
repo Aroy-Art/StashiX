@@ -31,6 +31,7 @@ defmodule Stashix.Library.Series do
     field :end_year, :integer
     field :ongoing, :boolean, default: false
     field :adult, :boolean, default: false
+    field :summary, :string
     field :path, :string
     field :deleted_at, :naive_datetime
     field :cover_blurhash, :string, virtual: true
@@ -48,6 +49,7 @@ defmodule Stashix.Library.Series do
     |> cast(attrs, [
       :name,
       :sort_name,
+      :summary,
       :volume,
       :language,
       :format,
