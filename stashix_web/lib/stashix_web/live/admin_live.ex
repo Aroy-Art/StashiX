@@ -172,6 +172,11 @@ defmodule StashixWeb.AdminLive do
     {:noreply, update(socket, :scanning_libraries, &MapSet.put(&1, id))}
   end
 
+  def handle_event("backfill_blurhashes", _params, socket) do
+    Stashix.Scanner.backfill_blurhashes()
+    {:noreply, put_flash(socket, :info, "Blurhash backfill started — check server logs for progress")}
+  end
+
   def handle_event("edit_library", %{"id" => id}, socket) do
     {:noreply, assign(socket, :editing_library_id, id)}
   end
@@ -584,12 +589,20 @@ defmodule StashixWeb.AdminLive do
         <div class="space-y-4">
           <div class="flex items-center justify-between">
             <h1 class="text-2xl font-bold text-white">Libraries</h1>
-            <button
-              phx-click="toggle_library_form"
-              class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
-            >
-              Add Library
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                phx-click="backfill_blurhashes"
+                class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg border border-gray-700"
+              >
+                Backfill Blurhashes
+              </button>
+              <button
+                phx-click="toggle_library_form"
+                class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg"
+              >
+                Add Library
+              </button>
+            </div>
           </div>
 
           <%= if @show_library_form do %>

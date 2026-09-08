@@ -28,6 +28,10 @@ defmodule Stashix.Scanner do
     GenServer.cast(__MODULE__, {:scan_series, series_id, force})
   end
 
+  def backfill_blurhashes do
+    GenServer.cast(__MODULE__, :backfill_blurhashes)
+  end
+
   @doc false
   def scan_sync(library_id, force \\ false), do: do_scan(library_id, force)
 
@@ -69,6 +73,31 @@ defmodule Stashix.Scanner do
   def handle_cast({:scan_series, series_id, force}, state) do
     Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
       do_scan_series(series_id, force)
+    end)
+
+    {:noreply, state}
+  end
+
+  def handle_cast(:backfill_blurhashes, state) do
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+      covers = Library.list_covers_without_blurhash()
+      total = length(covers)
+      Logger.info("Blurhash backfill: #{total} covers to process")
+
+      covers
+      |> Task.async_stream(
+        fn {book_id, path} -> save_cover_with_blurhash(book_id, path) end,
+        max_concurrency: @thumbnail_concurrency,
+        ordered: false,
+        timeout: 60_000
+      )
+      |> Stream.with_index(1)
+      |> Stream.each(fn {_, n} ->
+        if rem(n, 50) == 0, do: Logger.info("Blurhash backfill: #{n}/#{total}")
+      end)
+      |> Stream.run()
+
+      Logger.info("Blurhash backfill complete")
     end)
 
     {:noreply, state}

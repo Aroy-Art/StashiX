@@ -762,6 +762,15 @@ defmodule Stashix.Library do
     end
   end
 
+  def list_covers_without_blurhash do
+    from(bc in BookCover,
+      join: b in Book, on: b.id == bc.book_id,
+      where: is_nil(bc.blurhash) and not is_nil(bc.path),
+      select: {b.id, bc.path}
+    )
+    |> Repo.all()
+  end
+
   def series_cover_blurhash_map([]), do: %{}
 
   def series_cover_blurhash_map(series_ids) do
