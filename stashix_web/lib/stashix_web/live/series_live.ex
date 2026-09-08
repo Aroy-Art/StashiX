@@ -254,19 +254,19 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Editorial header — cover floats left, info BFC sits beside it, summary wraps below --%>
       <div class="overflow-hidden">
 
-        <%!-- Cover — floated left --%>
-        <div class="float-left w-40 md:w-52 mr-6 md:mr-10 mb-4">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)]">
+        <%!-- Cover — floated left; inline style bypasses Tailwind purge; aspect-ratio gives immediate height --%>
+        <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
+          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3]">
             <%= if @cover_book && @cover_book.cover do %>
               <img
                 id={"series-cover-#{@series.id}"}
                 phx-hook="CoverImage"
                 src={~p"/api/books/#{@cover_book.id}/cover?w=384"}
                 alt={@series.name}
-                class="w-full block"
+                class="w-full h-full object-cover block"
               />
             <% else %>
-              <div class="w-full aspect-[2/3] flex items-center justify-center bg-gray-800/60 text-gray-600">
+              <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
                 <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
               </div>
             <% end %>
@@ -410,11 +410,13 @@ defmodule StashixWeb.SeriesLive do
       </div>
 
       <%!-- Folder path --%>
-      <%= if @series.path do %>
-        <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
-          <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
-          {relative_folder(@series, @library)}
-        </div>
+      <%= if @current_user.role == :admin do %>
+        <%= if @series.path do %>
+          <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
+            <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+            {relative_folder(@series, @library)}
+          </div>
+        <% end %>
       <% end %>
 
       <%!-- Issues --%>
@@ -453,7 +455,7 @@ defmodule StashixWeb.SeriesLive do
               subtitle={book.year && to_string(book.year)}
               badge={
                 cond do
-                  book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
+                  book.volume && book.issue_number -> "Vol. #{book.volume}  ##{book.issue_number}"
                   book.issue_number -> "##{book.issue_number}"
                   true -> nil
                 end
