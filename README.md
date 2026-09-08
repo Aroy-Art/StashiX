@@ -1,63 +1,82 @@
 # Stashix
 
-Self-hosted comic book and ebook library server. Built with Go + React.
+Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveView.
 
-## Features (MVP)
+## Features
 
 - Multiple library support (multiple root folders)
-- Admin + User roles with per-library permissions and age-gate controls
+- Admin + user roles with per-library permissions and age-gate controls
 - Full-text search backed by PostgreSQL tsvector
 - Folder watching — auto-import new files
-- In-browser readers for CBZ, CBR, CB7, EPUB, PDF
+- In-browser readers for CBZ, CBR, CB7, PDF
 - Metadata parsed from filenames, ComicInfo.xml, MetronInfo.xml
-- WebSocket-first real-time sync (REST API fallback)
-- JWT authentication
-- Docker + Caddy (auto-TLS)
+- Blurhash cover placeholders with WebP serving and on-demand resizing
+- Publisher support with alias system
+- PWA — installable on Android
 
 ## Stack
 
-- **Backend:** Go, chi, pgx, sqlc, gorilla/websocket, fsnotify
-- **Frontend:** React, Vite, TypeScript, Zustand
+- **Backend:** Elixir, Phoenix LiveView, Ecto
 - **DB:** PostgreSQL
-- **Proxy:** Nginx
+- **Assets:** Tailwind v4, ESBuild, Heroicons, Lucide.dev
 
 ## Quick Start
 
 ```bash
 cp .env.example .env
-# edit .env with your values
+# edit .env — set POSTGRES_PASSWORD, SECRET_KEY_BASE, JWT_SECRET, LIBRARY_PATH
 docker compose up -d
 ```
 
-Access at `https://your-domain.com` (or `http://localhost` in dev).
+Access at `http://localhost:4000`. A setup wizard runs on first launch.
+
+Generate `SECRET_KEY_BASE` with:
+
+```bash
+docker compose run --rm phoenix ./bin/stashix eval "IO.puts(:crypto.strong_rand_bytes(48) |> Base.encode64())"
+```
 
 ## Development
 
 ```bash
-docker compose -f docker-compose.dev.yml up -d
-# backend
-cd backend && DATABASE_URL="postgres://stashix:stashix@localhost:5432/stashix?sslmode=disable" JWT_SECRET="dev-secret-key" DATA_DIR="tmp/stashix/data" THUMBNAIL_DIR="tmp/stashix/thumbs" air
-# frontend
-cd frontend && npm install && npm run dev
+cd stashix_web
+mix setup        # install deps + create/migrate DB
+mix phx.server   # http://localhost:4000
 ```
+
+Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7zip`, `unrar`, `pdfinfo`, `pdftoppm`.
+
+## Configuration
+
+| Env var           | Default (dev)                          | Purpose                                     |
+| ----------------- | -------------------------------------- | ------------------------------------------- |
+| `DATABASE_URL`    | _dev.exs default_                      | Ecto DB URL (`ecto://user:pass@host/db`)    |
+| `SECRET_KEY_BASE` | _required in prod_                     | Phoenix cookie/session encryption           |
+| `JWT_SECRET`      | `dev-secret-change-in-production`      | Guardian JWT signing secret                 |
+| `PHX_HOST`        | `localhost`                            | Public hostname (used in URLs)              |
+| `PORT`            | `4000`                                 | HTTP port                                   |
+| `LIBRARY_PATH`    | `/libraries`                           | Root path where book files are scanned from |
+| `DATA_DIR`        | `/tmp/stashix`                         | General app data                            |
+| `THUMBNAIL_DIR`   | `<repo>/tmp/data/thumbnails`           | Extracted cover images                      |
+| `IMAGE_CACHE_DIR` | `<repo>/tmp/data/cache/images/resized` | Resized/WebP cover cache                    |
+
+`THUMBNAIL_DIR` and `IMAGE_CACHE_DIR` are created automatically. In production point them at a persistent volume — covers are re-extracted on scan if missing.
 
 ---
 
-## TODO (Post-MVP)
+## TODO
 
 ### Metadata
 
 - [ ] External metadata scraping (ComicVine, MangaUpdates, Open Library, AniList)
-- [ ] Manual metadata editing UI
 - [ ] Bulk metadata edit / match
 - [ ] Cover art fetching from external sources
-- [ ] Series grouping and arc detection
 
 ### Formats
 
 - [ ] MOBI / AZW3 reader
 - [ ] CBT (tar-based) support
-- [ ] WebtoonZ / long-strip reader mode
+- [ ] Webtoon / long-strip reader mode
 
 ### Users & Auth
 
@@ -65,15 +84,6 @@ cd frontend && npm install && npm run dev
 - [ ] Invite links
 - [ ] User self-registration with admin approval
 - [ ] Reading lists / shelves per user
-- [ ] Activity feed
-
-### Reading Experience
-
-- [ ] Mobile-optimized reader
-- [ ] Double-page spread mode
-- [ ] Reading direction setting (LTR / RTL / vertical)
-- [ ] Bookmarks and annotations
-- [ ] Offline / PWA support
 
 ### Library
 
@@ -84,8 +94,7 @@ cd frontend && npm install && npm run dev
 
 ### Infrastructure
 
-- [ ] S3 / object storage backend for files
-- [ ] Redis for WS pub/sub (multi-instance scale-out)
+- [ ] S3 / object storage backend
 - [ ] Metrics endpoint (Prometheus)
 - [ ] OPDS catalog support
 - [ ] Webhook notifications (Discord, Slack)
