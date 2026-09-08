@@ -151,15 +151,12 @@ defmodule Stashix.Metadata.Parser do
         |> Enum.join(", ")
 
       community_rating_raw = xpath(doc, ~x"//MetronInfo/CommunityRating/AverageRating/text()"os)
+
       community_rating =
         case community_rating_raw do
           nil -> nil
           "" -> nil
-          s ->
-            case Float.parse(s) do
-              {f, _} -> f
-              :error -> nil
-            end
+          s -> with {f, _} <- Float.parse(s), do: f
         end
 
       %{}
@@ -210,11 +207,15 @@ defmodule Stashix.Metadata.Parser do
 
           year =
             case Map.get(fields, "CreationDate") do
-              nil -> nil
-              date -> Regex.run(~r/(\d{4})/, date) |> then(fn
-                [_, y] -> parse_int(y)
-                _ -> nil
-              end)
+              nil ->
+                nil
+
+              date ->
+                Regex.run(~r/(\d{4})/, date)
+                |> then(fn
+                  [_, y] -> parse_int(y)
+                  _ -> nil
+                end)
             end
 
           %{}
@@ -248,7 +249,10 @@ defmodule Stashix.Metadata.Parser do
 
     # "Issue 6 - Angel of Death (1996)" or "Volume 3 - Killing Angel"
     result =
-      case Regex.run(~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*(?:-|–)\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i, clean) do
+      case Regex.run(
+             ~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*(?:-|–)\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i,
+             clean
+           ) do
         [_, num, title, year] ->
           result
           |> Map.put(:issue_number, parse_decimal(num))
@@ -270,7 +274,10 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)(?<![–\-])\s+Vol(?:ume)?\.?\s+(\d{1,4}(?:\.\d+)?)(?:\s+\((\d{4})\))?/i, clean) do
+        case Regex.run(
+               ~r/^(.+?)(?<![–\-])\s+Vol(?:ume)?\.?\s+(\d{1,4}(?:\.\d+)?)(?:\s+\((\d{4})\))?/i,
+               clean
+             ) do
           [_, series, volume | rest] ->
             year = Enum.at(rest, 0)
 
@@ -362,7 +369,10 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Chapter|Ch\.?)\s+(\d{1,4})/i, clean) do
+        case Regex.run(
+               ~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Chapter|Ch\.?)\s+(\d{1,4})/i,
+               clean
+             ) do
           [_, series, year, chapter] ->
             result
             |> Map.put(:series, String.trim(series))
@@ -399,7 +409,10 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-        case Regex.run(~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)/i, clean) do
+        case Regex.run(
+               ~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:-|–)\s*(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)/i,
+               clean
+             ) do
           [_, series, year, issue] ->
             result
             |> Map.put(:series, String.trim(series))
@@ -453,42 +466,42 @@ defmodule Stashix.Metadata.Parser do
       if map_size(result) > 0 do
         result
       else
-      case Regex.run(
-             ~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/,
-             clean
-           ) do
-        [_, series, year | rest] ->
-          volume = Enum.at(rest, 0)
-          issue = Enum.at(rest, 1)
+        case Regex.run(
+               ~r/^(.+?)\s*\((\d{4})(?:-\d*)?\)\s*(?:v(\d+))?\s*(?:[#c]?(\d{1,4})(?:\.\d+)?)?/,
+               clean
+             ) do
+          [_, series, year | rest] ->
+            volume = Enum.at(rest, 0)
+            issue = Enum.at(rest, 1)
 
-          result
-          |> Map.put(:series, String.trim(series))
-          |> Map.put(:year, String.to_integer(year))
-          |> maybe_put(:volume, parse_int(volume))
-          |> maybe_put(:issue_number, parse_decimal(issue))
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:year, String.to_integer(year))
+            |> maybe_put(:volume, parse_int(volume))
+            |> maybe_put(:issue_number, parse_decimal(issue))
 
-        nil ->
-          case Regex.run(~r/^(.+?)\s+v(\d+)\s+(?:[#c]?(\d{1,4})(?:\.\d+)?)?/i, clean) do
-            [_, series, volume | rest] ->
-              issue = Enum.at(rest, 0)
+          nil ->
+            case Regex.run(~r/^(.+?)\s+v(\d+)\s+(?:[#c]?(\d{1,4})(?:\.\d+)?)?/i, clean) do
+              [_, series, volume | rest] ->
+                issue = Enum.at(rest, 0)
 
-              result
-              |> Map.put(:series, String.trim(series))
-              |> maybe_put(:volume, parse_int(volume))
-              |> maybe_put(:issue_number, parse_decimal(issue))
+                result
+                |> Map.put(:series, String.trim(series))
+                |> maybe_put(:volume, parse_int(volume))
+                |> maybe_put(:issue_number, parse_decimal(issue))
 
-            nil ->
-              case Regex.run(~r/^(.+?)\s+[#c]?(\d{1,4})(?:\.\d+)?$/i, clean) do
-                [_, series, issue] ->
-                  result
-                  |> Map.put(:series, String.trim(series))
-                  |> maybe_put(:issue_number, parse_decimal(issue))
+              nil ->
+                case Regex.run(~r/^(.+?)\s+[#c]?(\d{1,4})(?:\.\d+)?$/i, clean) do
+                  [_, series, issue] ->
+                    result
+                    |> Map.put(:series, String.trim(series))
+                    |> maybe_put(:issue_number, parse_decimal(issue))
 
-                nil ->
-                  Map.put(result, :title, clean)
-              end
-          end
-      end
+                  nil ->
+                    Map.put(result, :title, clean)
+                end
+            end
+        end
       end
 
     result = maybe_put(result, :source_format, source_format)
@@ -507,12 +520,8 @@ defmodule Stashix.Metadata.Parser do
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
 
-  defp parse_int(s) when is_binary(s) do
-    case Integer.parse(s) do
-      {n, _} -> n
-      :error -> nil
-    end
-  end
+  defp parse_int(s) when is_binary(s),
+    do: with({n, _} <- Integer.parse(s), do: n)
 
   defp parse_decimal(nil), do: nil
   defp parse_decimal(""), do: nil

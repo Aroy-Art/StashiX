@@ -54,8 +54,7 @@ defmodule StashixUi.Slider do
   attr :disabled, :boolean, default: false, doc: "Whether the slider is disabled"
   attr :"on-value-changed", :any, default: nil, doc: "Handler for value changed event"
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "A form field struct retrieved from the form, for example: @form[:volume]"
+  attr :field, Phoenix.HTML.FormField, doc: "A form field struct retrieved from the form, for example: @form[:volume]"
 
   attr :class, :string, default: nil
   attr :rest, :global
@@ -156,7 +155,7 @@ defmodule StashixUi.Slider do
 
   defp normalize_number(value, default) when is_binary(value) do
     case Float.parse(value) do
-      {number, _rest} -> number
+      {number, _} -> number
       :error -> default
     end
   end

@@ -59,12 +59,8 @@ defmodule StashixUi.Progress do
 
   defp normalize_integer(value) when is_integer(value), do: value
 
-  defp normalize_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {integer, _} -> integer
-      _ -> nil
-    end
-  end
+  defp normalize_integer(value) when is_binary(value),
+    do: with({integer, _} <- Integer.parse(value), do: integer)
 
   defp normalize_integer(_), do: nil
 end

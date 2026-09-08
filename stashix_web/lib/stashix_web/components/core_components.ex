@@ -280,8 +280,7 @@ defmodule StashixWeb.CoreComponents do
     values: ~w(checkbox color date datetime-local email file month number password
                range search select tel text textarea time url week)
 
-  attr :field, Phoenix.HTML.FormField,
-    doc: "a form field struct retrieved from the form, for example: @form[:email]"
+  attr :field, Phoenix.HTML.FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
 
   attr :errors, :list, default: []
   attr :checked, :boolean, doc: "the checked flag for checkbox inputs"
@@ -289,8 +288,7 @@ defmodule StashixWeb.CoreComponents do
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
-  attr :rest, :global,
-    include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
+  attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
   def input(%{field: %Phoenix.HTML.FormField{} = field} = assigns) do
@@ -628,8 +626,7 @@ defmodule StashixWeb.CoreComponents do
       to: selector,
       time: 300,
       transition:
-        {"transition-all transform ease-out duration-300",
-         "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+        {"transition-all transform ease-out duration-300", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
          "opacity-100 translate-y-0 sm:scale-100"}
     )
   end
@@ -639,8 +636,7 @@ defmodule StashixWeb.CoreComponents do
       to: selector,
       time: 200,
       transition:
-        {"transition-all transform ease-in duration-200",
-         "opacity-100 translate-y-0 sm:scale-100",
+        {"transition-all transform ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
   end
@@ -724,14 +720,23 @@ defmodule StashixWeb.CoreComponents do
   def media_card(assigns) do
     assigns =
       assigns
-      |> assign(:img_src, if(assigns.cover_url && assigns.width,
-        do: "#{assigns.cover_url}?w=#{assigns.width}",
-        else: assigns.cover_url
-      ))
+      |> assign(
+        :img_src,
+        if(assigns.cover_url && assigns.width,
+          do: "#{assigns.cover_url}?w=#{assigns.width}",
+          else: assigns.cover_url
+        )
+      )
       |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.href)}")
 
     ~H"""
-    <a href={@href} class={["group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200", @class]}>
+    <a
+      href={@href}
+      class={[
+        "group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200",
+        @class
+      ]}
+    >
       <div class="aspect-[2/3] bg-gray-800 relative overflow-hidden">
         <%= if @img_src do %>
           <canvas
@@ -776,7 +781,12 @@ defmodule StashixWeb.CoreComponents do
           <%= if @progress >= 1.0 do %>
             <div class="absolute top-2 left-2 z-10 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
               <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="3"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
           <% end %>
@@ -784,12 +794,15 @@ defmodule StashixWeb.CoreComponents do
             <div
               class={"h-full transition-all #{if @progress >= 1.0, do: "bg-green-500", else: "bg-violet-500"}"}
               style={"width: #{round(min(@progress, 1.0) * 100)}%"}
-            ></div>
+            >
+            </div>
           </div>
         <% end %>
       </div>
       <div class="px-2.5 py-2 bg-gray-900">
-        <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">{@title}</p>
+        <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+          {@title}
+        </p>
         <%= if @subtitle do %>
           <p class="text-xs text-gray-500 mt-0.5">{@subtitle}</p>
         <% end %>
@@ -803,7 +816,12 @@ defmodule StashixWeb.CoreComponents do
   defp media_card_fallback(%{type: :series} = assigns) do
     ~H"""
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+      />
     </svg>
     """
   end
@@ -811,7 +829,12 @@ defmodule StashixWeb.CoreComponents do
   defp media_card_fallback(assigns) do
     ~H"""
     <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+      />
     </svg>
     """
   end
@@ -901,7 +924,10 @@ defmodule StashixWeb.CoreComponents do
 
   def media_grid(assigns) do
     ~H"""
-    <div id={@id} class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
+    <div
+      id={@id}
+      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4"
+    >
       {render_slot(@inner_block)}
     </div>
     """

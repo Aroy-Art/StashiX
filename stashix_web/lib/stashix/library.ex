@@ -1,7 +1,16 @@
 defmodule Stashix.Library do
   import Ecto.Query
   alias Stashix.Repo
-  alias Stashix.Library.{Library, Book, Series, BookCover, LibraryPermission, ReadingProgress, Publisher}
+
+  alias Stashix.Library.{
+    Library,
+    Book,
+    Series,
+    BookCover,
+    LibraryPermission,
+    ReadingProgress,
+    Publisher
+  }
 
   def list_libraries(user) do
     if user.role == :admin do
@@ -60,12 +69,12 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [b], desc: b.title)
-        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
-        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "year_asc" -> order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
+        "year_desc" -> order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
         "added_asc" -> order_by(query, [b], asc: b.inserted_at)
         "added_desc" -> order_by(query, [b], desc: b.inserted_at)
-        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
-        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        "issue_asc" -> order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
+        "issue_desc" -> order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
         _ -> order_by(query, [b], asc: b.title)
       end
 
@@ -85,10 +94,18 @@ defmodule Stashix.Library do
   def get_adjacent_books(%{id: id, series_id: series_id, issue_number: _issue_number}) do
     siblings =
       from(b in Book,
-        left_join: c in BookCover, on: c.book_id == b.id,
+        left_join: c in BookCover,
+        on: c.book_id == b.id,
         where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
         order_by: [asc: b.issue_number],
-        select: %{id: b.id, issue_number: b.issue_number, title: b.title, year: b.year, page_count: b.page_count, blurhash: c.blurhash}
+        select: %{
+          id: b.id,
+          issue_number: b.issue_number,
+          title: b.title,
+          year: b.year,
+          page_count: b.page_count,
+          blurhash: c.blurhash
+        }
       )
       |> Repo.all()
 
@@ -108,7 +125,7 @@ defmodule Stashix.Library do
     query =
       from s in Series,
         left_join: b in Book,
-          on: b.series_id == s.id and is_nil(b.deleted_at),
+        on: b.series_id == s.id and is_nil(b.deleted_at),
         where: s.library_id == ^library_id and is_nil(s.deleted_at),
         group_by: s.id,
         select: %{s | issue_count: count(b.id)},
@@ -119,8 +136,8 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [s], desc: s.name)
-        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
-        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "year_asc" -> order_by(query, [s], asc_nulls_last: s.start_year, asc: s.name)
+        "year_desc" -> order_by(query, [s], desc_nulls_last: s.start_year, asc: s.name)
         "added_asc" -> order_by(query, [s], asc: s.inserted_at)
         "added_desc" -> order_by(query, [s], desc: s.inserted_at)
         _ -> order_by(query, [s], asc: s.name)
@@ -184,7 +201,7 @@ defmodule Stashix.Library do
     series_query =
       from s in Series,
         left_join: b in Book,
-          on: b.series_id == s.id and is_nil(b.deleted_at),
+        on: b.series_id == s.id and is_nil(b.deleted_at),
         group_by: s.id,
         select: %{s | issue_count: count(b.id)}
 
@@ -201,10 +218,11 @@ defmodule Stashix.Library do
       from(rp in ReadingProgress,
         where: rp.user_id == ^user_id and rp.current_page > 0,
         join: b in Book,
-          on: b.id == rp.book_id
-            and is_nil(b.deleted_at)
-            and not is_nil(b.series_id)
-            and b.page_count > 0,
+        on:
+          b.id == rp.book_id and
+            is_nil(b.deleted_at) and
+            not is_nil(b.series_id) and
+            b.page_count > 0,
         where: rp.current_page >= b.page_count - 1,
         group_by: b.series_id,
         order_by: [desc: max(rp.updated_at)],
@@ -224,7 +242,7 @@ defmodule Stashix.Library do
       from(b in Book,
         where: b.series_id in ^series_ids and is_nil(b.deleted_at),
         left_join: rp in ReadingProgress,
-          on: rp.book_id == b.id and rp.user_id == ^user_id,
+        on: rp.book_id == b.id and rp.user_id == ^user_id,
         where: is_nil(rp.id) or rp.current_page == 0,
         order_by: [asc: b.series_id, asc_nulls_last: b.issue_number],
         preload: [:cover, :series]
@@ -263,8 +281,7 @@ defmodule Stashix.Library do
         where:
           fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
             is_nil(b.deleted_at),
-        order_by:
-          fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
+        order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
         preload: [:cover, :series],
         limit: ^limit
       )
@@ -275,7 +292,7 @@ defmodule Stashix.Library do
     series =
       from(s in Series,
         left_join: b in Book,
-          on: b.series_id == s.id and is_nil(b.deleted_at),
+        on: b.series_id == s.id and is_nil(b.deleted_at),
         where: ilike(s.name, ^pattern) and is_nil(s.deleted_at),
         group_by: s.id,
         order_by: [asc: s.name],
@@ -331,14 +348,18 @@ defmodule Stashix.Library do
   end
 
   def load_series_cache(library_id) do
-    from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at), select: {s.path, s})
+    from(s in Series,
+      where: s.library_id == ^library_id and is_nil(s.deleted_at),
+      select: {s.path, s}
+    )
     |> Repo.all()
     |> Map.new()
   end
 
   def load_hash_series_map(library_id, hashes) do
     from(b in Book,
-      join: s in Series, on: s.id == b.series_id,
+      join: s in Series,
+      on: s.id == b.series_id,
       where: b.library_id == ^library_id and b.file_hash in ^hashes and is_nil(b.deleted_at),
       select: {b.file_hash, s}
     )
@@ -437,7 +458,8 @@ defmodule Stashix.Library do
 
     query =
       from s in Series,
-        join: sp in "series_publishers", on: sp.series_id == s.id,
+        join: sp in "series_publishers",
+        on: sp.series_id == s.id,
         where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
         distinct: true,
         limit: ^limit,
@@ -446,8 +468,8 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [s], desc: s.name)
-        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
-        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "year_asc" -> order_by(query, [s], asc_nulls_last: s.start_year, asc: s.name)
+        "year_desc" -> order_by(query, [s], desc_nulls_last: s.start_year, asc: s.name)
         "added_asc" -> order_by(query, [s], asc: s.inserted_at)
         "added_desc" -> order_by(query, [s], desc: s.inserted_at)
         _ -> order_by(query, [s], asc: s.name)
@@ -460,7 +482,8 @@ defmodule Stashix.Library do
     pub_bins = publisher_id_bins(publisher_id)
 
     from(s in Series,
-      join: sp in "series_publishers", on: sp.series_id == s.id,
+      join: sp in "series_publishers",
+      on: sp.series_id == s.id,
       where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
       distinct: true
     )
@@ -476,7 +499,8 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        join: bp in "book_publishers", on: bp.book_id == b.id,
+        join: bp in "book_publishers",
+        on: bp.book_id == b.id,
         where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
         distinct: true,
         preload: [:cover, :series],
@@ -486,12 +510,12 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [b], desc: b.title)
-        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
-        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "year_asc" -> order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
+        "year_desc" -> order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
         "added_asc" -> order_by(query, [b], asc: b.inserted_at)
         "added_desc" -> order_by(query, [b], desc: b.inserted_at)
-        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
-        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        "issue_asc" -> order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
+        "issue_desc" -> order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
         _ -> order_by(query, [b], asc: b.title)
       end
 
@@ -502,7 +526,8 @@ defmodule Stashix.Library do
     pub_bins = publisher_id_bins(publisher_id)
 
     from(b in Book,
-      join: bp in "book_publishers", on: bp.book_id == b.id,
+      join: bp in "book_publishers",
+      on: bp.book_id == b.id,
       where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
       distinct: true
     )
@@ -536,9 +561,11 @@ defmodule Stashix.Library do
       end
 
     total = Repo.aggregate(base, :count, :id)
+
     items =
       Repo.all(from p in base, limit: ^limit, offset: ^((page - 1) * limit))
       |> Repo.preload(:canonical)
+
     {items, total}
   end
 
@@ -645,7 +672,8 @@ defmodule Stashix.Library do
 
     series_counts =
       from(sp in "series_publishers",
-        join: s in Series, on: s.id == sp.series_id,
+        join: s in Series,
+        on: s.id == sp.series_id,
         where: sp.publisher_id in ^all_bins and is_nil(s.deleted_at),
         group_by: sp.publisher_id,
         select: {sp.publisher_id, count(s.id)}
@@ -655,7 +683,8 @@ defmodule Stashix.Library do
 
     books_counts =
       from(bp in "book_publishers",
-        join: b in Book, on: b.id == bp.book_id,
+        join: b in Book,
+        on: b.id == bp.book_id,
         where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "standalone",
         group_by: bp.publisher_id,
         select: {bp.publisher_id, count(b.id)}
@@ -665,7 +694,8 @@ defmodule Stashix.Library do
 
     issues_counts =
       from(bp in "book_publishers",
-        join: b in Book, on: b.id == bp.book_id,
+        join: b in Book,
+        on: b.id == bp.book_id,
         where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "issue",
         group_by: bp.publisher_id,
         select: {bp.publisher_id, count(b.id)}
@@ -701,7 +731,8 @@ defmodule Stashix.Library do
     all_bins = Map.keys(id_to_master) |> Enum.map(&Ecto.UUID.dump!/1)
 
     from(bp in "book_publishers",
-      join: b in Book, on: b.id == bp.book_id,
+      join: b in Book,
+      on: b.id == bp.book_id,
       where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at),
       select: {bp.publisher_id, bp.book_id}
     )
@@ -733,6 +764,7 @@ defmodule Stashix.Library do
       [%{book_id: Ecto.UUID.dump!(book_id), publisher_id: Ecto.UUID.dump!(publisher_id)}],
       on_conflict: :nothing
     )
+
     :ok
   end
 
@@ -742,6 +774,7 @@ defmodule Stashix.Library do
       [%{series_id: Ecto.UUID.dump!(series_id), publisher_id: Ecto.UUID.dump!(publisher_id)}],
       on_conflict: :nothing
     )
+
     :ok
   end
 
@@ -786,7 +819,8 @@ defmodule Stashix.Library do
 
   def list_covers_without_blurhash do
     from(bc in BookCover,
-      join: b in Book, on: b.id == bc.book_id,
+      join: b in Book,
+      on: b.id == bc.book_id,
       where: is_nil(bc.blurhash) and not is_nil(bc.path),
       select: {b.id, bc.path}
     )
@@ -797,7 +831,8 @@ defmodule Stashix.Library do
 
   def series_cover_blurhash_map(series_ids) do
     from(bc in BookCover,
-      join: b in Book, on: b.id == bc.book_id and is_nil(b.deleted_at),
+      join: b in Book,
+      on: b.id == bc.book_id and is_nil(b.deleted_at),
       where: b.series_id in ^series_ids,
       distinct: [asc: b.series_id],
       order_by: [asc: b.series_id, asc_nulls_last: b.issue_number, asc: b.inserted_at],
@@ -840,7 +875,9 @@ defmodule Stashix.Library do
 
   def count_books(library_id) do
     Repo.aggregate(
-      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"),
+      from(b in Book,
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
+      ),
       :count,
       :id
     )
@@ -856,18 +893,22 @@ defmodule Stashix.Library do
 
   def count_issues(library_id) do
     Repo.aggregate(
-      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"),
+      from(b in Book,
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
+      ),
       :count,
       :id
     )
   end
 
   def total_size(library_id) do
-    result = Repo.aggregate(
-      from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at)),
-      :sum,
-      :file_size
-    )
+    result =
+      Repo.aggregate(
+        from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at)),
+        :sum,
+        :file_size
+      )
+
     case result do
       nil -> 0
       %Decimal{} = d -> Decimal.to_integer(d)
@@ -892,7 +933,7 @@ defmodule Stashix.Library do
   def recent_series(library_id, limit \\ 10) do
     from(s in Series,
       left_join: b in Book,
-        on: b.series_id == s.id and is_nil(b.deleted_at),
+      on: b.series_id == s.id and is_nil(b.deleted_at),
       where: s.library_id == ^library_id and is_nil(s.deleted_at),
       group_by: s.id,
       order_by: [desc: s.inserted_at],
@@ -969,36 +1010,103 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST, ? DESC", s.name, b.title, b.issue_number, b.title)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST, ? DESC",
+              s.name,
+              b.title,
+              b.issue_number,
+              b.title
+            )
           )
+
         "year_asc" ->
-          order_by(query, [b, s],
-            fragment("? ASC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.start_year, s.name, b.title, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "? ASC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST",
+              s.start_year,
+              s.name,
+              b.title,
+              b.issue_number
+            )
           )
+
         "year_desc" ->
-          order_by(query, [b, s],
-            fragment("? DESC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.start_year, s.name, b.title, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "? DESC NULLS LAST, COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST",
+              s.start_year,
+              s.name,
+              b.title,
+              b.issue_number
+            )
           )
+
         "added_asc" ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.inserted_at, b.inserted_at, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST",
+              s.inserted_at,
+              b.inserted_at,
+              b.issue_number
+            )
           )
+
         "added_desc" ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST", s.inserted_at, b.inserted_at, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) DESC NULLS LAST, ? ASC NULLS LAST",
+              s.inserted_at,
+              b.inserted_at,
+              b.issue_number
+            )
           )
+
         "issue_asc" ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST", s.name, b.title, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST",
+              s.name,
+              b.title,
+              b.issue_number
+            )
           )
+
         "issue_desc" ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) ASC NULLS LAST, ? DESC NULLS LAST", s.name, b.title, b.issue_number)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) ASC NULLS LAST, ? DESC NULLS LAST",
+              s.name,
+              b.title,
+              b.issue_number
+            )
           )
+
         _ ->
-          order_by(query, [b, s],
-            fragment("COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST, ? ASC", s.name, b.title, b.issue_number, b.title)
+          order_by(
+            query,
+            [b, s],
+            fragment(
+              "COALESCE(?, ?) ASC NULLS LAST, ? ASC NULLS LAST, ? ASC",
+              s.name,
+              b.title,
+              b.issue_number,
+              b.title
+            )
           )
       end
 
@@ -1027,8 +1135,8 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [s], desc: s.name)
-        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
-        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "year_asc" -> order_by(query, [s], asc_nulls_last: s.start_year, asc: s.name)
+        "year_desc" -> order_by(query, [s], desc_nulls_last: s.start_year, asc: s.name)
         "added_asc" -> order_by(query, [s], asc: s.inserted_at)
         "added_desc" -> order_by(query, [s], desc: s.inserted_at)
         _ -> order_by(query, [s], asc: s.name)
@@ -1091,12 +1199,12 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [b], desc: b.title)
-        "year_asc" -> order_by(query, [b], [asc_nulls_last: b.year, asc: b.title])
-        "year_desc" -> order_by(query, [b], [desc_nulls_last: b.year, asc: b.title])
+        "year_asc" -> order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
+        "year_desc" -> order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
         "added_asc" -> order_by(query, [b], asc: b.inserted_at)
         "added_desc" -> order_by(query, [b], desc: b.inserted_at)
-        "issue_asc" -> order_by(query, [b], [asc_nulls_last: b.issue_number, asc: b.title])
-        "issue_desc" -> order_by(query, [b], [desc_nulls_last: b.issue_number, asc: b.title])
+        "issue_asc" -> order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
+        "issue_desc" -> order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
         _ -> order_by(query, [b], asc: b.title)
       end
 
@@ -1123,7 +1231,7 @@ defmodule Stashix.Library do
     query =
       from s in Series,
         left_join: b in Book,
-          on: b.series_id == s.id and is_nil(b.deleted_at),
+        on: b.series_id == s.id and is_nil(b.deleted_at),
         where: is_nil(s.deleted_at),
         group_by: s.id,
         select: %{s | issue_count: count(b.id)},
@@ -1135,8 +1243,8 @@ defmodule Stashix.Library do
     query =
       case sort do
         "title_desc" -> order_by(query, [s], desc: s.name)
-        "year_asc" -> order_by(query, [s], [asc_nulls_last: s.start_year, asc: s.name])
-        "year_desc" -> order_by(query, [s], [desc_nulls_last: s.start_year, asc: s.name])
+        "year_asc" -> order_by(query, [s], asc_nulls_last: s.start_year, asc: s.name)
+        "year_desc" -> order_by(query, [s], desc_nulls_last: s.start_year, asc: s.name)
         "added_asc" -> order_by(query, [s], asc: s.inserted_at)
         "added_desc" -> order_by(query, [s], desc: s.inserted_at)
         _ -> order_by(query, [s], asc: s.name)
@@ -1186,7 +1294,8 @@ defmodule Stashix.Library do
   end
 
   def purge_book(book) do
-    cover_paths = from(bc in BookCover, where: bc.book_id == ^book.id, select: bc.path) |> Repo.all()
+    cover_paths =
+      from(bc in BookCover, where: bc.book_id == ^book.id, select: bc.path) |> Repo.all()
 
     result =
       Repo.transaction(fn ->
@@ -1200,7 +1309,9 @@ defmodule Stashix.Library do
 
   def purge_series(series) do
     book_ids = from(b in Book, where: b.series_id == ^series.id, select: b.id) |> Repo.all()
-    cover_paths = from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
+
+    cover_paths =
+      from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
 
     result =
       Repo.transaction(fn ->
@@ -1243,7 +1354,9 @@ defmodule Stashix.Library do
 
   def batch_purge_series(ids) do
     book_ids = from(b in Book, where: b.series_id in ^ids, select: b.id) |> Repo.all()
-    cover_paths = from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
+
+    cover_paths =
+      from(bc in BookCover, where: bc.book_id in ^book_ids, select: bc.path) |> Repo.all()
 
     result =
       Repo.transaction(fn ->
@@ -1257,15 +1370,19 @@ defmodule Stashix.Library do
   end
 
   defp delete_cover_files(paths) do
-    cache_dir = Application.get_env(:stashix, :image_cache_dir, "/tmp/stashix/cache/images/resized")
-    cached_files = case File.ls(cache_dir) do
-      {:ok, files} -> files
-      _ -> []
-    end
+    cache_dir =
+      Application.get_env(:stashix, :image_cache_dir, "/tmp/stashix/cache/images/resized")
+
+    cached_files =
+      case File.ls(cache_dir) do
+        {:ok, files} -> files
+        _ -> []
+      end
 
     Enum.each(paths, fn path ->
       File.rm(path)
       prefix = :crypto.hash(:md5, path) |> Base.encode16(case: :lower)
+
       cached_files
       |> Enum.filter(&String.starts_with?(&1, prefix))
       |> Enum.each(&File.rm(Path.join(cache_dir, &1)))

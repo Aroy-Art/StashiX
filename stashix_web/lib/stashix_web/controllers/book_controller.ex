@@ -19,10 +19,12 @@ defmodule StashixWeb.BookController do
       type: [in: :query, type: :string, description: "Filter by book type"]
     ],
     responses: [
-      ok: {"Book list", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{books: %OpenApiSpex.Schema{type: :array, items: Schemas.Book}}
-      }},
+      ok:
+        {"Book list", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{books: %OpenApiSpex.Schema{type: :array, items: Schemas.Book}}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -44,10 +46,12 @@ defmodule StashixWeb.BookController do
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, type: :integer, required: true]],
     responses: [
-      ok: {"Book detail", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{book: Schemas.Book}
-      }},
+      ok:
+        {"Book detail", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{book: Schemas.Book}
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -148,13 +152,15 @@ defmodule StashixWeb.BookController do
     parameters: [id: [in: :path, type: :integer, required: true]],
     request_body: {"Progress", "application/json", Schemas.ProgressRequest, required: true},
     responses: [
-      ok: {"Progress saved", "application/json", %OpenApiSpex.Schema{
-        type: :object,
-        properties: %{
-          status: %OpenApiSpex.Schema{type: :string},
-          page: %OpenApiSpex.Schema{type: :integer}
-        }
-      }},
+      ok:
+        {"Progress saved", "application/json",
+         %OpenApiSpex.Schema{
+           type: :object,
+           properties: %{
+             status: %OpenApiSpex.Schema{type: :string},
+             page: %OpenApiSpex.Schema{type: :integer}
+           }
+         }},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
@@ -163,8 +169,11 @@ defmodule StashixWeb.BookController do
     page = parse_int(params["page"], 0)
 
     case Library.update_progress(user.id, id, page) do
-      {:ok, _} -> json(conn, %{status: "ok", page: page})
-      {:error, reason} -> conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
+      {:ok, _} ->
+        json(conn, %{status: "ok", page: page})
+
+      {:error, reason} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
     end
   end
 
@@ -233,11 +242,13 @@ defmodule StashixWeb.BookController do
   defp detect_image_type(_), do: "image/jpeg"
 
   defp parse_int(nil, default), do: default
+
   defp parse_int(s, default) when is_binary(s) do
     case Integer.parse(s) do
       {n, _} -> n
       :error -> default
     end
   end
+
   defp parse_int(n, _default) when is_integer(n), do: n
 end
