@@ -6,13 +6,13 @@ services:
     ports:
       - "4000:4000"
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE}
-      PHX_HOST: ${PHX_HOST}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://stashix:stashix@db/stashix}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_only_secret_key_base_replace_in_prod_with_mix_phx_gen_secret}
+      PHX_HOST: ${PHX_HOST:-localhost}
       PORT: 4000
       DATA_DIR: /data
     volumes:
-      - ${LIBRARY_PATH}:/libraries:ro
+      - ${LIBRARY_PATH:-./libraries}:/libraries:ro
       - phoenix_data:/data
     depends_on:
       db:
@@ -24,7 +24,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-stashix}
       POSTGRES_USER: ${POSTGRES_USER:-stashix}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stashix}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
