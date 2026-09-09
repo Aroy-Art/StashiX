@@ -27,9 +27,11 @@ RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips \
 WORKDIR /app
 
 COPY --from=build /app/_build/prod/rel/stashix ./
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
 
 ENV PHX_HOST=localhost PORT=4000 MIX_ENV=prod
 
 EXPOSE 4000
 
-CMD ["./bin/stashix", "start"]
+CMD ["./entrypoint.sh"]
