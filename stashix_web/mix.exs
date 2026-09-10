@@ -47,7 +47,7 @@ defmodule Stashix.MixProject do
       {:lucide, github: "lucide-icons/lucide", tag: "0.460.0", sparse: "icons", app: false, compile: false, depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:gettext, "~> 0.26"},
+      {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
