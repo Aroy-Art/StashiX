@@ -86,7 +86,6 @@ defmodule StashixWeb.AllPublishersLive do
                         src={~p"/api/books/#{book_id}/cover"}
                         alt=""
                         class="absolute inset-0 w-full h-full object-cover object-top"
-                        loading="lazy"
                       />
                     </div>
                   <% end %>

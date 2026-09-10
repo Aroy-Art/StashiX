@@ -733,6 +733,8 @@ defmodule Stashix.Library do
     from(bp in "book_publishers",
       join: b in Book,
       on: b.id == bp.book_id,
+      join: _c in BookCover,
+      on: _c.book_id == b.id,
       where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at),
       select: {bp.publisher_id, bp.book_id}
     )
