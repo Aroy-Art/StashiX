@@ -1,5 +1,6 @@
 defmodule Stashix.Media.ImageResizer do
   @quality 75
+  @max_width 2000
 
   @sizes %{sx: 80, s: 150, m: 300, l: 450, lg: 600, xl: 900}
 
@@ -7,10 +8,23 @@ defmodule Stashix.Media.ImageResizer do
 
   def size_width(size) when is_atom(size), do: Map.get(@sizes, size)
 
+  # Resize to a predefined named size and cache the result to disk.
   def resize(source_path, size, format \\ :jpeg) when is_atom(size) do
     case Map.get(@sizes, size) do
       nil -> {:error, :invalid_size}
       width -> do_resize_cached(source_path, width, size, format)
+    end
+  end
+
+  # Resize to an arbitrary pixel width without saving to disk. Returns binary.
+  def resize_transient(source_path, width, format \\ :jpeg)
+      when is_integer(width) and width > 0 do
+    width = min(width, @max_width)
+    ext = if format == :webp, do: "webp", else: "jpg"
+
+    with {:ok, image} <- Image.thumbnail(source_path, "#{width}x9999"),
+         {:ok, binary} <- Image.to_binary(image, suffix: ".#{ext}", quality: @quality) do
+      {:ok, binary}
     end
   end
 
@@ -25,14 +39,10 @@ defmodule Stashix.Media.ImageResizer do
     if File.exists?(cached_path) do
       {:ok, cached_path}
     else
-      do_resize(source_path, width, cached_path)
-    end
-  end
-
-  defp do_resize(source_path, width, dest_path) do
-    with {:ok, resized} <- Image.thumbnail(source_path, "#{width}x9999"),
-         {:ok, _} <- Image.write(resized, dest_path, quality: @quality) do
-      {:ok, dest_path}
+      with {:ok, image} <- Image.thumbnail(source_path, "#{width}x9999"),
+           {:ok, _} <- Image.write(image, cached_path, quality: @quality) do
+        {:ok, cached_path}
+      end
     end
   end
 

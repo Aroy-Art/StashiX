@@ -139,7 +139,7 @@ defmodule StashixWeb.BookController do
 
       cover ->
         if File.exists?(cover.path) do
-          serve_cover(conn, cover.path, params["s"])
+          serve_cover(conn, cover.path, params)
         else
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end

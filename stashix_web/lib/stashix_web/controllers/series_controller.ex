@@ -65,7 +65,7 @@ defmodule StashixWeb.SeriesController do
 
       path ->
         if File.exists?(path) do
-          serve_cover(conn, path, params["s"])
+          serve_cover(conn, path, params)
         else
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
