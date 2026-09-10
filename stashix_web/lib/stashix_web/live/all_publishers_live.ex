@@ -83,7 +83,7 @@ defmodule StashixWeb.AllPublishersLive do
                   <%= for book_id <- cover_ids do %>
                     <div class="flex-1 relative min-w-0">
                       <img
-                        src={~p"/api/books/#{book_id}/cover"}
+                        src={~p"/api/books/#{book_id}/cover?s=sx"}
                         alt=""
                         class="absolute inset-0 w-full h-full object-cover object-top"
                       />
