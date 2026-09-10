@@ -23,11 +23,12 @@ jobs:
         uses: https://code.forgejo.org/actions/checkout@v7
 
       - name: install elixir
-        shell: sh
+        shell: bash
         run: |
-          sudo add-apt-repository ppa:rabbitmq/rabbitmq-erlang
-          sudo apt-get update -q
-          sudo apt-get install -y elixir erlang
+          curl -fsSO https://elixir-lang.org/install.sh
+          sh install.sh elixir@1.20 erlang@27
+          echo "$(ls -d "$HOME"/.elixir-install/installs/otp/*/bin | tail -1)" >> "$GITHUB_PATH"
+          echo "$(ls -d "$HOME"/.elixir-install/installs/elixir/*/bin | tail -1)" >> "$GITHUB_PATH"
 
       - name: install hex and rebar
         shell: sh
