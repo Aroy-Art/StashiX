@@ -19,6 +19,8 @@ defmodule StashixWeb.Router do
 
   pipeline :media do
     plug CORSPlug
+    plug :fetch_session
+    plug StashixWeb.Plugs.MediaAuth
   end
 
   pipeline :auth do
