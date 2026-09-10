@@ -35,20 +35,18 @@ jobs:
           echo "$installs_dir/otp/$OTP_VERSION/bin" >> "$GITHUB_PATH"
           echo "$installs_dir/elixir/$ELIXIR_VERSION-otp-$otp_major/bin" >> "$GITHUB_PATH"
 
-      - name: install hex and rebar
-        shell: sh
-        run: mix local.hex --force && mix local.rebar --force
-
       - name: cache deps
         uses: https://code.forgejo.org/actions/cache@v6
         with:
           path: |
             stashix_web/deps
             stashix_web/_build
-            ~/.hex
-            ~/.mix
           key: ${{ runner.os }}-mix-${{ hashFiles('stashix_web/mix.lock') }}
           restore-keys: ${{ runner.os }}-mix-
+
+      - name: install hex and rebar
+        shell: sh
+        run: mix local.hex --force && mix local.rebar --force
 
       - name: install dependencies
         shell: sh
