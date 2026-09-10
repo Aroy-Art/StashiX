@@ -17,6 +17,9 @@ on:
 jobs:
   format:
     runs-on: act-ubuntu-24.04-amd64
+    env:
+      ELIXIR_VERSION: "1.20.4"
+      OTP_VERSION: "28.4"
 
     steps:
       - name: checkout code
@@ -26,9 +29,11 @@ jobs:
         shell: bash
         run: |
           curl -fsSO https://elixir-lang.org/install.sh
-          sh install.sh elixir@1.20 erlang@27
-          echo "$(ls -d "$HOME"/.elixir-install/installs/otp/*/bin | tail -1)" >> "$GITHUB_PATH"
-          echo "$(ls -d "$HOME"/.elixir-install/installs/elixir/*/bin | tail -1)" >> "$GITHUB_PATH"
+          sh install.sh elixir@$ELIXIR_VERSION otp@$OTP_VERSION
+          installs_dir="$HOME/.elixir-install/installs"
+          otp_major="${OTP_VERSION%%.*}"
+          echo "$installs_dir/otp/$OTP_VERSION/bin" >> "$GITHUB_PATH"
+          echo "$installs_dir/elixir/$ELIXIR_VERSION-otp-$otp_major/bin" >> "$GITHUB_PATH"
 
       - name: install hex and rebar
         shell: sh

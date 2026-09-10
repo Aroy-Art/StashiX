@@ -1,4 +1,23 @@
 {
     "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "dependencyDashboard": true
+    "dependencyDashboard": true,
+    "customManagers": [
+        {
+            "customType": "regex",
+            "fileMatch": ["^\\.forgejo/workflows/format\\.yaml$"],
+            "matchStrings": ["ELIXIR_VERSION: \"(?<currentValue>[\\d.]+)\""],
+            "depNameTemplate": "elixir-lang/elixir",
+            "datasourceTemplate": "github-releases",
+            "versioningTemplate": "semver"
+        },
+        {
+            "customType": "regex",
+            "fileMatch": ["^\\.forgejo/workflows/format\\.yaml$"],
+            "matchStrings": ["OTP_VERSION: \"(?<currentValue>[\\d.]+)\""],
+            "depNameTemplate": "erlang/otp",
+            "datasourceTemplate": "github-releases",
+            "extractVersionTemplate": "^OTP-(?<version>.*)$",
+            "versioningTemplate": "semver"
+        }
+    ]
 }
