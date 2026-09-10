@@ -25,11 +25,23 @@ jobs:
       - name: checkout code
         uses: https://code.forgejo.org/actions/checkout@v7
 
+      - name: cache elixir install
+        id: cache-elixir
+        uses: https://code.forgejo.org/actions/cache@v6
+        with:
+          path: ~/.elixir-install
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
+
       - name: install elixir
+        if: steps.cache-elixir.outputs.cache-hit != 'true'
         shell: bash
         run: |
           curl -fsSO https://elixir-lang.org/install.sh
           sh install.sh elixir@$ELIXIR_VERSION otp@$OTP_VERSION
+
+      - name: add elixir to path
+        shell: bash
+        run: |
           installs_dir="$HOME/.elixir-install/installs"
           otp_major="${OTP_VERSION%%.*}"
           echo "$installs_dir/otp/$OTP_VERSION/bin" >> "$GITHUB_PATH"
