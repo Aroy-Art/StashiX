@@ -20,10 +20,10 @@ defmodule Stashix.Media.ImageResizer do
   def resize_transient(source_path, width, format \\ :jpeg)
       when is_integer(width) and width > 0 do
     width = min(width, @max_width)
-    ext = if format == :webp, do: "webp", else: "jpg"
+    vips_suffix = if format == :webp, do: ".webp[Q=#{@quality}]", else: ".jpg[Q=#{@quality}]"
 
     with {:ok, image} <- Image.thumbnail(source_path, "#{width}x9999"),
-         {:ok, binary} <- Image.to_binary(image, suffix: ".#{ext}", quality: @quality) do
+         {:ok, binary} <- Vix.Vips.Image.write_to_buffer(image, vips_suffix) do
       {:ok, binary}
     end
   end
