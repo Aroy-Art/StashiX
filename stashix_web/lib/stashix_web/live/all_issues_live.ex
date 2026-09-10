@@ -117,7 +117,7 @@ defmodule StashixWeb.AllIssuesLive do
               href={~p"/book/#{book.id}"}
               title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
-              width={300}
+              size="m"
               subtitle={
                 cond do
                   book.series -> book.series.name

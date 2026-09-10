@@ -115,7 +115,7 @@ defmodule StashixWeb.AllBooksLive do
               href={~p"/book/#{book.id}"}
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
-              width={300}
+              size="m"
               subtitle={book.year && to_string(book.year)}
               progress={progress}
               page_count={book.page_count}

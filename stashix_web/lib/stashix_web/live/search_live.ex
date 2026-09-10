@@ -95,7 +95,7 @@ defmodule StashixWeb.SearchLive do
                   href={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={s.start_year && to_string(s.start_year)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
@@ -119,7 +119,7 @@ defmodule StashixWeb.SearchLive do
                       else: book.title
                   }
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={book.series && book.series.name}
                   badge={
                     cond do
@@ -145,7 +145,7 @@ defmodule StashixWeb.SearchLive do
                   href={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={book.year && to_string(book.year)}
                   page_count={book.page_count}
                   type={:book}

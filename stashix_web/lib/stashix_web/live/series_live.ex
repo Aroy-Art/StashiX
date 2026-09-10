@@ -289,7 +289,7 @@ defmodule StashixWeb.SeriesLive do
               <img
                 id={"series-cover-#{@series.id}"}
                 phx-hook="CoverImage"
-                src={~p"/api/books/#{@cover_book.id}/cover?w=384"}
+                src={~p"/api/books/#{@cover_book.id}/cover?s=l"}
                 alt={@series.name}
                 class="w-full h-full object-cover block"
               />
@@ -493,7 +493,7 @@ defmodule StashixWeb.SeriesLive do
               href={~p"/book/#{book.id}"}
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
-              width={300}
+              size="m"
               subtitle={book.year && to_string(book.year)}
               badge={
                 cond do

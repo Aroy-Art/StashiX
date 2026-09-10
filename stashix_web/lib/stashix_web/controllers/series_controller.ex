@@ -3,8 +3,9 @@ defmodule StashixWeb.SeriesController do
   use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
-  alias Stashix.Media.ImageResizer
   alias StashixWeb.Schemas
+
+  import StashixWeb.CoverHelper, only: [serve_cover: 3]
 
   operation :index,
     summary: "List series in library",
@@ -64,48 +65,11 @@ defmodule StashixWeb.SeriesController do
 
       path ->
         if File.exists?(path) do
-          serve_image(conn, path, params["w"])
+          serve_cover(conn, path, params["s"])
         else
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
     end
-  end
-
-  defp serve_image(conn, path, w) when is_binary(w) do
-    case Integer.parse(w) do
-      {width, _} when width > 0 -> serve_resized(conn, path, width)
-      _ -> serve_image(conn, path, nil)
-    end
-  end
-
-  defp serve_image(conn, path, _w) do
-    conn
-    |> put_resp_content_type(MIME.from_path(path))
-    |> put_resp_header("cache-control", "public, max-age=86400")
-    |> send_file(200, path)
-  end
-
-  defp serve_resized(conn, path, width) do
-    format = if webp_supported?(conn), do: :webp, else: :jpeg
-    content_type = if format == :webp, do: "image/webp", else: "image/jpeg"
-
-    case ImageResizer.resize(path, width, format) do
-      {:ok, resized_path} ->
-        conn
-        |> put_resp_content_type(content_type)
-        |> put_resp_header("cache-control", "public, max-age=86400")
-        |> put_resp_header("vary", "Accept")
-        |> send_file(200, resized_path)
-
-      {:error, _} ->
-        serve_image(conn, path, nil)
-    end
-  end
-
-  defp webp_supported?(conn) do
-    conn
-    |> get_req_header("accept")
-    |> Enum.any?(&String.contains?(&1, "image/webp"))
   end
 
   defp series_json(series) do

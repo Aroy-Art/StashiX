@@ -214,7 +214,7 @@ defmodule StashixWeb.BookLive do
               <img
                 id={"book-cover-#{@book.id}"}
                 phx-hook="CoverImage"
-                src={~p"/api/books/#{@book.id}/cover?w=384"}
+                src={~p"/api/books/#{@book.id}/cover?s=l"}
                 alt={@book.title}
                 class="w-full h-full object-cover block"
               />
@@ -425,7 +425,7 @@ defmodule StashixWeb.BookLive do
                 <img
                   id={"nav-prev-#{@prev_book.id}"}
                   phx-hook="CoverImage"
-                  src={~p"/api/books/#{@prev_book.id}/cover?w=120"}
+                  src={~p"/api/books/#{@prev_book.id}/cover?s=s"}
                   alt=""
                   class="w-full h-full object-contain block"
                   data-blurhash={@prev_book.blurhash}
@@ -471,7 +471,7 @@ defmodule StashixWeb.BookLive do
                 <img
                   id={"nav-next-#{@next_book.id}"}
                   phx-hook="CoverImage"
-                  src={~p"/api/books/#{@next_book.id}/cover?w=120"}
+                  src={~p"/api/books/#{@next_book.id}/cover?s=s"}
                   alt=""
                   class="w-full h-full object-contain block"
                   data-blurhash={@next_book.blurhash}

@@ -708,7 +708,7 @@ defmodule StashixWeb.CoreComponents do
   attr :href, :string, required: true
   attr :title, :string, required: true
   attr :cover_url, :string, default: nil
-  attr :width, :integer, default: nil
+  attr :size, :string, default: nil
   attr :subtitle, :string, default: nil
   attr :badge, :string, default: nil
   attr :progress, :float, default: nil
@@ -722,8 +722,8 @@ defmodule StashixWeb.CoreComponents do
       assigns
       |> assign(
         :img_src,
-        if(assigns.cover_url && assigns.width,
-          do: "#{assigns.cover_url}?w=#{assigns.width}",
+        if(assigns.cover_url && assigns.size,
+          do: "#{assigns.cover_url}?s=#{assigns.size}",
           else: assigns.cover_url
         )
       )

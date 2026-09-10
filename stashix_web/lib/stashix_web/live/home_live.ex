@@ -181,7 +181,7 @@ defmodule StashixWeb.HomeLive do
               style="width:104px;height:156px;background:#1a1040"
             >
               <img
-                src={~p"/api/books/#{spotlight_item.id}/cover?w=300"}
+                src={~p"/api/books/#{spotlight_item.id}/cover?s=m"}
                 class="w-full h-full object-cover"
                 onerror="this.style.display='none'"
               />
@@ -230,7 +230,7 @@ defmodule StashixWeb.HomeLive do
               style="width:104px;height:156px;background:#1a1040"
             >
               <img
-                src={~p"/api/series/#{spotlight_item.id}/cover?w=300"}
+                src={~p"/api/series/#{spotlight_item.id}/cover?s=m"}
                 class="w-full h-full object-cover"
                 onerror="this.style.display='none'"
               />
@@ -299,7 +299,7 @@ defmodule StashixWeb.HomeLive do
             style="width:104px;height:156px;background:#1a1040"
           >
             <img
-              src={~p"/api/books/#{hero.id}/cover?w=300"}
+              src={~p"/api/books/#{hero.id}/cover?s=m"}
               class="w-full h-full object-cover"
               onerror="this.style.display='none'"
             />
@@ -409,7 +409,7 @@ defmodule StashixWeb.HomeLive do
                   >
                     <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
                       <img
-                        src={~p"/api/books/#{book.id}/cover?w=120"}
+                        src={~p"/api/books/#{book.id}/cover?s=s"}
                         class="w-full h-full object-cover"
                         onerror="this.style.display='none'"
                       />
@@ -457,7 +457,7 @@ defmodule StashixWeb.HomeLive do
                   >
                     <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
                       <img
-                        src={~p"/api/books/#{book.id}/cover?w=120"}
+                        src={~p"/api/books/#{book.id}/cover?s=s"}
                         class="w-full h-full object-cover"
                         onerror="this.style.display='none'"
                       />
@@ -510,7 +510,7 @@ defmodule StashixWeb.HomeLive do
                       <a href={~p"/book/#{book.id}"} class="absolute inset-0 rounded-lg z-10"></a>
                       <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
-                          src={~p"/api/books/#{book.id}/cover?w=160"}
+                          src={~p"/api/books/#{book.id}/cover?s=s"}
                           class="w-full h-full object-cover"
                           onerror="this.style.display='none'"
                         />
@@ -546,7 +546,7 @@ defmodule StashixWeb.HomeLive do
                       <a href={~p"/series/#{s.id}"} class="absolute inset-0 rounded-lg z-10"></a>
                       <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
-                          src={~p"/api/series/#{s.id}/cover?w=160"}
+                          src={~p"/api/series/#{s.id}/cover?s=s"}
                           class="w-full h-full object-cover"
                           onerror="this.style.display='none'"
                         />
@@ -591,7 +591,7 @@ defmodule StashixWeb.HomeLive do
                   <%= for book <- Enum.take(covers, 5) do %>
                     <div class="flex-1 min-w-0">
                       <img
-                        src={~p"/api/books/#{book.id}/cover?w=80"}
+                        src={~p"/api/books/#{book.id}/cover?s=sx"}
                         class="w-full h-full object-cover"
                         onerror="this.style.display='none'"
                       />
@@ -715,7 +715,7 @@ defmodule StashixWeb.HomeLive do
                 href={~p"/book/#{book.id}"}
                 title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
-                width={288}
+                size="m"
                 subtitle={book.year && to_string(book.year)}
                 page_count={book.page_count}
                 type={:book}
@@ -754,7 +754,7 @@ defmodule StashixWeb.HomeLive do
                 href={~p"/series/#{s.id}"}
                 title={s.name}
                 cover_url={~p"/api/series/#{s.id}/cover"}
-                width={288}
+                size="m"
                 subtitle={series_date_range(s)}
                 badge={"#{s.issue_count} issues"}
                 type={:series}
@@ -793,7 +793,7 @@ defmodule StashixWeb.HomeLive do
                 href={~p"/book/#{book.id}"}
                 title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
-                width={288}
+                size="m"
                 subtitle={book.year && to_string(book.year)}
                 badge={
                   cond do

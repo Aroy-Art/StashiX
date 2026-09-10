@@ -288,7 +288,7 @@ defmodule StashixWeb.LibraryLive do
                   href={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
-                  width={288}
+                  size="m"
                   subtitle={series_date_range(s)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
@@ -320,7 +320,7 @@ defmodule StashixWeb.LibraryLive do
                   href={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={288}
+                  size="m"
                   subtitle={book.year && to_string(book.year)}
                   page_count={book.page_count}
                   type={:book}
@@ -356,7 +356,7 @@ defmodule StashixWeb.LibraryLive do
                       else: book.title
                   }
                   cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={288}
+                  size="m"
                   subtitle={if book.series, do: book.series.name}
                   badge={
                     cond do
@@ -398,7 +398,7 @@ defmodule StashixWeb.LibraryLive do
                   href={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={series_date_range(s)}
                   badge={"#{s.issue_count} issues"}
                   type={:series}
@@ -420,7 +420,7 @@ defmodule StashixWeb.LibraryLive do
                   href={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={book.year && to_string(book.year)}
                   progress={progress}
                   page_count={book.page_count}
@@ -447,7 +447,7 @@ defmodule StashixWeb.LibraryLive do
                       else: book.title
                   }
                   cover_url={~p"/api/books/#{book.id}/cover"}
-                  width={300}
+                  size="m"
                   subtitle={if book.series, do: book.series.name, else: book.year && to_string(book.year)}
                   progress={progress}
                   type={:book}

@@ -107,7 +107,7 @@ defmodule StashixWeb.AllSeriesLive do
               href={~p"/series/#{s.id}"}
               title={s.name}
               cover_url={~p"/api/series/#{s.id}/cover"}
-              width={300}
+              size="m"
               subtitle={series_date_range(s)}
               badge={"#{s.issue_count} issues"}
               type={:series}
