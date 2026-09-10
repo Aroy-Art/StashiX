@@ -2,6 +2,7 @@ name: Test
 
 on:
   push:
+    branches: [main]
     paths:
       - "stashix_web/lib/**"
       - "stashix_web/priv/**"
