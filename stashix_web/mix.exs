@@ -41,7 +41,7 @@ defmodule Stashix.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.0"},
       {:floki, "~> 0.38"},
-      {:phoenix_live_dashboard, "~> 0.8.3"},
+      {:phoenix_live_dashboard, "~> 0.9.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
       {:lucide, github: "lucide-icons/lucide", tag: "0.460.0", sparse: "icons", app: false, compile: false, depth: 1},
