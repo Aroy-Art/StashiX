@@ -221,14 +221,25 @@ defmodule StashixWeb.BookLive do
       <div class="overflow-hidden">
         <%!-- Cover — floated left --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3]">
+          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative">
             <%= if @book.cover do %>
+              <%= if @book.cover.blurhash do %>
+                <canvas
+                  id={"bh-book-cover-#{@book.id}"}
+                  width="32"
+                  height="48"
+                  class="absolute inset-0 w-full h-full"
+                  style="filter:blur(6px);transform:scale(1.05)"
+                ></canvas>
+              <% end %>
               <img
                 id={"book-cover-#{@book.id}"}
                 phx-hook="CoverImage"
                 src={~p"/api/books/#{@book.id}/cover?s=l"}
                 alt={@book.title}
                 class="w-full h-full object-cover block"
+                data-blurhash={@book.cover.blurhash}
+                data-canvas-id={"bh-book-cover-#{@book.id}"}
               />
             <% else %>
               <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">

@@ -289,14 +289,25 @@ defmodule StashixWeb.SeriesLive do
       <div class="overflow-hidden">
         <%!-- Cover — floated left; inline style bypasses Tailwind purge; aspect-ratio gives immediate height --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3]">
+          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative">
             <%= if @cover_book && @cover_book.cover do %>
+              <%= if @cover_book.cover.blurhash do %>
+                <canvas
+                  id={"bh-series-cover-#{@series.id}"}
+                  width="32"
+                  height="48"
+                  class="absolute inset-0 w-full h-full"
+                  style="filter:blur(6px);transform:scale(1.05)"
+                ></canvas>
+              <% end %>
               <img
                 id={"series-cover-#{@series.id}"}
                 phx-hook="CoverImage"
                 src={~p"/api/books/#{@cover_book.id}/cover?s=l"}
                 alt={@series.name}
                 class="w-full h-full object-cover block"
+                data-blurhash={@cover_book.cover.blurhash}
+                data-canvas-id={"bh-series-cover-#{@series.id}"}
               />
             <% else %>
               <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
