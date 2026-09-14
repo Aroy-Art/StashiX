@@ -28,7 +28,7 @@ defmodule Stashix.Library.Book do
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
     belongs_to :imprint, Stashix.Library.Imprint
-    many_to_many :publishers, Stashix.Library.Publisher, join_through: "book_publishers"
+    many_to_many :publishers, Stashix.Library.Publisher, join_through: "book_publishers", on_replace: :delete
     has_one :cover, Stashix.Library.BookCover
     has_many :reading_progress, Stashix.Library.ReadingProgress
     has_many :files, Stashix.Library.BookFile
