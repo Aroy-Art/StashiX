@@ -41,6 +41,138 @@ import "./ui/components/tooltip.js";
 
 let Hooks = { SaladUI: SaladUIHook }
 
+Hooks.PublisherSearch = {
+  mounted() {
+    this.publishers = JSON.parse(this.el.dataset.publishers || "[]")
+    this.selectedIds = new Set(JSON.parse(this.el.dataset.selectedIds || "[]"))
+    this.inputName = this.el.dataset.inputName
+    this.dropdownEl = null
+    this.badgesEl = this.el.querySelector(".pub-badges")
+    this.input = this.el.querySelector("input[type=text]")
+
+    this.renderBadges()
+    this.syncHiddenInputs()
+
+    this.input.addEventListener("input", () => {
+      const q = this.input.value.trim()
+      if (q === "") { this.closeDropdown(); return }
+      this.renderDropdown(q)
+    })
+    this.input.addEventListener("focus", () => {
+      if (this.input.value.trim()) this.renderDropdown(this.input.value.trim())
+    })
+    this.input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        const first = this.dropdownEl && this.dropdownEl.querySelector("button[data-pub-id]")
+        if (first) first.click()
+      } else if (e.key === "Escape") {
+        this.closeDropdown()
+      }
+    })
+    this.closeOutside = (e) => {
+      if (!this.el.contains(e.target)) this.closeDropdown()
+    }
+    document.addEventListener("click", this.closeOutside)
+  },
+
+  updated() {
+    // LiveView may patch data attributes — restore input value but keep local state
+    const val = this.input.value
+    if (this.input.value !== val) this.input.value = val
+  },
+
+  destroyed() {
+    document.removeEventListener("click", this.closeOutside)
+    this.closeDropdown()
+  },
+
+  selectPublisher(id) {
+    this.selectedIds.add(id)
+    this.input.value = ""
+    this.closeDropdown()
+    this.renderBadges()
+    this.syncHiddenInputs()
+  },
+
+  removePublisher(id) {
+    this.selectedIds.delete(id)
+    this.renderBadges()
+    this.syncHiddenInputs()
+    const q = this.input.value.trim()
+    if (q) this.renderDropdown(q)
+  },
+
+  renderBadges() {
+    if (!this.badgesEl) return
+    const pub = (id) => this.publishers.find(p => p.id === id)
+    this.badgesEl.innerHTML = [...this.selectedIds].map(id => {
+      const p = pub(id)
+      if (!p) return ""
+      return `<span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-violet-900/50 border border-violet-700/50 text-violet-300 text-xs">
+        ${p.name}
+        <button type="button" data-remove-id="${id}" class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </span>`
+    }).join("")
+    this.badgesEl.querySelectorAll("button[data-remove-id]").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        this.removePublisher(btn.dataset.removeId)
+      })
+    })
+    this.badgesEl.hidden = this.selectedIds.size === 0
+  },
+
+  syncHiddenInputs() {
+    this.el.querySelectorAll("input[type=hidden]").forEach(el => el.remove())
+    // Always emit at least one empty value so the key is present in form params
+    const ids = this.selectedIds.size > 0 ? [...this.selectedIds] : [""]
+    ids.forEach(val => {
+      const inp = document.createElement("input")
+      inp.type = "hidden"
+      inp.name = this.inputName
+      inp.value = val
+      this.el.appendChild(inp)
+    })
+  },
+
+  renderDropdown(q) {
+    const lower = q.toLowerCase()
+    const results = this.publishers
+      .filter(p => !this.selectedIds.has(p.id) && p.name.toLowerCase().includes(lower))
+      .slice(0, 8)
+
+    if (!this.dropdownEl) {
+      this.dropdownEl = document.createElement("div")
+      this.dropdownEl.className =
+        "absolute z-30 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
+      this.el.appendChild(this.dropdownEl)
+    }
+
+    if (results.length === 0) {
+      this.dropdownEl.innerHTML =
+        `<div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>`
+    } else {
+      this.dropdownEl.innerHTML = results.map((p, i) =>
+        `<button type="button" data-pub-id="${p.id}" class="w-full text-left px-3 py-2 text-sm transition-colors ${i === 0 ? "bg-gray-700/60 text-white hover:bg-gray-700" : "text-gray-300 hover:bg-gray-700 hover:text-white"}">${p.name}</button>`
+      ).join("")
+      this.dropdownEl.querySelectorAll("button[data-pub-id]").forEach(btn => {
+        btn.addEventListener("mousedown", (e) => e.preventDefault())
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation()
+          this.selectPublisher(btn.dataset.pubId)
+        })
+      })
+    }
+  },
+
+  closeDropdown() {
+    if (this.dropdownEl) { this.dropdownEl.remove(); this.dropdownEl = null }
+  }
+}
+
 Hooks.SearchNav = {
   mounted() {
     this.activeIndex = -1

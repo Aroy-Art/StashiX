@@ -418,7 +418,8 @@ defmodule Stashix.Library do
 
     changeset =
       if publisher_ids do
-        publishers = Repo.all(from p in Publisher, where: p.id in ^publisher_ids)
+        ids = Enum.reject(publisher_ids, &(&1 == ""))
+        publishers = Repo.all(from p in Publisher, where: p.id in ^ids)
         Ecto.Changeset.put_assoc(changeset, :publishers, publishers)
       else
         changeset
@@ -877,7 +878,8 @@ defmodule Stashix.Library do
 
     changeset =
       if publisher_ids do
-        publishers = Repo.all(from p in Publisher, where: p.id in ^publisher_ids)
+        ids = Enum.reject(publisher_ids, &(&1 == ""))
+        publishers = Repo.all(from p in Publisher, where: p.id in ^ids)
         Ecto.Changeset.put_assoc(changeset, :publishers, publishers)
       else
         changeset
