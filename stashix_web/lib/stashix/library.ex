@@ -824,18 +824,18 @@ defmodule Stashix.Library do
     from(bp in "book_publishers",
       join: b in Book,
       on: b.id == bp.book_id,
-      join: _c in BookCover,
-      on: _c.book_id == b.id,
+      join: c in BookCover,
+      on: c.book_id == b.id,
       where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at),
-      select: {bp.publisher_id, bp.book_id}
+      select: {bp.publisher_id, bp.book_id, c.blurhash}
     )
     |> Repo.all()
     |> Enum.group_by(
-      fn {pub_id, _} -> Map.get(id_to_master, Ecto.UUID.cast!(pub_id)) end,
-      fn {_, book_id} -> Ecto.UUID.cast!(book_id) end
+      fn {pub_id, _, _} -> Map.get(id_to_master, Ecto.UUID.cast!(pub_id)) end,
+      fn {_, book_id, blurhash} -> {Ecto.UUID.cast!(book_id), blurhash} end
     )
-    |> Enum.into(%{}, fn {master_id, book_ids} ->
-      {master_id, book_ids |> Enum.uniq() |> Enum.shuffle() |> Enum.take(5)}
+    |> Enum.into(%{}, fn {master_id, covers} ->
+      {master_id, covers |> Enum.uniq_by(&elem(&1, 0)) |> Enum.shuffle() |> Enum.take(5)}
     end)
   end
 

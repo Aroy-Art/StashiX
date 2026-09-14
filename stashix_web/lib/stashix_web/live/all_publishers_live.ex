@@ -68,23 +68,24 @@ defmodule StashixWeb.AllPublishersLive do
           <%= for pub <- @publishers do %>
             <% stats =
               Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
-            <% cover_ids = Map.get(@covers_map, pub.id, []) %>
+            <% covers = Map.get(@covers_map, pub.id, []) %>
             <.link
               navigate={~p"/publisher/#{pub.id}"}
               class="group block rounded-xl border border-gray-800 bg-gray-900 hover:border-violet-700/60 hover:bg-gray-800/60 overflow-hidden transition-all"
             >
               <%!-- Cover strip --%>
               <div class="flex h-24 bg-gray-950 overflow-hidden">
-                <%= if cover_ids == [] do %>
+                <%= if covers == [] do %>
                   <div class="flex-1 flex items-center justify-center">
                     <.icon name="lucide-building-2" class="w-8 h-8 text-gray-700" />
                   </div>
                 <% else %>
-                  <%= for book_id <- cover_ids do %>
+                  <%= for {book_id, blurhash} <- covers do %>
                     <div class="flex-1 relative min-w-0">
-                      <img
+                      <.blurhash_image
+                        id={"pub-cover-#{book_id}"}
                         src={~p"/api/books/#{book_id}/cover?s=sx"}
-                        alt=""
+                        blurhash={blurhash}
                         class="absolute inset-0 w-full h-full object-cover object-top"
                       />
                     </div>
