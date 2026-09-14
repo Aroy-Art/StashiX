@@ -997,6 +997,22 @@ defmodule Stashix.Library do
     )
   end
 
+  def total_size_for_series(series_id) do
+    result =
+      from(bf in BookFile,
+        join: b in Book,
+        on: b.id == bf.book_id,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
+      )
+      |> Repo.aggregate(:sum, :file_size)
+
+    case result do
+      nil -> 0
+      %Decimal{} = d -> Decimal.to_integer(d)
+      n -> n
+    end
+  end
+
   def total_size(library_id) do
     result =
       from(bf in BookFile,
@@ -1382,9 +1398,11 @@ defmodule Stashix.Library do
   end
 
   def list_all_deleted_books do
+    files_query = from(bf in BookFile, order_by: [asc: bf.format])
+
     from(b in Book,
       where: not is_nil(b.deleted_at),
-      preload: [:series, :cover, :library],
+      preload: [:series, :cover, :library, files: ^files_query],
       order_by: [desc: b.deleted_at]
     )
     |> Repo.all()

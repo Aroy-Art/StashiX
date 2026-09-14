@@ -12,7 +12,7 @@ defmodule StashixWeb.SeriesLive do
     library = Library.get_library!(series.library_id)
 
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
-    total_size = Enum.sum(Enum.map(series.books, & &1.file_size))
+    total_size = Library.total_size_for_series(series.id)
     sort = "issue_asc"
     books = sort_books(series.books, sort)
     cover_book = List.first(books)
@@ -128,7 +128,7 @@ defmodule StashixWeb.SeriesLive do
     book_ids = Enum.map(series.books, & &1.id)
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
-    total_size = Enum.sum(Enum.map(series.books, & &1.file_size))
+    total_size = Library.total_size_for_series(series.id)
 
     {:noreply,
      assign(socket,

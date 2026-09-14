@@ -1097,9 +1097,9 @@ defmodule StashixWeb.AdminLive do
                         <td class="px-4 py-3 text-gray-400">{b.library.name}</td>
                         <td
                           class="px-4 py-3 text-gray-600 text-xs font-mono truncate max-w-xs"
-                          title={b.path}
+                          title={b.files |> List.first() |> then(&(&1 && &1.path))}
                         >
-                          {b.path}
+                          {b.files |> List.first() |> then(&(&1 && &1.path))}
                         </td>
                         <td class="px-4 py-3 text-gray-500 text-xs">
                           {Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}
