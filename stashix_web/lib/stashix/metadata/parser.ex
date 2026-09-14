@@ -220,7 +220,6 @@ defmodule Stashix.Metadata.Parser do
 
           %{}
           |> maybe_put(:title, Map.get(fields, "Title"))
-          |> maybe_put(:publisher, Map.get(fields, "Creator"))
           |> maybe_put(:page_count, parse_int(Map.get(fields, "Pages")))
           |> maybe_put(:year, year)
 

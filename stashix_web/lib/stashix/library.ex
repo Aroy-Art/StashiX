@@ -47,7 +47,7 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at),
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         preload: [:cover, :series],
         limit: ^limit,
         offset: ^offset
@@ -96,7 +96,9 @@ defmodule Stashix.Library do
       from(b in Book,
         left_join: c in BookCover,
         on: c.book_id == b.id,
-        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
+        where:
+          b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number) and
+            is_nil(b.primary_book_id),
         order_by: [asc: b.issue_number],
         select: %{
           id: b.id,
@@ -149,7 +151,12 @@ defmodule Stashix.Library do
   def get_series!(id), do: Repo.get!(Series, id)
 
   def get_series_with_books(id) do
-    books_query = from(b in Book, where: is_nil(b.deleted_at), order_by: [asc: b.issue_number])
+    books_query =
+      from(b in Book,
+        where: is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        order_by: [asc: b.issue_number]
+      )
+
     Repo.get!(Series, id) |> Repo.preload([:publishers, books: {books_query, [:cover]}])
   end
 
@@ -188,7 +195,7 @@ defmodule Stashix.Library do
       from(rp in ReadingProgress,
         where: rp.user_id == ^user_id and rp.current_page > 0,
         join: b in Book,
-        on: b.id == rp.book_id and is_nil(b.deleted_at),
+        on: b.id == rp.book_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         where: b.page_count == 0 or rp.current_page < b.page_count - 1,
         order_by: [desc: rp.updated_at],
         limit: ^limit,
@@ -240,7 +247,7 @@ defmodule Stashix.Library do
       max_issues = Map.new(valid)
 
       from(b in Book,
-        where: b.series_id in ^series_ids and is_nil(b.deleted_at),
+        where: b.series_id in ^series_ids and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         left_join: rp in ReadingProgress,
         on: rp.book_id == b.id and rp.user_id == ^user_id,
         where: is_nil(rp.id) or rp.current_page == 0,
@@ -264,7 +271,7 @@ defmodule Stashix.Library do
     from(b in Book,
       where:
         fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-          is_nil(b.deleted_at),
+          is_nil(b.deleted_at) and is_nil(b.primary_book_id),
       order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
       preload: [:cover, :series],
       limit: ^limit,
@@ -280,7 +287,7 @@ defmodule Stashix.Library do
       from(b in Book,
         where:
           fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-            is_nil(b.deleted_at),
+            is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
         preload: [:cover, :series],
         limit: ^limit
@@ -339,7 +346,7 @@ defmodule Stashix.Library do
       UPDATE series
       SET issue_count = (
         SELECT COUNT(*) FROM books
-        WHERE books.series_id = series.id AND books.deleted_at IS NULL
+        WHERE books.series_id = series.id AND books.deleted_at IS NULL AND books.primary_book_id IS NULL
       )
       WHERE series.library_id = $1
       """,
@@ -501,7 +508,9 @@ defmodule Stashix.Library do
       from b in Book,
         join: bp in "book_publishers",
         on: bp.book_id == b.id,
-        where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
+        where:
+          bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type and
+            is_nil(b.primary_book_id),
         distinct: true,
         preload: [:cover, :series],
         limit: ^limit,
@@ -803,6 +812,30 @@ defmodule Stashix.Library do
     Repo.get_by(Book, file_hash: hash)
   end
 
+  @supported_extensions ~w(.cbz .cbr .cb7 .epub .pdf)
+
+  def get_book_by_stem(dir, stem, exclude_path) do
+    candidates =
+      Enum.map(@supported_extensions, &Path.join(dir, stem <> &1))
+      |> List.delete(exclude_path)
+
+    from(b in Book,
+      where: b.path in ^candidates and is_nil(b.deleted_at),
+      limit: 1
+    )
+    |> Repo.one()
+  end
+
+  def get_book_editions(book) do
+    primary_id = book.primary_book_id || book.id
+
+    from(b in Book,
+      where: (b.id == ^primary_id or b.primary_book_id == ^primary_id) and is_nil(b.deleted_at),
+      order_by: [asc: b.format]
+    )
+    |> Repo.all()
+  end
+
   def create_or_update_cover(book_id, path, blurhash \\ nil) do
     attrs = %{book_id: book_id, path: path, blurhash: blurhash}
 
@@ -878,7 +911,9 @@ defmodule Stashix.Library do
   def count_books(library_id) do
     Repo.aggregate(
       from(b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
+        where:
+          b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone" and
+            is_nil(b.primary_book_id)
       ),
       :count,
       :id
@@ -896,7 +931,9 @@ defmodule Stashix.Library do
   def count_issues(library_id) do
     Repo.aggregate(
       from(b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
+        where:
+          b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue" and
+            is_nil(b.primary_book_id)
       ),
       :count,
       :id
@@ -921,7 +958,7 @@ defmodule Stashix.Library do
   def recent_books(library_id, limit \\ 10, type \\ nil) do
     query =
       from b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at),
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         order_by: [desc: b.inserted_at],
         limit: ^limit,
         preload: [:cover]
@@ -948,7 +985,9 @@ defmodule Stashix.Library do
 
   def recent_issues(library_id, limit \\ 10) do
     from(b in Book,
-      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue",
+      where:
+        b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue" and
+          is_nil(b.primary_book_id),
       order_by: [desc: b.inserted_at],
       limit: ^limit,
       preload: [:cover]
@@ -1002,7 +1041,7 @@ defmodule Stashix.Library do
       from b in Book,
         left_join: s in assoc(b, :series),
         left_join: c in assoc(b, :cover),
-        where: is_nil(b.deleted_at) and b.type == "issue",
+        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.primary_book_id),
         limit: ^limit,
         offset: ^offset,
         preload: [series: s, cover: c]
@@ -1146,7 +1185,7 @@ defmodule Stashix.Library do
 
     issues_query =
       from b in Book,
-        where: is_nil(b.deleted_at) and b.type == "issue",
+        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.primary_book_id),
         order_by: [asc_nulls_last: b.issue_number, asc: b.title]
 
     Repo.all(query) |> Repo.preload(books: {issues_query, [:cover]})
@@ -1173,7 +1212,9 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id),
+        where:
+          is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id) and
+            is_nil(b.primary_book_id),
         order_by: [asc: b.title],
         preload: [:cover]
 
@@ -1190,7 +1231,7 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where: is_nil(b.deleted_at),
+        where: is_nil(b.deleted_at) and is_nil(b.primary_book_id),
         preload: [:cover, :series],
         limit: ^limit,
         offset: ^offset
@@ -1217,7 +1258,7 @@ defmodule Stashix.Library do
     type = Keyword.get(opts, :type)
     library_id = Keyword.get(opts, :library_id)
 
-    query = from b in Book, where: is_nil(b.deleted_at)
+    query = from b in Book, where: is_nil(b.deleted_at) and is_nil(b.primary_book_id)
     query = if type, do: where(query, [b], b.type == ^type), else: query
     query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 

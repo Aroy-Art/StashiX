@@ -305,6 +305,11 @@ defmodule Stashix.Scanner do
       |> String.trim_leading(".")
       |> String.to_atom()
 
+    stem = Path.basename(file_path, Path.extname(file_path))
+    dir = Path.dirname(file_path)
+    sibling = Library.get_book_by_stem(dir, stem, file_path)
+    primary_id = sibling && (sibling.primary_book_id || sibling.id)
+
     attrs = %{
       library_id: library.id,
       series_id: series && series.id,
@@ -319,6 +324,7 @@ defmodule Stashix.Scanner do
       language: Map.get(metadata, :language, "en"),
       summary: Map.get(metadata, :summary),
       source_format: Map.get(parsed, :source_format),
+      primary_book_id: primary_id,
       file_hash: file_hash,
       file_size: file_size,
       last_modified: last_modified
@@ -353,6 +359,16 @@ defmodule Stashix.Scanner do
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
     filename = Path.basename(file_path, Path.extname(file_path))
 
+    primary_id =
+      if is_nil(book.primary_book_id) do
+        stem = Path.basename(file_path, Path.extname(file_path))
+        dir = Path.dirname(file_path)
+        sibling = Library.get_book_by_stem(dir, stem, file_path)
+        sibling && (sibling.primary_book_id || sibling.id)
+      else
+        book.primary_book_id
+      end
+
     attrs = %{
       path: file_path,
       title: Map.get(metadata, :title) || filename,
@@ -365,6 +381,7 @@ defmodule Stashix.Scanner do
       language: Map.get(metadata, :language, book.language),
       summary: Map.get(metadata, :summary, book.summary),
       source_format: Map.get(parsed, :source_format),
+      primary_book_id: primary_id,
       file_hash: file_hash,
       file_size: file_size,
       last_modified: last_modified,

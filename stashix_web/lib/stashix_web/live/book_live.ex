@@ -15,6 +15,7 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
     {prev_book, next_book} = Library.get_adjacent_books(book)
+    editions = Library.get_book_editions(book)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
@@ -29,6 +30,7 @@ defmodule StashixWeb.BookLive do
        fully_read: fully_read,
        prev_book: prev_book,
        next_book: next_book,
+       editions: editions,
        read_menu_open: false,
        scanning: false,
        show_admin_menu: false,
@@ -114,6 +116,7 @@ defmodule StashixWeb.BookLive do
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
 
     {prev_book, next_book} = Library.get_adjacent_books(book)
+    editions = Library.get_book_editions(book)
 
     {:noreply,
      assign(socket,
@@ -123,7 +126,8 @@ defmodule StashixWeb.BookLive do
        fully_read: fully_read,
        page_title: book.title,
        prev_book: prev_book,
-       next_book: next_book
+       next_book: next_book,
+       editions: editions
      )}
   end
 
@@ -275,6 +279,27 @@ defmodule StashixWeb.BookLive do
             <% end %>
           </div>
 
+          <%!-- Format pills (only when multiple editions exist) --%>
+          <%= if length(@editions) > 1 do %>
+            <div class="flex items-center gap-1.5 mb-5">
+              <span class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-600 mr-1">Format</span>
+              <%= for ed <- @editions do %>
+                <%= if ed.id == @book.id do %>
+                  <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-violet-600 text-white">
+                    {String.upcase(to_string(ed.format))}
+                  </span>
+                <% else %>
+                  <a
+                    href={~p"/book/#{ed.id}"}
+                    class="px-2.5 py-1 text-xs font-semibold rounded-md border border-gray-700 text-gray-400 hover:border-violet-500 hover:text-violet-300 transition-colors"
+                  >
+                    {String.upcase(to_string(ed.format))}
+                  </a>
+                <% end %>
+              <% end %>
+            </div>
+          <% end %>
+
           <%!-- Progress bar --%>
           <%= if !@fully_read && @progress > 0 && @book.page_count > 0 do %>
             <.progress
@@ -372,7 +397,24 @@ defmodule StashixWeb.BookLive do
         <% end %>
         <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
           <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Format</p>
-          <p class="text-gray-300">{String.upcase(to_string(@book.format))}</p>
+          <%= if length(@editions) > 1 do %>
+            <p class="text-gray-300 flex flex-wrap gap-x-1">
+              <%= for ed <- @editions do %>
+                <a
+                  href={~p"/book/#{ed.id}"}
+                  class={
+                    if ed.id == @book.id,
+                      do: "text-violet-400 font-semibold",
+                      else: "text-gray-400 hover:text-violet-400 transition-colors"
+                  }
+                >
+                  {String.upcase(to_string(ed.format))}
+                </a>
+              <% end %>
+            </p>
+          <% else %>
+            <p class="text-gray-300">{String.upcase(to_string(@book.format))}</p>
+          <% end %>
         </div>
         <%= if fs = Formatters.format_file_size(@book.file_size) do %>
           <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">

@@ -35,9 +35,11 @@ defmodule Stashix.Library.Book do
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
     belongs_to :imprint, Stashix.Library.Imprint
+    belongs_to :primary_book, __MODULE__, type: :binary_id, foreign_key: :primary_book_id
     many_to_many :publishers, Stashix.Library.Publisher, join_through: "book_publishers"
     has_one :cover, Stashix.Library.BookCover
     has_many :reading_progress, Stashix.Library.ReadingProgress
+    has_many :alternate_formats, __MODULE__, foreign_key: :primary_book_id
 
     timestamps()
   end
@@ -67,6 +69,7 @@ defmodule Stashix.Library.Book do
       :upc,
       :community_rating,
       :source_format,
+      :primary_book_id,
       :library_id,
       :series_id,
       :imprint_id
