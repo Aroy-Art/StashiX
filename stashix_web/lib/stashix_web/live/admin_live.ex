@@ -1354,20 +1354,20 @@ defmodule StashixWeb.AdminLive do
                         <%= for p <- @publishers_with_aliases do %>
                           <tr class="group hover:bg-gray-800/40 transition-colors">
                             <td class="px-3 py-2">
-                              <a
-                                href={~p"/publisher/#{p.canonical_publisher_id}"}
+                              <.link
+                                navigate={~p"/publisher/#{p.canonical_publisher_id}"}
                                 class="text-gray-300 hover:text-violet-300 transition-colors"
                               >
                                 {p.canonical && p.canonical.name}
-                              </a>
+                              </.link>
                             </td>
                             <td class="px-3 py-2">
-                              <a
-                                href={~p"/publisher/#{p.canonical_publisher_id}"}
+                              <.link
+                                navigate={~p"/publisher/#{p.canonical_publisher_id}"}
                                 class="text-gray-400 hover:text-violet-300 transition-colors"
                               >
                                 {p.name}
-                              </a>
+                              </.link>
                             </td>
                             <td class="px-3 py-2 text-right">
                               <button
@@ -1477,12 +1477,12 @@ defmodule StashixWeb.AdminLive do
                       effectively_hidden = p.hidden || master_hidden %>
                       <tr class="group hover:bg-gray-800/40 transition-colors">
                         <td class="px-3 py-2">
-                          <a
-                            href={~p"/publisher/#{p.id}"}
+                          <.link
+                            navigate={~p"/publisher/#{p.id}"}
                             class={"hover:text-violet-300 transition-colors #{if effectively_hidden, do: "text-gray-600 line-through", else: "text-gray-300"}"}
                           >
                             {p.name}
-                          </a>
+                          </.link>
                         </td>
                         <td class="px-3 py-2">
                           <%= cond do %>

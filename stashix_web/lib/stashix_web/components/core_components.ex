@@ -705,7 +705,7 @@ defmodule StashixWeb.CoreComponents do
     - badge: overlaid bottom-left badge text (issue number, issue count)
     - type: :book | :series — controls fallback icon
   """
-  attr :href, :string, required: true
+  attr :navigate, :any, required: true
   attr :title, :string, required: true
   attr :cover_url, :string, default: nil
   attr :size, :string, default: nil
@@ -727,11 +727,11 @@ defmodule StashixWeb.CoreComponents do
           else: assigns.cover_url
         )
       )
-      |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.href)}")
+      |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.navigate)}")
 
     ~H"""
-    <a
-      href={@href}
+    <.link
+      navigate={@navigate}
       class={[
         "group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200",
         @class
@@ -807,7 +807,7 @@ defmodule StashixWeb.CoreComponents do
           <p class="text-xs text-gray-500 mt-0.5">{@subtitle}</p>
         <% end %>
       </div>
-    </a>
+    </.link>
     """
   end
 

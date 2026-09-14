@@ -92,7 +92,7 @@ defmodule StashixWeb.SearchLive do
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
               <%= for s <- @results.series do %>
                 <.media_card
-                  href={~p"/series/#{s.id}"}
+                  navigate={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   size="m"
@@ -112,7 +112,7 @@ defmodule StashixWeb.SearchLive do
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
               <%= for book <- @results.issues do %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={
                     if book.issue_number,
                       do: "##{book.issue_number} – #{book.title}",
@@ -142,7 +142,7 @@ defmodule StashixWeb.SearchLive do
             <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
               <%= for book <- @results.books do %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                   size="m"

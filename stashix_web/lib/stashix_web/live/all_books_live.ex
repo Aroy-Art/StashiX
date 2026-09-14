@@ -112,7 +112,7 @@ defmodule StashixWeb.AllBooksLive do
                 do: prog / (book.page_count - 1),
                 else: nil %>
             <.media_card
-              href={~p"/book/#{book.id}"}
+              navigate={~p"/book/#{book.id}"}
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"

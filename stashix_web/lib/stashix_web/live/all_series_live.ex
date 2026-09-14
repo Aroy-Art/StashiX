@@ -104,7 +104,7 @@ defmodule StashixWeb.AllSeriesLive do
         <.media_grid>
           <%= for s <- @series do %>
             <.media_card
-              href={~p"/series/#{s.id}"}
+              navigate={~p"/series/#{s.id}"}
               title={s.name}
               cover_url={~p"/api/series/#{s.id}/cover"}
               size="m"

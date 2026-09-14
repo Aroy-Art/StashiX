@@ -201,13 +201,13 @@ defmodule StashixWeb.LibraryLive do
           <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
         </button>
         <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
+          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <%= if @live_action != :show do %>
-            <a
-              href={~p"/library/#{@library.id}"}
+            <.link
+              navigate={~p"/library/#{@library.id}"}
               class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-            >{@library.name}</a>
+            >{@library.name}</.link>
             <span class="text-gray-700 flex-shrink-0">/</span>
             <span class="text-gray-300 truncate min-w-0">{section_label(@live_action)}</span>
           <% else %>
@@ -225,8 +225,8 @@ defmodule StashixWeb.LibraryLive do
         <%!-- Stat / nav tiles --%>
         <div class="flex flex-wrap gap-2">
           <%= if @series_count > 0 do %>
-            <a
-              href={~p"/library/#{@library.id}/series"}
+            <.link
+              navigate={~p"/library/#{@library.id}/series"}
               class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
             >
               <.icon name="lucide-layers" class="w-4 h-4 text-violet-400 flex-shrink-0" />
@@ -236,11 +236,11 @@ defmodule StashixWeb.LibraryLive do
                 name="lucide-chevron-right"
                 class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
               />
-            </a>
+            </.link>
           <% end %>
           <%= if @books_count > 0 do %>
-            <a
-              href={~p"/library/#{@library.id}/books"}
+            <.link
+              navigate={~p"/library/#{@library.id}/books"}
               class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
             >
               <.icon name="lucide-book" class="w-4 h-4 text-violet-400 flex-shrink-0" />
@@ -250,11 +250,11 @@ defmodule StashixWeb.LibraryLive do
                 name="lucide-chevron-right"
                 class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
               />
-            </a>
+            </.link>
           <% end %>
           <%= if @issues_count > 0 do %>
-            <a
-              href={~p"/library/#{@library.id}/issues"}
+            <.link
+              navigate={~p"/library/#{@library.id}/issues"}
               class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
             >
               <.icon name="lucide-newspaper" class="w-4 h-4 text-violet-400 flex-shrink-0" />
@@ -264,7 +264,7 @@ defmodule StashixWeb.LibraryLive do
                 name="lucide-chevron-right"
                 class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
               />
-            </a>
+            </.link>
           <% end %>
         </div>
 
@@ -276,16 +276,16 @@ defmodule StashixWeb.LibraryLive do
                 <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Series
               </h2>
               <%= if @series_count > 20 do %>
-                <a
-                  href={~p"/library/#{@library.id}/series"}
+                <.link
+                  navigate={~p"/library/#{@library.id}/series"}
                   class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</a>
+                >View all →</.link>
               <% end %>
             </div>
             <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <%= for s <- @recent_series do %>
                 <.media_card
-                  href={~p"/series/#{s.id}"}
+                  navigate={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   size="m"
@@ -308,16 +308,16 @@ defmodule StashixWeb.LibraryLive do
                 <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Books
               </h2>
               <%= if @books_count > 20 do %>
-                <a
-                  href={~p"/library/#{@library.id}/books"}
+                <.link
+                  navigate={~p"/library/#{@library.id}/books"}
                   class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</a>
+                >View all →</.link>
               <% end %>
             </div>
             <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <%= for book <- @recent_books do %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   size="m"
@@ -340,16 +340,16 @@ defmodule StashixWeb.LibraryLive do
                 <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Issues
               </h2>
               <%= if @issues_count > 20 do %>
-                <a
-                  href={~p"/library/#{@library.id}/issues"}
+                <.link
+                  navigate={~p"/library/#{@library.id}/issues"}
                   class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</a>
+                >View all →</.link>
               <% end %>
             </div>
             <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <%= for book <- @recent_issues do %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={
                     if book.issue_number,
                       do: "##{book.issue_number} – #{book.title}",
@@ -395,7 +395,7 @@ defmodule StashixWeb.LibraryLive do
             <.media_grid>
               <%= for s <- @items do %>
                 <.media_card
-                  href={~p"/series/#{s.id}"}
+                  navigate={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   size="m"
@@ -417,7 +417,7 @@ defmodule StashixWeb.LibraryLive do
                     do: prog / (book.page_count - 1),
                     else: nil %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={book.title}
                   cover_url={~p"/api/books/#{book.id}/cover"}
                   size="m"
@@ -440,7 +440,7 @@ defmodule StashixWeb.LibraryLive do
                     do: prog / (book.page_count - 1),
                     else: nil %>
                 <.media_card
-                  href={~p"/book/#{book.id}"}
+                  navigate={~p"/book/#{book.id}"}
                   title={
                     if book.issue_number,
                       do: "##{book.issue_number} – #{book.title}",

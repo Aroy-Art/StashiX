@@ -175,8 +175,8 @@ defmodule StashixWeb.HomeLive do
           </div>
 
           <%= if spotlight_type == :book do %>
-            <a
-              href={~p"/book/#{spotlight_item.id}"}
+            <.link
+              navigate={~p"/book/#{spotlight_item.id}"}
               class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
               style="width:104px;height:156px;background:#1a1040"
             >
@@ -185,15 +185,15 @@ defmodule StashixWeb.HomeLive do
                 class="w-full h-full object-cover"
                 onerror="this.style.display='none'"
               />
-            </a>
+            </.link>
             <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
               <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
                 Discover<%= if spotlight_item.series do %>
                   ·
-                  <a
-                    href={~p"/series/#{spotlight_item.series.id}"}
+                  <.link
+                    navigate={~p"/series/#{spotlight_item.series.id}"}
                     class="hover:text-violet-300 transition-colors"
-                  >{spotlight_item.series.name}</a>
+                  >{spotlight_item.series.name}</.link>
                 <% end %>
               </p>
               <h1
@@ -208,24 +208,24 @@ defmodule StashixWeb.HomeLive do
                 {if spotlight_item.page_count, do: "#{spotlight_item.page_count} pages", else: ""}
               </p>
               <div class="flex gap-2 mt-1">
-                <a
-                  href={~p"/read/#{spotlight_item.id}"}
+                <.link
+                  navigate={~p"/read/#{spotlight_item.id}"}
                   class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
                 >
                   <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                   Start Reading
-                </a>
-                <a
-                  href={~p"/book/#{spotlight_item.id}"}
+                </.link>
+                <.link
+                  navigate={~p"/book/#{spotlight_item.id}"}
                   class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors"
                 >
                   Details
-                </a>
+                </.link>
               </div>
             </div>
           <% else %>
-            <a
-              href={~p"/series/#{spotlight_item.id}"}
+            <.link
+              navigate={~p"/series/#{spotlight_item.id}"}
               class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
               style="width:104px;height:156px;background:#1a1040"
             >
@@ -234,7 +234,7 @@ defmodule StashixWeb.HomeLive do
                 class="w-full h-full object-cover"
                 onerror="this.style.display='none'"
               />
-            </a>
+            </.link>
             <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
               <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
                 Discover · Series
@@ -254,12 +254,12 @@ defmodule StashixWeb.HomeLive do
                 |> Enum.join(" · ")}
               </p>
               <div class="flex gap-2 mt-1">
-                <a
-                  href={~p"/series/#{spotlight_item.id}"}
+                <.link
+                  navigate={~p"/series/#{spotlight_item.id}"}
                   class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
                 >
                   Browse Series
-                </a>
+                </.link>
               </div>
             </div>
           <% end %>
@@ -293,8 +293,8 @@ defmodule StashixWeb.HomeLive do
           >
           </div>
 
-          <a
-            href={~p"/book/#{hero.id}"}
+          <.link
+            navigate={~p"/book/#{hero.id}"}
             class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
             style="width:104px;height:156px;background:#1a1040"
           >
@@ -303,16 +303,16 @@ defmodule StashixWeb.HomeLive do
               class="w-full h-full object-cover"
               onerror="this.style.display='none'"
             />
-          </a>
+          </.link>
 
           <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
             <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
               Continue Reading<%= if hero.series do %>
                 ·
-                <a
-                  href={~p"/series/#{hero.series.id}"}
+                <.link
+                  navigate={~p"/series/#{hero.series.id}"}
                   class="hover:text-violet-300 transition-colors"
-                >{hero.series.name}</a>
+                >{hero.series.name}</.link>
               <% end %>
             </p>
             <h1
@@ -345,18 +345,18 @@ defmodule StashixWeb.HomeLive do
               </div>
             <% end %>
             <div class="flex gap-2 mt-1">
-              <a
-                href={~p"/read/#{hero.id}"}
+              <.link
+                navigate={~p"/read/#{hero.id}"}
                 class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
               >
                 <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg> Continue
-              </a>
-              <a
-                href={~p"/book/#{hero.id}"}
+              </.link>
+              <.link
+                navigate={~p"/book/#{hero.id}"}
                 class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors"
               >
                 Details
-              </a>
+              </.link>
             </div>
           </div>
         </div>
@@ -364,27 +364,27 @@ defmodule StashixWeb.HomeLive do
 
       <%!-- STAT STRIP --%>
       <div class="flex items-center px-4 sm:px-8 py-2.5 border-b border-gray-800 bg-gray-900/50">
-        <a
-          href={~p"/books"}
+        <.link
+          navigate={~p"/books"}
           class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group"
         >
           <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_books}</span>
           <span class="text-xs text-gray-500">Books</span>
-        </a>
-        <a
-          href={~p"/series"}
+        </.link>
+        <.link
+          navigate={~p"/series"}
           class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group"
         >
           <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_series}</span>
           <span class="text-xs text-gray-500">Series</span>
-        </a>
-        <a
-          href={~p"/issues"}
+        </.link>
+        <.link
+          navigate={~p"/issues"}
           class="flex items-baseline gap-1.5 hover:text-violet-400 transition-colors group"
         >
           <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_issues}</span>
           <span class="text-xs text-gray-500">Issues</span>
-        </a>
+        </.link>
       </div>
 
       <%!-- TWO-COLUMN BODY --%>
@@ -403,8 +403,8 @@ defmodule StashixWeb.HomeLive do
                     if book.page_count && book.page_count > 1,
                       do: round(min(current_page / (book.page_count - 1), 1.0) * 100),
                       else: nil %>
-                  <a
-                    href={~p"/book/#{book.id}"}
+                  <.link
+                    navigate={~p"/book/#{book.id}"}
                     class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors"
                   >
                     <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
@@ -434,7 +434,7 @@ defmodule StashixWeb.HomeLive do
                         </div>
                       <% end %>
                     </div>
-                  </a>
+                  </.link>
                 <% end %>
               </div>
             </section>
@@ -447,12 +447,12 @@ defmodule StashixWeb.HomeLive do
                 <h2 class="text-sm font-semibold text-white flex items-center gap-2">
                   <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Up Next
                 </h2>
-                <a href={~p"/issues"} class="text-xs text-violet-400 hover:text-violet-300">See all →</a>
+                <.link navigate={~p"/issues"} class="text-xs text-violet-400 hover:text-violet-300">See all →</.link>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <%= for book <- Enum.take(@next_issue, 5) do %>
-                  <a
-                    href={~p"/book/#{book.id}"}
+                  <.link
+                    navigate={~p"/book/#{book.id}"}
                     class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors"
                   >
                     <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
@@ -489,7 +489,7 @@ defmodule StashixWeb.HomeLive do
                     <div class="flex-shrink-0 self-center">
                       <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-900/40 text-violet-300 border border-violet-800/40">Next</span>
                     </div>
-                  </a>
+                  </.link>
                 <% end %>
               </div>
             </section>
@@ -507,7 +507,7 @@ defmodule StashixWeb.HomeLive do
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <%= for book <- rec_books do %>
                     <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <a href={~p"/book/#{book.id}"} class="absolute inset-0 rounded-lg z-10"></a>
+                      <.link navigate={~p"/book/#{book.id}"} class="absolute inset-0 rounded-lg z-10"></.link>
                       <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
                           src={~p"/api/books/#{book.id}/cover?s=s"}
@@ -531,19 +531,19 @@ defmodule StashixWeb.HomeLive do
                           |> Enum.reject(&is_nil/1)
                           |> Enum.join(" · ")}
                         </p>
-                        <a
-                          href={~p"/read/#{book.id}"}
+                        <.link
+                          navigate={~p"/read/#{book.id}"}
                           class="relative z-20 mt-0.5 self-start flex items-center gap-1 px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
                         >
                           <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
                           Read
-                        </a>
+                        </.link>
                       </div>
                     </div>
                   <% end %>
                   <%= for s <- rec_series do %>
                     <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <a href={~p"/series/#{s.id}"} class="absolute inset-0 rounded-lg z-10"></a>
+                      <.link navigate={~p"/series/#{s.id}"} class="absolute inset-0 rounded-lg z-10"></.link>
                       <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
                         <img
                           src={~p"/api/series/#{s.id}/cover?s=s"}
@@ -564,12 +564,12 @@ defmodule StashixWeb.HomeLive do
                           |> Enum.reject(&is_nil/1)
                           |> Enum.join(" · ")}
                         </p>
-                        <a
-                          href={~p"/series/#{s.id}"}
+                        <.link
+                          navigate={~p"/series/#{s.id}"}
                           class="relative z-20 mt-0.5 self-start px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
                         >
                           Browse
-                        </a>
+                        </.link>
                       </div>
                     </div>
                   <% end %>
@@ -672,10 +672,10 @@ defmodule StashixWeb.HomeLive do
                       />
                     </div>
                   <% end %>
-                  <a
-                    href={~p"/library/#{lib.id}"}
+                  <.link
+                    navigate={~p"/library/#{lib.id}"}
                     class="text-xs text-violet-400 hover:text-violet-300"
-                  >Browse collection →</a>
+                  >Browse collection →</.link>
                 </div>
               </div>
             <% end %>
@@ -712,7 +712,7 @@ defmodule StashixWeb.HomeLive do
           <div id="home-recent-books" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <%= for book <- recent_books do %>
               <.media_card
-                href={~p"/book/#{book.id}"}
+                navigate={~p"/book/#{book.id}"}
                 title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 size="m"
@@ -751,7 +751,7 @@ defmodule StashixWeb.HomeLive do
           <div id="home-recent-series" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <%= for s <- recent_series do %>
               <.media_card
-                href={~p"/series/#{s.id}"}
+                navigate={~p"/series/#{s.id}"}
                 title={s.name}
                 cover_url={~p"/api/series/#{s.id}/cover"}
                 size="m"
@@ -790,7 +790,7 @@ defmodule StashixWeb.HomeLive do
           <div id="home-recent-issues" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <%= for book <- recent_issues do %>
               <.media_card
-                href={~p"/book/#{book.id}"}
+                navigate={~p"/book/#{book.id}"}
                 title={book.title}
                 cover_url={~p"/api/books/#{book.id}/cover"}
                 size="m"

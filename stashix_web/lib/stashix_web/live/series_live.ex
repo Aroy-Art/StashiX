@@ -233,12 +233,12 @@ defmodule StashixWeb.SeriesLive do
           <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
         </button>
         <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
+          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
           <span class="text-gray-700 flex-shrink-0">/</span>
-          <a
-            href={~p"/library/#{@library.id}"}
+          <.link
+            navigate={~p"/library/#{@library.id}"}
             class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-          >{@library.name}</a>
+          >{@library.name}</.link>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <span class="text-gray-300 truncate min-w-0">{@series.name}</span>
         </div>
@@ -315,7 +315,7 @@ defmodule StashixWeb.SeriesLive do
                 <%= if idx > 0 do %>
                   <span class="text-violet-800"> / </span>
                 <% end %>
-                <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</a>
+                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
               <% end %>
             </p>
           <% end %>
@@ -352,8 +352,8 @@ defmodule StashixWeb.SeriesLive do
                 end)
               ) %>
             <div class="flex items-center gap-3 flex-wrap">
-              <a
-                href={~p"/read/#{@continue_book.id}"}
+              <.link
+                navigate={~p"/read/#{@continue_book.id}"}
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors"
               >
                 <.icon name="lucide-play" class="w-4 h-4" />
@@ -362,14 +362,14 @@ defmodule StashixWeb.SeriesLive do
                 <% else %>
                   Start Reading{if lbl = issue_label(@continue_book), do: " — #{lbl}"}
                 <% end %>
-              </a>
+              </.link>
               <%= if has_progress && first_book && first_book.id != @continue_book.id do %>
-                <a
-                  href={~p"/read/#{first_book.id}"}
+                <.link
+                  navigate={~p"/read/#{first_book.id}"}
                   class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white text-sm font-medium rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
                 >
                   <.icon name="lucide-book-open" class="w-4 h-4" /> Read from #1
-                </a>
+                </.link>
               <% end %>
             </div>
           <% end %>
@@ -396,7 +396,7 @@ defmodule StashixWeb.SeriesLive do
                 <%= if idx > 0 do %>
                   <span class="text-gray-600"> / </span>
                 <% end %>
-                <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
+                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</.link>
               <% end %>
             </p>
           </div>
@@ -495,7 +495,7 @@ defmodule StashixWeb.SeriesLive do
                 do: prog / (book.page_count - 1),
                 else: nil %>
             <.media_card
-              href={~p"/book/#{book.id}"}
+              navigate={~p"/book/#{book.id}"}
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"

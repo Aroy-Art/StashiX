@@ -114,7 +114,7 @@ defmodule StashixWeb.AllIssuesLive do
                 do: prog / (book.page_count - 1),
                 else: nil %>
             <.media_card
-              href={~p"/book/#{book.id}"}
+              navigate={~p"/book/#{book.id}"}
               title={if book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"

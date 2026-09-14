@@ -69,8 +69,8 @@ defmodule StashixWeb.AllPublishersLive do
             <% stats =
               Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
             <% cover_ids = Map.get(@covers_map, pub.id, []) %>
-            <a
-              href={~p"/publisher/#{pub.id}"}
+            <.link
+              navigate={~p"/publisher/#{pub.id}"}
               class="group block rounded-xl border border-gray-800 bg-gray-900 hover:border-violet-700/60 hover:bg-gray-800/60 overflow-hidden transition-all"
             >
               <%!-- Cover strip --%>
@@ -121,7 +121,7 @@ defmodule StashixWeb.AllPublishersLive do
                   <% end %>
                 </div>
               </div>
-            </a>
+            </.link>
           <% end %>
         </div>
 

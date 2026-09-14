@@ -162,18 +162,18 @@ defmodule StashixWeb.BookLive do
           <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
         </button>
         <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <a href="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</a>
+          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
           <span class="text-gray-700 flex-shrink-0">/</span>
-          <a
-            href={~p"/library/#{@library.id}"}
+          <.link
+            navigate={~p"/library/#{@library.id}"}
             class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-          >{@library.name}</a>
+          >{@library.name}</.link>
           <%= if @book.series do %>
             <span class="text-gray-700 flex-shrink-0">/</span>
-            <a
-              href={~p"/series/#{@book.series.id}"}
+            <.link
+              navigate={~p"/series/#{@book.series.id}"}
               class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-            >{@book.series.name}</a>
+            >{@book.series.name}</.link>
           <% end %>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <span class="text-gray-300 truncate min-w-0">
@@ -243,9 +243,9 @@ defmodule StashixWeb.BookLive do
           <%!-- Series eyebrow --%>
           <%= if @book.series do %>
             <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
-              <a href={~p"/series/#{@book.series.id}"} class="hover:text-violet-300 transition-colors">
+              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-violet-300 transition-colors">
                 {@book.series.name}
-              </a>
+              </.link>
               <%= if @book.series.start_year do %>
                 <span class="text-gray-600 normal-case tracking-normal font-normal ml-1">
                   ({@book.series.start_year}{cond do
@@ -320,8 +320,8 @@ defmodule StashixWeb.BookLive do
           <%!-- Read button --%>
           <%= if @book.page_count > 0 && @selected_file do %>
             <div class="flex items-center gap-0">
-              <a
-                href={
+              <.link
+                navigate={
                   if @fully_read,
                     do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
                     else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
@@ -334,19 +334,19 @@ defmodule StashixWeb.BookLive do
                   @progress > 0 -> "Continue"
                   true -> "Read"
                 end}
-              </a>
+              </.link>
               <.dropdown_menu id="read-options-menu" class="flex">
                 <.dropdown_menu_trigger class="flex items-center py-3 px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
                   <.icon name="lucide-chevron-down" class="w-4 h-4" />
                 </.dropdown_menu_trigger>
                 <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
-                  <a
-                    href={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
+                  <.link
+                    navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
                     hidden={@progress == 0 || @fully_read}
                     class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
                   >
                     <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
-                  </a>
+                  </.link>
                   <button
                     phx-click={
                       JS.push("mark_read")
@@ -391,7 +391,7 @@ defmodule StashixWeb.BookLive do
                 <%= if idx > 0 do %>
                   <span class="text-gray-600"> / </span>
                 <% end %>
-                <a href={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</a>
+                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</.link>
               <% end %>
             </p>
           </div>
@@ -466,8 +466,8 @@ defmodule StashixWeb.BookLive do
       <%= if @prev_book || @next_book do %>
         <div class="flex gap-2">
           <%= if @prev_book do %>
-            <a
-              href={~p"/book/#{@prev_book.id}"}
+            <.link
+              navigate={~p"/book/#{@prev_book.id}"}
               class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 bg-linear-to-l from-gray-900 to-gray-700/60"
             >
               <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
@@ -507,13 +507,13 @@ defmodule StashixWeb.BookLive do
                   |> Enum.join(" · ")}
                 </p>
               </div>
-            </a>
+            </.link>
           <% else %>
             <div class="flex-1" />
           <% end %>
           <%= if @next_book do %>
-            <a
-              href={~p"/book/#{@next_book.id}"}
+            <.link
+              navigate={~p"/book/#{@next_book.id}"}
               class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 flex-row-reverse bg-linear-to-r from-gray-900 to-gray-700/60"
             >
               <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
@@ -553,7 +553,7 @@ defmodule StashixWeb.BookLive do
                   |> Enum.join(" · ")}
                 </p>
               </div>
-            </a>
+            </.link>
           <% else %>
             <div class="flex-1" />
           <% end %>
