@@ -694,6 +694,36 @@ defmodule StashixWeb.CoreComponents do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
 
+  attr :id, :string, required: true
+  attr :src, :string, required: true
+  attr :alt, :string, default: ""
+  attr :blurhash, :string, default: nil
+  attr :class, :string, default: "w-full h-full object-cover block"
+  attr :onerror, :string, default: nil
+
+  def blurhash_image(assigns) do
+    ~H"""
+    <canvas
+      :if={@blurhash}
+      id={"bh-#{@id}"}
+      width="32"
+      height="48"
+      class="absolute inset-0 w-full h-full"
+      style="filter:blur(6px);transform:scale(1.05)"
+    ></canvas>
+    <img
+      id={@id}
+      phx-hook="CoverImage"
+      src={@src}
+      alt={@alt}
+      class={@class}
+      data-blurhash={@blurhash}
+      data-canvas-id={"bh-#{@id}"}
+      onerror={@onerror}
+    />
+    """
+  end
+
   @doc """
   A unified card component for books and series.
 
@@ -739,22 +769,12 @@ defmodule StashixWeb.CoreComponents do
     >
       <div class="aspect-[2/3] bg-gray-800 relative overflow-hidden">
         <%= if @img_src do %>
-          <canvas
-            :if={@blurhash}
-            id={"bh-#{@cover_id}"}
-            width="32"
-            height="48"
-            class="absolute inset-0 w-full h-full"
-            style="filter:blur(6px);transform:scale(1.05)"
-          ></canvas>
-          <img
+          <.blurhash_image
             id={@cover_id}
-            phx-hook="CoverImage"
             src={@img_src}
             alt={@title}
+            blurhash={@blurhash}
             class="w-full h-full object-cover"
-            data-blurhash={@blurhash}
-            data-canvas-id={"bh-#{@cover_id}"}
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
           />
           <div class="w-full h-full hidden items-center justify-center text-gray-600">

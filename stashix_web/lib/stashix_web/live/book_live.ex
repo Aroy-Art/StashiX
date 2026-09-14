@@ -223,23 +223,11 @@ defmodule StashixWeb.BookLive do
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
           <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative">
             <%= if @book.cover do %>
-              <%= if @book.cover.blurhash do %>
-                <canvas
-                  id={"bh-book-cover-#{@book.id}"}
-                  width="32"
-                  height="48"
-                  class="absolute inset-0 w-full h-full"
-                  style="filter:blur(6px);transform:scale(1.05)"
-                ></canvas>
-              <% end %>
-              <img
+              <.blurhash_image
                 id={"book-cover-#{@book.id}"}
-                phx-hook="CoverImage"
                 src={~p"/api/books/#{@book.id}/cover?s=l"}
                 alt={@book.title}
-                class="w-full h-full object-cover block"
-                data-blurhash={@book.cover.blurhash}
-                data-canvas-id={"bh-book-cover-#{@book.id}"}
+                blurhash={@book.cover.blurhash}
               />
             <% else %>
               <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
@@ -482,23 +470,11 @@ defmodule StashixWeb.BookLive do
               class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 bg-linear-to-l from-gray-900 to-gray-700/60"
             >
               <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
-                <%= if @prev_book.blurhash do %>
-                  <canvas
-                    id={"bh-nav-prev-#{@prev_book.id}"}
-                    width="32"
-                    height="48"
-                    class="absolute inset-0 w-full h-full"
-                    style="filter:blur(6px);transform:scale(1.05)"
-                  ></canvas>
-                <% end %>
-                <img
+                <.blurhash_image
                   id={"nav-prev-#{@prev_book.id}"}
-                  phx-hook="CoverImage"
                   src={~p"/api/books/#{@prev_book.id}/cover?s=s"}
-                  alt=""
+                  blurhash={@prev_book.blurhash}
                   class="w-full h-full object-contain block"
-                  data-blurhash={@prev_book.blurhash}
-                  data-canvas-id={"bh-nav-prev-#{@prev_book.id}"}
                   onerror="this.style.display='none'"
                 />
               </div>
@@ -528,23 +504,11 @@ defmodule StashixWeb.BookLive do
               class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 flex-row-reverse bg-linear-to-r from-gray-900 to-gray-700/60"
             >
               <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
-                <%= if @next_book.blurhash do %>
-                  <canvas
-                    id={"bh-nav-next-#{@next_book.id}"}
-                    width="32"
-                    height="48"
-                    class="absolute inset-0 w-full h-full"
-                    style="filter:blur(6px);transform:scale(1.05)"
-                  ></canvas>
-                <% end %>
-                <img
+                <.blurhash_image
                   id={"nav-next-#{@next_book.id}"}
-                  phx-hook="CoverImage"
                   src={~p"/api/books/#{@next_book.id}/cover?s=s"}
-                  alt=""
+                  blurhash={@next_book.blurhash}
                   class="w-full h-full object-contain block"
-                  data-blurhash={@next_book.blurhash}
-                  data-canvas-id={"bh-nav-next-#{@next_book.id}"}
                   onerror="this.style.display='none'"
                 />
               </div>
