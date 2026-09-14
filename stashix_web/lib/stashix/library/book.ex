@@ -24,6 +24,7 @@ defmodule Stashix.Library.Book do
     field :isbn, :string
     field :upc, :string
     field :community_rating, :float
+    field :source_format, :string, virtual: true
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series

@@ -385,12 +385,13 @@ defmodule Stashix.Scanner do
            last_modified: last_modified,
            file_size: file_size,
            parsed: parsed,
+           comicinfo: comicinfo,
            metadata: metadata
          },
-         _library,
+         library,
          cache
        ) do
-    attrs = %{
+    file_attrs = %{
       path: file_path,
       file_hash: file_hash,
       last_modified: last_modified,
@@ -400,10 +401,24 @@ defmodule Stashix.Scanner do
       deleted_at: nil
     }
 
-    case Library.update_book_file(book_file, attrs) do
+    case Library.update_book_file(book_file, file_attrs) do
       {:ok, _} ->
         book = Library.get_book!(book_file.book_id)
-        {{book, file_path}, cache}
+        filename = Path.basename(file_path, Path.extname(file_path))
+        {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
+
+        book_attrs = %{
+          title: Map.get(metadata, :title) || filename,
+          issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
+          volume: Map.get(metadata, :volume),
+          year: Map.get(metadata, :year),
+          series_id: series && series.id,
+          type: if(series, do: "issue", else: "standalone"),
+          deleted_at: nil
+        }
+
+        Library.update_book(book, book_attrs)
+        {{book, file_path}, new_cache}
 
       {:error, reason} ->
         Logger.error("Failed to move book_file #{file_path}: #{inspect(reason)}")
@@ -438,7 +453,8 @@ defmodule Stashix.Scanner do
       type: if(series, do: "issue", else: "standalone"),
       page_count: resolve_page_count(metadata, file_path, book.page_count),
       language: Map.get(metadata, :language, book.language),
-      summary: Map.get(metadata, :summary, book.summary)
+      summary: Map.get(metadata, :summary, book.summary),
+      deleted_at: nil
     }
 
     file_attrs = %{

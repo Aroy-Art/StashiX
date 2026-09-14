@@ -79,7 +79,24 @@ defmodule Stashix.Library do
         _ -> order_by(query, [b], asc: b.title)
       end
 
-    Repo.all(query)
+    books = Repo.all(query)
+    populate_source_formats(books)
+  end
+
+  defp populate_source_formats([]), do: []
+
+  defp populate_source_formats(books) do
+    book_ids = Enum.map(books, & &1.id)
+
+    formats =
+      from(bf in BookFile,
+        where: bf.book_id in ^book_ids and is_nil(bf.deleted_at),
+        select: {bf.book_id, bf.source_format}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(books, fn b -> %{b | source_format: Map.get(formats, b.id)} end)
   end
 
   def get_book!(id), do: Repo.get!(Book, id)
