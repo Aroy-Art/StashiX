@@ -15,7 +15,7 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
     {prev_book, next_book} = Library.get_adjacent_books(book)
-    editions = Library.get_book_editions(book)
+    selected_file = Library.get_preferred_book_file(book)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
@@ -30,7 +30,7 @@ defmodule StashixWeb.BookLive do
        fully_read: fully_read,
        prev_book: prev_book,
        next_book: next_book,
-       editions: editions,
+       selected_file: selected_file,
        read_menu_open: false,
        scanning: false,
        show_admin_menu: false,
@@ -102,9 +102,15 @@ defmodule StashixWeb.BookLive do
     end
   end
 
-  def handle_event("rescan_book", _params, socket) do
+  def handle_event("select_format", %{"format" => fmt}, socket) do
     book = socket.assigns.book
-    Scanner.scan_file(book.library_id, book.path)
+    fmt_atom = String.to_existing_atom(fmt)
+    file = Enum.find(book.files, &(&1.format == fmt_atom))
+    {:noreply, assign(socket, selected_file: file)}
+  end
+
+  def handle_event("rescan_book", _params, socket) do
+    Scanner.scan_book(socket.assigns.book.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
   end
 
@@ -114,9 +120,10 @@ defmodule StashixWeb.BookLive do
     progress = Library.get_progress(socket.assigns.current_user.id, book.id)
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
-
     {prev_book, next_book} = Library.get_adjacent_books(book)
-    editions = Library.get_book_editions(book)
+
+    current_format = socket.assigns.selected_file && socket.assigns.selected_file.format
+    selected_file = Library.get_preferred_book_file(book, current_format)
 
     {:noreply,
      assign(socket,
@@ -127,7 +134,7 @@ defmodule StashixWeb.BookLive do
        page_title: book.title,
        prev_book: prev_book,
        next_book: next_book,
-       editions: editions
+       selected_file: selected_file
      )}
   end
 
@@ -136,9 +143,9 @@ defmodule StashixWeb.BookLive do
 
   defp book_display_title(book), do: book.title
 
-  defp relative_path(book, library) do
+  defp relative_path(path, library) do
     library.name <>
-      "/" <> (String.replace_prefix(book.path, library.root_path, "") |> String.trim_leading("/"))
+      "/" <> (String.replace_prefix(path, library.root_path, "") |> String.trim_leading("/"))
   end
 
   @impl true
@@ -279,22 +286,23 @@ defmodule StashixWeb.BookLive do
             <% end %>
           </div>
 
-          <%!-- Format pills (only when multiple editions exist) --%>
-          <%= if length(@editions) > 1 do %>
+          <%!-- Format pills (only when multiple files exist) --%>
+          <%= if length(@book.files) > 1 do %>
             <div class="flex items-center gap-1.5 mb-5">
               <span class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-600 mr-1">Format</span>
-              <%= for ed <- @editions do %>
-                <%= if ed.id == @book.id do %>
+              <%= for f <- @book.files do %>
+                <%= if @selected_file && f.id == @selected_file.id do %>
                   <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-violet-600 text-white">
-                    {String.upcase(to_string(ed.format))}
+                    {String.upcase(to_string(f.format))}
                   </span>
                 <% else %>
-                  <a
-                    href={~p"/book/#{ed.id}"}
+                  <button
+                    phx-click="select_format"
+                    phx-value-format={to_string(f.format)}
                     class="px-2.5 py-1 text-xs font-semibold rounded-md border border-gray-700 text-gray-400 hover:border-violet-500 hover:text-violet-300 transition-colors"
                   >
-                    {String.upcase(to_string(ed.format))}
-                  </a>
+                    {String.upcase(to_string(f.format))}
+                  </button>
                 <% end %>
               <% end %>
             </div>
@@ -309,10 +317,14 @@ defmodule StashixWeb.BookLive do
           <% end %>
 
           <%!-- Read button --%>
-          <%= if @book.page_count > 0 do %>
+          <%= if @book.page_count > 0 && @selected_file do %>
             <div class="flex items-center gap-0">
               <a
-                href={if @fully_read, do: ~p"/read/#{@book.id}?page=0", else: ~p"/read/#{@book.id}"}
+                href={
+                  if @fully_read,
+                    do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
+                    else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
+                }
                 class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-l-lg transition-colors"
               >
                 <.icon name="lucide-play" class="w-4 h-4" />
@@ -328,7 +340,7 @@ defmodule StashixWeb.BookLive do
                 </.dropdown_menu_trigger>
                 <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
                   <a
-                    href={~p"/read/#{@book.id}?page=0"}
+                    href={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
                     hidden={@progress == 0 || @fully_read}
                     class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
                   >
@@ -397,29 +409,32 @@ defmodule StashixWeb.BookLive do
         <% end %>
         <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
           <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Format</p>
-          <%= if length(@editions) > 1 do %>
+          <%= if length(@book.files) > 1 do %>
             <p class="text-gray-300 flex flex-wrap gap-x-1">
-              <%= for ed <- @editions do %>
-                <a
-                  href={~p"/book/#{ed.id}"}
+              <%= for f <- @book.files do %>
+                <button
+                  phx-click="select_format"
+                  phx-value-format={to_string(f.format)}
                   class={
-                    if ed.id == @book.id,
+                    if @selected_file && f.id == @selected_file.id,
                       do: "text-violet-400 font-semibold",
                       else: "text-gray-400 hover:text-violet-400 transition-colors"
                   }
                 >
-                  {String.upcase(to_string(ed.format))}
-                </a>
+                  {String.upcase(to_string(f.format))}
+                </button>
               <% end %>
             </p>
           <% else %>
-            <p class="text-gray-300">{String.upcase(to_string(@book.format))}</p>
+            <p class="text-gray-300">
+              {if @selected_file, do: String.upcase(to_string(@selected_file.format)), else: "—"}
+            </p>
           <% end %>
         </div>
-        <%= if fs = Formatters.format_file_size(@book.file_size) do %>
+        <%= if @selected_file && @selected_file.file_size > 0 do %>
           <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
             <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Size</p>
-            <p class="text-gray-300">{fs}</p>
+            <p class="text-gray-300">{Formatters.format_file_size(@selected_file.file_size)}</p>
           </div>
         <% end %>
         <%= if @book.language do %>
@@ -439,10 +454,10 @@ defmodule StashixWeb.BookLive do
       </div>
 
       <%!-- File path --%>
-      <%= if @current_user.role == :admin do %>
+      <%= if @current_user.role == :admin && @selected_file do %>
         <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
           <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
-          {relative_path(@book, @library)}
+          {relative_path(@selected_file.path, @library)}
         </div>
       <% end %>
 
@@ -554,10 +569,12 @@ defmodule StashixWeb.BookLive do
             <.dialog_description class="text-gray-400">
               Override metadata for this book. Changes persist until the next rescan.
             </.dialog_description>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
-              <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
-              {relative_path(@book, @library)}
-            </p>
+            <%= if @selected_file do %>
+              <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+                <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
+                {relative_path(@selected_file.path, @library)}
+              </p>
+            <% end %>
           </.dialog_header>
 
           <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">

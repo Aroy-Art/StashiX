@@ -5,6 +5,7 @@ defmodule Stashix.Library do
   alias Stashix.Library.{
     Library,
     Book,
+    BookFile,
     Series,
     BookCover,
     LibraryPermission,
@@ -47,7 +48,7 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        where: b.library_id == ^library_id and is_nil(b.deleted_at),
         preload: [:cover, :series],
         limit: ^limit,
         offset: ^offset
@@ -84,7 +85,10 @@ defmodule Stashix.Library do
   def get_book!(id), do: Repo.get!(Book, id)
 
   def get_book_with_series(id) do
-    Repo.get!(Book, id) |> Repo.preload([:series, :cover, :publishers])
+    files_query = from(bf in BookFile, where: is_nil(bf.deleted_at), order_by: [asc: bf.format])
+
+    Repo.get!(Book, id)
+    |> Repo.preload([:series, :cover, :publishers, files: files_query])
   end
 
   def get_adjacent_books(%{series_id: nil}), do: {nil, nil}
@@ -96,9 +100,7 @@ defmodule Stashix.Library do
       from(b in Book,
         left_join: c in BookCover,
         on: c.book_id == b.id,
-        where:
-          b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number) and
-            is_nil(b.primary_book_id),
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
         order_by: [asc: b.issue_number],
         select: %{
           id: b.id,
@@ -153,7 +155,7 @@ defmodule Stashix.Library do
   def get_series_with_books(id) do
     books_query =
       from(b in Book,
-        where: is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        where: is_nil(b.deleted_at),
         order_by: [asc: b.issue_number]
       )
 
@@ -195,7 +197,7 @@ defmodule Stashix.Library do
       from(rp in ReadingProgress,
         where: rp.user_id == ^user_id and rp.current_page > 0,
         join: b in Book,
-        on: b.id == rp.book_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        on: b.id == rp.book_id and is_nil(b.deleted_at),
         where: b.page_count == 0 or rp.current_page < b.page_count - 1,
         order_by: [desc: rp.updated_at],
         limit: ^limit,
@@ -247,7 +249,7 @@ defmodule Stashix.Library do
       max_issues = Map.new(valid)
 
       from(b in Book,
-        where: b.series_id in ^series_ids and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        where: b.series_id in ^series_ids and is_nil(b.deleted_at),
         left_join: rp in ReadingProgress,
         on: rp.book_id == b.id and rp.user_id == ^user_id,
         where: is_nil(rp.id) or rp.current_page == 0,
@@ -271,7 +273,7 @@ defmodule Stashix.Library do
     from(b in Book,
       where:
         fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-          is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+          is_nil(b.deleted_at),
       order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
       preload: [:cover, :series],
       limit: ^limit,
@@ -287,7 +289,7 @@ defmodule Stashix.Library do
       from(b in Book,
         where:
           fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-            is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+            is_nil(b.deleted_at),
         order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
         preload: [:cover, :series],
         limit: ^limit
@@ -346,7 +348,7 @@ defmodule Stashix.Library do
       UPDATE series
       SET issue_count = (
         SELECT COUNT(*) FROM books
-        WHERE books.series_id = series.id AND books.deleted_at IS NULL AND books.primary_book_id IS NULL
+        WHERE books.series_id = series.id AND books.deleted_at IS NULL
       )
       WHERE series.library_id = $1
       """,
@@ -364,11 +366,13 @@ defmodule Stashix.Library do
   end
 
   def load_hash_series_map(library_id, hashes) do
-    from(b in Book,
+    from(bf in BookFile,
+      join: b in Book,
+      on: b.id == bf.book_id,
       join: s in Series,
       on: s.id == b.series_id,
-      where: b.library_id == ^library_id and b.file_hash in ^hashes and is_nil(b.deleted_at),
-      select: {b.file_hash, s}
+      where: b.library_id == ^library_id and bf.file_hash in ^hashes and is_nil(bf.deleted_at),
+      select: {bf.file_hash, s}
     )
     |> Repo.all()
     |> Map.new()
@@ -376,10 +380,12 @@ defmodule Stashix.Library do
 
   def find_series_by_book_hashes(library_id, hashes) do
     series_id =
-      from(b in Book,
-        where: b.library_id == ^library_id and b.file_hash in ^hashes and is_nil(b.deleted_at),
+      from(bf in BookFile,
+        join: b in Book,
+        on: b.id == bf.book_id,
+        where: b.library_id == ^library_id and bf.file_hash in ^hashes and is_nil(bf.deleted_at),
         group_by: b.series_id,
-        order_by: [desc: count(b.id)],
+        order_by: [desc: count(bf.id)],
         limit: 1,
         select: b.series_id
       )
@@ -423,6 +429,75 @@ defmodule Stashix.Library do
     |> Repo.insert()
   end
 
+  def create_book_file(attrs) do
+    %BookFile{}
+    |> BookFile.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  def update_book_file(book_file, attrs) do
+    book_file
+    |> BookFile.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def get_book_file_by_path(path) do
+    Repo.get_by(BookFile, path: path)
+  end
+
+  def get_book_file_by_hash(hash) do
+    from(bf in BookFile, where: bf.file_hash == ^hash and is_nil(bf.deleted_at), limit: 1)
+    |> Repo.one()
+  end
+
+  def get_book_files(book_id) do
+    from(bf in BookFile, where: bf.book_id == ^book_id and is_nil(bf.deleted_at))
+    |> Repo.all()
+  end
+
+  @supported_extensions ~w(.cbz .cbr .cb7 .epub .pdf)
+
+  def get_book_by_stem(dir, stem) do
+    candidates = Enum.map(@supported_extensions, &Path.join(dir, stem <> &1))
+
+    from(bf in BookFile,
+      join: b in Book,
+      on: b.id == bf.book_id,
+      where: bf.path in ^candidates and is_nil(bf.deleted_at) and is_nil(b.deleted_at),
+      limit: 1,
+      select: b
+    )
+    |> Repo.one()
+  end
+
+  def get_preferred_book_file(book, format \\ nil) do
+    format_priority = [:cbz, :cbr, :cb7, :epub, :pdf]
+
+    files =
+      case book.files do
+        %Ecto.Association.NotLoaded{} ->
+          from(bf in BookFile,
+            where: bf.book_id == ^book.id and is_nil(bf.deleted_at),
+            order_by: [asc: bf.format]
+          )
+          |> Repo.all()
+
+        files ->
+          files
+      end
+
+    if format do
+      fmt = if is_atom(format), do: format, else: String.to_existing_atom(to_string(format))
+      Enum.find(files, &(&1.format == fmt)) || List.first(files)
+    else
+      Enum.min_by(
+        files,
+        &Enum.find_index(format_priority, fn f -> f == &1.format end),
+        fn -> nil end
+      )
+    end
+  end
+
   def get_publisher!(id), do: Repo.get!(Publisher, id)
 
   def get_publisher_with_aliases!(id) do
@@ -444,7 +519,6 @@ defmodule Stashix.Library do
     |> Repo.update()
   end
 
-  # Returns all binary UUIDs for a publisher: the master + any aliases
   defp publisher_id_bins(publisher_id) do
     alias_bins =
       from(p in Publisher,
@@ -508,9 +582,7 @@ defmodule Stashix.Library do
       from b in Book,
         join: bp in "book_publishers",
         on: bp.book_id == b.id,
-        where:
-          bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type and
-            is_nil(b.primary_book_id),
+        where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
         distinct: true,
         preload: [:cover, :series],
         limit: ^limit,
@@ -657,7 +729,6 @@ defmodule Stashix.Library do
   def publisher_stats(publisher_ids) when publisher_ids == [], do: %{}
 
   def publisher_stats(publisher_ids) do
-    # Build map of all IDs (master + aliases) -> master ID
     alias_rows =
       from(p in Publisher,
         where: p.canonical_publisher_id in ^publisher_ids,
@@ -796,44 +867,34 @@ defmodule Stashix.Library do
   end
 
   def load_books_cache(library_id) do
-    from(b in Book,
+    from(bf in BookFile,
+      join: b in Book,
+      on: b.id == bf.book_id,
       where: b.library_id == ^library_id,
-      select: {b.path, %{last_modified: b.last_modified, deleted_at: b.deleted_at, file_hash: b.file_hash}}
+      select: {bf.path, %{last_modified: bf.last_modified, deleted_at: bf.deleted_at, file_hash: bf.file_hash}}
     )
     |> Repo.all()
     |> Map.new()
   end
 
   def get_book_by_path(path) do
-    Repo.get_by(Book, path: path)
+    case from(bf in BookFile, where: bf.path == ^path, select: bf.book_id, limit: 1)
+         |> Repo.one() do
+      nil -> nil
+      book_id -> Repo.get(Book, book_id)
+    end
   end
 
   def get_book_by_hash(hash) do
-    Repo.get_by(Book, file_hash: hash)
-  end
-
-  @supported_extensions ~w(.cbz .cbr .cb7 .epub .pdf)
-
-  def get_book_by_stem(dir, stem, exclude_path) do
-    candidates =
-      Enum.map(@supported_extensions, &Path.join(dir, stem <> &1))
-      |> List.delete(exclude_path)
-
-    from(b in Book,
-      where: b.path in ^candidates and is_nil(b.deleted_at),
-      limit: 1
-    )
-    |> Repo.one()
-  end
-
-  def get_book_editions(book) do
-    primary_id = book.primary_book_id || book.id
-
-    from(b in Book,
-      where: (b.id == ^primary_id or b.primary_book_id == ^primary_id) and is_nil(b.deleted_at),
-      order_by: [asc: b.format]
-    )
-    |> Repo.all()
+    case from(bf in BookFile,
+           where: bf.file_hash == ^hash and is_nil(bf.deleted_at),
+           select: bf.book_id,
+           limit: 1
+         )
+         |> Repo.one() do
+      nil -> nil
+      book_id -> Repo.get(Book, book_id)
+    end
   end
 
   def create_or_update_cover(book_id, path, blurhash \\ nil) do
@@ -911,9 +972,7 @@ defmodule Stashix.Library do
   def count_books(library_id) do
     Repo.aggregate(
       from(b in Book,
-        where:
-          b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone" and
-            is_nil(b.primary_book_id)
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
       ),
       :count,
       :id
@@ -931,9 +990,7 @@ defmodule Stashix.Library do
   def count_issues(library_id) do
     Repo.aggregate(
       from(b in Book,
-        where:
-          b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue" and
-            is_nil(b.primary_book_id)
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
       ),
       :count,
       :id
@@ -942,11 +999,12 @@ defmodule Stashix.Library do
 
   def total_size(library_id) do
     result =
-      Repo.aggregate(
-        from(b in Book, where: b.library_id == ^library_id and is_nil(b.deleted_at)),
-        :sum,
-        :file_size
+      from(bf in BookFile,
+        join: b in Book,
+        on: b.id == bf.book_id,
+        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
       )
+      |> Repo.aggregate(:sum, :file_size)
 
     case result do
       nil -> 0
@@ -958,7 +1016,7 @@ defmodule Stashix.Library do
   def recent_books(library_id, limit \\ 10, type \\ nil) do
     query =
       from b in Book,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        where: b.library_id == ^library_id and is_nil(b.deleted_at),
         order_by: [desc: b.inserted_at],
         limit: ^limit,
         preload: [:cover]
@@ -985,9 +1043,7 @@ defmodule Stashix.Library do
 
   def recent_issues(library_id, limit \\ 10) do
     from(b in Book,
-      where:
-        b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue" and
-          is_nil(b.primary_book_id),
+      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue",
       order_by: [desc: b.inserted_at],
       limit: ^limit,
       preload: [:cover]
@@ -998,8 +1054,19 @@ defmodule Stashix.Library do
   def mark_orphaned_books(library_id, scanned_paths) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
+    from(bf in BookFile,
+      join: b in Book,
+      on: b.id == bf.book_id,
+      where: b.library_id == ^library_id and is_nil(bf.deleted_at) and bf.path not in ^scanned_paths
+    )
+    |> Repo.update_all(set: [deleted_at: now])
+
+    active_book_ids = from(bf in BookFile, where: is_nil(bf.deleted_at), select: bf.book_id)
+
     from(b in Book,
-      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.path not in ^scanned_paths
+      where:
+        b.library_id == ^library_id and is_nil(b.deleted_at) and
+          b.id not in subquery(active_book_ids)
     )
     |> Repo.update_all(set: [deleted_at: now])
   end
@@ -1007,8 +1074,19 @@ defmodule Stashix.Library do
   def mark_orphaned_series_books(series_id, scanned_paths) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
+    from(bf in BookFile,
+      join: b in Book,
+      on: b.id == bf.book_id,
+      where: b.series_id == ^series_id and is_nil(bf.deleted_at) and bf.path not in ^scanned_paths
+    )
+    |> Repo.update_all(set: [deleted_at: now])
+
+    active_book_ids = from(bf in BookFile, where: is_nil(bf.deleted_at), select: bf.book_id)
+
     from(b in Book,
-      where: b.series_id == ^series_id and is_nil(b.deleted_at) and b.path not in ^scanned_paths
+      where:
+        b.series_id == ^series_id and is_nil(b.deleted_at) and
+          b.id not in subquery(active_book_ids)
     )
     |> Repo.update_all(set: [deleted_at: now])
   end
@@ -1041,7 +1119,7 @@ defmodule Stashix.Library do
       from b in Book,
         left_join: s in assoc(b, :series),
         left_join: c in assoc(b, :cover),
-        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.primary_book_id),
+        where: is_nil(b.deleted_at) and b.type == "issue",
         limit: ^limit,
         offset: ^offset,
         preload: [series: s, cover: c]
@@ -1185,7 +1263,7 @@ defmodule Stashix.Library do
 
     issues_query =
       from b in Book,
-        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.primary_book_id),
+        where: is_nil(b.deleted_at) and b.type == "issue",
         order_by: [asc_nulls_last: b.issue_number, asc: b.title]
 
     Repo.all(query) |> Repo.preload(books: {issues_query, [:cover]})
@@ -1212,9 +1290,7 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where:
-          is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id) and
-            is_nil(b.primary_book_id),
+        where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id),
         order_by: [asc: b.title],
         preload: [:cover]
 
@@ -1231,7 +1307,7 @@ defmodule Stashix.Library do
 
     query =
       from b in Book,
-        where: is_nil(b.deleted_at) and is_nil(b.primary_book_id),
+        where: is_nil(b.deleted_at),
         preload: [:cover, :series],
         limit: ^limit,
         offset: ^offset
@@ -1258,7 +1334,7 @@ defmodule Stashix.Library do
     type = Keyword.get(opts, :type)
     library_id = Keyword.get(opts, :library_id)
 
-    query = from b in Book, where: is_nil(b.deleted_at) and is_nil(b.primary_book_id)
+    query = from b in Book, where: is_nil(b.deleted_at)
     query = if type, do: where(query, [b], b.type == ^type), else: query
     query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 
@@ -1324,11 +1400,22 @@ defmodule Stashix.Library do
   end
 
   def restore_book(book) do
-    book |> Book.changeset(%{deleted_at: nil}) |> Repo.update()
+    Repo.transaction(fn ->
+      from(bf in BookFile, where: bf.book_id == ^book.id)
+      |> Repo.update_all(set: [deleted_at: nil])
+
+      book |> Book.changeset(%{deleted_at: nil}) |> Repo.update!()
+    end)
   end
 
   def restore_series(series) do
     Repo.transaction(fn ->
+      book_ids =
+        from(b in Book, where: b.series_id == ^series.id, select: b.id) |> Repo.all()
+
+      from(bf in BookFile, where: bf.book_id in ^book_ids)
+      |> Repo.update_all(set: [deleted_at: nil])
+
       from(b in Book, where: b.series_id == ^series.id and not is_nil(b.deleted_at))
       |> Repo.update_all(set: [deleted_at: nil])
 
@@ -1368,6 +1455,9 @@ defmodule Stashix.Library do
   end
 
   def batch_restore_books(ids) do
+    from(bf in BookFile, where: bf.book_id in ^ids)
+    |> Repo.update_all(set: [deleted_at: nil])
+
     from(b in Book, where: b.id in ^ids)
     |> Repo.update_all(set: [deleted_at: nil])
   end
@@ -1387,6 +1477,11 @@ defmodule Stashix.Library do
 
   def batch_restore_series(ids) do
     Repo.transaction(fn ->
+      book_ids = from(b in Book, where: b.series_id in ^ids, select: b.id) |> Repo.all()
+
+      from(bf in BookFile, where: bf.book_id in ^book_ids)
+      |> Repo.update_all(set: [deleted_at: nil])
+
       from(b in Book, where: b.series_id in ^ids and not is_nil(b.deleted_at))
       |> Repo.update_all(set: [deleted_at: nil])
 

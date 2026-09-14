@@ -42,7 +42,6 @@ defmodule StashixWeb.SearchController do
     %{
       id: book.id,
       title: book.title,
-      format: book.format,
       issue_number: book.issue_number,
       series_id: book.series_id,
       library_id: book.library_id,

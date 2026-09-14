@@ -72,10 +72,15 @@ defmodule StashixWeb.BookController do
       unprocessable_entity: {"Extract error", "application/json", Schemas.Error}
     ]
 
-  def pages(conn, %{"id" => id}) do
-    book = Library.get_book!(id)
+  def pages(conn, %{"id" => id} = params) do
+    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    format = params["format"] && String.to_existing_atom(params["format"])
+    book_file = Library.get_preferred_book_file(book, format)
 
-    case Extractor.list_pages(book.path) do
+    case book_file && Extractor.list_pages(book_file.path) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "no file"})
+
       {:ok, pages} ->
         json(conn, %{pages: pages, count: length(pages)})
 
@@ -98,11 +103,16 @@ defmodule StashixWeb.BookController do
       not_found: {"Page not found", "application/json", Schemas.Error}
     ]
 
-  def page(conn, %{"id" => id, "n" => n}) do
-    book = Library.get_book!(id)
+  def page(conn, %{"id" => id, "n" => n} = params) do
+    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    format = params["format"] && String.to_existing_atom(params["format"])
+    book_file = Library.get_preferred_book_file(book, format)
     page_index = String.to_integer(n)
 
-    case Extractor.get_page(book.path, page_index) do
+    case book_file && Extractor.get_page(book_file.path, page_index) do
+      nil ->
+        conn |> put_status(:not_found) |> json(%{error: "no file"})
+
       {:ok, data} ->
         content_type = detect_image_type(data)
 
@@ -179,11 +189,15 @@ defmodule StashixWeb.BookController do
   end
 
   defp book_json(book) do
+    files =
+      case book.files do
+        %Ecto.Association.NotLoaded{} -> []
+        files -> files
+      end
+
     %{
       id: book.id,
       title: book.title,
-      path: book.path,
-      format: book.format,
       issue_number: book.issue_number,
       volume: book.volume,
       year: book.year,
@@ -192,10 +206,10 @@ defmodule StashixWeb.BookController do
       summary: book.summary,
       age_rating: book.age_rating,
       type: book.type,
-      file_size: book.file_size,
       series_id: book.series_id,
       library_id: book.library_id,
       has_cover: not is_nil(Map.get(book, :cover)),
+      formats: Enum.map(files, & &1.format),
       inserted_at: book.inserted_at
     }
   end

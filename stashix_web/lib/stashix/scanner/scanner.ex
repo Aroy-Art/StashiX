@@ -28,6 +28,10 @@ defmodule Stashix.Scanner do
     GenServer.cast(__MODULE__, {:scan_series, series_id, force})
   end
 
+  def scan_book(book_id) do
+    GenServer.cast(__MODULE__, {:scan_book, book_id})
+  end
+
   def backfill_blurhashes do
     GenServer.cast(__MODULE__, :backfill_blurhashes)
   end
@@ -78,6 +82,16 @@ defmodule Stashix.Scanner do
     {:noreply, state}
   end
 
+  def handle_cast({:scan_book, book_id}, state) do
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+      book = Library.get_book!(book_id)
+      files = Library.get_book_files(book_id)
+      Enum.each(files, fn bf -> do_scan_file(book.library_id, bf.path) end)
+    end)
+
+    {:noreply, state}
+  end
+
   def handle_cast(:backfill_blurhashes, state) do
     Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
       covers = Library.list_covers_without_blurhash()
@@ -113,11 +127,9 @@ defmodule Stashix.Scanner do
     files = collect_files(library.root_path)
     total = length(files)
 
-    # Pre-warm series cache and books cache: bulk queries instead of N round-trips
     series_cache = Library.load_series_cache(library_id) |> normalize_series_names()
     books_cache = if force, do: %{}, else: Library.load_books_cache(library_id)
 
-    # Partition: files that need full parse vs unchanged (skip Stage 1 for those)
     {files_to_parse, files_unchanged} =
       Enum.split_with(files, fn path ->
         case Map.get(books_cache, path) do
@@ -146,7 +158,6 @@ defmodule Stashix.Scanner do
 
     broadcast_progress(library_id, unchanged_count, total, false, :parsing)
 
-    # Stage 1: Parse metadata concurrently (hash + filename + comicinfo) — only changed files
     parsed_files =
       files_to_parse
       |> Task.async_stream(&parse_file_metadata/1,
@@ -163,7 +174,6 @@ defmodule Stashix.Scanner do
           []
       end)
 
-    # Between stages: detect renamed series folders via hash matching, update cache
     series_cache = detect_renamed_series(parsed_files, series_cache, library)
 
     update_task_status(library_id, %{
@@ -175,8 +185,6 @@ defmodule Stashix.Scanner do
 
     broadcast_progress(library_id, unchanged_count, total, false, :importing)
 
-    # Stage 2: DB upserts serially (prevents series creation races, uses cache)
-    # Unchanged files count as already scanned
     {thumbnail_jobs, _cache} =
       parsed_files
       |> Enum.with_index(unchanged_count + 1)
@@ -195,7 +203,6 @@ defmodule Stashix.Scanner do
         {new_jobs, new_cache}
       end)
 
-    # Stage 3: Generate thumbnails concurrently
     thumb_total = length(thumbnail_jobs)
 
     if thumb_total > 0 do
@@ -258,24 +265,24 @@ defmodule Stashix.Scanner do
          force,
          cache
        ) do
-    case Library.get_book_by_path(file_path) do
+    case Library.get_book_file_by_path(file_path) do
       nil ->
-        case Library.get_book_by_hash(file_hash) do
+        case Library.get_book_file_by_hash(file_hash) do
           nil -> create_book_from_meta(file_meta, library, cache)
-          existing -> update_book_from_meta(existing, file_meta, library, cache)
+          existing_file -> move_book_file(existing_file, file_meta, library, cache)
         end
 
-      existing ->
-        was_deleted = existing.deleted_at != nil
+      existing_file ->
+        was_deleted = existing_file.deleted_at != nil
 
         modified =
           NaiveDateTime.compare(
             last_modified,
-            existing.last_modified || ~N[1970-01-01 00:00:00]
+            existing_file.last_modified || ~N[1970-01-01 00:00:00]
           ) == :gt
 
         if force || was_deleted || modified do
-          update_book_from_meta(existing, file_meta, library, cache)
+          update_book_file_from_meta(existing_file, file_meta, library, cache)
         else
           {nil, cache}
         end
@@ -307,43 +314,105 @@ defmodule Stashix.Scanner do
 
     stem = Path.basename(file_path, Path.extname(file_path))
     dir = Path.dirname(file_path)
-    sibling = Library.get_book_by_stem(dir, stem, file_path)
-    primary_id = sibling && (sibling.primary_book_id || sibling.id)
+    existing_book = Library.get_book_by_stem(dir, stem)
 
-    attrs = %{
-      library_id: library.id,
-      series_id: series && series.id,
-      path: file_path,
-      title: Map.get(metadata, :title) || filename,
-      format: format,
-      type: if(series, do: "issue", else: "standalone"),
-      issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
-      volume: Map.get(metadata, :volume),
-      year: Map.get(metadata, :year),
-      page_count: resolve_page_count(metadata, file_path, 0),
-      language: Map.get(metadata, :language, "en"),
-      summary: Map.get(metadata, :summary),
-      source_format: Map.get(parsed, :source_format),
-      primary_book_id: primary_id,
-      file_hash: file_hash,
-      file_size: file_size,
-      last_modified: last_modified
-    }
+    book =
+      if existing_book do
+        existing_book
+      else
+        book_attrs = %{
+          library_id: library.id,
+          series_id: series && series.id,
+          title: Map.get(metadata, :title) || filename,
+          type: if(series, do: "issue", else: "standalone"),
+          issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
+          volume: Map.get(metadata, :volume),
+          year: Map.get(metadata, :year),
+          page_count: resolve_page_count(metadata, file_path, 0),
+          language: Map.get(metadata, :language, "en"),
+          summary: Map.get(metadata, :summary),
+          age_rating: Map.get(metadata, :age_rating),
+          community_rating: Map.get(metadata, :community_rating)
+        }
 
-    case Library.create_book(attrs) do
-      {:ok, book} ->
-        link_publisher(book, series, enrich_publisher(metadata, file_path, library))
-        Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, book})
-        {{book, file_path}, new_cache}
+        case Library.create_book(book_attrs) do
+          {:ok, b} ->
+            link_publisher(b, series, enrich_publisher(metadata, file_path, library))
+            Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, b})
+            b
 
-      {:error, reason} ->
-        Logger.error("Failed to import #{file_path}: #{inspect(reason)}")
-        {nil, new_cache}
+          {:error, reason} ->
+            Logger.error("Failed to create book for #{file_path}: #{inspect(reason)}")
+            nil
+        end
+      end
+
+    if book do
+      file_attrs = %{
+        book_id: book.id,
+        path: file_path,
+        format: format,
+        file_size: file_size,
+        file_hash: file_hash,
+        last_modified: last_modified,
+        page_count: resolve_page_count(metadata, file_path, 0),
+        source_format: Map.get(parsed, :source_format)
+      }
+
+      case Library.create_book_file(file_attrs) do
+        {:ok, _book_file} ->
+          if existing_book do
+            pc = resolve_page_count(metadata, file_path, 0)
+            if pc > 0, do: Library.update_book(book, %{page_count: pc})
+          end
+
+          {{book, file_path}, new_cache}
+
+        {:error, reason} ->
+          Logger.error("Failed to create book_file for #{file_path}: #{inspect(reason)}")
+          {nil, new_cache}
+      end
+    else
+      {nil, new_cache}
     end
   end
 
-  defp update_book_from_meta(
-         book,
+  defp move_book_file(
+         book_file,
+         %{
+           file_path: file_path,
+           file_hash: file_hash,
+           last_modified: last_modified,
+           file_size: file_size,
+           parsed: parsed,
+           metadata: metadata
+         },
+         _library,
+         cache
+       ) do
+    attrs = %{
+      path: file_path,
+      file_hash: file_hash,
+      last_modified: last_modified,
+      file_size: file_size,
+      page_count: resolve_page_count(metadata, file_path, book_file.page_count),
+      source_format: Map.get(parsed, :source_format),
+      deleted_at: nil
+    }
+
+    case Library.update_book_file(book_file, attrs) do
+      {:ok, _} ->
+        book = Library.get_book!(book_file.book_id)
+        {{book, file_path}, cache}
+
+      {:error, reason} ->
+        Logger.error("Failed to move book_file #{file_path}: #{inspect(reason)}")
+        {nil, cache}
+    end
+  end
+
+  defp update_book_file_from_meta(
+         book_file,
          %{
            file_path: file_path,
            file_hash: file_hash,
@@ -356,21 +425,11 @@ defmodule Stashix.Scanner do
          library,
          cache
        ) do
+    book = Library.get_book!(book_file.book_id)
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
     filename = Path.basename(file_path, Path.extname(file_path))
 
-    primary_id =
-      if is_nil(book.primary_book_id) do
-        stem = Path.basename(file_path, Path.extname(file_path))
-        dir = Path.dirname(file_path)
-        sibling = Library.get_book_by_stem(dir, stem, file_path)
-        sibling && (sibling.primary_book_id || sibling.id)
-      else
-        book.primary_book_id
-      end
-
-    attrs = %{
-      path: file_path,
+    book_attrs = %{
       title: Map.get(metadata, :title) || filename,
       issue_number: if(series, do: Map.get(parsed, :issue_number) || Map.get(comicinfo, :issue_number)),
       volume: Map.get(metadata, :volume),
@@ -379,22 +438,25 @@ defmodule Stashix.Scanner do
       type: if(series, do: "issue", else: "standalone"),
       page_count: resolve_page_count(metadata, file_path, book.page_count),
       language: Map.get(metadata, :language, book.language),
-      summary: Map.get(metadata, :summary, book.summary),
-      source_format: Map.get(parsed, :source_format),
-      primary_book_id: primary_id,
+      summary: Map.get(metadata, :summary, book.summary)
+    }
+
+    file_attrs = %{
+      path: file_path,
       file_hash: file_hash,
-      file_size: file_size,
       last_modified: last_modified,
+      file_size: file_size,
+      page_count: resolve_page_count(metadata, file_path, book_file.page_count),
+      source_format: Map.get(parsed, :source_format),
       deleted_at: nil
     }
 
-    case Library.update_book(book, attrs) do
-      {:ok, updated_book} ->
-        link_publisher(updated_book, series, enrich_publisher(metadata, file_path, library))
-        {{updated_book, file_path}, new_cache}
-
+    with {:ok, _updated_book} <- Library.update_book(book, book_attrs),
+         {:ok, _updated_file} <- Library.update_book_file(book_file, file_attrs) do
+      {{book, file_path}, new_cache}
+    else
       {:error, reason} ->
-        Logger.error("Failed to reimport #{file_path}: #{inspect(reason)}")
+        Logger.error("Failed to update book/file for #{file_path}: #{inspect(reason)}")
         {nil, new_cache}
     end
   end
@@ -746,8 +808,6 @@ defmodule Stashix.Scanner do
     end)
   end
 
-  # Infer publisher from path when XML provides none.
-  # Matches <lib_root>/<publisher>/<series>/file — publisher dir must sit directly under lib root.
   defp enrich_publisher(metadata, file_path, library) do
     if Map.has_key?(metadata, :publisher) do
       metadata

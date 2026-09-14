@@ -9,13 +9,21 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
-    book = Library.get_book!(id)
+    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    format = params["format"] && String.to_existing_atom(params["format"])
+    book_file = Library.get_preferred_book_file(book, format)
 
     pages =
-      case Extractor.list_pages(book.path) do
-        {:ok, p} -> p
-        _ -> []
+      if book_file do
+        case Extractor.list_pages(book_file.path) do
+          {:ok, p} -> p
+          _ -> []
+        end
+      else
+        []
       end
+
+    book_format = book_file && to_string(book_file.format)
 
     user = socket.assigns.current_user
     progress = Library.get_progress(user.id, id)
@@ -35,6 +43,7 @@ defmodule StashixWeb.ReaderLive do
      assign(socket,
        page_title: "Reading: #{book.title}",
        book: book,
+       book_format: book_format,
        pages: pages,
        page_count: length(pages),
        current_page: current_page,
@@ -459,7 +468,9 @@ defmodule StashixWeb.ReaderLive do
             <img
               id="reader-page-main"
               phx-hook="PageImage"
-              src={~p"/api/books/#{@book.id}/page/#{@current_page}"}
+              src={
+                "/api/books/#{@book.id}/page/#{@current_page}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
+              }
               alt={"Page #{@current_page + 1}"}
               class="object-contain"
               style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
@@ -496,7 +507,9 @@ defmodule StashixWeb.ReaderLive do
               <img
                 id="reader-page-second"
                 phx-hook="PageImage"
-                src={~p"/api/books/#{@book.id}/page/#{@current_page + 1}"}
+                src={
+                  "/api/books/#{@book.id}/page/#{@current_page + 1}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
+                }
                 alt={"Page #{@current_page + 2}"}
                 class="object-contain"
                 style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
@@ -511,7 +524,7 @@ defmodule StashixWeb.ReaderLive do
           <%= for offset <- preload_offsets(@page_layout) do %>
             <% p = @current_page + offset %>
             <%= if p >= 0 && p < @page_count do %>
-              <img src={~p"/api/books/#{@book.id}/page/#{p}"} />
+              <img src={"/api/books/#{@book.id}/page/#{p}#{if @book_format, do: "?format=#{@book_format}", else: ""}"} />
             <% end %>
           <% end %>
         </div>

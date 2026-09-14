@@ -94,7 +94,6 @@ defmodule StashixWeb.SeriesController do
       title: book.title,
       issue_number: book.issue_number,
       volume: book.volume,
-      format: book.format,
       page_count: book.page_count
     }
   end
