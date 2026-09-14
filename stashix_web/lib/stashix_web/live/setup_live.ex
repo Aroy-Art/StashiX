@@ -24,7 +24,7 @@ defmodule StashixWeb.SetupLive do
              "password_confirmation" => ""
            }),
          library_form: to_form(%{"library_name" => "", "library_path" => ""})
-       ), layout: {StashixWeb.Layouts, :root}}
+       ), layout: false}
     end
   end
 

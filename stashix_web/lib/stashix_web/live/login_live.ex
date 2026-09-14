@@ -21,7 +21,7 @@ defmodule StashixWeb.LoginLive do
          form: to_form(%{"login" => "", "password" => ""}),
          error: nil,
          trigger_submit: false
-       ), layout: {StashixWeb.Layouts, :root}}
+       ), layout: false}
     end
   end
 
