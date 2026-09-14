@@ -412,9 +412,19 @@ defmodule Stashix.Library do
   end
 
   def update_series(series, attrs) do
-    series
-    |> Series.changeset(attrs)
-    |> Repo.update()
+    {publisher_ids, series_attrs} = Map.pop(attrs, "publisher_ids")
+
+    changeset = Series.changeset(series, series_attrs)
+
+    changeset =
+      if publisher_ids do
+        publishers = Repo.all(from p in Publisher, where: p.id in ^publisher_ids)
+        Ecto.Changeset.put_assoc(changeset, :publishers, publishers)
+      else
+        changeset
+      end
+
+    Repo.update(changeset)
   end
 
   def update_series_folder_meta(series, attrs) do
@@ -861,9 +871,19 @@ defmodule Stashix.Library do
   end
 
   def update_book(book, attrs) do
-    book
-    |> Book.changeset(attrs)
-    |> Repo.update()
+    {publisher_ids, book_attrs} = Map.pop(attrs, "publisher_ids")
+
+    changeset = Book.changeset(book, book_attrs)
+
+    changeset =
+      if publisher_ids do
+        publishers = Repo.all(from p in Publisher, where: p.id in ^publisher_ids)
+        Ecto.Changeset.put_assoc(changeset, :publishers, publishers)
+      else
+        changeset
+      end
+
+    Repo.update(changeset)
   end
 
   def load_books_cache(library_id) do

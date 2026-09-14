@@ -41,7 +41,10 @@ defmodule StashixWeb.SeriesLive do
        scanning: false,
        show_admin_menu: false,
        show_edit_dialog: false,
-       edit_form: nil
+       edit_form: nil,
+       all_publishers: Library.list_all_publishers(),
+       pub_query: "",
+       selected_publisher_ids: []
      )}
   end
 
@@ -51,9 +54,16 @@ defmodule StashixWeb.SeriesLive do
       if params["edit"] == "true" && socket.assigns.current_user.role == :admin do
         series = socket.assigns.series
         form = series |> Series.changeset(%{}) |> to_form()
-        assign(socket, show_edit_dialog: true, edit_form: form)
+        selected_publisher_ids = Enum.map(series.publishers, & &1.id)
+
+        assign(socket,
+          show_edit_dialog: true,
+          edit_form: form,
+          selected_publisher_ids: selected_publisher_ids,
+          pub_query: ""
+        )
       else
-        assign(socket, show_edit_dialog: false, edit_form: nil)
+        assign(socket, show_edit_dialog: false, edit_form: nil, pub_query: "")
       end
 
     {:noreply, socket}
@@ -88,8 +98,24 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
   end
 
+  def handle_event("pub_query", %{"value" => q}, socket) do
+    {:noreply, assign(socket, pub_query: q)}
+  end
+
+  def handle_event("add_publisher", %{"id" => id}, socket) do
+    ids = socket.assigns.selected_publisher_ids
+    ids = if id in ids, do: ids, else: ids ++ [id]
+    {:noreply, assign(socket, selected_publisher_ids: ids, pub_query: "")}
+  end
+
+  def handle_event("remove_publisher", %{"id" => id}, socket) do
+    ids = Enum.reject(socket.assigns.selected_publisher_ids, &(&1 == id))
+    {:noreply, assign(socket, selected_publisher_ids: ids)}
+  end
+
   def handle_event("save_metadata", %{"series" => params}, socket) do
     series = socket.assigns.series
+    params = Map.put(params, "publisher_ids", socket.assigns.selected_publisher_ids)
 
     case Library.update_series(series, params) do
       {:ok, updated_series} ->
@@ -605,6 +631,74 @@ defmodule StashixWeb.SeriesLive do
                   class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
                 />
                 <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
+                <%!-- Selected badges --%>
+                <%= if @selected_publisher_ids != [] do %>
+                  <div class="flex flex-wrap gap-1.5 mb-2">
+                    <%= for id <- @selected_publisher_ids do %>
+                      <% pub = Enum.find(@all_publishers, &(&1.id == id)) %>
+                      <%= if pub do %>
+                        <span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-violet-900/50 border border-violet-700/50 text-violet-300 text-xs">
+                          {pub.name}
+                          <button
+                            type="button"
+                            phx-click="remove_publisher"
+                            phx-value-id={id}
+                            class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5"
+                          >
+                            <.icon name="lucide-x" class="w-2.5 h-2.5" />
+                          </button>
+                        </span>
+                      <% end %>
+                    <% end %>
+                  </div>
+                <% end %>
+                <%!-- Search input + dropdown --%>
+                <div class="relative">
+                  <input
+                    type="text"
+                    value={@pub_query}
+                    placeholder="Search publishers…"
+                    phx-keyup="pub_query"
+                    autocomplete="off"
+                    class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  />
+                  <%= if @pub_query != "" do %>
+                    <% results =
+                      @all_publishers
+                      |> Enum.reject(&(&1.id in @selected_publisher_ids))
+                      |> Enum.filter(&String.contains?(String.downcase(&1.name), String.downcase(@pub_query)))
+                      |> Enum.take(8) %>
+                    <div
+                      class="absolute z-30 top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden shadow-xl"
+                      onmousedown="event.preventDefault()"
+                    >
+                      <%= if results == [] do %>
+                        <div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>
+                      <% else %>
+                        <%= for {p, i} <- Enum.with_index(results) do %>
+                          <button
+                            type="button"
+                            phx-click="add_publisher"
+                            phx-value-id={p.id}
+                            class={[
+                              "w-full text-left px-3 py-2 text-sm transition-colors",
+                              if(i == 0,
+                                do: "bg-gray-700/60 text-white hover:bg-gray-700",
+                                else: "text-gray-300 hover:bg-gray-700 hover:text-white"
+                              )
+                            ]}
+                          >
+                            {p.name}
+                          </button>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
               </div>
             </div>
 
