@@ -71,11 +71,14 @@ jobs:
         run: mix docs
 
       - name: initialize site
+        run: mkdir _init && echo '<meta http-equiv="refresh" content="0;url=hexdoc/">' > _init/index.html
+
+      - name: push site init
         uses: https://code.forgejo.org/actions/git-pages@v2
         with:
           site: https://aroy.pages.aroy-art.com/Stashix/
           token: ${{ forgejo.token }}
-          source: stashix_web/doc/
+          source: _init/
 
       - name: publish to pages
         uses: https://code.forgejo.org/actions/git-pages@v2
