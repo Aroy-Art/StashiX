@@ -71,3 +71,4 @@ jobs:
           site: https://aroy.pages.aroy-art.com/
           token: ${{ forgejo.token }}
           source: stashix_web/doc/
+          path: stashix/hexdoc/
