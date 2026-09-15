@@ -107,6 +107,26 @@ defmodule StashixWeb.SearchLive do
           </section>
         <% end %>
 
+        <%= if @results.books != [] do %>
+          <section class="space-y-3">
+            <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Books</h2>
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+              <%= for book <- @results.books do %>
+                <.media_card
+                  navigate={~p"/book/#{book.id}"}
+                  title={book.title}
+                  cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
+                  size="m"
+                  subtitle={book.year && to_string(book.year)}
+                  page_count={book.page_count}
+                  type={:book}
+                  blurhash={book.cover && book.cover.blurhash}
+                />
+              <% end %>
+            </div>
+          </section>
+        <% end %>
+
         <%= if @results.issues != [] do %>
           <section class="space-y-3">
             <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Issues</h2>
@@ -129,26 +149,6 @@ defmodule StashixWeb.SearchLive do
                       true -> nil
                     end
                   }
-                  type={:book}
-                  blurhash={book.cover && book.cover.blurhash}
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%= if @results.books != [] do %>
-          <section class="space-y-3">
-            <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">Books</h2>
-            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
-              <%= for book <- @results.books do %>
-                <.media_card
-                  navigate={~p"/book/#{book.id}"}
-                  title={book.title}
-                  cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
-                  size="m"
-                  subtitle={book.year && to_string(book.year)}
-                  page_count={book.page_count}
                   type={:book}
                   blurhash={book.cover && book.cover.blurhash}
                 />
