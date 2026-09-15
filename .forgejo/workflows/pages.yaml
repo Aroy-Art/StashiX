@@ -70,9 +70,17 @@ jobs:
         working-directory: stashix_web
         run: mix docs
 
+      - name: initialize site
+        uses: https://code.forgejo.org/actions/git-pages@v2
+        with:
+          site: https://aroy.pages.aroy-art.com/Stashix/
+          token: ${{ forgejo.token }}
+          source: stashix_web/doc/
+
       - name: publish to pages
         uses: https://code.forgejo.org/actions/git-pages@v2
         with:
-          site: https://aroy.pages.aroy-art.com/Stashix-hexdoc/
+          site: https://aroy.pages.aroy-art.com/Stashix/
           token: ${{ forgejo.token }}
           source: stashix_web/doc/
+          path: hexdoc/
