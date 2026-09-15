@@ -4,52 +4,70 @@ on:
   push:
     branches: [main]
     paths:
-      - "docs/**"
+      - "stashix_web/lib/**"
+      - "stashix_web/mix.exs"
+      - "stashix_web/mix.lock"
       - ".forgejo/workflows/pages.yaml"
 
 jobs:
   publish:
     runs-on: act-ubuntu-24.04-amd64
+    env:
+      ELIXIR_VERSION: "1.20.4"
+      OTP_VERSION: "28.4"
 
     steps:
       - name: checkout code
         uses: https://code.forgejo.org/actions/checkout@v7
 
-      - name: install pandoc
-        run: |
-          apt-get install -y pandoc
+      - name: cache elixir install
+        id: cache-elixir
+        uses: https://code.forgejo.org/actions/cache@v6
+        with:
+          path: ~/.elixir-install
+          key: ${{ runner.os }}-elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.OTP_VERSION }}
 
-      - name: build site
+      - name: install elixir
+        if: steps.cache-elixir.outputs.cache-hit != 'true'
+        shell: bash
         run: |
-          mkdir -p _site
-          pandoc docs/scanner-layout.md \
-            --standalone \
-            --metadata title="Stashix — Scanner Layout" \
-            --css https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css \
-            -o _site/scanner-layout.html
-          cp docs/MetronInfo.schema.xml _site/MetronInfo.schema.xml
-          cat > _site/index.html <<'EOF'
-          <!doctype html>
-          <html lang="en">
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Stashix Docs</title>
-            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css">
-          </head>
-          <body>
-            <h1>Stashix Docs</h1>
-            <ul>
-              <li><a href="scanner-layout.html">Scanner Layout</a></li>
-              <li><a href="MetronInfo.schema.xml">MetronInfo XML Schema</a></li>
-            </ul>
-          </body>
-          </html>
-          EOF
+          curl -fsSO https://elixir-lang.org/install.sh
+          sh install.sh elixir@$ELIXIR_VERSION otp@$OTP_VERSION
+
+      - name: add elixir to path
+        shell: bash
+        run: |
+          installs_dir="$HOME/.elixir-install/installs"
+          otp_major="${OTP_VERSION%%.*}"
+          echo "$installs_dir/otp/$OTP_VERSION/bin" >> "$GITHUB_PATH"
+          echo "$installs_dir/elixir/$ELIXIR_VERSION-otp-$otp_major/bin" >> "$GITHUB_PATH"
+
+      - name: cache deps
+        uses: https://code.forgejo.org/actions/cache@v6
+        with:
+          path: |
+            stashix_web/deps
+            stashix_web/_build
+          key: ${{ runner.os }}-mix-docs-${{ hashFiles('stashix_web/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-docs-
+
+      - name: install hex and rebar
+        shell: sh
+        run: mix local.hex --force && mix local.rebar --force
+
+      - name: install dependencies
+        shell: sh
+        working-directory: stashix_web
+        run: mix deps.get
+
+      - name: build hex docs
+        shell: sh
+        working-directory: stashix_web
+        run: mix docs
 
       - name: publish to pages
         uses: https://code.forgejo.org/actions/git-pages@v2
         with:
           site: https://aroy.pages.aroy-art.com/
           token: ${{ forgejo.token }}
-          source: _site/
+          source: stashix_web/doc/
