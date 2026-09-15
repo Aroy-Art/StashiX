@@ -302,19 +302,12 @@ defmodule Stashix.Library do
   def search_all(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
 
-    fts_where =
-      dynamic(
-        [b],
-        fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-          is_nil(b.deleted_at)
-      )
-
-    fts_order = dynamic(fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string))
-
     issues =
       from(b in Book,
-        where: ^fts_where and b.type == "issue",
-        order_by: ^fts_order,
+        where:
+          fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
+            is_nil(b.deleted_at) and b.type == "issue",
+        order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
         preload: [:cover, :series],
         limit: ^limit
       )
@@ -322,8 +315,10 @@ defmodule Stashix.Library do
 
     books =
       from(b in Book,
-        where: ^fts_where and b.type == "standalone",
-        order_by: ^fts_order,
+        where:
+          fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
+            is_nil(b.deleted_at) and b.type == "standalone",
+        order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
         preload: [:cover, :series],
         limit: ^limit
       )
