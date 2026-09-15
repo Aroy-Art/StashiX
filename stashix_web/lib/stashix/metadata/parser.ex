@@ -461,6 +461,26 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series NN - Title" — e.g. "Asterix 11 - Asterix and the Chieftains Shield"
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s+(\d{1,4}(?:\.\d+)?)\s*(?:-|–)\s*(.+?)\s*$/,
+               clean
+             ) do
+          [_, series, issue, title] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
+            |> Map.put(:title, String.trim(title))
+
+          nil ->
+            result
+        end
+      end
+
     result =
       if map_size(result) > 0 do
         result
