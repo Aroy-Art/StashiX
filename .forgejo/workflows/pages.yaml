@@ -73,7 +73,6 @@ jobs:
       - name: publish to pages
         uses: https://code.forgejo.org/actions/git-pages@v2
         with:
-          site: https://aroy.pages.aroy-art.com/Stashix/
+          site: https://aroy.pages.aroy-art.com/Stashix/hexdoc/
           token: ${{ forgejo.token }}
           source: stashix_web/doc/
-          path: hexdoc/
