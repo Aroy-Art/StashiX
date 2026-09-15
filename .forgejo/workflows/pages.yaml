@@ -1,0 +1,55 @@
+name: Publish Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".forgejo/workflows/pages.yaml"
+
+jobs:
+  publish:
+    runs-on: act-ubuntu-24.04-amd64
+
+    steps:
+      - name: checkout code
+        uses: https://code.forgejo.org/actions/checkout@v7
+
+      - name: install pandoc
+        run: |
+          apt-get install -y pandoc
+
+      - name: build site
+        run: |
+          mkdir -p _site
+          pandoc docs/scanner-layout.md \
+            --standalone \
+            --metadata title="Stashix — Scanner Layout" \
+            --css https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css \
+            -o _site/scanner-layout.html
+          cp docs/MetronInfo.schema.xml _site/MetronInfo.schema.xml
+          cat > _site/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Stashix Docs</title>
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.min.css">
+          </head>
+          <body>
+            <h1>Stashix Docs</h1>
+            <ul>
+              <li><a href="scanner-layout.html">Scanner Layout</a></li>
+              <li><a href="MetronInfo.schema.xml">MetronInfo XML Schema</a></li>
+            </ul>
+          </body>
+          </html>
+          EOF
+
+      - name: publish to pages
+        uses: https://code.forgejo.org/actions/git-pages@v2
+        with:
+          site: https://aroy.pages.aroy-art.com/
+          token: ${{ forgejo.token }}
+          source: _site/
