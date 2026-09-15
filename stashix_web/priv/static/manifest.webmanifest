@@ -12,13 +12,40 @@
             "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "/screenshots/desktop.png",
+            "sizes": "1920x937",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "StashiX library view"
+        },
+        {
+            "src": "/screenshots/mobile.png",
+            "sizes": "500x1018",
+            "type": "image/png",
+            "label": "StashiX mobile view"
         }
     ]
 }

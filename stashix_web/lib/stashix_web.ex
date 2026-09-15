@@ -18,7 +18,7 @@ defmodule StashixWeb do
   """
 
   def static_paths,
-    do: ~w(assets fonts images icons favicon.ico favicon.png robots.txt manifest.webmanifest sw.js)
+    do: ~w(assets fonts images icons screenshots favicon.ico favicon.png robots.txt manifest.webmanifest sw.js)
 
   def router do
     quote do
