@@ -166,6 +166,8 @@ defmodule StashixWeb.LibraryLive do
     {:noreply, push_patch(socket, to: sub_path(socket, 1, socket.assigns.sort))}
   end
 
+  def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
+
   defp sub_path(socket, page, sort) do
     id = socket.assigns.library.id
     params = %{page: page, sort: sort}

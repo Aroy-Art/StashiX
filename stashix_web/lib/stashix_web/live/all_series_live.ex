@@ -87,6 +87,10 @@ defmodule StashixWeb.AllSeriesLive do
   defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
   defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
+  def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
+  def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""

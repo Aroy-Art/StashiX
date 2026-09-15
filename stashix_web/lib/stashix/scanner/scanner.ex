@@ -3,7 +3,7 @@ defmodule Stashix.Scanner do
   require Logger
 
   alias Stashix.Library
-  alias Stashix.Media.{Thumbnail, Extractor}
+  alias Stashix.Media.{Thumbnail, Extractor, ImageResizer}
   alias Stashix.Metadata.Parser
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
@@ -793,10 +793,23 @@ defmodule Stashix.Scanner do
         sidecar -> File.cp(sidecar, dest)
       end
 
-    case result do
-      :ok -> save_cover_with_blurhash(book.id, dest)
-      {:ok, _} -> save_cover_with_blurhash(book.id, dest)
-      {:error, reason} -> Logger.warning("Thumbnail failed for #{file_path}: #{inspect(reason)}")
+    saved =
+      case result do
+        :ok ->
+          ImageResizer.bust_cache(dest)
+          save_cover_with_blurhash(book.id, dest)
+
+        {:ok, _} ->
+          ImageResizer.bust_cache(dest)
+          save_cover_with_blurhash(book.id, dest)
+
+        {:error, reason} ->
+          Logger.warning("Thumbnail failed for #{file_path}: #{inspect(reason)}")
+          :error
+      end
+
+    if match?({:ok, _}, saved) do
+      Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{book.library_id}", {:cover_updated, book.id})
     end
   end
 

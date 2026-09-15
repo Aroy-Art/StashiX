@@ -147,6 +147,8 @@ defmodule StashixWeb.HomeLive do
      )}
   end
 
+  def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""

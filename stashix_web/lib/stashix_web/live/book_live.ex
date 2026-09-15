@@ -139,6 +139,15 @@ defmodule StashixWeb.BookLive do
      )}
   end
 
+  def handle_info({:cover_updated, book_id}, socket) do
+    if socket.assigns.book.id == book_id do
+      book = Library.get_book_with_series(book_id)
+      {:noreply, assign(socket, book: book)}
+    else
+      {:noreply, socket}
+    end
+  end
+
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 

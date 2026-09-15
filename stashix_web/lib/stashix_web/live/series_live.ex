@@ -149,6 +149,22 @@ defmodule StashixWeb.SeriesLive do
      )}
   end
 
+  def handle_info({:cover_updated, book_id}, socket) do
+    updated = Library.get_book_with_series(book_id)
+
+    books =
+      Enum.map(socket.assigns.books, fn b ->
+        if b.id == book_id, do: updated, else: b
+      end)
+
+    cover_book =
+      if socket.assigns.cover_book && socket.assigns.cover_book.id == book_id,
+        do: updated,
+        else: socket.assigns.cover_book
+
+    {:noreply, assign(socket, books: books, cover_book: cover_book)}
+  end
+
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 

@@ -554,6 +554,7 @@ defmodule StashixWeb.AdminLive do
   end
 
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+  def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
   @impl true
   def render(assigns) do

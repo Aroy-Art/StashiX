@@ -46,6 +46,18 @@ defmodule Stashix.Media.ImageResizer do
     end
   end
 
+  def bust_cache(source_path) do
+    cache_dir = resized_cache_dir()
+    cache_key = :crypto.hash(:md5, source_path) |> Base.encode16(case: :lower)
+
+    for ext <- ~w(jpg webp), size <- Map.keys(@sizes) do
+      path = Path.join(cache_dir, "#{cache_key}-#{size}.#{ext}")
+      File.rm(path)
+    end
+
+    :ok
+  end
+
   defp resized_cache_dir do
     Application.get_env(:stashix, :image_cache_dir, "/tmp/stashix/cache/images/resized")
   end

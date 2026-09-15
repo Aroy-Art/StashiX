@@ -6,6 +6,7 @@ defmodule Stashix.Scanner.FileWatcher do
 
   @debounce_ms 5_000
   @supported_exts ~w(.cbz .cbr .cb7 .epub .pdf)
+  @sidecar_exts ~w(.jpg .jpeg .png .webp)
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
@@ -28,14 +29,21 @@ defmodule Stashix.Scanner.FileWatcher do
 
   @impl true
   def handle_info({:file_event, _pid, {path, events}}, state) do
-    if supported_file?(path) && interesting_event?(events) do
-      library_id = find_library_id(path, state.libraries)
+    scan_path =
+      cond do
+        supported_file?(path) -> path
+        sidecar_file?(path) -> find_comic_for_sidecar(path)
+        true -> nil
+      end
+
+    if scan_path && interesting_event?(events) do
+      library_id = find_library_id(scan_path, state.libraries)
 
       if library_id do
-        {existing_timer, _} = Map.get(state.debounce, path, {nil, nil})
+        {existing_timer, _} = Map.get(state.debounce, scan_path, {nil, nil})
         cancel_timer(existing_timer)
-        timer = Process.send_after(self(), {:trigger_scan_file, path, library_id}, @debounce_ms)
-        {:noreply, put_in(state, [:debounce, path], {timer, library_id})}
+        timer = Process.send_after(self(), {:trigger_scan_file, scan_path, library_id}, @debounce_ms)
+        {:noreply, put_in(state, [:debounce, scan_path], {timer, library_id})}
       else
         {:noreply, state}
       end
@@ -69,6 +77,19 @@ defmodule Stashix.Scanner.FileWatcher do
 
   defp supported_file?(path) do
     String.downcase(Path.extname(path)) in @supported_exts
+  end
+
+  defp sidecar_file?(path) do
+    String.downcase(Path.extname(path)) in @sidecar_exts
+  end
+
+  defp find_comic_for_sidecar(sidecar_path) do
+    base = Path.rootname(sidecar_path)
+
+    Enum.find_value(@supported_exts, fn ext ->
+      candidate = base <> ext
+      if File.exists?(candidate), do: candidate
+    end)
   end
 
   defp interesting_event?(events) do
