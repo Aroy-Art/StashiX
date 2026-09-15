@@ -51,11 +51,16 @@ jobs:
       - name: cache deps
         uses: https://code.forgejo.org/actions/cache@v6
         with:
-          path: |
-            stashix_web/deps
-            stashix_web/_build
-          key: ${{ runner.os }}-mix-${{ hashFiles('stashix_web/mix.lock') }}
-          restore-keys: ${{ runner.os }}-mix-
+          path: stashix_web/deps
+          key: ${{ runner.os }}-mix-deps-${{ hashFiles('stashix_web/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-deps-
+
+      - name: cache build
+        uses: https://code.forgejo.org/actions/cache@v6
+        with:
+          path: stashix_web/_build
+          key: ${{ runner.os }}-mix-build-format-${{ hashFiles('stashix_web/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-build-format-
 
       - name: install hex and rebar
         shell: sh
