@@ -230,7 +230,7 @@ defmodule StashixWeb.BookLive do
       <div class="overflow-hidden">
         <%!-- Cover — floated left --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative">
+          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative group">
             <%= if @book.cover do %>
               <.blurhash_image
                 id={"book-cover-#{@book.id}"}
@@ -238,6 +238,16 @@ defmodule StashixWeb.BookLive do
                 alt={@book.title}
                 blurhash={@book.cover.blurhash}
               />
+              <button
+                phx-click={JS.show(to: "#book-cover-lightbox", display: "flex")}
+                class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
+                aria-label="View cover full screen"
+              >
+                <.icon
+                  name="lucide-zoom-in"
+                  class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
+                />
+              </button>
             <% else %>
               <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
                 <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
@@ -544,6 +554,31 @@ defmodule StashixWeb.BookLive do
         </div>
       <% end %>
     </div>
+
+    <%!-- Cover Lightbox --%>
+    <%= if @book.cover do %>
+      <div
+        id="book-cover-lightbox"
+        style="display:none"
+        phx-click={JS.hide(to: "#book-cover-lightbox")}
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 cursor-zoom-out"
+      >
+        <div onclick="event.stopPropagation()" class="cursor-default">
+          <img
+            src={~p"/api/books/#{@book.id}/cover?s=xl"}
+            alt={@book.title}
+            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+          />
+        </div>
+        <button
+          phx-click={JS.hide(to: "#book-cover-lightbox")}
+          class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+          aria-label="Close"
+        >
+          <.icon name="lucide-x" class="w-5 h-5" />
+        </button>
+      </div>
+    <% end %>
 
     <%!-- Edit Metadata Dialog --%>
     <%= if @current_user.role == :admin && @show_edit_dialog do %>

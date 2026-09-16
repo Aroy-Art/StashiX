@@ -305,7 +305,7 @@ defmodule StashixWeb.SeriesLive do
       <div class="overflow-hidden">
         <%!-- Cover — floated left; inline style bypasses Tailwind purge; aspect-ratio gives immediate height --%>
         <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative">
+          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative group">
             <%= if @cover_book && @cover_book.cover do %>
               <.blurhash_image
                 id={"series-cover-#{@series.id}"}
@@ -313,6 +313,16 @@ defmodule StashixWeb.SeriesLive do
                 alt={@series.name}
                 blurhash={@cover_book.cover.blurhash}
               />
+              <button
+                phx-click={JS.show(to: "#series-cover-lightbox")}
+                class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
+                aria-label="View cover full screen"
+              >
+                <.icon
+                  name="lucide-zoom-in"
+                  class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
+                />
+              </button>
             <% else %>
               <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
                 <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
@@ -530,6 +540,32 @@ defmodule StashixWeb.SeriesLive do
         </div>
       </div>
     </div>
+
+    <%!-- Cover Lightbox --%>
+    <%= if @cover_book && @cover_book.cover do %>
+      <div
+        id="series-cover-lightbox"
+        style="display:none"
+        phx-click={JS.hide(to: "#series-cover-lightbox")}
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 cursor-zoom-out"
+      >
+        <div onclick="event.stopPropagation()" class="relative p-4 cursor-default">
+          <img
+            src={~p"/api/books/#{@cover_book.id}/cover?s=xl"}
+            alt={@series.name}
+            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+          />
+          <button
+            onclick="event.stopPropagation()"
+            phx-click={JS.hide(to: "#series-cover-lightbox")}
+            class="absolute top-6 right-6 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+            aria-label="Close"
+          >
+            <.icon name="lucide-x" class="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    <% end %>
 
     <%!-- Edit Metadata Dialog --%>
     <%= if @current_user.role == :admin && @show_edit_dialog do %>

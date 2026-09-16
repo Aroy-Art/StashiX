@@ -62,6 +62,21 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 
 `THUMBNAIL_DIR` and `IMAGE_CACHE_DIR` are created automatically. In production point them at a persistent volume — covers are re-extracted on scan if missing.
 
+## Metrics
+
+Prometheus metrics are available on a dedicated port (default `9568`):
+
+```
+GET http://<host>:9568/metrics
+```
+
+| Config key       | Default      | Purpose                           |
+| ---------------- | ------------ | --------------------------------- |
+| `:metrics_port`  | `9568`       | Scrape endpoint port              |
+| `:metrics_ip`    | `{0,0,0,0}` | Bind address                      |
+
+The `phoenix_socket_connected_count` counter (labelled by `transport`) tracks WebSocket vs long-poll fallback connections. See [docs/metrics.md](docs/metrics.md) for the full metric list and example Grafana queries.
+
 ---
 
 ## TODO
@@ -95,6 +110,6 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 ### Infrastructure
 
 - [ ] S3 / object storage backend
-- [ ] Metrics endpoint (Prometheus)
+- [x] Metrics endpoint (Prometheus)
 - [ ] OPDS catalog support
 - [ ] Webhook notifications (Discord, Slack)
