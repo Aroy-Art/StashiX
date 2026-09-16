@@ -5,14 +5,19 @@ defmodule Stashix.Application do
 
   @impl true
   def start(_type, _args) do
+    metrics_port = Application.get_env(:stashix, :metrics_port, 9568)
+    metrics_ip = Application.get_env(:stashix, :metrics_ip, {0, 0, 0, 0})
+
     children = [
       TwMerge.Cache,
       StashixWeb.Telemetry,
+      {TelemetryMetricsPrometheus.Core, metrics: StashixWeb.Telemetry.metrics()},
       Stashix.Repo,
       {DNSCluster, query: Application.get_env(:stashix, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Stashix.PubSub},
       Stashix.Scanner.Supervisor,
-      StashixWeb.Endpoint
+      StashixWeb.Endpoint,
+      {Bandit, plug: StashixWeb.Plugs.MetricsPlug, scheme: :http, ip: metrics_ip, port: metrics_port}
     ]
 
     opts = [strategy: :one_for_one, name: Stashix.Supervisor]

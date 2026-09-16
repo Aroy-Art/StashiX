@@ -92,6 +92,7 @@ defmodule StashixWeb.AllIssuesLive do
     )
   end
 
+  @impl true
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
