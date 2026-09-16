@@ -543,27 +543,28 @@ defmodule StashixWeb.SeriesLive do
 
     <%!-- Cover Lightbox --%>
     <%= if @cover_book && @cover_book.cover do %>
-      <div
-        id="series-cover-lightbox"
-        style="display:none"
-        phx-click={JS.hide(to: "#series-cover-lightbox")}
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 cursor-zoom-out"
-      >
-        <div onclick="event.stopPropagation()" class="relative p-4 cursor-default">
+      <div id="series-cover-lightbox" style="display:none" class="fixed inset-0 z-50">
+        <div
+          phx-click={JS.hide(to: "#series-cover-lightbox")}
+          class="absolute inset-0 bg-black/90 cursor-zoom-out"
+        >
+        </div>
+        <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none">
           <img
             src={~p"/api/books/#{@cover_book.id}/cover?s=xl"}
             alt={@series.name}
-            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
-          />
-          <button
+            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
+            style="pointer-events:auto"
             onclick="event.stopPropagation()"
-            phx-click={JS.hide(to: "#series-cover-lightbox")}
-            class="absolute top-6 right-6 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
-            aria-label="Close"
-          >
-            <.icon name="lucide-x" class="w-5 h-5" />
-          </button>
+          />
         </div>
+        <button
+          phx-click={JS.hide(to: "#series-cover-lightbox")}
+          class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+          aria-label="Close"
+        >
+          <.icon name="lucide-x" class="w-5 h-5" />
+        </button>
       </div>
     <% end %>
 

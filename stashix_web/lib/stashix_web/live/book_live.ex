@@ -239,7 +239,7 @@ defmodule StashixWeb.BookLive do
                 blurhash={@book.cover.blurhash}
               />
               <button
-                phx-click={JS.show(to: "#book-cover-lightbox", display: "flex")}
+                phx-click={JS.show(to: "#book-cover-lightbox")}
                 class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
                 aria-label="View cover full screen"
               >
@@ -557,17 +557,19 @@ defmodule StashixWeb.BookLive do
 
     <%!-- Cover Lightbox --%>
     <%= if @book.cover do %>
-      <div
-        id="book-cover-lightbox"
-        style="display:none"
-        phx-click={JS.hide(to: "#book-cover-lightbox")}
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 cursor-zoom-out"
-      >
-        <div onclick="event.stopPropagation()" class="cursor-default">
+      <div id="book-cover-lightbox" style="display:none" class="fixed inset-0 z-50">
+        <div
+          phx-click={JS.hide(to: "#book-cover-lightbox")}
+          class="absolute inset-0 bg-black/90 cursor-zoom-out"
+        >
+        </div>
+        <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none">
           <img
             src={~p"/api/books/#{@book.id}/cover?s=xl"}
             alt={@book.title}
-            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
+            style="pointer-events:auto"
+            onclick="event.stopPropagation()"
           />
         </div>
         <button
