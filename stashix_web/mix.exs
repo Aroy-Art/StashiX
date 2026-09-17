@@ -45,7 +45,7 @@ defmodule Stashix.MixProject do
       {:phoenix_live_dashboard, "~> 0.9.0"},
       {:esbuild, "~> 0.8", runtime: Mix.env() == :dev},
       {:tailwind, "~> 0.5.1", runtime: Mix.env() == :dev},
-      {:lucide, github: "lucide-icons/lucide", tag: "1.46.0", sparse: "icons", app: false, compile: false, depth: 1},
+      {:lucide, github: "lucide-icons/lucide", tag: "1.47.0", sparse: "icons", app: false, compile: false, depth: 1},
       {:telemetry_metrics, "~> 1.0"},
       {:telemetry_metrics_prometheus_core, "~> 1.1"},
       {:telemetry_poller, "~> 1.0"},
