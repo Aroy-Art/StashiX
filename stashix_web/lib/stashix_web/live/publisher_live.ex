@@ -297,6 +297,7 @@ defmodule StashixWeb.PublisherLive do
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   size="m"
                   subtitle={series_date_range(s)}
+                  badge={"#{s.issue_count} issues"}
                   type={:series}
                   blurhash={s.cover_blurhash}
                   class="flex-shrink-0 w-36"
