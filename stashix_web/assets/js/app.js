@@ -58,6 +58,11 @@ Hooks.Chart = {
         const option = JSON.parse(this.el.dataset.option || "{}")
         if (Object.keys(option).length > 0) chart.setOption(option)
       } catch (_) {}
+
+      chart.on("click", (params) => {
+        const link = params.data?.link
+        if (link) window.liveSocket.pushHistoryState ? window.liveSocket.navigate(link) : (window.location.href = link)
+      })
     })
   },
 

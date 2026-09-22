@@ -14,7 +14,8 @@ defmodule StashixWeb.StatsLive do
     by_month = Library.stats_added_by_month()
     reading = Library.stats_reading_progress(user_id)
     top_series = Library.stats_top_series(15)
-    by_format = Library.stats_series_by_format()
+    by_file_format = Library.stats_books_by_file_format()
+    size_by_publisher = Library.stats_file_size_by_publisher()
 
     {:ok,
      assign(socket,
@@ -24,7 +25,8 @@ defmodule StashixWeb.StatsLive do
        chart_by_month: build_by_month(by_month),
        chart_reading: build_reading(reading),
        chart_top_series: build_top_series(top_series),
-       chart_by_format: build_by_format(by_format),
+       chart_by_format: build_by_file_format(by_file_format),
+       chart_size_by_publisher: build_size_by_publisher(size_by_publisher),
        stats: %{
          total_books: reading.total,
          unread: reading.unread,
@@ -212,14 +214,14 @@ defmodule StashixWeb.StatsLive do
     }
   end
 
-  defp build_by_format([]) do
+  defp build_by_file_format([]) do
     %{"series" => [%{"data" => []}]}
   end
 
-  defp build_by_format(rows) do
+  defp build_by_file_format(rows) do
     data =
       Enum.map(rows, fn {fmt, count} ->
-        %{"name" => fmt_label(fmt), "value" => count}
+        %{"name" => fmt |> Atom.to_string() |> String.upcase(), "value" => count}
       end)
 
     %{
@@ -241,7 +243,73 @@ defmodule StashixWeb.StatsLive do
             "borderWidth" => 2
           },
           "label" => %{"color" => "#9ca3af"},
-          "color" => ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#3b82f6"]
+          "color" => ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"]
+        }
+      ]
+    }
+  end
+
+  defp build_size_by_publisher([]) do
+    %{"series" => [%{"type" => "treemap", "data" => []}]}
+  end
+
+  defp build_size_by_publisher(rows) do
+    data =
+      rows
+      |> Enum.filter(fn {_, _, size} -> size && Decimal.compare(size, 0) == :gt end)
+      |> Enum.map(fn {id, name, size} ->
+        bytes = Decimal.to_integer(size)
+        formatted = Stashix.Formatters.format_bytes(bytes)
+
+        %{
+          "name" => name,
+          "value" => bytes,
+          "link" => "/publisher/#{id}",
+          "tooltip" => %{"formatter" => "#{name}: #{formatted}"}
+        }
+      end)
+
+    %{
+      "tooltip" => %{"trigger" => "item"},
+      "series" => [
+        %{
+          "type" => "treemap",
+          "data" => data,
+          "roam" => false,
+          "nodeClick" => false,
+          "cursor" => "pointer",
+          "breadcrumb" => %{"show" => false},
+          "label" => %{
+            "show" => true,
+            "color" => "#e5e7eb",
+            "fontSize" => 11,
+            "overflow" => "truncate",
+            "ellipsis" => true
+          },
+          "upperLabel" => %{"show" => false},
+          "itemStyle" => %{"borderColor" => "#030712", "borderWidth" => 2, "gapWidth" => 2},
+          "colorMappingBy" => "index",
+          "levels" => [
+            %{
+              "itemStyle" => %{
+                "borderColor" => "#1f2937",
+                "borderWidth" => 0,
+                "gapWidth" => 3
+              },
+              "color" => [
+                "#7c3aed",
+                "#2563eb",
+                "#0891b2",
+                "#059669",
+                "#d97706",
+                "#dc2626",
+                "#4f46e5",
+                "#0e7490",
+                "#047857",
+                "#b45309"
+              ]
+            }
+          ]
         }
       ]
     }
@@ -249,14 +317,6 @@ defmodule StashixWeb.StatsLive do
 
   defp shorten(str, max) when byte_size(str) > max, do: String.slice(str, 0, max - 1) <> "…"
   defp shorten(str, _), do: str
-
-  defp fmt_label(fmt) when is_atom(fmt), do: fmt |> Atom.to_string() |> fmt_label()
-  defp fmt_label("comic_series"), do: "Comic Series"
-  defp fmt_label("graphic_novel"), do: "Graphic Novel"
-  defp fmt_label("trade_paperback"), do: "Trade Paperback"
-  defp fmt_label("manga"), do: "Manga"
-  defp fmt_label("mini_series"), do: "Mini-Series"
-  defp fmt_label(other), do: other |> String.replace("_", " ") |> String.capitalize()
 
   @impl true
   def render(assigns) do
@@ -350,7 +410,7 @@ defmodule StashixWeb.StatsLive do
           </div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Series by Format</h2>
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">File Formats</h2>
           <div
             id="chart_by_format"
             phx-hook="Chart"
@@ -371,6 +431,19 @@ defmodule StashixWeb.StatsLive do
           phx-update="ignore"
           class="w-full h-96"
           data-option={Jason.encode!(@chart_top_series)}
+        >
+        </div>
+      </div>
+
+      <%!-- File size treemap by publisher --%>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">File Size by Publisher</h2>
+        <div
+          id="chart_size_by_publisher"
+          phx-hook="Chart"
+          phx-update="ignore"
+          class="w-full h-[28rem]"
+          data-option={Jason.encode!(@chart_size_by_publisher)}
         >
         </div>
       </div>

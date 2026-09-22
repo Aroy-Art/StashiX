@@ -1693,4 +1693,32 @@ defmodule Stashix.Library do
     )
     |> Repo.all()
   end
+
+  def stats_file_size_by_publisher do
+    from(bf in BookFile,
+      join: b in Book,
+      on: bf.book_id == b.id and is_nil(b.deleted_at),
+      join: bp in "book_publishers",
+      on: bp.book_id == b.id,
+      join: p in Publisher,
+      on: p.id == bp.publisher_id and is_nil(p.canonical_publisher_id),
+      where: is_nil(bf.deleted_at) and not p.hidden,
+      group_by: [p.id, p.name],
+      order_by: [desc: sum(bf.file_size)],
+      select: {p.id, p.name, sum(bf.file_size)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_books_by_file_format do
+    from(bf in BookFile,
+      join: b in Book,
+      on: bf.book_id == b.id,
+      where: is_nil(bf.deleted_at) and is_nil(b.deleted_at),
+      group_by: bf.format,
+      order_by: [desc: count(bf.book_id)],
+      select: {bf.format, count(bf.book_id)}
+    )
+    |> Repo.all()
+  end
 end
