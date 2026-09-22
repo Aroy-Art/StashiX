@@ -278,6 +278,12 @@ defmodule StashixWeb.StatsLive do
           "roam" => false,
           "nodeClick" => false,
           "cursor" => "pointer",
+          "left" => 0,
+          "right" => 0,
+          "top" => 0,
+          "bottom" => 0,
+          "width" => "100%",
+          "height" => "100%",
           "breadcrumb" => %{"show" => false},
           "label" => %{
             "show" => true,
@@ -442,7 +448,7 @@ defmodule StashixWeb.StatsLive do
           id="chart_size_by_publisher"
           phx-hook="Chart"
           phx-update="ignore"
-          class="w-full h-[28rem]"
+          class="w-full h-[50rem] lg:h-[28rem]"
           data-option={Jason.encode!(@chart_size_by_publisher)}
         >
         </div>
