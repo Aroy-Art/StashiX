@@ -289,8 +289,7 @@ defmodule StashixWeb.StatsLive do
             "show" => true,
             "color" => "#e5e7eb",
             "fontSize" => 11,
-            "overflow" => "truncate",
-            "ellipsis" => true
+            "overflow" => "truncate"
           },
           "upperLabel" => %{"show" => false},
           "itemStyle" => %{"borderColor" => "#030712", "borderWidth" => 2, "gapWidth" => 2},
