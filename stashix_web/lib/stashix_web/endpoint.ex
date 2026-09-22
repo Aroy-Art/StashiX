@@ -8,7 +8,8 @@ defmodule StashixWeb.Endpoint do
     store: :cookie,
     key: "_stashix_key",
     signing_salt: "IOjQsDrN",
-    same_site: "Lax"
+    same_site: "Lax",
+    max_age: 7 * 24 * 60 * 60
   ]
 
   socket "/live", Phoenix.LiveView.Socket,
