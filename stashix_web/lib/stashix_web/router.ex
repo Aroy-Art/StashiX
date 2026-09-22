@@ -134,6 +134,7 @@ defmodule StashixWeb.Router do
     live "/admin/libraries", AdminLive, :libraries
     live "/admin/cleanup", AdminLive, :cleanup
     live "/admin/publishers", AdminLive, :publishers
+    live "/stats", StatsLive, :index
   end
 
   if Application.compile_env(:stashix, :dev_routes) do

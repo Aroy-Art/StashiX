@@ -1610,4 +1610,87 @@ defmodule Stashix.Library do
     if match?({:ok, _}, result), do: delete_cover_files(cover_paths)
     result
   end
+
+  # Stats queries (global, across all libraries)
+
+  def stats_books_by_year do
+    from(b in Book,
+      where: is_nil(b.deleted_at) and not is_nil(b.year),
+      group_by: b.year,
+      order_by: b.year,
+      select: {b.year, count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_books_by_type do
+    from(b in Book,
+      where: is_nil(b.deleted_at),
+      group_by: b.type,
+      select: {b.type, count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_added_by_month do
+    from(b in Book,
+      where: is_nil(b.deleted_at),
+      group_by: fragment("to_char(?, 'YYYY-MM')", b.inserted_at),
+      order_by: fragment("to_char(?, 'YYYY-MM')", b.inserted_at),
+      select: {fragment("to_char(?, 'YYYY-MM')", b.inserted_at), count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_reading_progress(user_id) do
+    total =
+      from(b in Book, where: is_nil(b.deleted_at), select: count(b.id))
+      |> Repo.one()
+
+    if total == 0 do
+      %{total: 0, unread: 0, in_progress: 0, completed: 0}
+    else
+      progress_rows =
+        from(rp in ReadingProgress,
+          join: b in Book,
+          on: rp.book_id == b.id,
+          where: rp.user_id == ^user_id and is_nil(b.deleted_at),
+          select: {rp.current_page, b.page_count}
+        )
+        |> Repo.all()
+
+      in_progress =
+        Enum.count(progress_rows, fn {cur, pages} ->
+          pages && pages > 1 && cur > 0 && cur < pages - 1
+        end)
+
+      completed =
+        Enum.count(progress_rows, fn {cur, pages} ->
+          pages && pages > 0 && cur >= pages - 1
+        end)
+
+      unread = total - in_progress - completed
+
+      %{total: total, unread: unread, in_progress: in_progress, completed: completed}
+    end
+  end
+
+  def stats_top_series(limit \\ 10) do
+    from(s in Series,
+      where: is_nil(s.deleted_at) and s.issue_count > 0,
+      order_by: [desc: s.issue_count],
+      limit: ^limit,
+      select: {s.name, s.issue_count}
+    )
+    |> Repo.all()
+  end
+
+  def stats_series_by_format do
+    from(s in Series,
+      where: is_nil(s.deleted_at) and not is_nil(s.format),
+      group_by: s.format,
+      select: {s.format, count(s.id)}
+    )
+    |> Repo.all()
+  end
 end

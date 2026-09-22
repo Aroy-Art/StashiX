@@ -21,6 +21,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import "../vendor/blurhash"
+import * as echarts from "../vendor/echarts.min"
 import SaladUI from "./ui/index.js";
 import { SaladUIHook } from "./ui/core/hook.js";
 import "./ui/components/accordion.js";
@@ -40,6 +41,31 @@ import "./ui/components/toast-flash.js";
 import "./ui/components/tooltip.js";
 
 let Hooks = { SaladUI: SaladUIHook }
+
+const echartsLib = echarts.init ? echarts : echarts.default
+
+Hooks.Chart = {
+  mounted() {
+    requestAnimationFrame(() => {
+      const chart = echartsLib.init(this.el, null, {renderer: "canvas"})
+      this.chart = chart
+
+      const ro = new ResizeObserver(() => chart.resize())
+      ro.observe(this.el)
+      this.ro = ro
+
+      try {
+        const option = JSON.parse(this.el.dataset.option || "{}")
+        if (Object.keys(option).length > 0) chart.setOption(option)
+      } catch (_) {}
+    })
+  },
+
+  destroyed() {
+    if (this.ro) this.ro.disconnect()
+    if (this.chart) this.chart.dispose()
+  }
+}
 
 Hooks.PublisherSearch = {
   mounted() {
