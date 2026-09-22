@@ -1702,7 +1702,7 @@ defmodule Stashix.Library do
       on: bp.book_id == b.id,
       join: p in Publisher,
       on: p.id == bp.publisher_id and is_nil(p.canonical_publisher_id),
-      where: is_nil(bf.deleted_at) and not p.hidden,
+      where: is_nil(bf.deleted_at) and p.hidden == false,
       group_by: [p.id, p.name],
       order_by: [desc: sum(bf.file_size)],
       select: {p.id, p.name, sum(bf.file_size)}
