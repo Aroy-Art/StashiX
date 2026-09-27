@@ -29,3 +29,8 @@ config :phoenix, :plug_init_mode, :runtime
 # Enable helpful, but potentially expensive runtime checks
 config :phoenix_live_view,
   enable_expensive_runtime_checks: true
+
+config :stashix, Oban, testing: :manual
+
+# Metadata source HTTP calls are stubbed with Req.Test in tests
+config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}

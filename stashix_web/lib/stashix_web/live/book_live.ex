@@ -1,7 +1,7 @@
 defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Formatters, Library, Scanner}
+  alias Stashix.{Formatters, Library, Metadata, Repo, Scanner}
   alias Stashix.Library.Book
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -19,6 +19,7 @@ defmodule StashixWeb.BookLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
+      Metadata.subscribe(library.id)
     end
 
     {:ok,
@@ -35,7 +36,9 @@ defmodule StashixWeb.BookLive do
        scanning: false,
        show_admin_menu: false,
        show_edit_dialog: false,
+       show_identify_dialog: false,
        edit_form: nil,
+       external_ids: load_external_ids(book),
        all_publishers: Library.list_all_publishers()
      )}
   end
@@ -50,6 +53,11 @@ defmodule StashixWeb.BookLive do
       else
         assign(socket, show_edit_dialog: false, edit_form: nil)
       end
+
+    socket =
+      assign(socket,
+        show_identify_dialog: params["identify"] == "true" && socket.assigns.current_user.role == :admin
+      )
 
     {:noreply, socket}
   end
@@ -110,6 +118,27 @@ defmodule StashixWeb.BookLive do
     {:noreply, assign(socket, selected_file: file)}
   end
 
+  def handle_event("fetch_metadata", _params, socket) do
+    case Metadata.enqueue_book(socket.assigns.book.id) do
+      {:ok, _} -> {:noreply, put_flash(socket, :info, "Looking up metadata in the background…")}
+      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not queue metadata lookup")}
+    end
+  end
+
+  def handle_event("open_identify_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}?identify=true")}
+  end
+
+  def handle_event("close_identify_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}")}
+  end
+
+  def handle_event("toggle_metadata_lock", _params, socket) do
+    book = socket.assigns.book
+    {:ok, _} = Metadata.set_locked(book, !book.metadata_locked)
+    {:noreply, reload_book(socket)}
+  end
+
   def handle_event("rescan_book", _params, socket) do
     Scanner.scan_book(socket.assigns.book.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
@@ -150,6 +179,51 @@ defmodule StashixWeb.BookLive do
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:metadata_updated, :book, id}, %{assigns: %{book: %{id: id}}} = socket) do
+    {:noreply, reload_book(socket)}
+  end
+
+  def handle_info({:metadata_updated, _, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:identify_applied, :book, _id}, socket) do
+    {:noreply,
+     socket
+     |> reload_book()
+     |> put_flash(:info, "Metadata applied")
+     |> push_patch(to: ~p"/book/#{socket.assigns.book.id}")}
+  end
+
+  defp reload_book(socket) do
+    book = Library.get_book_with_series(socket.assigns.book.id)
+    current_format = socket.assigns.selected_file && socket.assigns.selected_file.format
+
+    assign(socket,
+      book: book,
+      page_title: book.title,
+      external_ids: load_external_ids(book),
+      selected_file: Library.get_preferred_book_file(book, current_format)
+    )
+  end
+
+  defp load_external_ids(book), do: Repo.preload(book, [:external_ids, :urls]) |> Map.take([:external_ids, :urls])
+
+  # Links to the record on each source's site, when we can build one.
+  defp external_links(%{external_ids: ids, urls: urls}) do
+    Enum.map(ids, fn e ->
+      source = to_string(e.source)
+
+      href =
+        case source do
+          "Comic Vine" -> "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"
+          "Grand Comics Database" -> "https://www.comics.org/issue/#{e.source_id}/"
+          "Metron" -> Enum.find_value(urls, &(String.contains?(&1.url, "metron.cloud") && &1.url))
+          _ -> nil
+        end
+
+      {source, e.source_id, href}
+    end)
+  end
 
   defp book_display_title(book), do: book.title
 
@@ -206,6 +280,28 @@ defmodule StashixWeb.BookLive do
                   on-select={JS.push("open_edit_dialog")}
                 >
                   <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("fetch_metadata")}
+                >
+                  <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("open_identify_dialog")}
+                >
+                  <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify…
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("toggle_metadata_lock")}
+                >
+                  <%= if @book.metadata_locked do %>
+                    <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
+                  <% else %>
+                    <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
+                  <% end %>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 disabled:opacity-50"
@@ -480,6 +576,38 @@ defmodule StashixWeb.BookLive do
         </div>
       <% end %>
 
+      <%!-- External metadata sources --%>
+      <%= if @external_ids.external_ids != [] || @book.metadata_source || @book.metadata_locked do %>
+        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 -mt-4">
+          <%= if @book.metadata_locked do %>
+            <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
+              <.icon name="lucide-lock" class="w-3 h-3" /> Locked
+            </span>
+          <% end %>
+          <%= if @book.metadata_matched_at do %>
+            <span>
+              Metadata from {(Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
+                                Stashix.Metadata.Sources.module(@book.metadata_source).name()) ||
+                @book.metadata_source} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
+            </span>
+          <% end %>
+          <%= for {source, id, href} <- external_links(@external_ids) do %>
+            <%= if href do %>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-800 hover:border-gray-600 hover:text-gray-300"
+              >
+                {source} <.icon name="lucide-external-link" class="w-3 h-3" />
+              </a>
+            <% else %>
+              <span class="px-2 py-0.5 rounded border border-gray-800" title={id}>{source}</span>
+            <% end %>
+          <% end %>
+        </div>
+      <% end %>
+
       <%!-- Prev / Next navigation --%>
       <%= if @prev_book || @next_book do %>
         <div class="flex gap-2">
@@ -580,6 +708,11 @@ defmodule StashixWeb.BookLive do
           <.icon name="lucide-x" class="w-5 h-5" />
         </button>
       </div>
+    <% end %>
+
+    <%!-- Identify Dialog --%>
+    <%= if @current_user.role == :admin && @show_identify_dialog do %>
+      <.live_component module={StashixWeb.IdentifyComponent} id="identify-book" target={@book} />
     <% end %>
 
     <%!-- Edit Metadata Dialog --%>

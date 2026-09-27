@@ -481,9 +481,18 @@ defmodule Stashix.Scanner do
       deleted_at: nil
     }
 
+    # Metadata fetched from an external source lives only in the DB when the
+    # file carries none (e.g. write-back disabled); don't reset it from the filename.
+    keep_fetched = book.metadata_matched_at != nil and comicinfo == %{}
+
+    book_attrs =
+      if keep_fetched,
+        do: Map.take(book_attrs, [:series_id, :type, :page_count, :deleted_at]),
+        else: book_attrs
+
     with {:ok, updated_book} <- Library.update_book(book, book_attrs),
          {:ok, _updated_file} <- Library.update_book_file(book_file, file_attrs) do
-      Importer.replace_book_metadata(updated_book, comicinfo)
+      unless keep_fetched, do: Importer.replace_book_metadata(updated_book, comicinfo)
       {{updated_book, file_path}, new_cache}
     else
       {:error, reason} ->
@@ -884,7 +893,7 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp compute_hash(file_path, file_size) do
+  def compute_hash(file_path, file_size) do
     prefix = "#{file_size}:"
 
     case File.open(file_path, [:read, :binary]) do

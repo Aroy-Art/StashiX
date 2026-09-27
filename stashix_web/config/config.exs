@@ -17,6 +17,21 @@ config :stashix,
   image_cache_dir: System.get_env("IMAGE_CACHE_DIR") || Path.join(repo_tmp, "cache/images/resized"),
   library_path: System.get_env("LIBRARY_PATH") || "/libraries"
 
+config :stashix, Oban,
+  engine: Oban.Engines.Basic,
+  repo: Stashix.Repo,
+  queues: [metadata: 4, metadata_write: 2],
+  plugins: [
+    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)}
+  ]
+
+config :stashix, :metadata_sources, [
+  Stashix.Metadata.Sources.Metron,
+  Stashix.Metadata.Sources.ComicVine,
+  Stashix.Metadata.Sources.GCD
+]
+
 config :stashix, Stashix.Auth.Guardian,
   issuer: "stashix",
   secret_key: System.get_env("JWT_SECRET") || "dev-secret-change-in-production",

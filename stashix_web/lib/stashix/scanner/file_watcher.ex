@@ -6,10 +6,18 @@ defmodule Stashix.Scanner.FileWatcher do
 
   @debounce_ms 5_000
   @supported_exts ~w(.cbz .cbr .cb7 .epub .pdf)
-  @sidecar_exts ~w(.jpg .jpeg .png .webp)
+  @sidecar_exts ~w(.jpg .jpeg .png .webp .xml)
+  # Events for paths Stashix itself just wrote (metadata write-back) are ignored
+  # for this long, so our own writes don't trigger a re-import.
+  @suppress_ms 30_000
 
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
+  end
+
+  @doc "Ignore file events for `path` for a short while (we are about to write it)."
+  def suppress(path) do
+    GenServer.cast(__MODULE__, {:suppress, path, System.monotonic_time(:millisecond) + @suppress_ms})
   end
 
   @impl true
@@ -24,7 +32,14 @@ defmodule Stashix.Scanner.FileWatcher do
         pid
       end
 
-    {:ok, %{watcher: watcher_pid, debounce: %{}, libraries: library_path_map(libraries)}}
+    {:ok, %{watcher: watcher_pid, debounce: %{}, suppressed: %{}, libraries: library_path_map(libraries)}}
+  end
+
+  @impl true
+  def handle_cast({:suppress, path, until}, state) do
+    now = System.monotonic_time(:millisecond)
+    suppressed = state.suppressed |> Map.reject(fn {_, t} -> t < now end) |> Map.put(path, until)
+    {:noreply, %{state | suppressed: suppressed}}
   end
 
   @impl true
@@ -36,7 +51,7 @@ defmodule Stashix.Scanner.FileWatcher do
         true -> nil
       end
 
-    if scan_path && interesting_event?(events) do
+    if scan_path && interesting_event?(events) && not suppressed?(state, path) do
       library_id = find_library_id(scan_path, state.libraries)
 
       if library_id do
@@ -73,6 +88,13 @@ defmodule Stashix.Scanner.FileWatcher do
 
   defp library_path_map(libraries) do
     Map.new(libraries, fn lib -> {lib.root_path, lib.id} end)
+  end
+
+  defp suppressed?(state, path) do
+    case Map.get(state.suppressed, path) do
+      nil -> false
+      until -> System.monotonic_time(:millisecond) < until
+    end
   end
 
   defp supported_file?(path) do

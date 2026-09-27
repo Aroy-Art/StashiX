@@ -1,7 +1,7 @@
 defmodule StashixWeb.SeriesLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Formatters, Library, Scanner}
+  alias Stashix.{Formatters, Library, Metadata, Scanner}
   alias Stashix.Library.Series
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -23,6 +23,7 @@ defmodule StashixWeb.SeriesLive do
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
+      Metadata.subscribe(library.id)
     end
 
     {:ok,
@@ -41,6 +42,7 @@ defmodule StashixWeb.SeriesLive do
        scanning: false,
        show_admin_menu: false,
        show_edit_dialog: false,
+       show_identify_dialog: false,
        edit_form: nil,
        all_publishers: Library.list_all_publishers()
      )}
@@ -60,6 +62,11 @@ defmodule StashixWeb.SeriesLive do
       else
         assign(socket, show_edit_dialog: false, edit_form: nil)
       end
+
+    socket =
+      assign(socket,
+        show_identify_dialog: params["identify"] == "true" && socket.assigns.current_user.role == :admin
+      )
 
     {:noreply, socket}
   end
@@ -116,6 +123,30 @@ defmodule StashixWeb.SeriesLive do
     end
   end
 
+  def handle_event("fetch_metadata", _params, socket) do
+    case Metadata.enqueue_series(socket.assigns.series.id) do
+      {:ok, _} ->
+        {:noreply, put_flash(socket, :info, "Looking up metadata for the series and its issues…")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not queue metadata lookup")}
+    end
+  end
+
+  def handle_event("open_identify_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}?identify=true")}
+  end
+
+  def handle_event("close_identify_dialog", _params, socket) do
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
+  end
+
+  def handle_event("toggle_metadata_lock", _params, socket) do
+    series = socket.assigns.series
+    {:ok, _} = Metadata.set_locked(series, !series.metadata_locked)
+    {:noreply, reload_series(socket)}
+  end
+
   def handle_event("rescan_series", _, socket) do
     Scanner.scan_series(socket.assigns.series.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
@@ -167,6 +198,37 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:metadata_updated, :series, id}, %{assigns: %{series: %{id: id}}} = socket),
+    do: {:noreply, reload_series(socket)}
+
+  def handle_info({:metadata_updated, :book, book_id}, socket) do
+    if Enum.any?(socket.assigns.books, &(&1.id == book_id)),
+      do: {:noreply, reload_series(socket)},
+      else: {:noreply, socket}
+  end
+
+  def handle_info({:metadata_updated, _, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:identify_applied, :series, _id}, socket) do
+    {:noreply,
+     socket
+     |> reload_series()
+     |> put_flash(:info, "Series metadata applied")
+     |> push_patch(to: ~p"/series/#{socket.assigns.series.id}")}
+  end
+
+  defp reload_series(socket) do
+    series = Library.get_series_with_books(socket.assigns.series.id)
+    books = sort_books(series.books, socket.assigns.sort)
+
+    assign(socket,
+      series: series,
+      books: books,
+      page_title: series.name,
+      summary_info: derive_summary(series, books)
+    )
+  end
 
   defp find_continue_book(books, progress_map) do
     issue_sorted =
@@ -271,6 +333,28 @@ defmodule StashixWeb.SeriesLive do
                   on-select={JS.push("open_edit_dialog")}
                 >
                   <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("fetch_metadata")}
+                >
+                  <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("open_identify_dialog")}
+                >
+                  <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify Series…
+                </.dropdown_menu_item>
+                <.dropdown_menu_item
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                  on-select={JS.push("toggle_metadata_lock")}
+                >
+                  <%= if @series.metadata_locked do %>
+                    <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
+                  <% else %>
+                    <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
+                  <% end %>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
                   class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
@@ -566,6 +650,11 @@ defmodule StashixWeb.SeriesLive do
           <.icon name="lucide-x" class="w-5 h-5" />
         </button>
       </div>
+    <% end %>
+
+    <%!-- Identify Dialog --%>
+    <%= if @current_user.role == :admin && @show_identify_dialog do %>
+      <.live_component module={StashixWeb.IdentifyComponent} id="identify-series" target={@series} />
     <% end %>
 
     <%!-- Edit Metadata Dialog --%>

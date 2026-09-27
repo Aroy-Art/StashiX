@@ -1,0 +1,177 @@
+defmodule Stashix.Metadata.Sources do
+  @moduledoc """
+  Registry of metadata source plugins and their persisted settings.
+
+  Plugins are the modules listed in `config :stashix, :metadata_sources`. A DB row
+  in `metadata_sources` is created on demand (disabled) for every registered
+  plugin; rows whose plugin was removed from the list are ignored.
+  """
+  import Ecto.Query
+
+  alias Stashix.Repo
+  alias Stashix.Metadata.SourceConfig
+
+  @masked "••••••••"
+
+  def masked_value, do: @masked
+
+  @doc "All registered plugin modules."
+  def modules, do: Application.get_env(:stashix, :metadata_sources, [])
+
+  @doc "Plugin module for a source key, or nil."
+  def module(key) when is_binary(key), do: Enum.find(modules(), &(&1.key() == key))
+
+  @doc """
+  Every registered source as `%{module: mod, config: %SourceConfig{}}`, ordered by
+  priority. Creates missing DB rows.
+  """
+  def list do
+    mods = modules()
+    keys = Enum.map(mods, & &1.key())
+
+    existing =
+      from(s in SourceConfig, where: s.source_key in ^keys)
+      |> Repo.all()
+      |> Map.new(&{&1.source_key, &1})
+
+    mods
+    |> Enum.with_index()
+    |> Enum.map(fn {mod, idx} ->
+      config = Map.get(existing, mod.key()) || create_default!(mod, (idx + 1) * 10)
+      %{module: mod, config: config}
+    end)
+    |> Enum.sort_by(& &1.config.priority)
+  end
+
+  @doc "Enabled sources ordered by priority."
+  def enabled, do: Enum.filter(list(), & &1.config.enabled)
+
+  def get(key) do
+    case module(key) do
+      nil -> nil
+      mod -> Enum.find(list(), &(&1.module == mod))
+    end
+  end
+
+  defp create_default!(mod, priority) do
+    %SourceConfig{}
+    |> SourceConfig.changeset(%{
+      source_key: mod.key(),
+      priority: priority,
+      config: default_config(mod)
+    })
+    |> Repo.insert!(on_conflict: :nothing, conflict_target: :source_key)
+    |> case do
+      %SourceConfig{id: nil} -> Repo.get_by!(SourceConfig, source_key: mod.key())
+      row -> row
+    end
+  end
+
+  defp default_config(mod) do
+    mod.config_schema()
+    |> Enum.filter(&Map.has_key?(&1, :default))
+    |> Map.new(&{&1.key, &1.default})
+  end
+
+  @doc """
+  Updates a source's settings. `config` params are merged into the stored map;
+  secret/cookie fields left blank (or still showing the mask) keep their value.
+  """
+  def update(%SourceConfig{} = row, attrs) do
+    mod = module(row.source_key)
+    attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
+
+    attrs =
+      case Map.fetch(attrs, "config") do
+        {:ok, params} when is_map(params) ->
+          Map.put(attrs, "config", merge_config(mod, row.config || %{}, params))
+
+        _ ->
+          attrs
+      end
+
+    row
+    |> SourceConfig.changeset(attrs)
+    |> Repo.update()
+  end
+
+  defp merge_config(mod, current, params) do
+    Enum.reduce(mod.config_schema(), current, fn field, acc ->
+      case Map.fetch(params, field.key) do
+        :error ->
+          acc
+
+        {:ok, value} ->
+          value = cast_field(field.type, value)
+
+          cond do
+            field.type in [:secret, :cookies] and value in ["", nil, @masked] -> acc
+            true -> Map.put(acc, field.key, value)
+          end
+      end
+    end)
+  end
+
+  defp cast_field(:boolean, v), do: v in [true, "true", "on", "1"]
+
+  defp cast_field(:integer, v) when is_binary(v) do
+    case Integer.parse(String.trim(v)) do
+      {i, _} -> i
+      :error -> nil
+    end
+  end
+
+  defp cast_field(_, v) when is_binary(v), do: String.trim(v)
+  defp cast_field(_, v), do: v
+
+  @doc "Config map with secret values replaced by a mask, for rendering in forms."
+  def masked_config(mod, config) do
+    Map.new(mod.config_schema(), fn field ->
+      value = Map.get(config || %{}, field.key)
+
+      shown =
+        if field.type in [:secret, :cookies] and value not in [nil, ""],
+          do: @masked,
+          else: value
+
+      {field.key, shown}
+    end)
+  end
+
+  @doc "True when every required config field has a value."
+  def configured?(mod, config) do
+    mod.config_schema()
+    |> Enum.filter(&Map.get(&1, :required, false))
+    |> Enum.all?(&(Map.get(config || %{}, &1.key) not in [nil, ""]))
+  end
+
+  @doc "Effective rate limit as `{requests, per_ms}`."
+  def rate_limit(_mod, %SourceConfig{rate_limit_per_minute: n}) when is_integer(n) and n > 0,
+    do: {n, 60_000}
+
+  def rate_limit(mod, _), do: mod.default_rate_limit()
+
+  @doc "Swaps priority with the neighbouring source (`:up` / `:down`)."
+  def move(key, direction) do
+    sources = list()
+    idx = Enum.find_index(sources, &(&1.config.source_key == key))
+    other_idx = if direction == :up, do: idx - 1, else: idx + 1
+
+    if idx && other_idx >= 0 && other_idx < length(sources) do
+      reordered =
+        sources
+        |> List.replace_at(idx, Enum.at(sources, other_idx))
+        |> List.replace_at(other_idx, Enum.at(sources, idx))
+
+      Repo.transaction(fn ->
+        reordered
+        |> Enum.with_index(1)
+        |> Enum.each(fn {%{config: c}, i} ->
+          c |> SourceConfig.changeset(%{priority: i * 10}) |> Repo.update!()
+        end)
+      end)
+    end
+
+    :ok
+  end
+end

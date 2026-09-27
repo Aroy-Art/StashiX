@@ -13,9 +13,12 @@ defmodule Stashix.Application do
       StashixWeb.Telemetry,
       {TelemetryMetricsPrometheus.Core, metrics: StashixWeb.Telemetry.metrics()},
       Stashix.Repo,
+      Stashix.Vault,
       {DNSCluster, query: Application.get_env(:stashix, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Stashix.PubSub},
       Stashix.Scanner.Supervisor,
+      Stashix.Metadata.RateLimiter,
+      {Oban, Application.fetch_env!(:stashix, Oban)},
       StashixWeb.Endpoint,
       {Bandit, plug: StashixWeb.Plugs.MetricsPlug, scheme: :http, ip: metrics_ip, port: metrics_port}
     ]

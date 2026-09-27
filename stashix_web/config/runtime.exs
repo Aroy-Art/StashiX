@@ -22,6 +22,21 @@ end
 
 config :stashix, Stashix.Auth.Guardian, secret_key: System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
 
+vault_key =
+  case System.get_env("STASHIX_ENCRYPTION_KEY") do
+    key when is_binary(key) and key != "" ->
+      Base.decode64!(key)
+
+    _ ->
+      jwt_secret = System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
+      :crypto.hash(:sha256, "stashix-vault:" <> jwt_secret)
+  end
+
+config :stashix, Stashix.Vault,
+  ciphers: [
+    default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: vault_key, iv_length: 12}
+  ]
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

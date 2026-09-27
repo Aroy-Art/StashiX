@@ -35,6 +35,9 @@ defmodule Stashix.Library.Series do
     field :path, :string
     field :deleted_at, :naive_datetime
     field :cover_blurhash, :string, virtual: true
+    field :metadata_locked, :boolean, default: false
+    field :metadata_matched_at, :naive_datetime
+    field :metadata_source, :string
 
     belongs_to :library, Stashix.Library.Library
     has_many :books, Stashix.Library.Book
@@ -62,7 +65,10 @@ defmodule Stashix.Library.Series do
       :adult,
       :path,
       :deleted_at,
-      :library_id
+      :library_id,
+      :metadata_locked,
+      :metadata_matched_at,
+      :metadata_source
     ])
     |> validate_required([:name, :library_id])
   end

@@ -181,6 +181,16 @@ defmodule StashixWeb.AdminLive do
     {:noreply, update(socket, :scanning_libraries, &MapSet.put(&1, id))}
   end
 
+  def handle_event("match_library_metadata", %{"id" => id}, socket) do
+    case Stashix.Metadata.enqueue_library(id) do
+      {:ok, _} ->
+        {:noreply, put_flash(socket, :info, "Metadata matching queued — follow progress in Admin · Metadata · Jobs")}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not queue metadata matching")}
+    end
+  end
+
   def handle_event("backfill_blurhashes", _params, socket) do
     Stashix.Scanner.backfill_blurhashes()
 
@@ -865,6 +875,14 @@ defmodule StashixWeb.AdminLive do
                       ]}
                     >
                       Force Rescan
+                    </button>
+                    <button
+                      phx-click="match_library_metadata"
+                      phx-value-id={lib.id}
+                      class="px-3 py-1.5 text-sm rounded-lg border bg-gray-800 hover:bg-gray-700 text-violet-300 border-gray-700"
+                      title="Look up metadata for unmatched books from the enabled sources"
+                    >
+                      Match Metadata
                     </button>
                     <button
                       phx-click="show_confirm"

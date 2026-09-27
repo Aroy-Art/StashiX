@@ -29,6 +29,9 @@ defmodule Stashix.Library.Book do
     field :community_rating, :float
     field :community_rating_count, :integer
     field :source_format, :string, virtual: true
+    field :metadata_locked, :boolean, default: false
+    field :metadata_matched_at, :naive_datetime
+    field :metadata_source, :string
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -79,7 +82,10 @@ defmodule Stashix.Library.Book do
       :community_rating_count,
       :library_id,
       :series_id,
-      :imprint_id
+      :imprint_id,
+      :metadata_locked,
+      :metadata_matched_at,
+      :metadata_source
     ])
     |> validate_required([:title, :library_id])
   end

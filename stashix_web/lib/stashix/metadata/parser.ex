@@ -14,14 +14,43 @@ defmodule Stashix.Metadata.Parser do
                )
 
   def parse_comicinfo(archive_path) do
+    case parse_sidecar(archive_path) do
+      nil -> parse_embedded(archive_path)
+      sidecar -> Map.merge(parse_embedded(archive_path), sidecar)
+    end
+  end
+
+  # A `<book name>.xml` next to the file (written by metadata write-back for
+  # formats we can't embed into) takes precedence over embedded data.
+  defp parse_sidecar(archive_path) do
+    path = Path.rootname(archive_path) <> ".xml"
+
+    with true <- File.regular?(path),
+         {:ok, data} <- File.read(path) do
+      cond do
+        String.contains?(data, "<MetronInfo") -> parse_metroninfo_xml(data)
+        String.contains?(data, "<ComicInfo") -> parse_comicinfo_xml(data)
+        true -> nil
+      end
+    else
+      _ -> nil
+    end
+  end
+
+  defp parse_embedded(archive_path) do
     ext = archive_path |> Path.extname() |> String.downcase()
 
     case ext do
       cbz when cbz in [".cbz", ".epub"] ->
         case extract_xml_from_zip(archive_path) do
-          nil -> %{}
-          {:metroninfo, data} -> parse_metroninfo_xml(data)
-          {:comicinfo, data} -> parse_comicinfo_xml(data)
+          nil ->
+            %{}
+
+          xmls ->
+            # MetronInfo wins; ComicInfo fills fields MetronInfo lacks (e.g. Title).
+            comic = if data = xmls[:comicinfo], do: parse_comicinfo_xml(data), else: %{}
+            metron = if data = xmls[:metroninfo], do: parse_metroninfo_xml(data), else: %{}
+            Map.merge(comic, metron)
         end
 
       ".pdf" ->
@@ -36,37 +65,30 @@ defmodule Stashix.Metadata.Parser do
     path_charlist = String.to_charlist(archive_path)
 
     with {:ok, entries} <- :zip.list_dir(path_charlist) do
-      xml_entries =
-        entries
-        |> Enum.filter(fn
+      xml_names =
+        Enum.flat_map(entries, fn
           {:zip_file, name, _info, _comment, _offset, _comp_size} ->
-            n = to_string(name) |> String.downcase()
-            n == "comicinfo.xml" || n == "metroninfo.xml"
+            case to_string(name) |> String.downcase() do
+              "comicinfo.xml" -> [{:comicinfo, name}]
+              "metroninfo.xml" -> [{:metroninfo, name}]
+              _ -> []
+            end
 
           _ ->
-            false
+            []
         end)
 
-      # Prefer MetronInfo over ComicInfo when both exist
-      xml_entry =
-        Enum.find(xml_entries, fn {:zip_file, name, _, _, _, _} ->
-          to_string(name) |> String.downcase() == "metroninfo.xml"
-        end) || List.first(xml_entries)
+      if xml_names == [] do
+        nil
+      else
+        case :zip.extract(path_charlist, [:memory, {:file_list, Enum.map(xml_names, &elem(&1, 1))}]) do
+          {:ok, files} ->
+            by_name = Map.new(files, fn {name, data} -> {to_string(name), data} end)
+            Map.new(xml_names, fn {format, name} -> {format, by_name[to_string(name)]} end)
 
-      case xml_entry do
-        nil ->
-          nil
-
-        {:zip_file, name, _info, _comment, _offset, _comp_size} ->
-          format =
-            if to_string(name) |> String.downcase() == "metroninfo.xml",
-              do: :metroninfo,
-              else: :comicinfo
-
-          case :zip.extract(path_charlist, [:memory, {:file_list, [name]}]) do
-            {:ok, [{_name, data}]} -> {format, data}
-            _ -> nil
-          end
+          _ ->
+            nil
+        end
       end
     else
       _ -> nil
@@ -285,6 +307,8 @@ defmodule Stashix.Metadata.Parser do
       |> maybe_put(:locations, if(locations != [], do: locations))
       |> maybe_put(:reprints, if(reprints != [], do: reprints))
       |> maybe_put(:stories, if(stories != [], do: stories))
+      # MetronInfo has no Title element; the first story name is the issue title.
+      |> maybe_put(:title, if(stories != [], do: hd(stories).name))
       |> maybe_put(:urls, if(urls != [], do: urls))
       |> maybe_put(:prices, if(prices != [], do: prices))
       |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
