@@ -1780,4 +1780,156 @@ defmodule Stashix.Library do
     )
     |> Repo.all()
   end
+
+  def stats_books_by_language do
+    from(b in Book,
+      where: is_nil(b.deleted_at) and not is_nil(b.language),
+      group_by: fragment("lower(?)", b.language),
+      order_by: [desc: count(b.id)],
+      select: {fragment("lower(?)", b.language), count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_books_by_age_rating do
+    from(b in Book,
+      where: is_nil(b.deleted_at) and not is_nil(b.age_rating),
+      group_by: b.age_rating,
+      order_by: [desc: count(b.id)],
+      select: {b.age_rating, count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_top_genres(limit \\ 20) do
+    from(g in Stashix.Library.BookGenre,
+      join: b in Book,
+      on: g.book_id == b.id and is_nil(b.deleted_at),
+      group_by: g.name,
+      order_by: [desc: count(g.id)],
+      limit: ^limit,
+      select: {g.name, count(g.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_top_creators(limit \\ 20) do
+    from(c in Stashix.Library.Creator,
+      join: bc in Stashix.Library.BookCredit,
+      on: bc.creator_id == c.id,
+      join: b in Book,
+      on: bc.book_id == b.id and is_nil(b.deleted_at),
+      group_by: c.name,
+      order_by: [desc: count(bc.id)],
+      limit: ^limit,
+      select: {c.name, count(bc.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_credits_by_role do
+    from(bc in Stashix.Library.BookCredit,
+      join: b in Book,
+      on: bc.book_id == b.id and is_nil(b.deleted_at),
+      group_by: bc.role,
+      order_by: [desc: count(bc.id)],
+      select: {bc.role, count(bc.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_top_characters(limit \\ 20) do
+    from(ch in Stashix.Library.BookCharacter,
+      join: b in Book,
+      on: ch.book_id == b.id and is_nil(b.deleted_at),
+      group_by: ch.name,
+      order_by: [desc: count(ch.id)],
+      limit: ^limit,
+      select: {ch.name, count(ch.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_top_publishers_by_count(limit \\ 20) do
+    from(p in Publisher,
+      join: bp in "book_publishers",
+      on: bp.publisher_id == p.id,
+      join: b in Book,
+      on: bp.book_id == b.id and is_nil(b.deleted_at),
+      where: is_nil(p.canonical_publisher_id) and p.hidden == false,
+      group_by: [p.id, p.name],
+      order_by: [desc: count(b.id)],
+      limit: ^limit,
+      select: {p.id, p.name, count(b.id)}
+    )
+    |> Repo.all()
+  end
+
+  def stats_total_pages do
+    from(bf in BookFile,
+      join: b in Book,
+      on: bf.book_id == b.id and is_nil(b.deleted_at),
+      where: is_nil(bf.deleted_at),
+      select: sum(bf.page_count)
+    )
+    |> Repo.one()
+  end
+
+  def stats_total_file_size do
+    from(bf in BookFile,
+      join: b in Book,
+      on: bf.book_id == b.id and is_nil(b.deleted_at),
+      where: is_nil(bf.deleted_at),
+      select: sum(bf.file_size)
+    )
+    |> Repo.one()
+  end
+
+  def stats_metadata_coverage do
+    total =
+      from(b in Book, where: is_nil(b.deleted_at), select: count(b.id))
+      |> Repo.one()
+
+    with_summary =
+      from(b in Book,
+        where: is_nil(b.deleted_at) and not is_nil(b.summary) and b.summary != "",
+        select: count(b.id)
+      )
+      |> Repo.one()
+
+    with_genres =
+      from(b in Book,
+        join: g in Stashix.Library.BookGenre,
+        on: g.book_id == b.id,
+        where: is_nil(b.deleted_at),
+        select: count(b.id, :distinct)
+      )
+      |> Repo.one()
+
+    with_credits =
+      from(b in Book,
+        join: bc in Stashix.Library.BookCredit,
+        on: bc.book_id == b.id,
+        where: is_nil(b.deleted_at),
+        select: count(b.id, :distinct)
+      )
+      |> Repo.one()
+
+    with_external_ids =
+      from(b in Book,
+        join: ei in Stashix.Library.BookExternalId,
+        on: ei.book_id == b.id,
+        where: is_nil(b.deleted_at),
+        select: count(b.id, :distinct)
+      )
+      |> Repo.one()
+
+    %{
+      total: total,
+      with_summary: with_summary,
+      with_genres: with_genres,
+      with_credits: with_credits,
+      with_external_ids: with_external_ids
+    }
+  end
 end

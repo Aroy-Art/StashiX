@@ -112,6 +112,31 @@ defmodule Stashix.Formatters do
   def format_age_rating(_), do: "N/A"
 
   @doc """
+  Returns the number of A4 sheets needed to print `total_pages` comic pages
+  (two sides per sheet, 80 gsm paper).
+  """
+  def paper_sheets(total_pages), do: div(total_pages, 2)
+
+  @doc """
+  Formats the physical weight of printing `total_pages` comic pages on A4 80 gsm paper.
+
+  Assumes two printed sides per sheet (pages ÷ 2 = sheets) and 5 g per sheet
+  (A4 area = 0.0625 m², 80 g/m² × 0.0625 = 5 g). Scales to g, kg, or t.
+  """
+  def format_paper_weight(total_pages) do
+    grams = paper_sheets(total_pages) * 5
+    format_grams(grams)
+  end
+
+  defp format_grams(g) when g >= 1_000_000,
+    do: "#{:erlang.float_to_binary(g / 1_000_000, decimals: 2)} t"
+
+  defp format_grams(g) when g >= 1_000,
+    do: "#{:erlang.float_to_binary(g / 1_000, decimals: 1)} kg"
+
+  defp format_grams(g), do: "#{g} g"
+
+  @doc """
   Formats a byte count with adaptive precision and the given unit base.
 
   - `:binary` (default) — IEC units: KiB, MiB, GiB, TiB

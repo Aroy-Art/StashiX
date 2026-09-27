@@ -16,6 +16,16 @@ defmodule StashixWeb.StatsLive do
     top_series = Library.stats_top_series(15)
     by_file_format = Library.stats_books_by_file_format()
     size_by_publisher = Library.stats_file_size_by_publisher()
+    by_language = Library.stats_books_by_language()
+    by_age_rating = Library.stats_books_by_age_rating()
+    top_genres = Library.stats_top_genres(20)
+    top_creators = Library.stats_top_creators(20)
+    credits_by_role = Library.stats_credits_by_role()
+    top_characters = Library.stats_top_characters(20)
+    top_publishers = Library.stats_top_publishers_by_count(20)
+    total_pages = Library.stats_total_pages()
+    total_file_size = Library.stats_total_file_size()
+    metadata = Library.stats_metadata_coverage()
 
     {:ok,
      assign(socket,
@@ -27,11 +37,23 @@ defmodule StashixWeb.StatsLive do
        chart_top_series: build_top_series(top_series),
        chart_by_format: build_by_file_format(by_file_format),
        chart_size_by_publisher: build_size_by_publisher(size_by_publisher),
+       chart_by_language: build_by_language(by_language),
+       chart_by_age_rating: build_by_age_rating(by_age_rating),
+       chart_top_genres: build_top_genres(top_genres),
+       chart_top_creators: build_top_creators(top_creators),
+       chart_credits_by_role: build_credits_by_role(credits_by_role),
+       chart_top_characters: build_top_characters(top_characters),
+       chart_top_publishers: build_top_publishers(top_publishers),
        stats: %{
          total_books: reading.total,
          unread: reading.unread,
          in_progress: reading.in_progress,
-         completed: reading.completed
+         completed: reading.completed,
+         total_pages: total_pages || 0,
+         total_file_size: total_file_size || Decimal.new(0),
+         metadata: metadata,
+         paper_weight: Stashix.Formatters.format_paper_weight(total_pages || 0),
+         paper_sheets: Stashix.Formatters.paper_sheets(total_pages || 0)
        }
      )}
   end
@@ -40,6 +62,33 @@ defmodule StashixWeb.StatsLive do
 
   defp grid_opts do
     %{"left" => "4%", "right" => "4%", "bottom" => "12%", "top" => "8%", "containLabel" => true}
+  end
+
+  defp grid_opts_horizontal do
+    %{"left" => "2%", "right" => "4%", "bottom" => "4%", "top" => "4%", "containLabel" => true}
+  end
+
+  defp pie_series(data, colors) do
+    %{
+      "type" => "pie",
+      "radius" => ["40%", "70%"],
+      "center" => ["50%", "45%"],
+      "data" => data,
+      "itemStyle" => %{
+        "borderRadius" => 4,
+        "borderColor" => "#030712",
+        "borderWidth" => 2
+      },
+      "label" => %{"color" => "#9ca3af"},
+      "color" => colors
+    }
+  end
+
+  defp default_colors,
+    do: ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#4f46e5", "#0e7490", "#047857"]
+
+  defp legend_opts do
+    %{"orient" => "horizontal", "bottom" => 0, "textStyle" => %{"color" => "#9ca3af"}}
   end
 
   defp build_by_year([]) do
@@ -91,26 +140,8 @@ defmodule StashixWeb.StatsLive do
 
     %{
       "tooltip" => %{"trigger" => "item"},
-      "legend" => %{
-        "orient" => "horizontal",
-        "bottom" => 0,
-        "textStyle" => %{"color" => "#9ca3af"}
-      },
-      "series" => [
-        %{
-          "type" => "pie",
-          "radius" => ["40%", "70%"],
-          "center" => ["50%", "45%"],
-          "data" => data,
-          "itemStyle" => %{
-            "borderRadius" => 4,
-            "borderColor" => "#030712",
-            "borderWidth" => 2
-          },
-          "label" => %{"color" => "#9ca3af"},
-          "color" => ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"]
-        }
-      ]
+      "legend" => legend_opts(),
+      "series" => [pie_series(data, default_colors())]
     }
   end
 
@@ -149,32 +180,16 @@ defmodule StashixWeb.StatsLive do
   end
 
   defp build_reading(%{unread: unread, in_progress: in_progress, completed: completed}) do
+    data = [
+      %{"name" => "Unread", "value" => unread},
+      %{"name" => "In Progress", "value" => in_progress},
+      %{"name" => "Completed", "value" => completed}
+    ]
+
     %{
       "tooltip" => %{"trigger" => "item"},
-      "legend" => %{
-        "orient" => "horizontal",
-        "bottom" => 0,
-        "textStyle" => %{"color" => "#9ca3af"}
-      },
-      "series" => [
-        %{
-          "type" => "pie",
-          "radius" => ["40%", "70%"],
-          "center" => ["50%", "45%"],
-          "data" => [
-            %{"name" => "Unread", "value" => unread},
-            %{"name" => "In Progress", "value" => in_progress},
-            %{"name" => "Completed", "value" => completed}
-          ],
-          "itemStyle" => %{
-            "borderRadius" => 4,
-            "borderColor" => "#030712",
-            "borderWidth" => 2
-          },
-          "label" => %{"color" => "#9ca3af"},
-          "color" => ["#4b5563", "#7c3aed", "#10b981"]
-        }
-      ]
+      "legend" => legend_opts(),
+      "series" => [pie_series(data, ["#4b5563", "#7c3aed", "#10b981"])]
     }
   end
 
@@ -187,13 +202,7 @@ defmodule StashixWeb.StatsLive do
     counts = rows |> Enum.map(fn {_, c} -> c end) |> Enum.reverse()
 
     %{
-      "grid" => %{
-        "left" => "2%",
-        "right" => "4%",
-        "bottom" => "4%",
-        "top" => "4%",
-        "containLabel" => true
-      },
+      "grid" => grid_opts_horizontal(),
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
@@ -226,25 +235,9 @@ defmodule StashixWeb.StatsLive do
 
     %{
       "tooltip" => %{"trigger" => "item"},
-      "legend" => %{
-        "orient" => "horizontal",
-        "bottom" => 0,
-        "textStyle" => %{"color" => "#9ca3af"}
-      },
+      "legend" => legend_opts(),
       "series" => [
-        %{
-          "type" => "pie",
-          "radius" => ["35%", "65%"],
-          "center" => ["50%", "45%"],
-          "data" => data,
-          "itemStyle" => %{
-            "borderRadius" => 4,
-            "borderColor" => "#030712",
-            "borderWidth" => 2
-          },
-          "label" => %{"color" => "#9ca3af"},
-          "color" => ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"]
-        }
+        %{pie_series(data, default_colors()) | "radius" => ["35%", "65%"]}
       ]
     }
   end
@@ -320,8 +313,198 @@ defmodule StashixWeb.StatsLive do
     }
   end
 
+  defp build_by_language([]) do
+    %{"series" => [%{"data" => []}]}
+  end
+
+  defp build_by_language(rows) do
+    data =
+      Enum.map(rows, fn {lang, count} ->
+        %{"name" => lang |> to_string() |> String.upcase(), "value" => count}
+      end)
+
+    %{
+      "tooltip" => %{"trigger" => "item"},
+      "legend" => legend_opts(),
+      "series" => [pie_series(data, default_colors())]
+    }
+  end
+
+  defp build_by_age_rating([]) do
+    %{"series" => [%{"data" => []}]}
+  end
+
+  defp build_by_age_rating(rows) do
+    rating_label = fn r ->
+      case r do
+        :unknown -> "Unknown"
+        :everyone -> "Everyone"
+        :teen -> "Teen"
+        :teen_plus -> "Teen+"
+        :mature -> "Mature"
+        :adult -> "Adult"
+        :explicit -> "Explicit"
+        other -> other |> Atom.to_string() |> title_case()
+      end
+    end
+
+    data = Enum.map(rows, fn {r, c} -> %{"name" => rating_label.(r), "value" => c} end)
+
+    %{
+      "tooltip" => %{"trigger" => "item"},
+      "legend" => legend_opts(),
+      "series" => [
+        pie_series(data, ["#4b5563", "#10b981", "#2563eb", "#7c3aed", "#f59e0b", "#ef4444", "#dc2626"])
+      ]
+    }
+  end
+
+  defp build_top_genres([]) do
+    %{"series" => [], "yAxis" => %{"data" => []}, "xAxis" => %{}}
+  end
+
+  defp build_top_genres(rows) do
+    names = rows |> Enum.map(fn {n, _} -> shorten(n, 25) end) |> Enum.reverse()
+    counts = rows |> Enum.map(fn {_, c} -> c end) |> Enum.reverse()
+
+    %{
+      "grid" => grid_opts_horizontal(),
+      "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
+      "xAxis" => %{
+        "type" => "value",
+        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+      },
+      "yAxis" => %{
+        "type" => "category",
+        "data" => names,
+        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+      },
+      "series" => [
+        %{
+          "type" => "bar",
+          "data" => counts,
+          "itemStyle" => %{"color" => "#06b6d4", "borderRadius" => [0, 3, 3, 0]}
+        }
+      ]
+    }
+  end
+
+  defp build_top_creators([]) do
+    %{"series" => [], "yAxis" => %{"data" => []}, "xAxis" => %{}}
+  end
+
+  defp build_top_creators(rows) do
+    names = rows |> Enum.map(fn {n, _} -> shorten(n, 25) end) |> Enum.reverse()
+    counts = rows |> Enum.map(fn {_, c} -> c end) |> Enum.reverse()
+
+    %{
+      "grid" => grid_opts_horizontal(),
+      "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
+      "xAxis" => %{
+        "type" => "value",
+        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+      },
+      "yAxis" => %{
+        "type" => "category",
+        "data" => names,
+        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+      },
+      "series" => [
+        %{
+          "type" => "bar",
+          "data" => counts,
+          "itemStyle" => %{"color" => "#10b981", "borderRadius" => [0, 3, 3, 0]}
+        }
+      ]
+    }
+  end
+
+  defp build_credits_by_role([]) do
+    %{"series" => [%{"data" => []}]}
+  end
+
+  defp build_credits_by_role(rows) do
+    data =
+      Enum.map(rows, fn {role, count} ->
+        %{"name" => Atom.to_string(role), "value" => count}
+      end)
+
+    %{
+      "tooltip" => %{"trigger" => "item"},
+      "legend" => legend_opts(),
+      "series" => [pie_series(data, default_colors())]
+    }
+  end
+
+  defp build_top_characters([]) do
+    %{"series" => [], "yAxis" => %{"data" => []}, "xAxis" => %{}}
+  end
+
+  defp build_top_characters(rows) do
+    names = rows |> Enum.map(fn {n, _} -> shorten(n, 25) end) |> Enum.reverse()
+    counts = rows |> Enum.map(fn {_, c} -> c end) |> Enum.reverse()
+
+    %{
+      "grid" => grid_opts_horizontal(),
+      "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
+      "xAxis" => %{
+        "type" => "value",
+        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+      },
+      "yAxis" => %{
+        "type" => "category",
+        "data" => names,
+        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+      },
+      "series" => [
+        %{
+          "type" => "bar",
+          "data" => counts,
+          "itemStyle" => %{"color" => "#f59e0b", "borderRadius" => [0, 3, 3, 0]}
+        }
+      ]
+    }
+  end
+
+  defp build_top_publishers([]) do
+    %{"series" => [], "yAxis" => %{"data" => []}, "xAxis" => %{}}
+  end
+
+  defp build_top_publishers(rows) do
+    names = rows |> Enum.map(fn {_, n, _} -> shorten(n, 25) end) |> Enum.reverse()
+    counts = rows |> Enum.map(fn {_, _, c} -> c end) |> Enum.reverse()
+
+    %{
+      "grid" => grid_opts_horizontal(),
+      "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
+      "xAxis" => %{
+        "type" => "value",
+        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+      },
+      "yAxis" => %{
+        "type" => "category",
+        "data" => names,
+        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+      },
+      "series" => [
+        %{
+          "type" => "bar",
+          "data" => counts,
+          "itemStyle" => %{"color" => "#4f46e5", "borderRadius" => [0, 3, 3, 0]}
+        }
+      ]
+    }
+  end
+
   defp shorten(str, max) when byte_size(str) > max, do: String.slice(str, 0, max - 1) <> "…"
   defp shorten(str, _), do: str
+
+  defp title_case(str) do
+    str
+    |> String.split(" ")
+    |> Enum.map(&String.capitalize/1)
+    |> Enum.join(" ")
+  end
 
   @impl true
   def render(assigns) do
@@ -335,7 +518,7 @@ defmodule StashixWeb.StatsLive do
       </div>
 
       <%!-- Summary tiles --%>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total</p>
           <p class="text-2xl font-bold text-white">{@stats.total_books}</p>
@@ -362,9 +545,80 @@ defmodule StashixWeb.StatsLive do
             {pct(@stats.completed, @stats.total_books)}
           </p>
         </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Pages</p>
+          <p class="text-2xl font-bold text-cyan-400">{format_number(@stats.total_pages)}</p>
+          <p class="text-xs text-gray-600 mt-0.5">across all files</p>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Library Size</p>
+          <p class="text-2xl font-bold text-indigo-400">
+            {Stashix.Formatters.format_bytes(Decimal.to_integer(@stats.total_file_size))}
+          </p>
+          <p class="text-xs text-gray-600 mt-0.5">total storage</p>
+        </div>
       </div>
 
-      <%!-- Charts row 1 --%>
+      <%!-- Fun fact: paper weight --%>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+        <span class="text-2xl">📄</span>
+        <div>
+          <p class="text-xs text-gray-500 uppercase tracking-wider mb-0.5">Fun Fact · Paper Weight</p>
+          <p class="text-white">
+            If you printed your entire library on A4 paper you'd need
+            <span class="font-bold text-violet-400">{format_number(@stats.paper_sheets)}</span>
+            sheets weighing <span class="font-bold text-violet-400">{@stats.paper_weight}</span>.
+          </p>
+          <p class="text-xs text-gray-600 mt-0.5">
+            {@stats.total_pages} pages ÷ 2 sides × 5 g/sheet (A4 80 gsm)
+          </p>
+        </div>
+      </div>
+
+      <%!-- Metadata coverage tiles --%>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h2 class="text-sm font-semibold text-gray-400 mb-3">Metadata Coverage</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="bg-gray-800 rounded-lg p-3">
+            <p class="text-xs text-gray-500 mb-1">With Summary</p>
+            <p class="text-xl font-bold text-white">
+              {pct(@stats.metadata.with_summary, @stats.metadata.total)}
+            </p>
+            <p class="text-xs text-gray-600 mt-0.5">
+              {@stats.metadata.with_summary} / {@stats.metadata.total}
+            </p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-3">
+            <p class="text-xs text-gray-500 mb-1">With Genres</p>
+            <p class="text-xl font-bold text-white">
+              {pct(@stats.metadata.with_genres, @stats.metadata.total)}
+            </p>
+            <p class="text-xs text-gray-600 mt-0.5">
+              {@stats.metadata.with_genres} / {@stats.metadata.total}
+            </p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-3">
+            <p class="text-xs text-gray-500 mb-1">With Credits</p>
+            <p class="text-xl font-bold text-white">
+              {pct(@stats.metadata.with_credits, @stats.metadata.total)}
+            </p>
+            <p class="text-xs text-gray-600 mt-0.5">
+              {@stats.metadata.with_credits} / {@stats.metadata.total}
+            </p>
+          </div>
+          <div class="bg-gray-800 rounded-lg p-3">
+            <p class="text-xs text-gray-500 mb-1">With External IDs</p>
+            <p class="text-xl font-bold text-white">
+              {pct(@stats.metadata.with_external_ids, @stats.metadata.total)}
+            </p>
+            <p class="text-xs text-gray-600 mt-0.5">
+              {@stats.metadata.with_external_ids} / {@stats.metadata.total}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <%!-- Charts row 1: timeline --%>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <h2 class="text-sm font-semibold text-gray-400 mb-3">Added by Month</h2>
@@ -390,8 +644,8 @@ defmodule StashixWeb.StatsLive do
         </div>
       </div>
 
-      <%!-- Charts row 2 --%>
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <%!-- Pie charts: 2 rows × 3 cols --%>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
           <h2 class="text-sm font-semibold text-gray-400 mb-3">Type Breakdown</h2>
           <div
@@ -425,6 +679,39 @@ defmodule StashixWeb.StatsLive do
           >
           </div>
         </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Language</h2>
+          <div
+            id="chart_by_language"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-56"
+            data-option={Jason.encode!(@chart_by_language)}
+          >
+          </div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Age Rating</h2>
+          <div
+            id="chart_by_age_rating"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-56"
+            data-option={Jason.encode!(@chart_by_age_rating)}
+          >
+          </div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Credits by Role</h2>
+          <div
+            id="chart_credits_by_role"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-56"
+            data-option={Jason.encode!(@chart_credits_by_role)}
+          >
+          </div>
+        </div>
       </div>
 
       <%!-- Top series --%>
@@ -437,6 +724,58 @@ defmodule StashixWeb.StatsLive do
           class="w-full h-96"
           data-option={Jason.encode!(@chart_top_series)}
         >
+        </div>
+      </div>
+
+      <%!-- Top creators + top genres side by side --%>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Creators by Credits</h2>
+          <div
+            id="chart_top_creators"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-96"
+            data-option={Jason.encode!(@chart_top_creators)}
+          >
+          </div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Genres</h2>
+          <div
+            id="chart_top_genres"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-96"
+            data-option={Jason.encode!(@chart_top_genres)}
+          >
+          </div>
+        </div>
+      </div>
+
+      <%!-- Top characters + top publishers side by side --%>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Characters</h2>
+          <div
+            id="chart_top_characters"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-96"
+            data-option={Jason.encode!(@chart_top_characters)}
+          >
+          </div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Publishers by Book Count</h2>
+          <div
+            id="chart_top_publishers"
+            phx-hook="Chart"
+            phx-update="ignore"
+            class="w-full h-96"
+            data-option={Jason.encode!(@chart_top_publishers)}
+          >
+          </div>
         </div>
       </div>
 
@@ -458,4 +797,12 @@ defmodule StashixWeb.StatsLive do
 
   defp pct(_, 0), do: "—"
   defp pct(n, total), do: "#{round(n / total * 100)}%"
+
+  defp format_number(n) when n >= 1_000_000,
+    do: "#{:erlang.float_to_binary(n / 1_000_000, decimals: 1)}M"
+
+  defp format_number(n) when n >= 1_000,
+    do: "#{:erlang.float_to_binary(n / 1_000, decimals: 1)}K"
+
+  defp format_number(n), do: to_string(n)
 end
