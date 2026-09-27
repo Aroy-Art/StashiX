@@ -110,9 +110,15 @@ defmodule Stashix.Metadata.Parser do
       |> maybe_put(:summary, xpath(doc, ~x"//ComicInfo/Summary/text()"os))
       |> maybe_put(:age_rating, normalize_age_rating(age_rating_raw))
       |> maybe_put(:language, xpath(doc, ~x"//ComicInfo/LanguageISO/text()"os))
-      |> maybe_put(:genre, xpath(doc, ~x"//ComicInfo/Genre/text()"os))
-      |> maybe_put(:tags, xpath(doc, ~x"//ComicInfo/Tags/text()"os))
-      |> maybe_put(:story_arc, xpath(doc, ~x"//ComicInfo/StoryArc/text()"os))
+      |> maybe_put(:genres, split_delimited(xpath(doc, ~x"//ComicInfo/Genre/text()"os)))
+      |> maybe_put(:tags, split_delimited(xpath(doc, ~x"//ComicInfo/Tags/text()"os)))
+      |> maybe_put(
+        :arcs,
+        case xpath(doc, ~x"//ComicInfo/StoryArc/text()"os) do
+          s when s not in [nil, ""] -> [%{name: s, arc_number: nil, external_id: nil}]
+          _ -> nil
+        end
+      )
     rescue
       _ -> %{}
     catch
@@ -125,56 +131,163 @@ defmodule Stashix.Metadata.Parser do
       doc = data |> sanitize_xml() |> parse()
 
       age_rating_raw = xpath(doc, ~x"//MetronInfo/AgeRating/text()"s)
+      cover_date = parse_date(xpath(doc, ~x"//MetronInfo/CoverDate/text()"os))
+      store_date = parse_date(xpath(doc, ~x"//MetronInfo/StoreDate/text()"os))
 
-      cover_year =
-        case xpath(doc, ~x"//MetronInfo/CoverDate/text()"os) do
-          nil -> nil
-          "" -> nil
-          date -> date |> String.slice(0, 4) |> parse_int()
-        end
-
-      store_year =
-        case xpath(doc, ~x"//MetronInfo/StoreDate/text()"os) do
-          nil -> nil
-          "" -> nil
-          date -> date |> String.slice(0, 4) |> parse_int()
+      community_rating =
+        case xpath(doc, ~x"//MetronInfo/CommunityRating/AverageRating/text()"os) do
+          s when s not in [nil, ""] -> with {f, _} <- Float.parse(s), do: f
+          _ -> nil
         end
 
       genres =
         xpath(doc, ~x"//MetronInfo/Genres/Genre/text()"ls)
         |> Enum.reject(&(&1 == ""))
-        |> Enum.join(", ")
 
       tags =
         xpath(doc, ~x"//MetronInfo/Tags/Tag/text()"ls)
         |> Enum.reject(&(&1 == ""))
-        |> Enum.join(", ")
 
-      community_rating_raw = xpath(doc, ~x"//MetronInfo/CommunityRating/AverageRating/text()"os)
+      arcs =
+        xpath(doc, ~x"//MetronInfo/Arcs/Arc"l,
+          name: ~x"./Name/text()"s,
+          arc_number: ~x"./Number/text()"os,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+        |> Enum.map(&%{name: &1.name, arc_number: parse_int(&1.arc_number), external_id: &1.external_id})
 
-      community_rating =
-        case community_rating_raw do
-          nil -> nil
-          "" -> nil
-          s -> with {f, _} <- Float.parse(s), do: f
+      credits =
+        xpath(doc, ~x"//MetronInfo/Credits/Credit"l,
+          creator: ~x"./Creator/text()"s,
+          creator_id: ~x"./Creator/@id"os,
+          roles: ~x"./Roles/Role/text()"ls
+        )
+        |> Enum.reject(&(&1.creator == ""))
+
+      characters =
+        xpath(doc, ~x"//MetronInfo/Characters/Character"l,
+          name: ~x"./text()"s,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      teams =
+        xpath(doc, ~x"//MetronInfo/Teams/Team"l,
+          name: ~x"./text()"s,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      universes =
+        xpath(doc, ~x"//MetronInfo/Universes/Universe"l,
+          name: ~x"./Name/text()"s,
+          designation: ~x"./Designation/text()"os,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      locations =
+        xpath(doc, ~x"//MetronInfo/Locations/Location"l,
+          name: ~x"./text()"s,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      reprints =
+        xpath(doc, ~x"//MetronInfo/Reprints/Reprint"l,
+          name: ~x"./text()"s,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      stories =
+        xpath(doc, ~x"//MetronInfo/Stories/Story"l,
+          name: ~x"./text()"s,
+          external_id: ~x"./@id"os
+        )
+        |> Enum.reject(&(&1.name == ""))
+
+      urls =
+        xpath(doc, ~x"//MetronInfo/URLs/URL"l,
+          url: ~x"./text()"s,
+          is_primary: ~x"./@primary"os
+        )
+        |> Enum.reject(&(&1.url == ""))
+        |> Enum.map(&%{url: &1.url, is_primary: &1.is_primary == "true"})
+
+      prices =
+        xpath(doc, ~x"//MetronInfo/Prices/Price"l,
+          amount: ~x"./text()"s,
+          country: ~x"./@country"s
+        )
+        |> Enum.reject(&(&1.country == ""))
+        |> Enum.map(&%{amount: parse_decimal(&1.amount), country: &1.country})
+        |> Enum.reject(&is_nil(&1.amount))
+
+      external_ids =
+        xpath(doc, ~x"//MetronInfo/IDS/ID"l,
+          source: ~x"./@source"s,
+          source_id: ~x"./text()"s,
+          is_primary: ~x"./@primary"os
+        )
+        |> Enum.reject(&(&1.source == "" || &1.source_id == ""))
+        |> Enum.map(&%{source: &1.source, source_id: &1.source_id, is_primary: &1.is_primary == "true"})
+
+      last_modified =
+        case xpath(doc, ~x"//MetronInfo/LastModified/text()"os) do
+          s when s not in [nil, ""] ->
+            case NaiveDateTime.from_iso8601(s) do
+              {:ok, dt} -> dt
+              _ -> nil
+            end
+
+          _ ->
+            nil
         end
 
       %{}
       |> maybe_put(:series, xpath(doc, ~x"//MetronInfo/Series/Name/text()"os))
+      |> maybe_put(:series_sort_name, xpath(doc, ~x"//MetronInfo/Series/SortName/text()"os))
       |> maybe_put(:volume, parse_int(xpath(doc, ~x"//MetronInfo/Series/Volume/text()"os)))
+      |> maybe_put(:series_format, xpath(doc, ~x"//MetronInfo/Series/Format/text()"os))
+      |> maybe_put(:series_start_year, parse_int(xpath(doc, ~x"//MetronInfo/Series/StartYear/text()"os)))
+      |> maybe_put(:series_issue_count, parse_int(xpath(doc, ~x"//MetronInfo/Series/IssueCount/text()"os)))
+      |> maybe_put(:series_volume_count, parse_int(xpath(doc, ~x"//MetronInfo/Series/VolumeCount/text()"os)))
       |> maybe_put(:language, xpath(doc, ~x"//MetronInfo/Series/@lang"os))
       |> maybe_put(:issue_number, parse_decimal(xpath(doc, ~x"//MetronInfo/Number/text()"os)))
       |> maybe_put(:alternative_number, xpath(doc, ~x"//MetronInfo/AlternativeNumber/text()"os))
       |> maybe_put(:collection_title, xpath(doc, ~x"//MetronInfo/CollectionTitle/text()"os))
-      |> maybe_put(:year, cover_year || store_year)
+      |> maybe_put(:cover_date, cover_date)
+      |> maybe_put(:store_date, store_date)
+      |> maybe_put(:year, (cover_date && cover_date.year) || (store_date && store_date.year))
       |> maybe_put(:publisher, xpath(doc, ~x"//MetronInfo/Publisher/Name/text()"os))
+      |> maybe_put(:imprint, xpath(doc, ~x"//MetronInfo/Publisher/Imprint/text()"os))
       |> maybe_put(:page_count, parse_int(xpath(doc, ~x"//MetronInfo/PageCount/text()"os)))
       |> maybe_put(:summary, xpath(doc, ~x"//MetronInfo/Summary/text()"os))
+      |> maybe_put(:notes, xpath(doc, ~x"//MetronInfo/Notes/text()"os))
       |> maybe_put(:age_rating, normalize_metroninfo_age_rating(age_rating_raw))
-      |> maybe_put(:genre, if(genres != "", do: genres))
-      |> maybe_put(:tags, if(tags != "", do: tags))
-      |> maybe_put(:story_arc, xpath(doc, ~x"//MetronInfo/Arcs/Arc[1]/Name/text()"os))
+      |> maybe_put(:isbn, xpath(doc, ~x"//MetronInfo/GTIN/ISBN/text()"os))
+      |> maybe_put(:upc, xpath(doc, ~x"//MetronInfo/GTIN/UPC/text()"os))
       |> maybe_put(:community_rating, community_rating)
+      |> maybe_put(
+        :community_rating_count,
+        parse_int(xpath(doc, ~x"//MetronInfo/CommunityRating/RatingCount/text()"os))
+      )
+      |> maybe_put(:last_modified, last_modified)
+      |> maybe_put(:genres, if(genres != [], do: genres))
+      |> maybe_put(:tags, if(tags != [], do: tags))
+      |> maybe_put(:arcs, if(arcs != [], do: arcs))
+      |> maybe_put(:credits, if(credits != [], do: credits))
+      |> maybe_put(:characters, if(characters != [], do: characters))
+      |> maybe_put(:teams, if(teams != [], do: teams))
+      |> maybe_put(:universes, if(universes != [], do: universes))
+      |> maybe_put(:locations, if(locations != [], do: locations))
+      |> maybe_put(:reprints, if(reprints != [], do: reprints))
+      |> maybe_put(:stories, if(stories != [], do: stories))
+      |> maybe_put(:urls, if(urls != [], do: urls))
+      |> maybe_put(:prices, if(prices != [], do: prices))
+      |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
     rescue
       _ -> %{}
     catch
@@ -536,6 +649,24 @@ defmodule Stashix.Metadata.Parser do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp split_delimited(nil), do: nil
+  defp split_delimited(""), do: nil
+
+  defp split_delimited(s) do
+    result = s |> String.split(~r/[,|]/) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    if result == [], do: nil, else: result
+  end
+
+  defp parse_date(nil), do: nil
+  defp parse_date(""), do: nil
+
+  defp parse_date(s) do
+    case Date.from_iso8601(s) do
+      {:ok, date} -> date
+      _ -> nil
+    end
+  end
 
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil

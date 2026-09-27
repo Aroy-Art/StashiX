@@ -40,6 +40,7 @@ defmodule Stashix.Library.Series do
     has_many :books, Stashix.Library.Book
     many_to_many :publishers, Stashix.Library.Publisher, join_through: "series_publishers", on_replace: :delete
     has_many :external_ids, Stashix.Library.SeriesExternalId
+    has_many :alternative_names, Stashix.Library.SeriesAlternativeName
 
     timestamps()
   end

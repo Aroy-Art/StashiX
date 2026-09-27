@@ -4,7 +4,7 @@ defmodule Stashix.Scanner do
 
   alias Stashix.Library
   alias Stashix.Media.{Thumbnail, Extractor, ImageResizer}
-  alias Stashix.Metadata.Parser
+  alias Stashix.Metadata.{Parser, Importer}
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
   @ets_table :scan_tasks
@@ -332,12 +332,19 @@ defmodule Stashix.Scanner do
           language: Map.get(metadata, :language, "en"),
           summary: Map.get(metadata, :summary),
           age_rating: Map.get(metadata, :age_rating),
-          community_rating: Map.get(metadata, :community_rating)
+          community_rating: Map.get(metadata, :community_rating),
+          community_rating_count: Map.get(comicinfo, :community_rating_count),
+          cover_date: Map.get(comicinfo, :cover_date),
+          store_date: Map.get(comicinfo, :store_date),
+          notes: Map.get(comicinfo, :notes),
+          isbn: Map.get(comicinfo, :isbn),
+          upc: Map.get(comicinfo, :upc)
         }
 
         case Library.create_book(book_attrs) do
           {:ok, b} ->
             link_publisher(b, series, enrich_publisher(metadata, file_path, library))
+            Importer.replace_book_metadata(b, comicinfo)
             Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, b})
             b
 
@@ -454,6 +461,13 @@ defmodule Stashix.Scanner do
       page_count: resolve_page_count(metadata, file_path, book.page_count),
       language: Map.get(metadata, :language, book.language),
       summary: Map.get(metadata, :summary, book.summary),
+      community_rating: Map.get(comicinfo, :community_rating, book.community_rating),
+      community_rating_count: Map.get(comicinfo, :community_rating_count, book.community_rating_count),
+      cover_date: Map.get(comicinfo, :cover_date, book.cover_date),
+      store_date: Map.get(comicinfo, :store_date, book.store_date),
+      notes: Map.get(comicinfo, :notes, book.notes),
+      isbn: Map.get(comicinfo, :isbn, book.isbn),
+      upc: Map.get(comicinfo, :upc, book.upc),
       deleted_at: nil
     }
 
@@ -467,9 +481,10 @@ defmodule Stashix.Scanner do
       deleted_at: nil
     }
 
-    with {:ok, _updated_book} <- Library.update_book(book, book_attrs),
+    with {:ok, updated_book} <- Library.update_book(book, book_attrs),
          {:ok, _updated_file} <- Library.update_book_file(book_file, file_attrs) do
-      {{book, file_path}, new_cache}
+      Importer.replace_book_metadata(updated_book, comicinfo)
+      {{updated_book, file_path}, new_cache}
     else
       {:error, reason} ->
         Logger.error("Failed to update book/file for #{file_path}: #{inspect(reason)}")

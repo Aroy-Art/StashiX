@@ -23,7 +23,11 @@ defmodule Stashix.Library.Book do
     field :alternative_number, :string
     field :isbn, :string
     field :upc, :string
+    field :cover_date, :date
+    field :store_date, :date
+    field :notes, :string
     field :community_rating, :float
+    field :community_rating_count, :integer
     field :source_format, :string, virtual: true
 
     belongs_to :library, Stashix.Library.Library
@@ -33,6 +37,19 @@ defmodule Stashix.Library.Book do
     has_one :cover, Stashix.Library.BookCover
     has_many :reading_progress, Stashix.Library.ReadingProgress
     has_many :files, Stashix.Library.BookFile
+    has_many :external_ids, Stashix.Library.BookExternalId
+    has_many :credits, Stashix.Library.BookCredit
+    has_many :genres, Stashix.Library.BookGenre
+    has_many :tags, Stashix.Library.BookTag
+    has_many :story_arcs, Stashix.Library.BookStoryArc
+    has_many :stories, Stashix.Library.BookStory
+    has_many :characters, Stashix.Library.BookCharacter
+    has_many :teams, Stashix.Library.BookTeam
+    has_many :universes, Stashix.Library.BookUniverse
+    has_many :locations, Stashix.Library.BookLocation
+    has_many :reprints, Stashix.Library.BookReprint
+    has_many :urls, Stashix.Library.BookUrl
+    has_many :prices, Stashix.Library.BookPrice
 
     timestamps()
   end
@@ -55,7 +72,11 @@ defmodule Stashix.Library.Book do
       :alternative_number,
       :isbn,
       :upc,
+      :cover_date,
+      :store_date,
+      :notes,
       :community_rating,
+      :community_rating_count,
       :library_id,
       :series_id,
       :imprint_id
