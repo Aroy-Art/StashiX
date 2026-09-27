@@ -15,6 +15,15 @@ defmodule Stashix.Metadata.Sources.ComicVine do
                    concept_credits aliases)
   @volume_fields ~w(id name start_year publisher count_of_issues image site_detail_url description)
 
+  # Comic Vine stores collected-edition titles as a format abbreviation rather than
+  # a real title; these should be ignored so the volume/series name is used instead.
+  @format_labels ~w(tpb hc gn omnibus sc hb)
+  @format_label_patterns [
+    ~r/^(trade\s+paperback|hard\s*cover|graphic\s+novel|omnibus|special\s+edition)$/i,
+    ~r/^(vol\.?|volume|book)\s*\d+$/i,
+    ~r/^(part|chapter)\s*\d+$/i
+  ]
+
   @impl true
   def key, do: "comic_vine"
   @impl true
@@ -124,6 +133,7 @@ defmodule Stashix.Metadata.Sources.ComicVine do
 
   defp issue_candidate(i) do
     cover_date = date(i["cover_date"])
+    issue_name = if format_label?(i["name"]), do: nil, else: i["name"]
 
     %Candidate{
       source_key: key(),
@@ -132,7 +142,7 @@ defmodule Stashix.Metadata.Sources.ComicVine do
       series_id: get_in(i, ["volume", "id"]) && to_string(get_in(i, ["volume", "id"])),
       series_name: get_in(i, ["volume", "name"]),
       number: i["issue_number"],
-      title: i["name"],
+      title: issue_name,
       year: year_of(cover_date),
       cover_url: get_in(i, ["image", "small_url"]),
       url: i["site_detail_url"],
@@ -154,11 +164,13 @@ defmodule Stashix.Metadata.Sources.ComicVine do
     store_date = date(i["store_date"])
     volume = i["volume"] || %{}
 
+    issue_name = if format_label?(i["name"]), do: nil, else: i["name"]
+
     %{}
     |> put(:series, volume["name"])
     |> put(:issue_number, decimal(i["issue_number"]))
-    |> put(:title, i["name"])
-    |> put(:stories, if(blank?(i["name"]), do: [], else: [%{name: i["name"], external_id: nil}]))
+    |> put(:title, issue_name)
+    |> put(:stories, if(blank?(issue_name), do: [], else: [%{name: issue_name, external_id: nil}]))
     |> put(:cover_date, cover_date)
     |> put(:store_date, store_date)
     |> put(:year, year_of(cover_date) || year_of(store_date))
@@ -190,6 +202,13 @@ defmodule Stashix.Metadata.Sources.ComicVine do
     "translator" => "Translator",
     "production" => "Production"
   }
+
+  defp format_label?(nil), do: false
+
+  defp format_label?(name) do
+    normalized = name |> String.trim() |> String.downcase()
+    normalized in @format_labels or Enum.any?(@format_label_patterns, &Regex.match?(&1, normalized))
+  end
 
   defp credits(list) when is_list(list) do
     list
