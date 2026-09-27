@@ -69,7 +69,7 @@ defmodule StashixWeb.AllPublishersLive do
       <%= if @publishers != [] do %>
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-4 mx-2 2xl:mx-20">
           <%= for pub <- @publishers do %>
             <% stats =
               Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>

@@ -946,7 +946,7 @@ defmodule StashixWeb.CoreComponents do
     ~H"""
     <div
       id={@id}
-      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4"
+      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-4"
     >
       {render_slot(@inner_block)}
     </div>
