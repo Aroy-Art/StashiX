@@ -43,8 +43,11 @@ defmodule Stashix.Metadata.Sources.ComicVine do
     ]
   end
 
-  defp cv_get(ctx, path, params) do
-    case HTTP.get(ctx, path, params: params) do
+  @impl true
+  def cacheable?(body), do: match?(%{"status_code" => 1}, body)
+
+  defp cv_get(ctx, path, params, cache \\ nil) do
+    case HTTP.get(ctx, path, params: params, cache: cache) do
       {:ok, %{"status_code" => 1, "results" => results}} -> {:ok, results}
       {:ok, %{"status_code" => 100}} -> {:error, :unauthorized}
       {:ok, %{"status_code" => 107}} -> {:error, {:rate_limited, 60_000}}
@@ -67,7 +70,7 @@ defmodule Stashix.Metadata.Sources.ComicVine do
   def search_series(query, ctx) do
     params = [query: query[:name], resources: "volume", limit: 20, field_list: Enum.join(@volume_fields, ",")]
 
-    with {:ok, results} <- cv_get(ctx, "/search/", params) do
+    with {:ok, results} <- cv_get(ctx, "/search/", params, :short) do
       {:ok, Enum.map(results, &volume_candidate/1)}
     end
   end
@@ -113,7 +116,7 @@ defmodule Stashix.Metadata.Sources.ComicVine do
     else
       params = [filter: Enum.join(filters, ","), limit: 50, field_list: Enum.join(@issue_list_fields, ",")]
 
-      with {:ok, results} <- cv_get(ctx, "/issues/", params) do
+      with {:ok, results} <- cv_get(ctx, "/issues/", params, :short) do
         {:ok, Enum.map(results, &issue_candidate/1)}
       end
     end
@@ -139,7 +142,8 @@ defmodule Stashix.Metadata.Sources.ComicVine do
 
   @impl true
   def fetch_issue(id, ctx) do
-    with {:ok, i} when is_map(i) <- cv_get(ctx, "/issue/4000-#{id}/", field_list: Enum.join(@issue_fields, ",")) do
+    with {:ok, i} when is_map(i) <-
+           cv_get(ctx, "/issue/4000-#{id}/", [field_list: Enum.join(@issue_fields, ",")], :long) do
       {:ok, issue_metadata(i)}
     end
   end
@@ -205,7 +209,8 @@ defmodule Stashix.Metadata.Sources.ComicVine do
 
   @impl true
   def fetch_series(id, ctx) do
-    with {:ok, v} when is_map(v) <- cv_get(ctx, "/volume/4050-#{id}/", field_list: Enum.join(@volume_fields, ",")) do
+    with {:ok, v} when is_map(v) <-
+           cv_get(ctx, "/volume/4050-#{id}/", [field_list: Enum.join(@volume_fields, ",")], :long) do
       {:ok,
        %{}
        |> put(:name, v["name"])

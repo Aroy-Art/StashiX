@@ -76,6 +76,9 @@ defmodule Stashix.Metadata.Sources do
   @doc """
   Updates a source's settings. `config` params are merged into the stored map;
   secret/cookie fields left blank (or still showing the mask) keep their value.
+
+  Changing the config invalidates the last connection test and disables the
+  source until it is tested again (see `set_enabled/2`).
   """
   def update(%SourceConfig{} = row, attrs) do
     mod = module(row.source_key)
@@ -84,7 +87,20 @@ defmodule Stashix.Metadata.Sources do
     attrs =
       case Map.fetch(attrs, "config") do
         {:ok, params} when is_map(params) ->
-          Map.put(attrs, "config", merge_config(mod, row.config || %{}, params))
+          current = row.config || %{}
+          merged = merge_config(mod, current, params)
+
+          if merged == current do
+            Map.delete(attrs, "config")
+          else
+            Map.merge(attrs, %{
+              "config" => merged,
+              "enabled" => false,
+              "last_test_status" => nil,
+              "last_test_message" => nil,
+              "last_tested_at" => nil
+            })
+          end
 
         _ ->
           attrs
@@ -94,6 +110,16 @@ defmodule Stashix.Metadata.Sources do
     |> SourceConfig.changeset(attrs)
     |> Repo.update()
   end
+
+  @doc "Enables/disables a source. Enabling requires a successful connection test."
+  def set_enabled(%SourceConfig{} = row, true) do
+    if row.last_test_status == "ok",
+      do: row |> SourceConfig.changeset(%{enabled: true}) |> Repo.update(),
+      else: {:error, :untested}
+  end
+
+  def set_enabled(%SourceConfig{} = row, false),
+    do: row |> SourceConfig.changeset(%{enabled: false}) |> Repo.update()
 
   defp merge_config(mod, current, params) do
     Enum.reduce(mod.config_schema(), current, fn field, acc ->

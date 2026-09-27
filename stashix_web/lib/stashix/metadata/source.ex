@@ -70,4 +70,12 @@ defmodule Stashix.Metadata.Source do
   @callback search_issues(issue_query(), ctx()) :: {:ok, [Candidate.t()]} | {:error, term()}
   @callback fetch_issue(id :: String.t(), ctx()) :: {:ok, map()} | {:error, term()}
   @callback fetch_series(id :: String.t(), ctx()) :: {:ok, map()} | {:error, term()}
+
+  @doc """
+  Optional. Whether a successful (2xx) response body may be cached. Implement it
+  for APIs that report errors inside a 200 response.
+  """
+  @callback cacheable?(body :: term()) :: boolean()
+
+  @optional_callbacks cacheable?: 1
 end

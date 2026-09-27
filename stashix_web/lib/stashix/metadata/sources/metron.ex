@@ -61,7 +61,7 @@ defmodule Stashix.Metadata.Sources.Metron do
   def search_series(query, ctx) do
     params = [name: query[:name]] |> maybe_param(:year_began, query[:year])
 
-    with {:ok, %{"results" => results}} <- HTTP.get(ctx, "/series/", params: params),
+    with {:ok, %{"results" => results}} <- HTTP.get(ctx, "/series/", params: params, cache: :short),
          results = retry_without_year(results, query, ctx) do
       {:ok, Enum.map(results, &series_candidate/1)}
     end
@@ -69,7 +69,7 @@ defmodule Stashix.Metadata.Sources.Metron do
 
   # Metron's year_began filter is exact; fall back to name only when it finds nothing.
   defp retry_without_year([], %{year: y} = query, ctx) when not is_nil(y) do
-    case HTTP.get(ctx, "/series/", params: [name: query[:name]]) do
+    case HTTP.get(ctx, "/series/", params: [name: query[:name]], cache: :short) do
       {:ok, %{"results" => r}} -> r
       _ -> []
     end
@@ -104,7 +104,7 @@ defmodule Stashix.Metadata.Sources.Metron do
       |> maybe_param(:number, query[:number])
       |> maybe_param(:cover_year, if(blank?(query[:series_id]), do: query[:year]))
 
-    with {:ok, %{"results" => results}} <- HTTP.get(ctx, "/issue/", params: params) do
+    with {:ok, %{"results" => results}} <- HTTP.get(ctx, "/issue/", params: params, cache: :short) do
       {:ok, Enum.map(results, &issue_candidate/1)}
     end
   end
@@ -132,7 +132,7 @@ defmodule Stashix.Metadata.Sources.Metron do
 
   @impl true
   def fetch_issue(id, ctx) do
-    with {:ok, i} when is_map(i) <- HTTP.get(ctx, "/issue/#{id}/") do
+    with {:ok, i} when is_map(i) <- HTTP.get(ctx, "/issue/#{id}/", cache: :long) do
       {:ok, issue_metadata(i)}
     end
   end
@@ -223,7 +223,7 @@ defmodule Stashix.Metadata.Sources.Metron do
 
   @impl true
   def fetch_series(id, ctx) do
-    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{id}/") do
+    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{id}/", cache: :long) do
       {:ok,
        %{}
        |> put(:name, s["name"])

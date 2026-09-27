@@ -47,4 +47,27 @@ defmodule Stashix.Metadata.SourcesTest do
     {:ok, row} = Sources.update(row, %{"rate_limit_per_minute" => 12})
     assert Sources.rate_limit(mod, row) == {12, 60_000}
   end
+
+  test "changing the config invalidates the connection test and disables the source" do
+    %{config: row} = Sources.get("metron")
+    {:ok, row} = Sources.update(row, %{"config" => %{"username" => "bob", "password" => "x"}})
+    {:ok, row} = Sources.update(row, %{"last_test_status" => "ok"})
+    {:ok, row} = Sources.set_enabled(row, true)
+    assert row.enabled
+
+    # unchanged values (blank secret) keep the test result
+    {:ok, row} = Sources.update(row, %{"config" => %{"username" => "bob", "password" => ""}})
+    assert row.enabled and row.last_test_status == "ok"
+
+    {:ok, row} = Sources.update(row, %{"config" => %{"username" => "alice"}})
+    refute row.enabled
+    assert row.last_test_status == nil
+  end
+
+  test "set_enabled/2 refuses untested sources" do
+    %{config: row} = Sources.get("gcd")
+    assert Sources.set_enabled(row, true) == {:error, :untested}
+    {:ok, row} = Sources.update(row, %{"last_test_status" => "error"})
+    assert Sources.set_enabled(row, true) == {:error, :untested}
+  end
 end

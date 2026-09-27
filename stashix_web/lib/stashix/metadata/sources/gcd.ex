@@ -71,7 +71,7 @@ defmodule Stashix.Metadata.Sources.GCD do
         do: "/series/name/#{enc(query[:name])}/year/#{query[:year]}/",
         else: "/series/name/#{enc(query[:name])}/"
 
-    with {:ok, %{"results" => results}} <- HTTP.get(ctx, path) do
+    with {:ok, %{"results" => results}} <- HTTP.get(ctx, path, cache: :short) do
       {:ok, Enum.map(results, &series_candidate/1)}
     end
   end
@@ -95,7 +95,7 @@ defmodule Stashix.Metadata.Sources.GCD do
 
   @impl true
   def search_issues(%{series_id: series_id} = query, ctx) when is_binary(series_id) and series_id != "" do
-    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{series_id}/") do
+    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{series_id}/", cache: :short) do
       wanted = normalize_descriptor(query[:number])
 
       candidates =
@@ -129,7 +129,7 @@ defmodule Stashix.Metadata.Sources.GCD do
         do: "/series/name/#{enc(query[:series_name])}/issue/#{enc(query[:number])}/year/#{query[:year]}/",
         else: "/series/name/#{enc(query[:series_name])}/issue/#{enc(query[:number])}/"
 
-    with {:ok, %{"results" => results}} <- HTTP.get(ctx, path) do
+    with {:ok, %{"results" => results}} <- HTTP.get(ctx, path, cache: :short) do
       {:ok,
        results
        |> Enum.reject(&(&1["variant_of"] not in [nil, ""]))
@@ -165,7 +165,7 @@ defmodule Stashix.Metadata.Sources.GCD do
 
   @impl true
   def fetch_issue(id, ctx) do
-    with {:ok, i} when is_map(i) <- HTTP.get(ctx, "/issue/#{id}/") do
+    with {:ok, i} when is_map(i) <- HTTP.get(ctx, "/issue/#{id}/", cache: :long) do
       {:ok, issue_metadata(i, id)}
     end
   end
@@ -319,7 +319,7 @@ defmodule Stashix.Metadata.Sources.GCD do
 
   @impl true
   def fetch_series(id, ctx) do
-    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{id}/") do
+    with {:ok, s} when is_map(s) <- HTTP.get(ctx, "/series/#{id}/", cache: :long) do
       {:ok,
        %{}
        |> put(:name, s["name"])

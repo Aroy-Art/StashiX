@@ -3,6 +3,8 @@ defmodule StashixWeb.SeriesLive do
 
   alias Stashix.{Formatters, Library, Metadata, Scanner}
   alias Stashix.Library.Series
+  alias Stashix.Metadata.Roles
+  import StashixWeb.MetadataComponents
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -44,6 +46,7 @@ defmodule StashixWeb.SeriesLive do
        show_edit_dialog: false,
        show_identify_dialog: false,
        edit_form: nil,
+       series_details: Library.series_details(series.id),
        all_publishers: Library.list_all_publishers()
      )}
   end
@@ -226,7 +229,8 @@ defmodule StashixWeb.SeriesLive do
       series: series,
       books: books,
       page_title: series.name,
-      summary_info: derive_summary(series, books)
+      summary_info: derive_summary(series, books),
+      series_details: Library.series_details(series.id)
     )
   end
 
@@ -561,6 +565,49 @@ defmodule StashixWeb.SeriesLive do
           </div>
         <% end %>
       </div>
+
+      <%!-- Series details expander --%>
+      <% sd = @series_details %>
+      <% creator_groups = Roles.group_counts(sd.creators) %>
+      <% headline_groups = Roles.headline(creator_groups) %>
+      <% has_extras =
+        sd.characters != [] || sd.teams != [] || sd.arcs != [] || sd.genres != [] ||
+          creator_groups != [] %>
+      <%= if headline_groups != [] || has_extras do %>
+        <div class="space-y-3">
+          <.credits_line groups={headline_groups} />
+          <%= if has_extras do %>
+            <.expander id="series-details">
+              <.detail_section label="Creators" show={creator_groups != []}>
+                <div class="space-y-2">
+                  <div :for={{label, entries} <- creator_groups} class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+                    <span class="w-20 shrink-0 text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 pt-0.5">{label}</span>
+                    <span class="text-gray-300">
+                      {entries |> Enum.map(fn {name, _} -> name end) |> Enum.join(", ")}
+                    </span>
+                  </div>
+                </div>
+              </.detail_section>
+
+              <.detail_section label="Genres" show={sd.genres != []}>
+                <.chips items={Enum.map(sd.genres, fn {name, count} -> {name, count} end)} />
+              </.detail_section>
+
+              <.detail_section label="Story Arcs" show={sd.arcs != []}>
+                <.chips items={Enum.map(sd.arcs, fn {name, count} -> {name, count} end)} />
+              </.detail_section>
+
+              <.detail_section label="Characters" show={sd.characters != []}>
+                <.chips items={Enum.map(sd.characters, fn {name, count} -> {name, count} end)} />
+              </.detail_section>
+
+              <.detail_section label="Teams" show={sd.teams != []}>
+                <.chips items={Enum.map(sd.teams, fn {name, count} -> {name, count} end)} />
+              </.detail_section>
+            </.expander>
+          <% end %>
+        </div>
+      <% end %>
 
       <%!-- Folder path --%>
       <%= if @current_user.role == :admin do %>

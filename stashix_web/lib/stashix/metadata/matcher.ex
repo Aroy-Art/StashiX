@@ -200,10 +200,13 @@ defmodule Stashix.Metadata.Matcher do
     end
   end
 
-  @doc "Manual search from the Identify dialog: scored candidates from one source."
-  def search(source_key, kind, query) do
+  @doc """
+  Manual search from the Identify dialog: scored candidates from one source.
+  `refresh: true` bypasses the response cache.
+  """
+  def search(source_key, kind, query, opts \\ []) do
     with %{} = source <- Sources.get(source_key) || {:error, :unknown_source},
-         ctx = HTTP.context(source) do
+         ctx = HTTP.context(source, refresh: Keyword.get(opts, :refresh, false)) do
       case kind do
         :series ->
           search_series(source, ctx, query)

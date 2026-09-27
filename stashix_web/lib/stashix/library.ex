@@ -108,6 +108,65 @@ defmodule Stashix.Library do
     |> Repo.preload([:series, :cover, :publishers, files: files_query])
   end
 
+  @doc "Book with all MetronInfo detail associations, for the book page's details panel."
+  def get_book_details(id) do
+    Repo.get!(Book, id)
+    |> Repo.preload([
+      :imprint,
+      :external_ids,
+      :genres,
+      :tags,
+      :characters,
+      :teams,
+      :locations,
+      :universes,
+      :reprints,
+      :prices,
+      :urls,
+      stories: from(s in Stashix.Library.BookStory, order_by: s.inserted_at),
+      story_arcs: from(a in Stashix.Library.BookStoryArc, order_by: a.name),
+      credits: [:creator]
+    ])
+  end
+
+  @doc """
+  Series-level details: the series' own extra fields plus the most frequent
+  creators, characters, teams, story arcs and genres across its live books.
+  """
+  def series_details(series_id, limit \\ 20) do
+    series = Repo.get!(Series, series_id) |> Repo.preload([:external_ids, :alternative_names])
+    book_ids = from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
+
+    top = fn schema ->
+      from(r in schema,
+        where: r.book_id in subquery(book_ids),
+        group_by: r.name,
+        select: {r.name, count(r.id)},
+        order_by: [desc: count(r.id), asc: r.name],
+        limit: ^limit
+      )
+      |> Repo.all()
+    end
+
+    creators =
+      from(c in Stashix.Library.BookCredit,
+        join: cr in assoc(c, :creator),
+        where: c.book_id in subquery(book_ids),
+        group_by: [cr.name, c.role],
+        select: {cr.name, c.role, count(c.id)}
+      )
+      |> Repo.all()
+
+    %{
+      series: series,
+      creators: creators,
+      characters: top.(Stashix.Library.BookCharacter),
+      teams: top.(Stashix.Library.BookTeam),
+      arcs: top.(Stashix.Library.BookStoryArc),
+      genres: top.(Stashix.Library.BookGenre)
+    }
+  end
+
   def get_adjacent_books(%{series_id: nil}), do: {nil, nil}
 
   def get_adjacent_books(%{series_id: _series_id, issue_number: nil}), do: {nil, nil}

@@ -18,7 +18,8 @@ defmodule StashixWeb.AdminMetadataLive do
        admin_sidebar: true,
        sources: [],
        testing: MapSet.new(),
-       saved: nil,
+       saved: MapSet.new(),
+       cache_count: 0,
        settings: Settings.metadata(),
        reviews: [],
        review_count: Metadata.count_reviews(),
@@ -75,7 +76,7 @@ defmodule StashixWeb.AdminMetadataLive do
       if connected?(socket) and socket.assigns.live_action == :metadata_jobs,
         do: Process.send_after(self(), :refresh_jobs, @job_refresh_ms)
 
-    assign(socket, job_counts: Metadata.job_counts(), refresh_timer: timer)
+    assign(socket, job_counts: Metadata.job_counts(), cache_count: Metadata.cache_count(), refresh_timer: timer)
   end
 
   defp source_row(socket, key), do: Enum.find(socket.assigns.sources, &(&1.config.source_key == key))
@@ -83,11 +84,22 @@ defmodule StashixWeb.AdminMetadataLive do
   # ── Sources ─────────────────────────────────────────────────────────────────
 
   @impl true
-  def handle_event("toggle_source", %{"key" => key, "field" => field}, socket)
-      when field in ["enabled", "auto_apply"] do
+  def handle_event("toggle_source", %{"key" => key, "field" => "enabled"}, socket) do
     %{config: row} = source_row(socket, key)
-    {:ok, _} = Sources.update(row, %{field => not Map.fetch!(row, String.to_existing_atom(field))})
-    {:noreply, load_sources(socket)}
+
+    case Sources.set_enabled(row, not row.enabled) do
+      {:ok, _} ->
+        {:noreply, load_sources(socket)}
+
+      {:error, :untested} ->
+        {:noreply, put_flash(socket, :error, "Test the connection successfully before enabling this source")}
+    end
+  end
+
+  def handle_event("toggle_source", %{"key" => key, "field" => "auto_apply"}, socket) do
+    %{config: row} = source_row(socket, key)
+    {:ok, _} = Sources.update(row, %{"auto_apply" => not row.auto_apply})
+    {:noreply, socket |> load_sources() |> mark_saved(key)}
   end
 
   def handle_event("move_source", %{"key" => key, "dir" => dir}, socket) do
@@ -95,7 +107,8 @@ defmodule StashixWeb.AdminMetadataLive do
     {:noreply, load_sources(socket)}
   end
 
-  def handle_event("save_source", %{"key" => key} = params, socket) do
+  # Auto-saved on every (debounced) form change.
+  def handle_event("autosave_source", %{"key" => key} = params, socket) do
     %{config: row} = source_row(socket, key)
 
     attrs = %{
@@ -108,9 +121,11 @@ defmodule StashixWeb.AdminMetadataLive do
     }
 
     case Sources.update(row, attrs) do
-      {:ok, _} ->
-        Stashix.Metadata.RateLimiter.reset(key)
-        {:noreply, socket |> load_sources() |> assign(saved: key) |> put_flash(:info, "Saved")}
+      {:ok, updated} ->
+        if updated.rate_limit_per_minute != row.rate_limit_per_minute,
+          do: Stashix.Metadata.RateLimiter.reset(key)
+
+        {:noreply, socket |> load_sources() |> mark_saved(key)}
 
       {:error, changeset} ->
         {:noreply, put_flash(socket, :error, "Could not save: #{inspect(changeset.errors)}")}
@@ -136,11 +151,13 @@ defmodule StashixWeb.AdminMetadataLive do
       "auto_match_margin" => percent(s["auto_match_margin"], 10),
       "overwrite_mode" => if(s["overwrite_mode"] == "fill", do: "fill", else: "replace"),
       "write_to_files" => s["write_to_files"] == "true",
-      "write_comicinfo" => s["write_comicinfo"] == "true"
+      "write_comicinfo" => s["write_comicinfo"] == "true",
+      "cache_search_hours" => non_neg(s["cache_search_hours"], 24),
+      "cache_detail_days" => non_neg(s["cache_detail_days"], 30)
     }
 
     {:ok, _} = Settings.put("metadata", value)
-    {:noreply, socket |> assign(settings: Settings.metadata()) |> put_flash(:info, "Settings saved")}
+    {:noreply, socket |> assign(settings: Settings.metadata()) |> mark_saved("settings")}
   end
 
   # ── Review ──────────────────────────────────────────────────────────────────
@@ -177,9 +194,26 @@ defmodule StashixWeb.AdminMetadataLive do
     {:noreply, load_jobs(socket)}
   end
 
+  def handle_event("clear_cache", _params, socket) do
+    n = Metadata.clear_cache()
+    {:noreply, socket |> load_jobs() |> put_flash(:info, "Cleared #{n} cached responses")}
+  end
+
   def handle_event("cancel_pending", _params, socket) do
     Metadata.cancel_pending_jobs()
     {:noreply, load_jobs(socket)}
+  end
+
+  defp mark_saved(socket, key) do
+    Process.send_after(self(), {:clear_saved, key}, 2_000)
+    update(socket, :saved, &MapSet.put(&1, key))
+  end
+
+  defp non_neg(v, default) do
+    case Integer.parse(to_string(v)) do
+      {n, _} when n >= 0 -> n
+      _ -> default
+    end
   end
 
   defp percent(v, default) do
@@ -190,6 +224,8 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   @impl true
+  def handle_info({:clear_saved, key}, socket), do: {:noreply, update(socket, :saved, &MapSet.delete(&1, key))}
+
   def handle_info({:source_tested, key}, socket) do
     {:noreply, socket |> update(:testing, &MapSet.delete(&1, key)) |> load_sources()}
   end
@@ -257,11 +293,11 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <%= if @live_action == :metadata_sources do %>
-        <.sources_tab sources={@sources} testing={@testing} />
+        <.sources_tab sources={@sources} testing={@testing} saved={@saved} />
       <% end %>
 
       <%= if @live_action == :metadata_settings do %>
-        <.settings_tab settings={@settings} />
+        <.settings_tab settings={@settings} saved={MapSet.member?(@saved, "settings")} />
       <% end %>
 
       <%= if @live_action == :metadata_review do %>
@@ -277,7 +313,7 @@ defmodule StashixWeb.AdminMetadataLive do
       <% end %>
 
       <%= if @live_action == :metadata_jobs do %>
-        <.jobs_tab job_counts={@job_counts} libraries={@libraries} />
+        <.jobs_tab job_counts={@job_counts} libraries={@libraries} cache_count={@cache_count} />
       <% end %>
     </div>
     """
@@ -285,12 +321,14 @@ defmodule StashixWeb.AdminMetadataLive do
 
   attr :sources, :list
   attr :testing, :any
+  attr :saved, :any
 
   defp sources_tab(assigns) do
     ~H"""
     <div class="space-y-4 max-w-3xl">
       <p class="text-sm text-gray-500">
-        Sources are searched in priority order when matching automatically. Credentials and cookies are stored encrypted.
+        Sources are searched in priority order when matching automatically. Changes save automatically; credentials and cookies are stored encrypted.
+        A source can be enabled once its connection test succeeds.
       </p>
 
       <%= for {%{module: mod, config: row}, idx} <- Enum.with_index(@sources) do %>
@@ -358,12 +396,27 @@ defmodule StashixWeb.AdminMetadataLive do
               <p class="text-sm text-gray-500 mt-0.5">{mod.description()}</p>
             </div>
             <div class="flex flex-col items-end gap-2">
-              <.source_toggle label="Enabled" on={row.enabled} key={row.source_key} field="enabled" />
+              <.source_toggle
+                label="Enabled"
+                on={row.enabled}
+                key={row.source_key}
+                field="enabled"
+                disabled={not row.enabled and row.last_test_status != "ok"}
+                title={
+                  if not row.enabled and row.last_test_status != "ok",
+                    do: "Test the connection first"
+                }
+              />
               <.source_toggle label="Auto-apply" on={row.auto_apply} key={row.source_key} field="auto_apply" />
             </div>
           </div>
 
-          <form phx-submit="save_source" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <form
+            id={"source-form-#{row.source_key}"}
+            phx-change="autosave_source"
+            phx-submit="autosave_source"
+            class="grid grid-cols-1 sm:grid-cols-2 gap-3"
+          >
             <input type="hidden" name="key" value={row.source_key} />
             <%= for field <- mod.config_schema() do %>
               <% value = Map.get(values, field.key)
@@ -379,6 +432,7 @@ defmodule StashixWeb.AdminMetadataLive do
                       name={"config[#{field.key}]"}
                       value=""
                       autocomplete="new-password"
+                      phx-debounce="blur"
                       placeholder={if has_value, do: "•••••••• saved — leave blank to keep", else: ""}
                       class={input_class()}
                     />
@@ -386,6 +440,7 @@ defmodule StashixWeb.AdminMetadataLive do
                     <textarea
                       name={"config[#{field.key}]"}
                       rows="3"
+                      phx-debounce="blur"
                       placeholder={if has_value, do: "Cookies saved — leave blank to keep", else: "name=value; other=value"}
                       class={[input_class(), "font-mono text-xs"]}
                     ></textarea>
@@ -399,6 +454,7 @@ defmodule StashixWeb.AdminMetadataLive do
                       type={if field.type == :integer, do: "number", else: "text"}
                       name={"config[#{field.key}]"}
                       value={value}
+                      phx-debounce="600"
                       class={input_class()}
                     />
                 <% end %>
@@ -412,11 +468,21 @@ defmodule StashixWeb.AdminMetadataLive do
                 min="1"
                 name="rate_limit_per_minute"
                 value={row.rate_limit_per_minute}
+                phx-debounce="600"
                 placeholder={"Default: #{Float.round(default_n * 60_000 / default_ms, 1)}"}
                 class={input_class()}
               />
             </div>
-            <div class="sm:col-span-2 flex justify-end gap-2">
+            <div class="sm:col-span-2 flex items-center justify-end gap-3">
+              <span
+                :if={MapSet.member?(@saved, row.source_key)}
+                class="inline-flex items-center gap-1 text-xs text-emerald-400"
+              >
+                <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
+              </span>
+              <span :if={not row.enabled and row.last_test_status != "ok"} class="text-xs text-gray-500">
+                Test the connection to enable
+              </span>
               <button
                 type="button"
                 phx-click="test_source"
@@ -430,12 +496,6 @@ defmodule StashixWeb.AdminMetadataLive do
                   <.icon name="lucide-plug" class="w-3.5 h-3.5" /> Test connection
                 <% end %>
               </button>
-              <button
-                type="submit"
-                class="px-3 py-1.5 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
-              >
-                Save
-              </button>
             </div>
           </form>
         </div>
@@ -448,6 +508,8 @@ defmodule StashixWeb.AdminMetadataLive do
   attr :on, :boolean
   attr :key, :string
   attr :field, :string
+  attr :disabled, :boolean, default: false
+  attr :title, :string, default: nil
 
   defp source_toggle(assigns) do
     ~H"""
@@ -456,7 +518,9 @@ defmodule StashixWeb.AdminMetadataLive do
       phx-click="toggle_source"
       phx-value-key={@key}
       phx-value-field={@field}
-      class="flex items-center gap-2 text-xs text-gray-400"
+      disabled={@disabled}
+      title={@title}
+      class="flex items-center gap-2 text-xs text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {@label}
       <span class={[
@@ -473,10 +537,16 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   attr :settings, :map
+  attr :saved, :boolean
 
   defp settings_tab(assigns) do
     ~H"""
-    <form phx-submit="save_settings" class="max-w-xl space-y-5">
+    <form
+      id="metadata-settings-form"
+      phx-change="save_settings"
+      phx-submit="save_settings"
+      class="max-w-xl space-y-5"
+    >
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-xs font-medium text-gray-400 mb-1.5">Auto-match threshold (%)</label>
@@ -485,6 +555,7 @@ defmodule StashixWeb.AdminMetadataLive do
             min="0"
             max="100"
             name="settings[auto_match_threshold]"
+            phx-debounce="600"
             value={round(@settings["auto_match_threshold"] * 100)}
             class={input_class()}
           />
@@ -497,6 +568,7 @@ defmodule StashixWeb.AdminMetadataLive do
             min="0"
             max="100"
             name="settings[auto_match_margin]"
+            phx-debounce="600"
             value={round(@settings["auto_match_margin"] * 100)}
             class={input_class()}
           />
@@ -505,15 +577,46 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-400 mb-1.5">When applying a match</label>
+        <label class="block text-xs font-medium text-gray-400 mb-1.5">When applying a match automatically</label>
         <select name="settings[overwrite_mode]" class={input_class()}>
-          <option value="replace" selected={@settings["overwrite_mode"] == "replace"}>
-            Replace fields the source provides
-          </option>
           <option value="fill" selected={@settings["overwrite_mode"] == "fill"}>
             Only fill empty fields
           </option>
+          <option value="replace" selected={@settings["overwrite_mode"] == "replace"}>
+            Replace fields the source provides
+          </option>
         </select>
+        <p class="text-xs text-gray-600 mt-1">
+          In the Identify dialog you can pick exactly which fields to overwrite.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">Cache searches (hours)</label>
+          <input
+            type="number"
+            min="0"
+            name="settings[cache_search_hours]"
+            value={@settings["cache_search_hours"]}
+            phx-debounce="600"
+            class={input_class()}
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-400 mb-1.5">Cache issue/series details (days)</label>
+          <input
+            type="number"
+            min="0"
+            name="settings[cache_detail_days]"
+            value={@settings["cache_detail_days"]}
+            phx-debounce="600"
+            class={input_class()}
+          />
+        </div>
+        <p class="col-span-2 text-xs text-gray-600 -mt-2">
+          Source responses are cached to save API requests. 0 disables caching.
+        </p>
       </div>
 
       <div class="space-y-2">
@@ -549,9 +652,11 @@ defmodule StashixWeb.AdminMetadataLive do
         </label>
       </div>
 
-      <button type="submit" class="px-4 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white">
-        Save settings
-      </button>
+      <p class="h-5 text-xs text-emerald-400">
+        <span :if={@saved} class="inline-flex items-center gap-1">
+          <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
+        </span>
+      </p>
     </form>
     """
   end
@@ -627,6 +732,7 @@ defmodule StashixWeb.AdminMetadataLive do
 
   attr :job_counts, :map
   attr :libraries, :list
+  attr :cache_count, :integer
 
   defp jobs_tab(assigns) do
     ~H"""
@@ -667,6 +773,13 @@ defmodule StashixWeb.AdminMetadataLive do
           class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-red-400"
         >
           Cancel queued
+        </button>
+        <button
+          phx-click="clear_cache"
+          class="ml-auto px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
+          title="Delete cached source responses"
+        >
+          Clear cache ({@cache_count})
         </button>
       </div>
 

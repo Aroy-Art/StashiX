@@ -148,6 +148,23 @@ defmodule Stashix.Metadata.MatcherTest do
       assert book.upc == "76194134182900111"
     end
 
+    test "explicit fields overwrite only what was chosen", %{book: book} do
+      {:ok, book} = Library.update_book(book, %{summary: "Mine", upc: "000"})
+      metadata = Stashix.MetadataFixtures.metron_issue() |> Stashix.Metadata.Sources.Metron.issue_metadata()
+
+      assert {:ok, _} =
+               Metadata.apply_issue_metadata(book, "metron", metadata, %{"write_to_files" => false},
+                 fields: ["summary", "characters"]
+               )
+
+      book = Repo.get!(Book, book.id) |> Repo.preload([:characters, :credits])
+      assert book.summary == "Batman meets Gotham."
+      assert book.upc == "000"
+      assert book.title == "Batman 001"
+      assert Enum.map(book.characters, & &1.name) == ["Batman"]
+      assert book.credits == []
+    end
+
     test "applying enqueues a file write when enabled", %{book: book} do
       Stashix.Settings.put("metadata", %{"write_to_files" => true})
       Req.Test.stub(Stashix.Metadata.HTTP, fn conn -> Req.Test.json(conn, metron_issue()) end)

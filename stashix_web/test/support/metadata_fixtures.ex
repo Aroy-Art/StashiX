@@ -78,12 +78,9 @@ defmodule Stashix.MetadataFixtures do
   def enable_metron!(attrs \\ %{}) do
     %{config: row} = Sources.get("metron")
 
-    {:ok, row} =
-      Sources.update(
-        row,
-        Map.merge(%{"enabled" => true, "config" => %{"username" => "u", "password" => "p"}}, attrs)
-      )
-
+    {:ok, row} = Sources.update(row, Map.merge(%{"config" => %{"username" => "u", "password" => "p"}}, attrs))
+    {:ok, row} = Sources.update(row, %{"last_test_status" => "ok"})
+    {:ok, row} = Sources.set_enabled(row, true)
     row
   end
 
@@ -119,6 +116,19 @@ defmodule Stashix.MetadataFixtures do
           attrs
         )
       )
+
+    # Record (not an actual file) so filename-derived titles are recognisable.
+    dir = (series && series.path) || lib.root_path
+
+    {:ok, _} =
+      Library.create_book_file(%{
+        book_id: b.id,
+        path: Path.join(dir, "#{b.title}.cbz"),
+        format: :cbz,
+        file_size: 1,
+        file_hash: "fixture-#{b.id}",
+        last_modified: ~N[2024-01-01 00:00:00]
+      })
 
     b
   end

@@ -12,9 +12,11 @@ defmodule Stashix.Settings do
     "metadata" => %{
       "auto_match_threshold" => 0.9,
       "auto_match_margin" => 0.1,
-      "overwrite_mode" => "replace",
+      "overwrite_mode" => "fill",
       "write_to_files" => true,
-      "write_comicinfo" => true
+      "write_comicinfo" => true,
+      "cache_search_hours" => 24,
+      "cache_detail_days" => 30
     }
   }
 

@@ -9,11 +9,17 @@ defmodule Stashix.Metadata.HTTP do
 
   @version Mix.Project.config()[:version]
 
-  @doc "Runtime context for a `%{module: mod, config: %SourceConfig{}}` entry."
-  def context(%{module: mod, config: row}) do
+  @doc """
+  Runtime context for a `%{module: mod, config: %SourceConfig{}}` entry.
+
+  Options:
+    * `:refresh` - skip cache reads (responses are still stored)
+  """
+  def context(%{module: mod, config: row}, opts \\ []) do
     config = row.config || %{}
     limit = Sources.rate_limit(mod, row)
     key = mod.key()
+    cache = cache_config(Keyword.get(opts, :refresh, false))
 
     req =
       Req.new(
@@ -27,7 +33,12 @@ defmodule Stashix.Metadata.HTTP do
       )
       |> Req.merge(mod.req_options(config))
       |> put_cookies(mod, config)
-      |> Req.Request.append_request_steps(rate_limit: &rate_limit_step(&1, key, limit))
+      |> Req.Request.register_options([:metadata_cache])
+      |> Req.Request.append_request_steps(
+        metadata_cache: &cache_request_step(&1, key, cache),
+        rate_limit: &rate_limit_step(&1, key, limit)
+      )
+      |> Req.Request.append_response_steps(metadata_cache: &cache_response_step(&1, mod, cache))
       |> Req.merge(Application.get_env(:stashix, :metadata_req_options, []))
 
     %{config: config, req: req, source_key: key}
@@ -60,6 +71,52 @@ defmodule Stashix.Metadata.HTTP do
     |> Enum.join("; ")
   end
 
+  defp cache_config(refresh) do
+    settings = Stashix.Settings.metadata()
+
+    %{
+      refresh: refresh,
+      ttl: %{
+        short: round((settings["cache_search_hours"] || 24) * 3600),
+        long: round((settings["cache_detail_days"] || 30) * 86_400)
+      }
+    }
+  end
+
+  # Requests made with `metadata_cache: :short | :long` are served from / stored in
+  # Stashix.Metadata.Cache. A hit halts the pipeline before the rate limiter.
+  defp cache_request_step(request, source_key, cache) do
+    with kind when kind in [:short, :long] <- request.options[:metadata_cache],
+         :get <- request.method,
+         true <- cache.ttl[kind] > 0 do
+      {cache_key, url} = Stashix.Metadata.Cache.key(source_key, request.url)
+      request = Req.Request.put_private(request, :metadata_cache, {cache_key, url, kind})
+
+      case if(cache.refresh, do: :miss, else: Stashix.Metadata.Cache.get(cache_key)) do
+        {:ok, body} ->
+          response = Req.Response.new(status: 200, body: body) |> Req.Response.put_private(:cached, true)
+          {request, response}
+
+        :miss ->
+          request
+      end
+    else
+      _ -> request
+    end
+  end
+
+  defp cache_response_step({request, response}, mod, cache) do
+    with {cache_key, url, kind} <- Req.Request.get_private(request, :metadata_cache),
+         status when status in 200..299 <- response.status,
+         false <- Req.Response.get_private(response, :cached, false),
+         body when is_map(body) or is_list(body) <- response.body,
+         true <- not function_exported?(mod, :cacheable?, 1) or mod.cacheable?(body) do
+      Stashix.Metadata.Cache.put(cache_key, mod.key(), url, body, cache.ttl[kind])
+    end
+
+    {request, response}
+  end
+
   defp rate_limit_step(request, key, limit) do
     case RateLimiter.acquire(key, limit) do
       :ok -> request
@@ -70,10 +127,15 @@ defmodule Stashix.Metadata.HTTP do
   @doc """
   GET returning `{:ok, body}` or a normalised error:
   `:unauthorized`, `:not_found`, `{:rate_limited, ms}`, `{:http, status}`, `{:transport, reason}`.
+
+  Pass `cache: :short` (searches) or `cache: :long` (detail records) to use the
+  response cache.
   """
   def get(%{req: req}, url, opts \\ []) do
+    {cache, opts} = Keyword.pop(opts, :cache)
+
     req
-    |> Req.get([url: url] ++ opts)
+    |> Req.get([url: url, metadata_cache: cache] ++ opts)
     |> normalize()
   end
 

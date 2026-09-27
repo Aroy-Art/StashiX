@@ -91,23 +91,23 @@ defmodule Stashix.Metadata do
     end
   end
 
-  @doc "Fetches full issue metadata (used for previews in the Identify dialog)."
-  def fetch_issue(source_key, issue_id) do
+  @doc "Fetches full issue metadata (used for previews in the Identify dialog). `refresh: true` skips the cache."
+  def fetch_issue(source_key, issue_id, opts \\ []) do
     with {:ok, source} <- fetch_source(source_key) do
-      source.module.fetch_issue(issue_id, HTTP.context(source))
+      source.module.fetch_issue(issue_id, HTTP.context(source, opts))
     end
   end
 
-  def fetch_series(source_key, series_id) do
+  def fetch_series(source_key, series_id, opts \\ []) do
     with {:ok, source} <- fetch_source(source_key) do
-      source.module.fetch_series(series_id, HTTP.context(source))
+      source.module.fetch_series(series_id, HTTP.context(source, opts))
     end
   end
 
   @doc "Applies already fetched issue metadata (avoids a second request after a preview)."
-  def apply_issue_metadata(%Book{} = book, source_key, metadata, settings \\ Settings.metadata()) do
+  def apply_issue_metadata(%Book{} = book, source_key, metadata, settings \\ Settings.metadata(), opts \\ []) do
     with {:ok, source} <- fetch_source(source_key),
-         {:ok, updated} <- Apply.apply_book(book, source.module, metadata, settings) do
+         {:ok, updated} <- Apply.apply_book(book, source.module, metadata, settings, opts) do
       resolve_reviews(book_id: book.id)
       broadcast(book.library_id, {:metadata_updated, :book, book.id})
       maybe_enqueue_write(updated, settings)
@@ -121,9 +121,9 @@ defmodule Stashix.Metadata do
     end
   end
 
-  def apply_series_metadata(%Series{} = series, source_key, metadata, settings \\ Settings.metadata()) do
+  def apply_series_metadata(%Series{} = series, source_key, metadata, settings \\ Settings.metadata(), opts \\ []) do
     with {:ok, source} <- fetch_source(source_key),
-         {:ok, updated} <- Apply.apply_series(series, source.module, metadata, settings) do
+         {:ok, updated} <- Apply.apply_series(series, source.module, metadata, settings, opts) do
       resolve_reviews(series_id: series.id)
       broadcast(series.library_id, {:metadata_updated, :series, series.id})
       {:ok, updated}
@@ -138,7 +138,10 @@ defmodule Stashix.Metadata do
   end
 
   @doc "Manual search for the Identify dialog."
-  defdelegate search(source_key, kind, query), to: Matcher
+  defdelegate search(source_key, kind, query, opts \\ []), to: Matcher
+
+  defdelegate cache_count, to: Stashix.Metadata.Cache, as: :count
+  defdelegate clear_cache(source_key \\ nil), to: Stashix.Metadata.Cache, as: :clear
 
   ## Jobs
 

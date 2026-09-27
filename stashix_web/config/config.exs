@@ -23,7 +23,8 @@ config :stashix, Oban,
   queues: [metadata: 4, metadata_write: 2],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
-    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)}
+    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
+    {Oban.Plugins.Cron, crontab: [{"17 4 * * *", Stashix.Metadata.Workers.PruneCacheWorker}]}
   ]
 
 config :stashix, :metadata_sources, [

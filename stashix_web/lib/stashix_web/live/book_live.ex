@@ -3,6 +3,8 @@ defmodule StashixWeb.BookLive do
 
   alias Stashix.{Formatters, Library, Metadata, Repo, Scanner}
   alias Stashix.Library.Book
+  alias Stashix.Metadata.Roles
+  import StashixWeb.MetadataComponents
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -39,6 +41,7 @@ defmodule StashixWeb.BookLive do
        show_identify_dialog: false,
        edit_form: nil,
        external_ids: load_external_ids(book),
+       book_details: Library.get_book_details(book.id),
        all_publishers: Library.list_all_publishers()
      )}
   end
@@ -202,6 +205,7 @@ defmodule StashixWeb.BookLive do
       book: book,
       page_title: book.title,
       external_ids: load_external_ids(book),
+      book_details: Library.get_book_details(book.id),
       selected_file: Library.get_preferred_book_file(book, current_format)
     )
   end
@@ -567,6 +571,96 @@ defmodule StashixWeb.BookLive do
           <p class="text-gray-300">{Formatters.format_age_rating(@book.age_rating)}</p>
         </div>
       </div>
+
+      <%!-- Credits + details expander --%>
+      <% credit_groups = Roles.group(@book_details.credits) %>
+      <% headline_groups = Roles.headline(credit_groups) %>
+      <% has_extras =
+        @book_details.characters != [] || @book_details.teams != [] ||
+          @book_details.story_arcs != [] || @book_details.genres != [] ||
+          @book_details.tags != [] || @book_details.locations != [] ||
+          @book_details.universes != [] || @book_details.reprints != [] ||
+          @book_details.prices != [] || @book_details.stories != [] ||
+          @book_details.imprint || credit_groups != [] %>
+      <%= if credit_groups != [] || has_extras do %>
+        <div class="space-y-3">
+          <.credits_line groups={headline_groups} />
+          <%= if has_extras do %>
+            <.expander id="book-details">
+              <%!-- Full credits by role --%>
+              <.detail_section label="Credits" show={credit_groups != []}>
+                <div class="space-y-2">
+                  <div :for={{label, names} <- credit_groups} class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
+                    <span class="w-20 shrink-0 text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 pt-0.5">{label}</span>
+                    <span class="text-gray-300">{Enum.join(
+                      Enum.map(names, fn n -> if is_tuple(n), do: elem(n, 0), else: n end),
+                      ", "
+                    )}</span>
+                  </div>
+                </div>
+              </.detail_section>
+
+              <%!-- Scalars grid --%>
+              <.detail_grid entries={[
+                {"Stories", Enum.map_join(@book_details.stories, ", ", & &1.name)},
+                {"Story Arcs",
+                 Enum.map_join(@book_details.story_arcs, ", ", fn a ->
+                   if a.arc_number, do: "#{a.name} ##{a.arc_number}", else: a.name
+                 end)},
+                {"Imprint", @book_details.imprint && @book_details.imprint.name},
+                {"Price",
+                 Enum.map_join(@book_details.prices, " / ", fn p ->
+                   "#{p.amount} #{p.country}"
+                 end)}
+              ]} />
+
+              <%!-- Chips sections --%>
+              <.detail_section label="Genres" show={@book_details.genres != []}>
+                <.chips items={Enum.map(@book_details.genres, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Tags" show={@book_details.tags != []}>
+                <.chips items={Enum.map(@book_details.tags, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Characters" show={@book_details.characters != []}>
+                <.chips items={Enum.map(@book_details.characters, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Teams" show={@book_details.teams != []}>
+                <.chips items={Enum.map(@book_details.teams, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Locations" show={@book_details.locations != []}>
+                <.chips items={Enum.map(@book_details.locations, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Universes" show={@book_details.universes != []}>
+                <.chips items={Enum.map(@book_details.universes, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="Reprints" show={@book_details.reprints != []}>
+                <.chips items={Enum.map(@book_details.reprints, & &1.name)} />
+              </.detail_section>
+
+              <.detail_section label="URLs" show={@book_details.urls != []}>
+                <div class="flex flex-wrap gap-2">
+                  <a
+                    :for={u <- @book_details.urls}
+                    href={u.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                  >
+                    {URI.parse(u.url).host || u.url}
+                    <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
+                  </a>
+                </div>
+              </.detail_section>
+            </.expander>
+          <% end %>
+        </div>
+      <% end %>
 
       <%!-- File path --%>
       <%= if @current_user.role == :admin && @selected_file do %>
