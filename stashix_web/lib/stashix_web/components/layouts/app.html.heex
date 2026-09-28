@@ -11,6 +11,7 @@
     <%!-- Sidebar --%>
     <aside
       id="sidebar"
+      phx-hook="Sidebar"
       class="fixed inset-y-0 left-0 z-40 w-52 -translate-x-full lg:translate-x-0 lg:relative lg:z-auto flex-shrink-0 bg-gray-950 border-r-2 border-gray-800 flex flex-col h-screen h-dvh transition-transform duration-200"
     >
       <%!-- Logo --%>
@@ -517,18 +518,3 @@
     <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
   </form>
 <% end %>
-
-<script>
-  function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('sidebar-backdrop');
-    sidebar.classList.toggle('-translate-x-full');
-    backdrop.classList.toggle('hidden');
-  }
-  function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const backdrop = document.getElementById('sidebar-backdrop');
-    sidebar.classList.add('-translate-x-full');
-    backdrop.classList.add('hidden');
-  }
-</script>

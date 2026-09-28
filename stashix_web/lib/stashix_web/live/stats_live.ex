@@ -419,20 +419,86 @@ defmodule StashixWeb.StatsLive do
     }
   end
 
+  @role_groups %{
+    "Writing" => ~w[Writer Script Story Plot Interviewer]a,
+    "Art" => ~w[Artist Penciller Breakdowns Illustrator Layouts]a,
+    "Inking" => [:Inker, :Embellisher, :Finishes, :"Ink Assists"],
+    "Colouring" => [
+      :Colorist,
+      :"Color Separations",
+      :"Color Assists",
+      :"Color Flats",
+      :"Digital Art Technician",
+      :"Gray Tone"
+    ],
+    "Lettering" => ~w[Letterer]a,
+    "Covers" => [:"Cover Artist"],
+    "Editing" => [
+      :Editor,
+      :"Consulting Editor",
+      :"Assistant Editor",
+      :"Associate Editor",
+      :"Group Editor",
+      :"Senior Editor",
+      :"Managing Editor",
+      :"Collection Editor",
+      :"Supervising Editor",
+      :"Executive Editor",
+      :"Editor in Chief"
+    ],
+    "Production" => [
+      :Production,
+      :Designer,
+      :"Logo Design",
+      :Translator,
+      :"Executive Producer",
+      :"General Manager",
+      :"Production Manager",
+      :"Brand Manager",
+      :"VP of Business Affairs",
+      :"VP of Marketing",
+      :"VP of Publicity",
+      :"VP of Sales",
+      :"Chief Creative Officer",
+      :President,
+      :Publisher,
+      :Other
+    ]
+  }
+
+  defp role_group(role) do
+    Enum.find_value(@role_groups, "Other", fn {group, roles} ->
+      if role in roles, do: group
+    end)
+  end
+
   defp build_credits_by_role([]) do
     %{"series" => [%{"data" => []}]}
   end
 
   defp build_credits_by_role(rows) do
-    data =
-      Enum.map(rows, fn {role, count} ->
-        %{"name" => Atom.to_string(role), "value" => count}
-      end)
+    grouped =
+      rows
+      |> Enum.group_by(fn {role, _} -> role_group(role) end, fn {_, c} -> c end)
+      |> Enum.map(fn {group, counts} -> {group, Enum.sum(counts)} end)
+      |> Enum.sort_by(fn {_, c} -> c end, :desc)
+
+    data = Enum.map(grouped, fn {group, count} -> %{"name" => group, "value" => count} end)
 
     %{
       "tooltip" => %{"trigger" => "item"},
-      "legend" => legend_opts(),
-      "series" => [pie_series(data, default_colors())]
+      "series" => [
+        pie_series(data, [
+          "#7c3aed",
+          "#2563eb",
+          "#06b6d4",
+          "#10b981",
+          "#f59e0b",
+          "#ef4444",
+          "#8b5cf6",
+          "#64748b"
+        ])
+      ]
     }
   end
 
