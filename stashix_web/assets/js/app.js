@@ -42,6 +42,33 @@ import "./ui/components/tooltip.js";
 
 let Hooks = { SaladUI: SaladUIHook }
 
+Hooks.Sidebar = {
+  mounted() {
+    this.isOpen = false
+    window.toggleSidebar = () => {
+      this.isOpen = !this.isOpen
+      this.apply()
+    }
+    window.closeSidebar = () => {
+      this.isOpen = false
+      this.apply()
+    }
+  },
+  updated() {
+    this.apply()
+  },
+  apply() {
+    const backdrop = document.getElementById('sidebar-backdrop')
+    if (this.isOpen) {
+      this.el.classList.remove('-translate-x-full')
+      if (backdrop) backdrop.classList.remove('hidden')
+    } else {
+      this.el.classList.add('-translate-x-full')
+      if (backdrop) backdrop.classList.add('hidden')
+    }
+  }
+}
+
 const echartsLib = echarts.init ? echarts : echarts.default
 
 Hooks.Chart = {
