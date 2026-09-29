@@ -4,7 +4,7 @@ defmodule Stashix.Metadata.MatcherTest do
   import Stashix.MetadataFixtures
 
   alias Stashix.{Library, Metadata, Repo}
-  alias Stashix.Library.{Book, BookExternalId, SeriesExternalId}
+  alias Stashix.Library.{Book, BookExternalId, BookUrl, SeriesExternalId}
   alias Stashix.Metadata.{Candidate, Matcher, MatchReview}
 
   describe "scoring" do
@@ -163,6 +163,21 @@ defmodule Stashix.Metadata.MatcherTest do
       assert book.title == "Batman 001"
       assert Enum.map(book.characters, & &1.name) == ["Batman"]
       assert book.credits == []
+    end
+
+    test "links from another source are added, not replaced", %{book: book} do
+      cv_url = "https://comicvine.gamespot.com/batman-1/4000-1/"
+      Repo.insert!(%BookUrl{book_id: book.id, url: cv_url, is_primary: true})
+      metron_url = "https://metron.cloud/issue/batman-2016-1/"
+      metadata = %{summary: "Batman meets Gotham.", urls: [%{url: metron_url, is_primary: true}, %{url: cv_url}]}
+
+      for opts <- [[], [fields: ["urls"]]], mode <- ["fill", "replace"] do
+        settings = %{"write_to_files" => false, "overwrite_mode" => mode}
+        assert {:ok, _} = Metadata.apply_issue_metadata(book, "metron", metadata, settings, opts)
+
+        urls = Repo.all(from u in BookUrl, where: u.book_id == ^book.id, select: {u.url, u.is_primary})
+        assert Enum.sort(urls) == Enum.sort([{cv_url, true}, {metron_url, false}])
+      end
     end
 
     test "applying enqueues a file write when enabled", %{book: book} do
