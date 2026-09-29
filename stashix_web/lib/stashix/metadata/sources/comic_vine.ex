@@ -71,14 +71,36 @@ defmodule Stashix.Metadata.Sources.ComicVine do
   def information_source, do: "Comic Vine"
 
   @doc """
-  Default rate limit: 3 requests per 60 seconds.
+  Default rate limit: one request every 1.1 seconds, no bursts.
 
-  The official limit is 200 requests per resource per hour (~3.3 req/min).
-  Status 107 is returned on bursts before that ceiling is reached, so this
-  cap is set below the theoretical maximum.
+  Comic Vine's velocity detection throttles clients that send requests less
+  than a second apart (status 107), and blocks harder on repeat offences.
+  The hourly per-resource quota is tracked via `endpoint_scope/1`.
   """
   @impl true
-  def default_rate_limit, do: {3, 60_000}
+  def default_rate_limit, do: {1, 1_100}
+
+  @doc """
+  API resource a request counts against (`search`, `issues`, `issue`,
+  `volume`, ...): the first path segment after `/api/`. Comic Vine's usage
+  page reports quota per resource the same way.
+  """
+  @impl true
+  def endpoint_scope(%URI{path: path}) do
+    case String.split(path || "", "/", trim: true) do
+      ["api", resource | _] -> resource
+      [resource | _] -> resource
+      [] -> nil
+    end
+  end
+
+  @doc "Official quota: 200 requests per resource per hour."
+  @impl true
+  def default_endpoint_limit_per_hour, do: 200
+
+  @doc "Cover images are served from `comicvine.gamespot.com/a/uploads/`."
+  @impl true
+  def image_hosts, do: ["comicvine.gamespot.com"]
 
   @doc "Returns the list of user-supplied config fields required by this source."
   @impl true

@@ -77,5 +77,21 @@ defmodule Stashix.Metadata.Source do
   """
   @callback cacheable?(body :: term()) :: boolean()
 
-  @optional_callbacks cacheable?: 1
+  @doc """
+  Optional. Name of the endpoint a request hits (e.g. `"issues"`), or `nil`.
+  Each endpoint gets its own hourly quota on top of the source-wide limit;
+  implement together with `default_endpoint_limit_per_hour/0`.
+  """
+  @callback endpoint_scope(url :: URI.t()) :: String.t() | nil
+
+  @doc "Optional. Default hourly request quota per endpoint (see `endpoint_scope/1`)."
+  @callback default_endpoint_limit_per_hour() :: pos_integer()
+
+  @doc """
+  Optional. Hosts (or parent domains) the source serves images from. Cover
+  URLs on these hosts are fetched through Stashix's image proxy.
+  """
+  @callback image_hosts() :: [String.t()]
+
+  @optional_callbacks cacheable?: 1, endpoint_scope: 1, default_endpoint_limit_per_hour: 0, image_hosts: 0
 end

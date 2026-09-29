@@ -18,6 +18,18 @@ defmodule StashixWeb.IdentifyComponent do
   alias Stashix.Library.{Book, Series}
 
   @impl true
+  # Sent from the search/preview task when the source's rate limiter makes it wait.
+  # Sub-second spacing waits aren't worth a notice.
+  def update(%{rate_wait: {ms, _limit}}, socket) when ms < 2_000, do: {:ok, socket}
+
+  def update(%{rate_wait: {ms, limit}}, socket) do
+    ticking? = socket.assigns.wait_until != nil
+    socket = assign(socket, wait_until: System.monotonic_time(:millisecond) + ms, wait_limit: limit)
+    {:ok, if(ticking?, do: socket, else: schedule_wait_tick(socket))}
+  end
+
+  def update(%{wait_tick: true}, socket), do: {:ok, schedule_wait_tick(socket)}
+
   def update(assigns, socket) do
     first_mount? = not Map.has_key?(socket.assigns, :kind)
     socket = assign(socket, assigns)
@@ -52,6 +64,8 @@ defmodule StashixWeb.IdentifyComponent do
     |> assign(
       kind: kind,
       sources: sources,
+      wait_until: nil,
+      wait_limit: nil,
       source_key: (List.first(candidates) && List.first(candidates).source_key) || first_key(sources),
       form: to_form(stringify(query), as: :q),
       refresh: false,
@@ -66,6 +80,30 @@ defmodule StashixWeb.IdentifyComponent do
       applying: false,
       queue_issues: true
     )
+  end
+
+  # Re-renders once a second while a rate-limit wait is shown.
+  defp schedule_wait_tick(socket) do
+    if wait_remaining(socket.assigns.wait_until) > 0 do
+      send_update_after(self(), __MODULE__, [id: socket.assigns.id, wait_tick: true], 1_000)
+      socket
+    else
+      assign(socket, wait_until: nil)
+    end
+  end
+
+  defp wait_remaining(nil), do: 0
+  defp wait_remaining(until), do: max(0, until - System.monotonic_time(:millisecond))
+
+  # Runs `fun` in the async task, reporting rate-limit waits back to this component.
+  defp report_waits(socket, fun) do
+    lv = self()
+    id = socket.assigns.id
+
+    fn ->
+      Stashix.Metadata.RateLimiter.on_wait(&send_update(lv, __MODULE__, id: id, rate_wait: {&1, &2}))
+      fun.()
+    end
   end
 
   defp first_key([{k, _} | _]), do: k
@@ -94,9 +132,12 @@ defmodule StashixWeb.IdentifyComponent do
       socket
       |> assign(source_key: source_key, refresh: refresh, form: to_form(q, as: :q), searching: true, error: nil)
       |> assign(selected: nil, preview: nil, rows: [])
-      |> start_async(:search, fn ->
-        Metadata.search(source_key, if(kind == :series, do: :series, else: :issue), query, refresh: refresh)
-      end)
+      |> start_async(
+        :search,
+        report_waits(socket, fn ->
+          Metadata.search(source_key, if(kind == :series, do: :series, else: :issue), query, refresh: refresh)
+        end)
+      )
 
     {:noreply, socket}
   end
@@ -109,11 +150,14 @@ defmodule StashixWeb.IdentifyComponent do
     socket =
       socket
       |> assign(selected: candidate, preview: nil, rows: [], loading_preview: true, error: nil)
-      |> start_async(:preview, fn ->
-        if kind == :series,
-          do: Metadata.fetch_series(candidate.source_key, candidate.id, opts),
-          else: Metadata.fetch_issue(candidate.source_key, candidate.id, opts)
-      end)
+      |> start_async(
+        :preview,
+        report_waits(socket, fn ->
+          if kind == :series,
+            do: Metadata.fetch_series(candidate.source_key, candidate.id, opts),
+            else: Metadata.fetch_issue(candidate.source_key, candidate.id, opts)
+        end)
+      )
 
     {:noreply, socket}
   end
@@ -179,6 +223,9 @@ defmodule StashixWeb.IdentifyComponent do
   # ── Async results ───────────────────────────────────────────────────────────
 
   @impl true
+  def handle_async(name, result, socket) when name in [:search, :preview] and socket.assigns.wait_until != nil,
+    do: handle_async(name, result, assign(socket, wait_until: nil))
+
   def handle_async(:search, {:ok, {:ok, candidates}}, socket) do
     {:noreply, assign(socket, searching: false, candidates: candidates)}
   end
@@ -541,6 +588,13 @@ defmodule StashixWeb.IdentifyComponent do
               </div>
             </.form>
 
+            <.rate_wait_note
+              :if={@searching}
+              wait_until={@wait_until}
+              source={source_name(@sources, @source_key)}
+              limit={@wait_limit}
+            />
+
             <div
               :if={@error}
               class="mt-3 rounded-lg border border-red-800/60 bg-red-900/20 px-3 py-2 text-sm text-red-300"
@@ -577,7 +631,7 @@ defmodule StashixWeb.IdentifyComponent do
                     <img
                       :if={c.cover_url}
                       id={"#{@id}-cover-#{c.source_key}-#{c.id}"}
-                      src={c.cover_url}
+                      src={~p"/api/metadata/image?#{[url: c.cover_url]}"}
                       alt=""
                       loading="lazy"
                       class="w-full h-full object-cover"
@@ -625,9 +679,18 @@ defmodule StashixWeb.IdentifyComponent do
             </div>
 
             <div id={"#{@id}-preview"} class="mt-4">
-              <p :if={@loading_preview} class="flex items-center gap-2 text-sm text-gray-400 py-4">
+              <p
+                :if={@loading_preview and wait_remaining(@wait_until) == 0}
+                class="flex items-center gap-2 text-sm text-gray-400 py-4"
+              >
                 <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" /> Loading details…
               </p>
+              <.rate_wait_note
+                :if={@loading_preview}
+                wait_until={@wait_until}
+                source={source_name(@sources, @selected.source_key)}
+                limit={@wait_limit}
+              />
 
               <div :if={@preview} class="rounded-lg border border-gray-800 overflow-x-auto">
                 <table class="w-full text-sm">
@@ -727,6 +790,34 @@ defmodule StashixWeb.IdentifyComponent do
     </div>
     """
   end
+
+  attr :wait_until, :integer, default: nil
+  attr :source, :string, required: true
+  attr :limit, :any, default: nil
+
+  defp rate_wait_note(assigns) do
+    assigns = assign(assigns, secs: ceil(wait_remaining(assigns.wait_until) / 1000))
+
+    ~H"""
+    <div
+      :if={@secs > 0}
+      class="mt-3 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200"
+    >
+      <.icon name="lucide-hourglass" class="w-4 h-4 mt-0.5 flex-shrink-0 animate-pulse" />
+      <div>
+        <p>Waiting for {@source}'s rate limit, next request in {@secs}s…</p>
+        <p :if={@limit} class="text-xs text-amber-300/70">
+          {@source} allows {rate_text(@limit)}. Searches can take several requests; cached results skip the wait.
+        </p>
+      </div>
+    </div>
+    """
+  end
+
+  defp rate_text({1, ms}), do: "one request every #{Float.round(ms / 1000, 1)}s"
+  defp rate_text({n, 3_600_000}), do: "#{n} requests per hour for this endpoint"
+  defp rate_text({n, 60_000}), do: "#{n} requests per minute"
+  defp rate_text({n, ms}), do: "#{n} requests per #{div(ms, 1000)}s"
 
   defp input_class,
     do:
