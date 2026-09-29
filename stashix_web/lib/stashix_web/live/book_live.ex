@@ -102,6 +102,7 @@ defmodule StashixWeb.BookLive do
 
     case Library.update_book(book, params) do
       {:ok, updated_book} ->
+        if Stashix.Settings.metadata()["write_to_files"], do: Metadata.enqueue_write(updated_book.id)
         book = Library.get_book_with_series(updated_book.id)
 
         {:noreply,
@@ -231,6 +232,11 @@ defmodule StashixWeb.BookLive do
 
   defp book_display_title(book), do: book.title
 
+  # A CV "volume" with exactly one issue is a standalone TPB/OGN — don't show
+  # the series eyebrow (it would duplicate the title) or a meaningless "#1" prefix.
+  defp standalone_volume?(%{series: %{issue_count: 1}}), do: true
+  defp standalone_volume?(_), do: false
+
   defp relative_path(path, library) do
     library.name <>
       "/" <> (String.replace_prefix(path, library.root_path, "") |> String.trim_leading("/"))
@@ -264,7 +270,7 @@ defmodule StashixWeb.BookLive do
           <% end %>
           <span class="text-gray-700 flex-shrink-0">/</span>
           <span class="text-gray-300 truncate min-w-0">
-            <%= if @book.issue_number do %>
+            <%= if @book.issue_number && !standalone_volume?(@book) do %>
               <span class="hidden sm:inline">Issue </span>#{Decimal.to_integer(@book.issue_number)}
             <% else %>
               {@book.title}
@@ -359,7 +365,7 @@ defmodule StashixWeb.BookLive do
         <%!-- BFC wrapper: forced beside the float --%>
         <div class="overflow-hidden pt-1">
           <%!-- Series eyebrow --%>
-          <%= if @book.series do %>
+          <%= if @book.series && !standalone_volume?(@book) do %>
             <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
               <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-violet-300 transition-colors">
                 {@book.series.name}
@@ -378,7 +384,7 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Title --%>
           <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight mb-3">
-            <%= if @book.issue_number do %>
+            <%= if @book.issue_number && !standalone_volume?(@book) do %>
               #{Decimal.to_integer(@book.issue_number)} –
             <% end %>
             {book_display_title(@book)}
@@ -589,14 +595,11 @@ defmodule StashixWeb.BookLive do
             <.expander id="book-details">
               <%!-- Full credits by role --%>
               <.detail_section label="Credits" show={credit_groups != []}>
-                <div class="space-y-2">
-                  <div :for={{label, names} <- credit_groups} class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
-                    <span class="w-20 shrink-0 text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 pt-0.5">{label}</span>
-                    <span class="text-gray-300">{Enum.join(
-                      Enum.map(names, fn n -> if is_tuple(n), do: elem(n, 0), else: n end),
-                      ", "
-                    )}</span>
-                  </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+                  <%= for {role, names} <- credit_groups, name <- names do %>
+                    <% name = if is_tuple(name), do: elem(name, 0), else: name %>
+                    <.creator_card name={name} role={role} />
+                  <% end %>
                 </div>
               </.detail_section>
 
@@ -659,14 +662,6 @@ defmodule StashixWeb.BookLive do
               </.detail_section>
             </.expander>
           <% end %>
-        </div>
-      <% end %>
-
-      <%!-- File path --%>
-      <%= if @current_user.role == :admin && @selected_file do %>
-        <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
-          <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
-          {relative_path(@selected_file.path, @library)}
         </div>
       <% end %>
 
@@ -773,6 +768,14 @@ defmodule StashixWeb.BookLive do
           <% else %>
             <div class="flex-1" />
           <% end %>
+        </div>
+      <% end %>
+
+      <%!-- File path --%>
+      <%= if @current_user.role == :admin && @selected_file do %>
+        <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug mt-2">
+          <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+          {relative_path(@selected_file.path, @library)}
         </div>
       <% end %>
     </div>
