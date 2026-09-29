@@ -10,7 +10,34 @@ defmodule Stashix.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      docs: docs()
+    ]
+  end
+
+  defp docs do
+    [
+      main: "Stashix",
+      extras: [
+        "../docs/scanner-layout.md": [title: "Scanner: Library Layout"],
+        "../docs/metadata-workflow.md": [title: "Metadata: Source → File Workflow"],
+        "../docs/metrics.md": [title: "Metrics"]
+      ],
+      groups_for_extras: [
+        Guides: [
+          "../docs/scanner-layout.md",
+          "../docs/metadata-workflow.md",
+          "../docs/metrics.md"
+        ]
+      ],
+      groups_for_modules: [
+        "Metadata Sources": [~r/Stashix\.Metadata\.Sources/],
+        "Metadata Core": [~r/Stashix\.Metadata/],
+        Library: [~r/Stashix\.Library/],
+        Scanner: [~r/Stashix\.Scanner/],
+        API: [~r/StashixWeb\.API/],
+        Web: [~r/StashixWeb/]
+      ]
     ]
   end
 
