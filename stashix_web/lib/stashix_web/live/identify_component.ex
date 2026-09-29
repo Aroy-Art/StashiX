@@ -235,7 +235,19 @@ defmodule StashixWeb.IdentifyComponent do
   end
 
   def handle_async(:preview, {:ok, {:ok, metadata}}, socket) do
-    rows = preview_rows(fresh(socket.assigns.target), metadata)
+    target = fresh(socket.assigns.target)
+
+    # For books: when CV strips the issue title (format label like "TPB", "HC"),
+    # surface the series/volume name as the proposed book title so the user can
+    # apply it.  The Apply layer already guards against overwriting a real title.
+    metadata =
+      if match?(%Book{}, target) and is_nil(metadata[:title]) and is_binary(metadata[:series]) do
+        Map.put(metadata, :title, metadata[:series])
+      else
+        metadata
+      end
+
+    rows = preview_rows(target, metadata)
 
     {:noreply,
      assign(socket,
@@ -376,10 +388,24 @@ defmodule StashixWeb.IdentifyComponent do
         credits: :creator
       ])
 
+    # Standalone when the series already has issue_count 1, OR when the CV volume
+    # name matches the current book title (series IS the title — typical TPB pattern).
+    standalone =
+      match?(%{series: %{issue_count: 1}}, book) or
+        (is_binary(m[:series]) and is_binary(book.title) and
+           normalize_title(m[:series]) == normalize_title(book.title))
+
     @book_rows
     |> Enum.map(fn
       {nil, label} ->
         info_row(label, book.series && book.series.name, m[:series])
+
+      {"issue_number", label} ->
+        {current_raw, current} = book_current(book, "issue_number")
+        new_raw = m[:issue_number]
+        r = row("issue_number", label, current_raw, current, new_raw, display_new("issue_number", new_raw))
+        # Standalone CV volumes always have issue_number 1 — don't auto-select it
+        if standalone, do: %{r | default: false}, else: r
 
       {key, label} ->
         {current_raw, current} = book_current(book, key)
@@ -448,6 +474,8 @@ defmodule StashixWeb.IdentifyComponent do
     do: %{key: nil, label: label, current: fmt(current), new: fmt(new), selectable: false, default: false}
 
   defp selectable_fields(rows), do: rows |> Enum.filter(& &1.selectable) |> MapSet.new(& &1.key)
+
+  defp normalize_title(s), do: s |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
 
   # Child lists from the DB (structs) or from a source (maps) → short text.
   defp summarize(_key, items) when items in [nil, []], do: nil
