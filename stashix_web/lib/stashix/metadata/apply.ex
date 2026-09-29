@@ -6,7 +6,7 @@ defmodule Stashix.Metadata.Apply do
     * `"fill"`    - only empty local fields are filled in (default)
     * `"replace"` - every field the source provides replaces the local value
   An explicit `fields: [...]` option (manual matching) overrides the mode.
-  External ids are always merged, never replaced.
+  External ids and links (urls) are always merged, never replaced.
   """
   alias Stashix.Repo
   alias Stashix.Library
@@ -67,6 +67,8 @@ defmodule Stashix.Metadata.Apply do
 
     children =
       @child_keys
+      # Links are merged below, never replaced, so a book can link to several sources.
+      |> List.delete(:urls)
       |> Enum.filter(fn key ->
         Map.has_key?(metadata, key) and write?(rule, key, metadata[key], Map.get(book, @child_assocs[key]))
       end)
@@ -80,6 +82,7 @@ defmodule Stashix.Metadata.Apply do
       with {:ok, updated} <- Library.update_book(book, attrs),
            {:ok, _} <- Importer.replace_book_metadata(updated, children, only_present: true) do
         Importer.upsert_external_ids(BookExternalId, :book_id, book.id, metadata[:external_ids] || [])
+        if merge_urls?(rule, metadata[:urls]), do: Importer.merge_urls(book.id, metadata[:urls])
         link_publisher(updated, book.series, publisher)
 
         if book.series do
@@ -112,6 +115,11 @@ defmodule Stashix.Metadata.Apply do
   def write?({:fields, chosen}, field, _new, _current), do: MapSet.member?(chosen, field)
   def write?({:mode, "replace"}, _field, _new, _current), do: true
   def write?({:mode, _fill}, _field, _new, current), do: not present?(current)
+
+  # Merging links never loses data, so it happens in every mode unless deselected.
+  defp merge_urls?(_rule, urls) when urls in [nil, []], do: false
+  defp merge_urls?({:fields, chosen}, _urls), do: MapSet.member?(chosen, :urls)
+  defp merge_urls?({:mode, _}, _urls), do: true
 
   # A known issue number / real page count from the file is only replaced when explicitly chosen.
   defp fill_unless_chosen({:mode, _}), do: {:mode, "fill"}

@@ -407,6 +407,14 @@ defmodule StashixWeb.IdentifyComponent do
         # Standalone CV volumes always have issue_number 1 — don't auto-select it
         if standalone, do: %{r | default: false}, else: r
 
+      {"urls", label} ->
+        # Links are merged, not replaced: show the combined list and pre-check it when it adds anything.
+        known = MapSet.new(book.urls, &String.trim(&1.url))
+        added = Enum.reject(m[:urls] || [], &MapSet.member?(known, String.trim(&1.url)))
+        current = summarize("urls", book.urls)
+        r = row("urls", label, book.urls, current, added, summarize("urls", book.urls ++ added))
+        %{r | default: r.selectable}
+
       {key, label} ->
         {current_raw, current} = book_current(book, key)
         new_raw = m[String.to_existing_atom(key)]

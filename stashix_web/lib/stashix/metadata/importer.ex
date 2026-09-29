@@ -201,6 +201,37 @@ defmodule Stashix.Metadata.Importer do
   end
 
   @doc """
+  Adds links to a book, keeping the ones it already has so a book can point at
+  several metadata sources. Duplicate urls are skipped, and a new link is only
+  primary when the book has no primary link yet.
+  """
+  def merge_urls(book_id, urls) do
+    existing = Repo.all(from u in BookUrl, where: u.book_id == ^book_id, select: {u.url, u.is_primary})
+    known = MapSet.new(existing, fn {url, _} -> url end)
+    has_primary = Enum.any?(existing, fn {_, primary} -> primary end)
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    rows =
+      urls
+      |> Enum.map(&Map.update!(&1, :url, fn url -> String.trim(url) end))
+      |> Enum.reject(&(&1.url == "" or MapSet.member?(known, &1.url)))
+      |> Enum.uniq_by(& &1.url)
+      |> Enum.map(fn u ->
+        %{
+          id: Ecto.UUID.generate(),
+          book_id: book_id,
+          url: u.url,
+          is_primary: not has_primary and (u[:is_primary] || false),
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    if rows != [], do: Repo.insert_all(BookUrl, rows)
+    :ok
+  end
+
+  @doc """
   Upserts external ids (one per source) for a book or series, leaving ids from
   other sources untouched. `schema` is `BookExternalId` or `SeriesExternalId`.
   """
