@@ -490,7 +490,7 @@ defmodule StashixWeb.SeriesLive do
 
         <%!-- Summary — outside BFC wrapper, so it continues beside the float then expands below --%>
         <%= if @summary_info do %>
-          <p class="text-sm text-gray-400 leading-relaxed mt-5">{@summary_info.text}</p>
+          <p class="text-sm text-gray-400 leading-relaxed mt-5 whitespace-pre-line">{@summary_info.text}</p>
           <%= if @summary_info.source do %>
             <p class="mt-1.5 text-[11px] text-gray-600 italic">From issue {@summary_info.source}</p>
           <% end %>

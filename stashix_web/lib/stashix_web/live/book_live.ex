@@ -493,7 +493,7 @@ defmodule StashixWeb.BookLive do
 
         <%!-- Summary — outside BFC, wraps around float then expands to full width --%>
         <%= if @book.summary && @book.summary != "" do %>
-          <p class="text-sm text-gray-400 leading-relaxed mt-5">{@book.summary}</p>
+          <p class="text-sm text-gray-400 leading-relaxed mt-5 whitespace-pre-line">{@book.summary}</p>
         <% end %>
       </div>
 
