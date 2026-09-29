@@ -42,10 +42,36 @@ defmodule Stashix.Metadata.SourcesTest do
   end
 
   test "rate_limit/2 prefers the configured per-minute value" do
-    %{module: mod, config: row} = Sources.get("comic_vine")
+    %{module: mod, config: row} = Sources.get("metron")
     assert Sources.rate_limit(mod, row) == mod.default_rate_limit()
     {:ok, row} = Sources.update(row, %{"rate_limit_per_minute" => 12})
     assert Sources.rate_limit(mod, row) == {12, 60_000}
+  end
+
+  test "rate_limit/2 uses the request interval for sources without bursts" do
+    %{module: mod, config: row} = Sources.get("comic_vine")
+    assert Sources.spaced?(mod)
+    assert Sources.rate_limit(mod, row) == {1, 1_100}
+    {:ok, row} = Sources.update(row, %{"rate_limit_per_minute" => 30})
+    assert Sources.rate_limit(mod, row) == {1, 1_100}
+    {:ok, row} = Sources.update(row, %{"request_interval_ms" => 2_000})
+    assert Sources.rate_limit(mod, row) == {1, 2_000}
+  end
+
+  test "endpoint_rate_limit/2 defaults to the source quota and can be overridden" do
+    %{module: mod, config: row} = Sources.get("comic_vine")
+    assert Sources.endpoint_rate_limit(mod, row) == {200, 3_600_000}
+    {:ok, row} = Sources.update(row, %{"endpoint_limit_per_hour" => 150})
+    assert Sources.endpoint_rate_limit(mod, row) == {150, 3_600_000}
+
+    %{module: metron, config: metron_row} = Sources.get("metron")
+    assert Sources.endpoint_rate_limit(metron, metron_row) == nil
+  end
+
+  test "Comic Vine scopes quotas by API resource" do
+    mod = Stashix.Metadata.Sources.ComicVine
+    assert mod.endpoint_scope(URI.parse("https://comicvine.gamespot.com/api/issue/4000-123/?format=json")) == "issue"
+    assert mod.endpoint_scope(URI.parse("https://comicvine.gamespot.com/api/search/")) == "search"
   end
 
   test "changing the config invalidates the connection test and disables the source" do

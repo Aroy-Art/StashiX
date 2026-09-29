@@ -26,6 +26,9 @@ defmodule Stashix.Metadata.Sources.GCD do
   def default_rate_limit, do: {3, 60_000}
 
   @impl true
+  def image_hosts, do: ["comics.org"]
+
+  @impl true
   def config_schema do
     [
       %{key: "username", label: "Email / username", type: :string, required: false},

@@ -18,6 +18,7 @@ defmodule Stashix.Metadata.HTTP do
   def context(%{module: mod, config: row}, opts \\ []) do
     config = row.config || %{}
     limit = Sources.rate_limit(mod, row)
+    endpoint_limit = Sources.endpoint_rate_limit(mod, row)
     key = mod.key()
     cache = cache_config(Keyword.get(opts, :refresh, false))
 
@@ -36,7 +37,7 @@ defmodule Stashix.Metadata.HTTP do
       |> Req.Request.register_options([:metadata_cache])
       |> Req.Request.append_request_steps(
         metadata_cache: &cache_request_step(&1, key, cache),
-        rate_limit: &rate_limit_step(&1, key, limit)
+        rate_limit: &rate_limit_step(&1, mod, key, limit, endpoint_limit)
       )
       |> Req.Request.append_response_steps(metadata_cache: &cache_response_step(&1, mod, cache))
       |> Req.merge(Application.get_env(:stashix, :metadata_req_options, []))
@@ -117,10 +118,23 @@ defmodule Stashix.Metadata.HTTP do
     {request, response}
   end
 
-  defp rate_limit_step(request, key, limit) do
-    case RateLimiter.acquire(key, limit) do
-      :ok -> request
+  # The endpoint bucket (if any) is taken first so a long endpoint wait doesn't
+  # hold a source-wide slot.
+  defp rate_limit_step(request, mod, key, limit, endpoint_limit) do
+    with :ok <- acquire_endpoint(request, mod, key, endpoint_limit),
+         :ok <- RateLimiter.acquire(key, limit) do
+      request
+    else
       {:error, reason} -> {request, %Stashix.Metadata.HTTP.Error{reason: reason}}
+    end
+  end
+
+  defp acquire_endpoint(_request, _mod, _key, nil), do: :ok
+
+  defp acquire_endpoint(request, mod, key, limit) do
+    case mod.endpoint_scope(request.url) do
+      nil -> :ok
+      scope -> RateLimiter.acquire("#{key}:#{scope}", limit)
     end
   end
 

@@ -22,6 +22,9 @@ defmodule Stashix.Metadata.Sources.Metron do
   def default_rate_limit, do: {20, 60_000}
 
   @impl true
+  def image_hosts, do: ["metron.cloud"]
+
+  @impl true
   def config_schema do
     [
       %{key: "username", label: "Username", type: :string, required: true},

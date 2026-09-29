@@ -113,16 +113,20 @@ defmodule StashixWeb.AdminMetadataLive do
 
     attrs = %{
       "config" => Map.get(params, "config", %{}),
-      "rate_limit_per_minute" =>
-        case Integer.parse(params["rate_limit_per_minute"] || "") do
-          {n, _} when n > 0 -> n
+      "rate_limit_per_minute" => pos_int(params["rate_limit_per_minute"]),
+      "request_interval_ms" =>
+        case Float.parse(params["request_interval_s"] || "") do
+          {secs, _} when secs > 0 -> round(secs * 1000)
           _ -> nil
-        end
+        end,
+      "endpoint_limit_per_hour" => pos_int(params["endpoint_limit_per_hour"])
     }
 
     case Sources.update(row, attrs) do
       {:ok, updated} ->
-        if updated.rate_limit_per_minute != row.rate_limit_per_minute,
+        limits = [:rate_limit_per_minute, :request_interval_ms, :endpoint_limit_per_hour]
+
+        if Map.take(updated, limits) != Map.take(row, limits),
           do: Stashix.Metadata.RateLimiter.reset(key)
 
         {:noreply, socket |> load_sources() |> mark_saved(key)}
@@ -196,7 +200,8 @@ defmodule StashixWeb.AdminMetadataLive do
 
   def handle_event("clear_cache", _params, socket) do
     n = Metadata.clear_cache()
-    {:noreply, socket |> load_jobs() |> put_flash(:info, "Cleared #{n} cached responses")}
+    images = Stashix.Metadata.ImageProxy.clear()
+    {:noreply, socket |> load_jobs() |> put_flash(:info, "Cleared #{n} cached responses and #{images} images")}
   end
 
   def handle_event("cancel_pending", _params, socket) do
@@ -213,6 +218,13 @@ defmodule StashixWeb.AdminMetadataLive do
     case Integer.parse(to_string(v)) do
       {n, _} when n >= 0 -> n
       _ -> default
+    end
+  end
+
+  defp pos_int(v) do
+    case Integer.parse(v || "") do
+      {n, _} when n > 0 -> n
+      _ -> nil
     end
   end
 
@@ -461,7 +473,21 @@ defmodule StashixWeb.AdminMetadataLive do
                 <p :if={Map.get(field, :help)} class="text-xs text-gray-600 mt-1">{field.help}</p>
               </div>
             <% end %>
-            <div>
+            <div :if={Sources.spaced?(mod)}>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Min. seconds between requests</label>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                name="request_interval_s"
+                value={row.request_interval_ms && row.request_interval_ms / 1000}
+                phx-debounce="600"
+                placeholder={"Default: #{default_ms / 1000}"}
+                class={input_class()}
+              />
+              <p class="text-xs text-gray-600 mt-1">Requests closer together than this risk a temporary block.</p>
+            </div>
+            <div :if={not Sources.spaced?(mod)}>
               <label class="block text-xs font-medium text-gray-400 mb-1.5">Rate limit (requests / minute)</label>
               <input
                 type="number"
@@ -472,6 +498,19 @@ defmodule StashixWeb.AdminMetadataLive do
                 placeholder={"Default: #{Float.round(default_n * 60_000 / default_ms, 1)}"}
                 class={input_class()}
               />
+            </div>
+            <div :if={Sources.endpoint_limits?(mod)}>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Requests per hour, per endpoint</label>
+              <input
+                type="number"
+                min="1"
+                name="endpoint_limit_per_hour"
+                value={row.endpoint_limit_per_hour}
+                phx-debounce="600"
+                placeholder={"Default: #{mod.default_endpoint_limit_per_hour()}"}
+                class={input_class()}
+              />
+              <p class="text-xs text-gray-600 mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
             </div>
             <div class="sm:col-span-2 flex items-center justify-end gap-3">
               <span
@@ -777,7 +816,7 @@ defmodule StashixWeb.AdminMetadataLive do
         <button
           phx-click="clear_cache"
           class="ml-auto px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-          title="Delete cached source responses"
+          title="Delete cached source responses and images"
         >
           Clear cache ({@cache_count})
         </button>

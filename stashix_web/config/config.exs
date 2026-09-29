@@ -15,6 +15,7 @@ config :stashix,
   data_dir: System.get_env("DATA_DIR") || "/tmp/stashix",
   thumbnail_dir: System.get_env("THUMBNAIL_DIR") || Path.join(repo_tmp, "thumbnails"),
   image_cache_dir: System.get_env("IMAGE_CACHE_DIR") || Path.join(repo_tmp, "cache/images/resized"),
+  metadata_image_dir: System.get_env("METADATA_IMAGE_DIR") || Path.join(repo_tmp, "cache/images/metadata"),
   library_path: System.get_env("LIBRARY_PATH") || "/libraries"
 
 config :stashix, Oban,

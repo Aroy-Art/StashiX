@@ -69,6 +69,7 @@ defmodule StashixWeb.Router do
     get "/books/:id/cover", BookController, :cover
     get "/books/:id/page/:n", BookController, :page
     get "/series/:id/cover", SeriesController, :cover
+    get "/metadata/image", MetadataImageController, :show
   end
 
   scope "/api", StashixWeb do

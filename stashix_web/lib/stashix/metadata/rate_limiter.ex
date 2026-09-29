@@ -5,6 +5,9 @@ defmodule Stashix.Metadata.RateLimiter do
   `reserve/3` books the next slot for a source and returns how long the caller
   must wait before sending. When the wait would exceed `max_wait` nothing is
   booked and `{:error, {:rate_limited, ms}}` is returned so the job can snooze.
+
+  A process can register a callback with `on_wait/1`; it is called with the
+  wait in ms and the limit that caused it before the process sleeps (used to show progress in the UI).
   """
   use GenServer
 
@@ -17,6 +20,7 @@ defmodule Stashix.Metadata.RateLimiter do
         :ok
 
       {:ok, wait} ->
+        if fun = Process.get({__MODULE__, :on_wait}), do: fun.(wait, limit)
         Process.sleep(wait)
         :ok
 
@@ -25,7 +29,10 @@ defmodule Stashix.Metadata.RateLimiter do
     end
   end
 
-  @doc "Forget state for a source (e.g. after its limit changed)."
+  @doc "Calls `fun.(wait_ms, limit)` whenever this process has to wait for a slot."
+  def on_wait(fun) when is_function(fun, 2), do: Process.put({__MODULE__, :on_wait}, fun)
+
+  @doc "Forget state for a source and its endpoints (e.g. after a limit changed)."
   def reset(key), do: GenServer.cast(__MODULE__, {:reset, key})
 
   @impl true
@@ -47,5 +54,6 @@ defmodule Stashix.Metadata.RateLimiter do
   end
 
   @impl true
-  def handle_cast({:reset, key}, state), do: {:noreply, Map.delete(state, key)}
+  def handle_cast({:reset, key}, state),
+    do: {:noreply, Map.reject(state, fn {k, _} -> k == key or String.starts_with?(k, key <> ":") end)}
 end
