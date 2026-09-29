@@ -314,16 +314,13 @@ defmodule StashixWeb.BookLive do
                   <% end %>
                 </.dropdown_menu_item>
                 <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300 disabled:opacity-50"
+                  class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400 disabled:opacity-50"
                   on-select={JS.push("rescan_book")}
                 >
                   <%= if @scanning do %>
-                    <.icon
-                      name="lucide-loader-circle"
-                      class="w-4 h-4 mr-2 animate-spin text-violet-400"
-                    /> Scanning…
+                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
                   <% else %>
-                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Book
+                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
                   <% end %>
                 </.dropdown_menu_item>
               </.dropdown_menu_content>
