@@ -171,11 +171,41 @@ defmodule Stashix.Metadata.Sources do
     |> Enum.all?(&(Map.get(config || %{}, &1.key) not in [nil, ""]))
   end
 
-  @doc "Effective rate limit as `{requests, per_ms}`."
-  def rate_limit(_mod, %SourceConfig{rate_limit_per_minute: n}) when is_integer(n) and n > 0,
-    do: {n, 60_000}
+  @doc """
+  True when the source's default limit allows no bursts (`{1, ms}`): its speed
+  is configured as a minimum interval between requests, not requests/minute.
+  """
+  def spaced?(mod), do: match?({1, _}, mod.default_rate_limit())
+
+  @doc "True when the source has per-endpoint hourly quotas."
+  def endpoint_limits?(mod), do: function_exported?(mod, :endpoint_scope, 1)
+
+  @doc "Effective source-wide rate limit as `{requests, per_ms}`."
+  def rate_limit(mod, %SourceConfig{} = row) do
+    cond do
+      spaced?(mod) and pos_int?(row.request_interval_ms) -> {1, row.request_interval_ms}
+      not spaced?(mod) and pos_int?(row.rate_limit_per_minute) -> {row.rate_limit_per_minute, 60_000}
+      true -> mod.default_rate_limit()
+    end
+  end
 
   def rate_limit(mod, _), do: mod.default_rate_limit()
+
+  @doc "Effective per-endpoint limit as `{requests, per_ms}`, or `nil` when the source has none."
+  def endpoint_rate_limit(mod, row) do
+    cond do
+      not endpoint_limits?(mod) ->
+        nil
+
+      match?(%SourceConfig{endpoint_limit_per_hour: n} when is_integer(n) and n > 0, row) ->
+        {row.endpoint_limit_per_hour, 3_600_000}
+
+      true ->
+        {mod.default_endpoint_limit_per_hour(), 3_600_000}
+    end
+  end
+
+  defp pos_int?(n), do: is_integer(n) and n > 0
 
   @doc "Swaps priority with the neighbouring source (`:up` / `:down`)."
   def move(key, direction) do
