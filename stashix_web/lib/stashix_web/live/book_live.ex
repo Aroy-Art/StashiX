@@ -479,7 +479,7 @@ defmodule StashixWeb.BookLive do
                     hidden={@fully_read}
                     class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
                   >
-                    <.icon name="lucide-check-circle" class="w-4 h-4 mr-2" /> Mark as Read
+                    <.icon name="lucide-circle-check-big" class="w-4 h-4 mr-2" /> Mark as Read
                   </button>
                   <button
                     phx-click={
