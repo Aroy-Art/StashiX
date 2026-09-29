@@ -305,7 +305,7 @@ defmodule StashixWeb.SeriesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-4xl mx-auto space-y-8">
+    <div class="max-w-4xl mx-auto space-y-6">
       <%!-- Breadcrumbs --%>
       <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
         <button
