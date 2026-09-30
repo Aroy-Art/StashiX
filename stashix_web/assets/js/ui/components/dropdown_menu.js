@@ -122,6 +122,23 @@ class DropdownMenuComponent extends Component {
       }
     }
 
+    // Rebuild Menu so MenuItem click handlers target the live DOM nodes after
+    // morphdom's patch. Without this, items whose content changed (e.g. the
+    // lock or rescan items) get their inner HTML replaced in-place, which
+    // detaches the text/icon nodes the old handlers relied on — leaving the
+    // second and subsequent action clicks silently dead.
+    if (this.menu) {
+      this.menu.destroy();
+      this.menu = null;
+    }
+    if (this.content) {
+      this.menu = new Menu(this.content, {
+        hookContext: this.hook,
+        rootEl: this.el,
+        onItemSelect: this.onItemSelect.bind(this),
+      });
+    }
+
     // LiveView patched the DOM back to server-rendered state (e.g. positioner
     // got hidden=true again). Re-apply the current JS state so the dropdown
     // stays open/closed as the component believes it to be.
@@ -142,6 +159,13 @@ class DropdownMenuComponent extends Component {
     if (this.state === "open" && this.positionedElement) {
       window.requestAnimationFrame(() => {
         if (!this.destroyed) this.positionedElement?.update();
+      });
+    }
+
+    // Re-activate focus management for the rebuilt menu when open.
+    if (this.state === "open" && this.menu) {
+      window.requestAnimationFrame(() => {
+        if (!this.destroyed && this.state === "open") this.menu?.activate();
       });
     }
 
