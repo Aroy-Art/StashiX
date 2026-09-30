@@ -584,7 +584,8 @@ defmodule StashixWeb.BookLive do
           @book_details.tags != [] || @book_details.locations != [] ||
           @book_details.universes != [] || @book_details.reprints != [] ||
           @book_details.prices != [] || @book_details.stories != [] ||
-          @book_details.imprint || credit_groups != [] %>
+          @book_details.imprint || credit_groups != [] ||
+          (@book.notes || "") != "" %>
       <%= if credit_groups != [] || has_extras do %>
         <div class="space-y-3">
           <.credits_line groups={headline_groups} />
@@ -656,6 +657,12 @@ defmodule StashixWeb.BookLive do
                     <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
                   </a>
                 </div>
+              </.detail_section>
+
+              <.detail_section label="Notes" show={(@book.notes || "") != ""}>
+                <p class="text-sm text-gray-400 leading-relaxed whitespace-pre-line break-words">
+                  {@book.notes}
+                </p>
               </.detail_section>
             </.expander>
           <% end %>
@@ -899,6 +906,15 @@ defmodule StashixWeb.BookLive do
                   rows="4"
                   class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
                 >{@edit_form[:summary].value}</textarea>
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+                <textarea
+                  name="book[notes]"
+                  rows="3"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+                >{@edit_form[:notes].value}</textarea>
               </div>
 
               <div class="col-span-2">

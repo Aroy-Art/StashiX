@@ -511,6 +511,36 @@ defmodule Stashix.Library do
     Repo.update(changeset)
   end
 
+  @doc """
+  Overwrites the age rating of every non-deleted book in the series.
+  With `only_unknown: true`, only books rated `:unknown` (or unset) are touched.
+  Returns `{:ok, book_ids}` for the books that were updated.
+  """
+  def set_series_age_rating(series_id, rating, opts \\ []) when is_binary(rating) do
+    case Enum.find(Ecto.Enum.values(Book, :age_rating), &(Atom.to_string(&1) == rating)) do
+      nil ->
+        {:error, :invalid_age_rating}
+
+      atom ->
+        now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+        query =
+          from(b in Book,
+            where: b.series_id == ^series_id and is_nil(b.deleted_at),
+            select: b.id
+          )
+
+        query =
+          if opts[:only_unknown],
+            do: where(query, [b], b.age_rating == :unknown or is_nil(b.age_rating)),
+            else: query
+
+        {_, ids} = Repo.update_all(query, set: [age_rating: atom, updated_at: now])
+
+        {:ok, ids}
+    end
+  end
+
   def update_series_folder_meta(series, attrs) do
     series
     |> Series.changeset(Map.take(attrs, [:name, :path, :start_year, :end_year, :ongoing]))
