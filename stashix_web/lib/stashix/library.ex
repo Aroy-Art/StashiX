@@ -401,6 +401,282 @@ defmodule Stashix.Library do
     %{series: series, issues: issues, books: books}
   end
 
+  # ---------------------------------------------------------------------------
+  # Filtered search (search page)
+  #
+  # `filters` is a map with any of:
+  #   :q            - free text (full-text on books, ilike on series names)
+  #   :types        - list of book types ("issue", "standalone")
+  #   :year_from    - integer, inclusive
+  #   :year_to      - integer, inclusive
+  #   :age_ratings  - list of age rating atoms
+  #   :library_id   - library UUID
+  #   :publisher_id - canonical publisher UUID (aliases are included)
+  #   :genre        - genre name
+  #   :read_status  - "unread" | "in_progress" | "read" (requires :user_id)
+  #   :user_id      - current user, for read status
+  #   :sort         - "relevance" | "title_asc" | "title_desc" | "year_asc" |
+  #                   "year_desc" | "added_desc" | "added_asc"
+  # ---------------------------------------------------------------------------
+
+  def search_filtered_books(filters, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    base = filtered_books_query(filters)
+
+    total = Repo.aggregate(base, :count, :id)
+
+    books =
+      base
+      |> sort_filtered_books(filters)
+      |> limit(^limit)
+      |> offset(^offset)
+      |> preload([:cover, :series])
+      |> Repo.all()
+
+    {books, total}
+  end
+
+  def search_filtered_series(filters, opts \\ []) do
+    limit = Keyword.get(opts, :limit, 48)
+    offset = Keyword.get(opts, :offset, 0)
+    base = filtered_series_query(filters)
+
+    total = Repo.aggregate(base, :count, :id)
+
+    series =
+      from([series: s] in base,
+        left_join: b in Book,
+        on: b.series_id == s.id and is_nil(b.deleted_at),
+        group_by: s.id,
+        select: %{s | issue_count: count(b.id)},
+        limit: ^limit,
+        offset: ^offset
+      )
+      |> sort_filtered_series(filters)
+      |> Repo.all()
+      |> attach_series_blurhashes()
+
+    {series, total}
+  end
+
+  def search_year_bounds do
+    from(b in Book,
+      where: is_nil(b.deleted_at),
+      select: {
+        min(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date)),
+        max(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date))
+      }
+    )
+    |> Repo.one()
+  end
+
+  def list_genre_names do
+    from(g in Stashix.Library.BookGenre,
+      join: b in Book,
+      on: g.book_id == b.id and is_nil(b.deleted_at),
+      distinct: true,
+      order_by: [asc: g.name],
+      select: g.name
+    )
+    |> Repo.all()
+  end
+
+  defp filtered_books_query(filters) do
+    query = from(b in Book, as: :book, where: is_nil(b.deleted_at))
+
+    query =
+      case filters[:q] do
+        q when is_binary(q) and q != "" ->
+          where(query, [b], fragment("search_vec @@ plainto_tsquery('english', ?)", ^q))
+
+        _ ->
+          query
+      end
+
+    query =
+      case filters[:types] do
+        [_ | _] = types -> where(query, [b], b.type in ^types)
+        _ -> query
+      end
+
+    query
+    |> filter_book_year(filters[:year_from], filters[:year_to])
+    |> filter_book_attrs(filters)
+    |> filter_read_status(filters[:read_status], filters[:user_id])
+  end
+
+  # Shared by books and series-with-matching-books: age rating, library,
+  # publisher, genre. Expects the book binding to be named :book.
+  defp filter_book_attrs(query, filters) do
+    query =
+      case filters[:age_ratings] do
+        [_ | _] = ratings -> where(query, [book: b], b.age_rating in ^ratings)
+        _ -> query
+      end
+
+    query =
+      if filters[:library_id],
+        do: where(query, [book: b], b.library_id == ^filters[:library_id]),
+        else: query
+
+    query =
+      if filters[:publisher_id] do
+        bins = publisher_id_bins(filters[:publisher_id])
+
+        where(
+          query,
+          [book: b],
+          exists(
+            from(bp in "book_publishers",
+              where: bp.book_id == parent_as(:book).id and bp.publisher_id in ^bins,
+              select: 1
+            )
+          )
+        )
+      else
+        query
+      end
+
+    if filters[:genre] do
+      genre = filters[:genre]
+
+      where(
+        query,
+        [book: b],
+        exists(
+          from(g in Stashix.Library.BookGenre,
+            where: g.book_id == parent_as(:book).id and g.name == ^genre,
+            select: 1
+          )
+        )
+      )
+    else
+      query
+    end
+  end
+
+  defp filter_book_year(query, nil, nil), do: query
+
+  defp filter_book_year(query, from_year, to_year) do
+    year = dynamic([book: b], fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date))
+    query = if from_year, do: where(query, ^dynamic(^year >= ^from_year)), else: query
+    if to_year, do: where(query, ^dynamic(^year <= ^to_year)), else: query
+  end
+
+  defp filter_read_status(query, status, user_id)
+       when status in ["unread", "in_progress", "read"] and not is_nil(user_id) do
+    query =
+      join(query, :left, [book: b], rp in ReadingProgress,
+        as: :progress,
+        on: rp.book_id == b.id and rp.user_id == ^user_id
+      )
+
+    case status do
+      "unread" ->
+        where(query, [progress: rp], is_nil(rp.id) or rp.current_page == 0)
+
+      "in_progress" ->
+        where(
+          query,
+          [book: b, progress: rp],
+          rp.current_page > 0 and rp.current_page < b.page_count - 1
+        )
+
+      "read" ->
+        where(
+          query,
+          [book: b, progress: rp],
+          not is_nil(rp.id) and b.page_count > 0 and rp.current_page >= b.page_count - 1
+        )
+    end
+  end
+
+  defp filter_read_status(query, _status, _user_id), do: query
+
+  defp sort_filtered_books(query, filters) do
+    case {filters[:sort], filters[:q]} do
+      {"relevance", q} when is_binary(q) and q != "" ->
+        order_by(query, [b],
+          desc: fragment("ts_rank(search_vec, plainto_tsquery('english', ?))", ^q),
+          asc: b.title
+        )
+
+      {"title_desc", _} ->
+        order_by(query, [b], desc: b.title)
+
+      {"year_asc", _} ->
+        order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
+
+      {"year_desc", _} ->
+        order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
+
+      {"added_desc", _} ->
+        order_by(query, [b], desc: b.inserted_at)
+
+      {"added_asc", _} ->
+        order_by(query, [b], asc: b.inserted_at)
+
+      _ ->
+        order_by(query, [b], asc: b.title, asc_nulls_last: b.issue_number)
+    end
+  end
+
+  defp filtered_series_query(filters) do
+    query = from(s in Series, as: :series, where: is_nil(s.deleted_at))
+
+    query =
+      case filters[:q] do
+        q when is_binary(q) and q != "" ->
+          pattern = "%#{String.replace(q, "%", "\\%")}%"
+          where(query, [s], ilike(s.name, ^pattern))
+
+        _ ->
+          query
+      end
+
+    query =
+      if filters[:library_id],
+        do: where(query, [s], s.library_id == ^filters[:library_id]),
+        else: query
+
+    query =
+      if filters[:year_from],
+        do: where(query, [s], s.start_year >= ^filters[:year_from]),
+        else: query
+
+    query =
+      if filters[:year_to],
+        do: where(query, [s], s.start_year <= ^filters[:year_to]),
+        else: query
+
+    # Book-level filters: keep series that contain at least one matching book.
+    if (filters[:age_ratings] not in [nil, []] or filters[:publisher_id]) || filters[:genre] do
+      book_query =
+        from(b in Book,
+          as: :book,
+          where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
+          select: 1
+        )
+        |> filter_book_attrs(Map.take(filters, [:age_ratings, :publisher_id, :genre]))
+
+      where(query, [s], exists(book_query))
+    else
+      query
+    end
+  end
+
+  defp sort_filtered_series(query, filters) do
+    case filters[:sort] do
+      "title_desc" -> order_by(query, [s], desc: s.name)
+      "year_asc" -> order_by(query, [s], asc_nulls_last: s.start_year, asc: s.name)
+      "year_desc" -> order_by(query, [s], desc_nulls_last: s.start_year, asc: s.name)
+      "added_desc" -> order_by(query, [s], desc: s.inserted_at)
+      "added_asc" -> order_by(query, [s], asc: s.inserted_at)
+      _ -> order_by(query, [s], asc: s.name)
+    end
+  end
+
   def get_series_cover(series_id) do
     series = Repo.get!(Series, series_id)
 
