@@ -14,7 +14,7 @@ defmodule StashixWeb.IdentifyComponent do
   use StashixWeb, :live_component
 
   alias Stashix.{Metadata, Repo}
-  alias Stashix.Metadata.{Apply, Candidate, Matcher, Sources}
+  alias Stashix.Metadata.{Apply, Candidate, Importer, Matcher, Sources}
   alias Stashix.Library.{Book, Series}
 
   @impl true
@@ -59,28 +59,87 @@ defmodule StashixWeb.IdentifyComponent do
       end
 
     candidates = if review, do: Metadata.review_candidates(review), else: []
+    known_ids = known_ids(target, Enum.map(sources, &elem(&1, 0)))
+
+    socket =
+      socket
+      |> assign(
+        kind: kind,
+        sources: sources,
+        known_ids: known_ids,
+        linked_lookup: nil,
+        wait_until: nil,
+        wait_limit: nil,
+        source_key: (List.first(candidates) && List.first(candidates).source_key) || first_key(sources),
+        form: to_form(stringify(query), as: :q),
+        refresh: false,
+        candidates: candidates,
+        selected: nil,
+        preview: nil,
+        rows: [],
+        selected_fields: MapSet.new(),
+        error: review && review.error,
+        searching: false,
+        loading_preview: false,
+        applying: false,
+        queue_issues: true
+      )
+
+    # A stored source id beats searching: fetch it straight away. Search stays
+    # available for when the linked entry is wrong.
+    case {review, Enum.find(sources, fn {k, _} -> Map.has_key?(known_ids, k) end)} do
+      {nil, {key, _}} -> lookup_known(socket, key)
+      _ -> socket
+    end
+  end
+
+  # %{source_key => source_id} for usable sources the target already has an id for.
+  defp known_ids(target, source_keys) do
+    stored = target |> Repo.preload(:external_ids, force: true) |> Map.get(:external_ids)
+
+    for source <- Sources.enabled(),
+        source.module.key() in source_keys,
+        id = Enum.find_value(stored, &(to_string(&1.source) == source.module.information_source() && &1.source_id)),
+        into: %{},
+        do: {source.module.key(), id}
+  end
+
+  defp lookup_known(socket, source_key) do
+    id = Map.fetch!(socket.assigns.known_ids, source_key)
+    kind = socket.assigns.kind
+    candidate = %Candidate{source_key: source_key, kind: kind, id: id, score: 1.0}
+    opts = [refresh: socket.assigns.refresh]
 
     socket
-    |> assign(
-      kind: kind,
-      sources: sources,
-      wait_until: nil,
-      wait_limit: nil,
-      source_key: (List.first(candidates) && List.first(candidates).source_key) || first_key(sources),
-      form: to_form(stringify(query), as: :q),
-      refresh: false,
-      candidates: candidates,
-      selected: nil,
-      preview: nil,
-      rows: [],
-      selected_fields: MapSet.new(),
-      error: review && review.error,
-      searching: false,
-      loading_preview: false,
-      applying: false,
-      queue_issues: true
+    |> assign(source_key: source_key, candidates: [candidate], error: nil, linked_lookup: {source_key, id})
+    |> assign(selected: candidate, preview: nil, rows: [], loading_preview: true)
+    |> start_async(
+      :preview,
+      report_waits(socket, fn ->
+        if kind == :series,
+          do: Metadata.fetch_series(source_key, id, opts),
+          else: Metadata.fetch_issue(source_key, id, opts)
+      end)
     )
   end
+
+  defp linked?(known_ids, %Candidate{source_key: key, id: id}), do: Map.get(known_ids, key) == to_string(id)
+
+  # A candidate built from a bare id has nothing to show until its record loads.
+  defp enrich_candidate(%Candidate{series_name: nil} = c, m) do
+    %{
+      c
+      | series_name: m[:series] || m[:name],
+        number: Matcher.format_number(m[:issue_number]),
+        title: m[:title],
+        year: m[:year] || m[:start_year],
+        publisher: m[:publisher],
+        cover_url: m[:cover_url],
+        issue_count: m[:issue_count]
+    }
+  end
+
+  defp enrich_candidate(c, _m), do: c
 
   # Re-renders once a second while a rate-limit wait is shown.
   defp schedule_wait_tick(socket) do
@@ -131,6 +190,7 @@ defmodule StashixWeb.IdentifyComponent do
     socket =
       socket
       |> assign(source_key: source_key, refresh: refresh, form: to_form(q, as: :q), searching: true, error: nil)
+      |> assign(linked_lookup: nil)
       |> assign(selected: nil, preview: nil, rows: [])
       |> start_async(
         :search,
@@ -142,6 +202,12 @@ defmodule StashixWeb.IdentifyComponent do
     {:noreply, socket}
   end
 
+  def handle_event("lookup_known", %{"source" => key}, socket) do
+    if Map.has_key?(socket.assigns.known_ids, key),
+      do: {:noreply, lookup_known(socket, key)},
+      else: {:noreply, socket}
+  end
+
   def handle_event("select", %{"idx" => idx}, socket) do
     candidate = Enum.at(socket.assigns.candidates, String.to_integer(idx))
     kind = socket.assigns.kind
@@ -150,6 +216,7 @@ defmodule StashixWeb.IdentifyComponent do
     socket =
       socket
       |> assign(selected: candidate, preview: nil, rows: [], loading_preview: true, error: nil)
+      |> assign(linked_lookup: if(linked?(socket.assigns.known_ids, candidate), do: socket.assigns.linked_lookup))
       |> start_async(
         :preview,
         report_waits(socket, fn ->
@@ -248,9 +315,17 @@ defmodule StashixWeb.IdentifyComponent do
       end
 
     rows = preview_rows(target, metadata)
+    selected = socket.assigns.selected && enrich_candidate(socket.assigns.selected, metadata)
+
+    candidates =
+      Enum.map(socket.assigns.candidates, fn c ->
+        if selected && c.id == selected.id && c.source_key == selected.source_key, do: selected, else: c
+      end)
 
     {:noreply,
      assign(socket,
+       selected: selected,
+       candidates: candidates,
        loading_preview: false,
        preview: metadata,
        rows: rows,
@@ -408,11 +483,26 @@ defmodule StashixWeb.IdentifyComponent do
         if standalone, do: %{r | default: false}, else: r
 
       {"urls", label} ->
-        # Links are merged, not replaced: show the combined list and pre-check it when it adds anything.
+        # Links are merged one per source (see Importer.merge_urls/2): show the resulting
+        # list and pre-check it when it changes anything.
+        # First link per source wins, as in merge_urls.
+        incoming =
+          (m[:urls] || [])
+          |> Enum.reverse()
+          |> Map.new(&{Importer.link_source(&1.url), String.trim(&1.url)})
+
         known = MapSet.new(book.urls, &String.trim(&1.url))
-        added = Enum.reject(m[:urls] || [], &MapSet.member?(known, String.trim(&1.url)))
+        added = incoming |> Map.values() |> Enum.reject(&MapSet.member?(known, &1))
+
+        # Replaced links stay in place; links from new sources are appended.
+        merged =
+          Enum.map(book.urls, &Map.get(incoming, Importer.link_source(&1.url), &1.url))
+          |> Enum.concat(Map.values(incoming))
+          |> Enum.uniq_by(&Importer.link_source/1)
+
         current = summarize("urls", book.urls)
-        r = row("urls", label, book.urls, current, added, summarize("urls", book.urls ++ added))
+        added = Enum.map(added, &%{url: &1})
+        r = row("urls", label, book.urls, current, added, preview_join(merged))
         %{r | default: r.selectable}
 
       {key, label} ->
@@ -561,6 +651,22 @@ defmodule StashixWeb.IdentifyComponent do
           </h2>
           <p class="text-sm text-gray-400 mb-4">Search a metadata source and pick the matching entry.</p>
 
+          <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+            <span class="text-gray-500">Linked IDs:</span>
+            <button
+              :for={{key, id} <- @known_ids}
+              type="button"
+              phx-click="lookup_known"
+              phx-value-source={key}
+              phx-target={@myself}
+              title="Look up this entry directly"
+              class="inline-flex items-center gap-1.5 rounded-md border border-gray-700 bg-gray-800/60 px-2 py-1 text-gray-300 hover:border-violet-500 hover:text-white transition-colors"
+            >
+              <.icon name="lucide-link" class="w-3 h-3" />
+              {source_name(@sources, key)} <span class="font-mono text-gray-500">{"##{id}"}</span>
+            </button>
+          </div>
+
           <%= if @sources == [] do %>
             <div class="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
               No metadata source is enabled and configured. <.link
@@ -623,6 +729,20 @@ defmodule StashixWeb.IdentifyComponent do
                 </button>
               </div>
             </.form>
+
+            <div
+              :if={@linked_lookup}
+              class="mt-3 flex items-start gap-2 rounded-lg border border-violet-800/50 bg-violet-900/20 px-3 py-2 text-sm text-violet-200"
+            >
+              <.icon name="lucide-link" class="w-4 h-4 mt-0.5 flex-shrink-0" />
+              <p>
+                <% {key, id} = @linked_lookup %> This {if @kind == :series, do: "series", else: "issue"} is already linked to
+                <span class="font-medium text-white">{source_name(@sources, key)}</span>
+                <span class="font-mono">{"##{id}"}</span>
+                (from its file tags or an earlier match), so that entry was loaded directly — no search needed.
+                <span class="text-violet-300/70">Not the right match? Search above to pick a different one.</span>
+              </p>
+            </div>
 
             <.rate_wait_note
               :if={@searching}
@@ -687,6 +807,12 @@ defmodule StashixWeb.IdentifyComponent do
                       |> Enum.join(" · ")}
                     </p>
                   </div>
+                  <span
+                    :if={linked?(@known_ids, c)}
+                    class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-violet-300 flex-shrink-0"
+                  >
+                    <.icon name="lucide-link" class="w-3 h-3" /> Linked
+                  </span>
                   <span class="text-[10px] uppercase tracking-wide text-gray-500 flex-shrink-0">
                     {source_name(@sources, c.source_key)}
                   </span>

@@ -16,8 +16,20 @@ defmodule Stashix.Metadata.Parser do
   def parse_comicinfo(archive_path) do
     case parse_sidecar(archive_path) do
       nil -> parse_embedded(archive_path)
-      sidecar -> Map.merge(parse_embedded(archive_path), sidecar)
+      sidecar -> merge_comic_metron(parse_embedded(archive_path), sidecar)
     end
+  end
+
+  # Right side wins field-by-field, but external ids are unioned per source so
+  # e.g. a Comic Vine id only present in ComicInfo survives next to MetronInfo's.
+  defp merge_comic_metron(base, override) do
+    ids =
+      (List.wrap(override[:external_ids]) ++ List.wrap(base[:external_ids]))
+      |> Enum.uniq_by(& &1.source)
+
+    base
+    |> Map.merge(override)
+    |> maybe_put(:external_ids, if(ids != [], do: ids))
   end
 
   # A `<book name>.xml` next to the file (written by metadata write-back for
@@ -50,7 +62,7 @@ defmodule Stashix.Metadata.Parser do
             # MetronInfo wins; ComicInfo fills fields MetronInfo lacks (e.g. Title).
             comic = if data = xmls[:comicinfo], do: parse_comicinfo_xml(data), else: %{}
             metron = if data = xmls[:metroninfo], do: parse_metroninfo_xml(data), else: %{}
-            Map.merge(comic, metron)
+            merge_comic_metron(comic, metron)
         end
 
       ".pdf" ->
@@ -117,9 +129,16 @@ defmodule Stashix.Metadata.Parser do
       doc = data |> sanitize_xml() |> parse()
 
       age_rating_raw = xpath(doc, ~x"//ComicInfo/AgeRating/text()"s)
+      notes = xpath(doc, ~x"//ComicInfo/Notes/text()"os)
+      web = xpath(doc, ~x"//ComicInfo/Web/text()"os)
+      urls = split_urls(web)
+      external_ids = external_ids_from_comicinfo(urls, notes)
 
       %{}
       |> maybe_put(:title, xpath(doc, ~x"//ComicInfo/Title/text()"os))
+      |> maybe_put(:notes, notes)
+      |> maybe_put(:urls, if(urls != [], do: Enum.map(urls, &%{url: &1, is_primary: false})))
+      |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
       |> maybe_put(:series, xpath(doc, ~x"//ComicInfo/Series/text()"os))
       |> maybe_put(
         :issue_number,
@@ -673,6 +692,66 @@ defmodule Stashix.Metadata.Parser do
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
+
+  defp split_urls(nil), do: []
+
+  defp split_urls(web) do
+    web
+    |> String.split(~r/[\s,]+/, trim: true)
+    |> Enum.filter(&String.starts_with?(&1, ["http://", "https://"]))
+  end
+
+  @doc """
+  Source ids recoverable from ComicInfo's `Web` URLs and taggers' `Notes`
+  (ComicTagger / MetronTagger write e.g. "... info from Comic Vine ... [Issue ID 12345]"
+  or the older "[CVDB12345]").
+  """
+  def external_ids_from_comicinfo(urls, notes) do
+    from_urls = Enum.flat_map(urls, &id_from_url/1)
+    (from_urls ++ ids_from_notes(notes)) |> Enum.uniq_by(& &1.source)
+  end
+
+  defp id_from_url(url) do
+    cond do
+      m = Regex.run(~r{comicvine\.gamespot\.com/.*/4000-(\d+)}, url) ->
+        [%{source: "Comic Vine", source_id: Enum.at(m, 1), is_primary: false}]
+
+      m = Regex.run(~r{comics\.org/issue/(\d+)}, url) ->
+        [%{source: "Grand Comics Database", source_id: Enum.at(m, 1), is_primary: false}]
+
+      true ->
+        []
+    end
+  end
+
+  defp ids_from_notes(nil), do: []
+
+  defp ids_from_notes(notes) do
+    cvdb =
+      case Regex.run(~r/\[CVDB(\d+)\]/i, notes) do
+        [_, id] -> [%{source: "Comic Vine", source_id: id, is_primary: false}]
+        _ -> []
+      end
+
+    issue_id =
+      with [_, id] <- Regex.run(~r/\[Issue ID (\d+)\]/i, notes),
+           source when not is_nil(source) <- notes_source(notes) do
+        [%{source: source, source_id: id, is_primary: false}]
+      else
+        _ -> []
+      end
+
+    cvdb ++ issue_id
+  end
+
+  defp notes_source(notes) do
+    cond do
+      notes =~ ~r/from Metron/i -> "Metron"
+      notes =~ ~r/from Comic ?Vine/i -> "Comic Vine"
+      notes =~ ~r/from (GCD|Grand Comics Database)/i -> "Grand Comics Database"
+      true -> nil
+    end
+  end
 
   defp split_delimited(nil), do: nil
   defp split_delimited(""), do: nil

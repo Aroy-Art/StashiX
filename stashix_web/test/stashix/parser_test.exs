@@ -403,4 +403,40 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:year] == 2022
     end
   end
+
+  describe "external_ids_from_comicinfo/2" do
+    test "Comic Vine and GCD ids from Web URLs" do
+      urls = [
+        "https://comicvine.gamespot.com/saga-1/4000-338386/",
+        "https://www.comics.org/issue/1234567/"
+      ]
+
+      assert Parser.external_ids_from_comicinfo(urls, nil) == [
+               %{source: "Comic Vine", source_id: "338386", is_primary: false},
+               %{source: "Grand Comics Database", source_id: "1234567", is_primary: false}
+             ]
+    end
+
+    test "tagger notes with Issue ID name the source" do
+      notes = "Tagged with MetronTagger-4.9.3 using info from Metron on 2026-05-31 22:53:43. [Issue ID 98765]"
+
+      assert Parser.external_ids_from_comicinfo([], notes) == [
+               %{source: "Metron", source_id: "98765", is_primary: false}
+             ]
+    end
+
+    test "legacy CVDB note" do
+      notes = "Tagged with ComicTagger 1.1.0 using info from Comic Vine on 2020-01-01. [CVDB12345]"
+
+      assert Parser.external_ids_from_comicinfo([], notes) == [
+               %{source: "Comic Vine", source_id: "12345", is_primary: false}
+             ]
+    end
+
+    test "URL id wins over a duplicate from notes; unknown source ignored" do
+      urls = ["https://comicvine.gamespot.com/x/4000-1/"]
+      assert [%{source_id: "1"}] = Parser.external_ids_from_comicinfo(urls, "info from Comic Vine [Issue ID 2]")
+      assert Parser.external_ids_from_comicinfo([], "Scanned by someone [Issue ID 2]") == []
+    end
+  end
 end
