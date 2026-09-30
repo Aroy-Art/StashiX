@@ -612,7 +612,12 @@ defmodule StashixWeb.SeriesLive do
                   <div :for={{label, entries} <- creator_groups} class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
                     <span class="w-20 shrink-0 text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 pt-0.5">{label}</span>
                     <span class="text-gray-300">
-                      {entries |> Enum.map(fn {name, _} -> name end) |> Enum.join(", ")}
+                      <span :for={{entry, i} <- Enum.with_index(entries)}>
+                        <.link
+                          navigate={"/search?creator=#{elem(entry, 2)}"}
+                          class="hover:text-white hover:underline transition-colors"
+                        >{elem(entry, 0)}</.link><span :if={i < length(entries) - 1}>, </span>
+                      </span>
                     </span>
                   </div>
                 </div>

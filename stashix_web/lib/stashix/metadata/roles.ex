@@ -34,25 +34,27 @@ defmodule Stashix.Metadata.Roles do
   def group_of(role), do: Map.get(@lookup, role, "Other")
 
   @doc """
-  `[{heading, [name]}]` in display order from `%BookCredit{creator: %Creator{}}` rows.
+  `[{heading, [{name, id}]}]` in display order from `%BookCredit{creator: %Creator{}}` rows.
   """
   def group(credits) do
     credits
-    |> Enum.group_by(&group_of(&1.role), & &1.creator.name)
-    |> sort_groups(&Enum.uniq/1)
+    |> Enum.group_by(&group_of(&1.role), &{&1.creator.name, &1.creator.id})
+    |> sort_groups(fn entries -> entries |> Enum.uniq_by(&elem(&1, 0)) end)
   end
 
   @doc """
-  `[{heading, [{name, count}]}]` from `{name, role, count}` rows (series aggregates).
+  `[{heading, [{name, count, id}]}]` from `{name, role, count, id}` rows (series aggregates).
   """
   def group_counts(rows, limit \\ 8) do
     rows
-    |> Enum.group_by(fn {_name, role, _count} -> group_of(role) end, fn {name, _role, count} -> {name, count} end)
+    |> Enum.group_by(fn {_name, role, _count, _id} -> group_of(role) end, fn {name, _role, count, id} ->
+      {name, count, id}
+    end)
     |> sort_groups(fn entries ->
       entries
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-      |> Enum.map(fn {name, counts} -> {name, Enum.max(counts)} end)
-      |> Enum.sort_by(fn {name, count} -> {-count, name} end)
+      |> Enum.group_by(fn {name, _count, id} -> {name, id} end, fn {_name, count, _id} -> count end)
+      |> Enum.map(fn {{name, id}, counts} -> {name, Enum.max(counts), id} end)
+      |> Enum.sort_by(fn {name, count, _id} -> {-count, name} end)
       |> Enum.take(limit)
     end)
   end

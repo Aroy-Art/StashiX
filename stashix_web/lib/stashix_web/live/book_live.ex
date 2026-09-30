@@ -594,9 +594,8 @@ defmodule StashixWeb.BookLive do
               <%!-- Full credits by role --%>
               <.detail_section label="Credits" show={credit_groups != []}>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <%= for {role, names} <- credit_groups, name <- names do %>
-                    <% name = if is_tuple(name), do: elem(name, 0), else: name %>
-                    <.creator_card name={name} role={role} />
+                  <%= for {role, names} <- credit_groups, {creator_name, creator_id} <- names do %>
+                    <.creator_card name={creator_name} role={role} creator_id={creator_id} />
                   <% end %>
                 </div>
               </.detail_section>
