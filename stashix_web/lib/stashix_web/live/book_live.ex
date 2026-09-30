@@ -8,15 +8,17 @@ defmodule StashixWeb.BookLive do
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
+  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_book)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    book = Library.get_book_with_series(id)
-    library = Library.get_library!(book.library_id)
+    book = Library.get_book_with_series(socket.assigns.access, id)
+    library = Library.get_readable_library!(socket.assigns.access, book.library_id)
 
     progress = Library.get_progress(socket.assigns.current_user.id, id)
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
-    {prev_book, next_book} = Library.get_adjacent_books(book)
+    {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     selected_file = Library.get_preferred_book_file(book)
 
     if connected?(socket) do
@@ -41,7 +43,7 @@ defmodule StashixWeb.BookLive do
        show_identify_dialog: false,
        edit_form: nil,
        external_ids: load_external_ids(book),
-       book_details: Library.get_book_details(book.id),
+       book_details: Library.get_book_details(socket.assigns.access, book.id),
        all_publishers: Library.list_all_publishers()
      )}
   end
@@ -66,6 +68,13 @@ defmodule StashixWeb.BookLive do
   end
 
   @impl true
+  # Metadata editing and rescans are admin-only; the UI hides them for other
+  # users, and this drops the events if sent anyway.
+  def handle_event(event, _params, %{assigns: %{current_user: %{role: role}}} = socket)
+      when event in @admin_events and role != :admin do
+    {:noreply, socket}
+  end
+
   def handle_event("toggle_read_menu", _params, socket) do
     {:noreply, assign(socket, read_menu_open: !socket.assigns.read_menu_open)}
   end
@@ -75,13 +84,13 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_event("mark_unread", _params, socket) do
-    Library.update_progress(socket.assigns.current_user.id, socket.assigns.book.id, 0)
+    Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, 0)
     {:noreply, assign(socket, progress: 0, fully_read: false, read_menu_open: false)}
   end
 
   def handle_event("mark_read", _params, socket) do
     book = socket.assigns.book
-    Library.update_progress(socket.assigns.current_user.id, book.id, book.page_count)
+    Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, book.id, book.page_count)
     {:noreply, assign(socket, progress: book.page_count, fully_read: true, read_menu_open: false)}
   end
 
@@ -103,7 +112,7 @@ defmodule StashixWeb.BookLive do
     case Library.update_book(book, params) do
       {:ok, updated_book} ->
         if Stashix.Settings.metadata()["write_to_files"], do: Metadata.enqueue_write(updated_book.id)
-        book = Library.get_book_with_series(updated_book.id)
+        book = Library.get_book_with_series(socket.assigns.access, updated_book.id)
 
         {:noreply,
          socket
@@ -150,11 +159,11 @@ defmodule StashixWeb.BookLive do
 
   @impl true
   def handle_info({:scan_progress, %{done: true}}, socket) do
-    book = Library.get_book_with_series(socket.assigns.book.id)
+    book = Library.get_book_with_series(socket.assigns.access, socket.assigns.book.id)
     progress = Library.get_progress(socket.assigns.current_user.id, book.id)
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
-    {prev_book, next_book} = Library.get_adjacent_books(book)
+    {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
 
     current_format = socket.assigns.selected_file && socket.assigns.selected_file.format
     selected_file = Library.get_preferred_book_file(book, current_format)
@@ -174,7 +183,7 @@ defmodule StashixWeb.BookLive do
 
   def handle_info({:cover_updated, book_id}, socket) do
     if socket.assigns.book.id == book_id do
-      book = Library.get_book_with_series(book_id)
+      book = Library.get_book_with_series(socket.assigns.access, book_id)
       {:noreply, assign(socket, book: book)}
     else
       {:noreply, socket}
@@ -199,14 +208,14 @@ defmodule StashixWeb.BookLive do
   end
 
   defp reload_book(socket) do
-    book = Library.get_book_with_series(socket.assigns.book.id)
+    book = Library.get_book_with_series(socket.assigns.access, socket.assigns.book.id)
     current_format = socket.assigns.selected_file && socket.assigns.selected_file.format
 
     assign(socket,
       book: book,
       page_title: book.title,
       external_ids: load_external_ids(book),
-      book_details: Library.get_book_details(book.id),
+      book_details: Library.get_book_details(socket.assigns.access, book.id),
       selected_file: Library.get_preferred_book_file(book, current_format)
     )
   end

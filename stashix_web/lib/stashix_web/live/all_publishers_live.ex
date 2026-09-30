@@ -35,15 +35,19 @@ defmodule StashixWeb.AllPublishersLive do
   end
 
   defp load_publishers(socket, page) do
-    total = Library.count_publishers()
+    total = Library.count_publishers(socket.assigns.access)
     total_pages = max(1, ceil(total / @page_size))
 
     publishers =
-      Library.list_publishers_paginated(limit: @page_size, offset: (page - 1) * @page_size)
+      Library.list_publishers_paginated(
+        access: socket.assigns.access,
+        limit: @page_size,
+        offset: (page - 1) * @page_size
+      )
 
     pub_ids = Enum.map(publishers, & &1.id)
-    stats_map = Library.publisher_stats(pub_ids)
-    covers_map = Library.publisher_sample_covers(pub_ids)
+    stats_map = Library.publisher_stats(socket.assigns.access, pub_ids)
+    covers_map = Library.publisher_sample_covers(socket.assigns.access, pub_ids)
 
     assign(socket,
       publishers: publishers,

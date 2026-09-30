@@ -2,7 +2,7 @@ defmodule Stashix.ScannerTest do
   use Stashix.DataCase, async: false
 
   alias Stashix.{Library, Scanner, Repo}
-  alias Stashix.Library.{Book, BookCover}
+  alias Stashix.Library.{Access, Book, BookCover}
 
   setup do
     tmp = Path.join(System.tmp_dir!(), "stashix_test_#{:erlang.unique_integer([:positive])}")
@@ -84,7 +84,7 @@ defmodule Stashix.ScannerTest do
     test "file at library root → standalone", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
       assert book.series_id == nil
     end
@@ -92,7 +92,7 @@ defmodule Stashix.ScannerTest do
     test "file in One-Shot folder → standalone", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "One-Shot"), "Creepshow (1982).cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
       assert book.series_id == nil
     end
@@ -100,14 +100,14 @@ defmodule Stashix.ScannerTest do
     test "standalone detection is case-insensitive (one shot)", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "one shot"), "Some Book.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
     end
 
     test "standalone detection is case-insensitive (ONESHOT)", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "ONESHOT"), "Some Book.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
     end
 
@@ -115,7 +115,7 @@ defmodule Stashix.ScannerTest do
       {:ok, lib} = Library.update_library(lib, %{standalone_folders: ["Specials"]})
       write_cbz(mkdir(tmp, "Specials"), "Annual.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
     end
 
@@ -123,14 +123,14 @@ defmodule Stashix.ScannerTest do
       {:ok, lib} = Library.update_library(lib, %{standalone_folders: ["Specials"]})
       write_cbz(mkdir(tmp, "SPECIALS"), "Annual.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
     end
 
     test "unknown folder → issue, not standalone", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Regular Series"), "Issue 001.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "issue"
     end
   end
@@ -141,7 +141,7 @@ defmodule Stashix.ScannerTest do
     test "series name stripped of year range", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Batman (1940-2011)"), "Batman 001.cbz")
       Scanner.scan_sync(lib.id)
-      assert [book] = Library.list_books(lib.id)
+      assert [book] = Library.list_books(lib.id, access: Access.all())
       series = Library.get_series!(book.series_id)
       assert series.name == "Batman"
       assert series.start_year == 1940
@@ -152,7 +152,7 @@ defmodule Stashix.ScannerTest do
     test "ongoing series folder sets ongoing=true", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "The Disavowed (2025-)"), "Issue 001.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       series = Library.get_series!(book.series_id)
       assert series.name == "The Disavowed"
       assert series.start_year == 2025
@@ -163,7 +163,7 @@ defmodule Stashix.ScannerTest do
     test "single-year folder → completed series", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Big Ducks (1984)"), "Issue 001.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       series = Library.get_series!(book.series_id)
       assert series.name == "Big Ducks"
       assert series.start_year == 1984
@@ -173,7 +173,7 @@ defmodule Stashix.ScannerTest do
     test "plain folder name → series with no years", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Akira"), "Akira v1.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       series = Library.get_series!(book.series_id)
       assert series.name == "Akira"
       assert series.start_year == nil
@@ -186,7 +186,7 @@ defmodule Stashix.ScannerTest do
       write_cbz(folder, "Issue 002.cbz")
       write_cbz(folder, "Issue 003.cbz")
       Scanner.scan_sync(lib.id)
-      books = Library.list_books(lib.id)
+      books = Library.list_books(lib.id, access: Access.all())
       assert length(books) == 3
       series_ids = books |> Enum.map(& &1.series_id) |> Enum.uniq()
       assert [series_id] = series_ids
@@ -197,7 +197,7 @@ defmodule Stashix.ScannerTest do
       write_cbz(mkdir(tmp, "Batman (1940-2011)"), "Batman 001.cbz")
       write_cbz(mkdir(tmp, "Superman (1939-)"), "Superman 001.cbz")
       Scanner.scan_sync(lib.id)
-      books = Library.list_books(lib.id)
+      books = Library.list_books(lib.id, access: Access.all())
       series_ids = books |> Enum.map(& &1.series_id) |> Enum.uniq()
       assert length(series_ids) == 2
     end
@@ -210,7 +210,7 @@ defmodule Stashix.ScannerTest do
       folder = mkdir(tmp, "Bubblegum Crisis: Grand Mal (1994)")
       write_cbz(folder, "Bubblegum Crisis: Grand Mal (1994) - Issue 3.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.issue_number == Decimal.new("3")
     end
 
@@ -219,7 +219,7 @@ defmodule Stashix.ScannerTest do
       write_cbz(folder, "Saga (2012) - Issue 1.cbz")
       write_cbz(folder, "Saga (2012) - Issue 2.cbz")
       Scanner.scan_sync(lib.id)
-      books = Library.list_books(lib.id, sort: "issue_asc")
+      books = Library.list_books(lib.id, sort: "issue_asc", access: Access.all())
       assert length(books) == 2
       [b1, b2] = books
       assert b1.issue_number == Decimal.new("1")
@@ -236,7 +236,7 @@ defmodule Stashix.ScannerTest do
       )
 
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.issue_number == Decimal.new("1")
       assert book.title == "The Waterloo Insider"
       assert book.year == 2025
@@ -247,7 +247,7 @@ defmodule Stashix.ScannerTest do
       folder = mkdir(tmp, "Battle Angel Alita (1994)")
       write_cbz(folder, "Issue 1 - Rusty Angel.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.issue_number == Decimal.new("1")
       assert book.title == "Rusty Angel"
     end
@@ -259,14 +259,14 @@ defmodule Stashix.ScannerTest do
     test "counts pages from archive when no ComicInfo.xml", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz", page_count: 5)
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.page_count == 5
     end
 
     test "single-page archive counted correctly", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz", page_count: 1)
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.page_count == 1
     end
   end
@@ -279,7 +279,7 @@ defmodule Stashix.ScannerTest do
       write_cbz(folder, "Issue 001.cbz")
       File.write!(Path.join(folder, "Issue 001.jpg"), "fake jpeg")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       cover = Repo.get_by(BookCover, book_id: book.id)
       assert cover != nil
     end
@@ -291,7 +291,7 @@ defmodule Stashix.ScannerTest do
     test "missing file soft-deleted on rescan", %{lib: lib, tmp: tmp} do
       cbz = write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.deleted_at == nil
 
       File.rm!(cbz)
@@ -303,7 +303,7 @@ defmodule Stashix.ScannerTest do
     test "restored file reappears after rescan", %{lib: lib, tmp: tmp} do
       cbz = write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       book_id = book.id
 
       File.rm!(cbz)
@@ -323,7 +323,7 @@ defmodule Stashix.ScannerTest do
       folder = mkdir(tmp, "Battle Angel Alita (1994-1998)")
       old_cbz = write_cbz(folder, "Volume 1 - Rusty Angel.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.title == "Rusty Angel"
       assert book.issue_number == Decimal.new("1")
       book_id = book.id
@@ -333,7 +333,7 @@ defmodule Stashix.ScannerTest do
       File.rm!(old_cbz)
       Scanner.scan_sync(lib.id)
 
-      books = Library.list_books(lib.id)
+      books = Library.list_books(lib.id, access: Access.all())
       assert length(books) == 1
       updated = hd(books)
       assert updated.id == book_id
@@ -347,7 +347,7 @@ defmodule Stashix.ScannerTest do
     test "force rescan corrects manually corrupted type", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "One-Shot"), "Standalone.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       assert book.type == "standalone"
 
       Library.update_book(book, %{type: "issue"})
@@ -360,7 +360,7 @@ defmodule Stashix.ScannerTest do
     test "normal rescan skips unmodified files", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)
-      [book] = Library.list_books(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
       original_updated_at = book.updated_at
 
       Scanner.scan_sync(lib.id)

@@ -29,8 +29,8 @@ defmodule StashixWeb.LibraryController do
           id: lib.id,
           name: lib.name,
           root_path: lib.root_path,
-          book_count: Library.count_books(lib.id),
-          series_count: Library.count_series(lib.id),
+          book_count: Library.count_books(conn.assigns.access, lib.id),
+          series_count: Library.count_series(conn.assigns.access, lib.id),
           inserted_at: lib.inserted_at
         }
       end)
@@ -49,15 +49,15 @@ defmodule StashixWeb.LibraryController do
     ]
 
   def show(conn, %{"id" => id}) do
-    library = Library.get_library!(id)
+    library = Library.get_readable_library!(conn.assigns.access, id)
 
     json(conn, %{
       id: library.id,
       name: library.name,
       root_path: library.root_path,
       standalone_folders: library.standalone_folders,
-      book_count: Library.count_books(library.id),
-      series_count: Library.count_series(library.id),
+      book_count: Library.count_books(conn.assigns.access, library.id),
+      series_count: Library.count_series(conn.assigns.access, library.id),
       inserted_at: library.inserted_at
     })
   end

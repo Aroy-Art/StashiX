@@ -169,8 +169,12 @@ defmodule StashixWeb.AdminUserController do
       user_id: id,
       library_id: params["library_id"],
       can_read: params["can_read"],
-      max_age_rating: params["max_age_rating"]
+      max_age_rating: params["max_age_rating"],
+      hide_unrated: params["hide_unrated"]
     }
+
+    # Omitted fields keep their current (or default) value.
+    attrs = Map.reject(attrs, fn {_k, v} -> is_nil(v) end)
 
     case Library.set_library_permission(attrs) do
       {:ok, _} ->

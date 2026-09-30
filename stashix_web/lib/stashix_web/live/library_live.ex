@@ -42,10 +42,11 @@ defmodule StashixWeb.LibraryLive do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library_id}")
     end
 
-    library = Library.get_library!(library_id)
-    series_count = Library.count_series(library_id)
-    books_count = Library.count_books(library_id)
-    issues_count = Library.count_issues(library_id)
+    access = socket.assigns.access
+    library = Library.get_readable_library!(access, library_id)
+    series_count = Library.count_series(access, library_id)
+    books_count = Library.count_books(access, library_id)
+    issues_count = Library.count_issues(access, library_id)
 
     {:ok,
      assign(socket,
@@ -71,16 +72,17 @@ defmodule StashixWeb.LibraryLive do
     sort = params["sort"] || "title_asc"
     lib_id = socket.assigns.library.id
     user_id = socket.assigns.current_user.id
+    access = socket.assigns.access
 
     socket =
       case socket.assigns.live_action do
         :show ->
-          recent_series = Library.list_series(lib_id, limit: 20, sort: "added_desc")
+          recent_series = Library.list_series(lib_id, limit: 20, sort: "added_desc", access: access)
 
           recent_books =
-            Library.list_books(lib_id, type: "standalone", limit: 20, sort: "added_desc")
+            Library.list_books(lib_id, type: "standalone", limit: 20, sort: "added_desc", access: access)
 
-          recent_issues = Library.list_books(lib_id, type: "issue", limit: 20, sort: "added_desc")
+          recent_issues = Library.list_books(lib_id, type: "issue", limit: 20, sort: "added_desc", access: access)
 
           assign(socket,
             recent_series: recent_series,
@@ -91,7 +93,7 @@ defmodule StashixWeb.LibraryLive do
 
         :series ->
           opts = [sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
-          items = Library.list_series(lib_id, opts)
+          items = Library.list_series(lib_id, [access: access] ++ opts)
           total = socket.assigns.series_count
 
           assign(socket,
@@ -113,7 +115,7 @@ defmodule StashixWeb.LibraryLive do
             offset: (page - 1) * @page_size
           ]
 
-          items = Library.list_books(lib_id, opts)
+          items = Library.list_books(lib_id, [access: access] ++ opts)
           total = socket.assigns.books_count
           progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
 
@@ -130,7 +132,7 @@ defmodule StashixWeb.LibraryLive do
 
         :issues ->
           opts = [type: "issue", sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
-          items = Library.list_books(lib_id, opts)
+          items = Library.list_books(lib_id, [access: access] ++ opts)
           total = socket.assigns.issues_count
           progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
 

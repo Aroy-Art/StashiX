@@ -23,7 +23,7 @@ defmodule StashixWeb.SeriesController do
     ]
 
   def index(conn, %{"id" => library_id}) do
-    series = Library.list_series(library_id)
+    series = Library.list_series(library_id, access: conn.assigns.access)
     json(conn, %{series: Enum.map(series, &series_json/1)})
   end
 
@@ -38,7 +38,7 @@ defmodule StashixWeb.SeriesController do
     ]
 
   def show(conn, %{"id" => id}) do
-    series = Library.get_series_with_books(id)
+    series = Library.get_series_with_books(conn.assigns.access, id)
 
     json(conn, %{
       series: series_json(series),
@@ -59,7 +59,7 @@ defmodule StashixWeb.SeriesController do
     ]
 
   def cover(conn, %{"id" => id} = params) do
-    case Library.get_series_cover(id) do
+    case Library.get_series_cover(conn.assigns.access, id) do
       nil ->
         conn |> put_status(:not_found) |> json(%{error: "no cover"})
 

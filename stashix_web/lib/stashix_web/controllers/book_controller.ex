@@ -31,6 +31,7 @@ defmodule StashixWeb.BookController do
 
   def index(conn, %{"id" => library_id} = params) do
     opts = [
+      access: conn.assigns.access,
       limit: parse_int(params["limit"], 50),
       offset: parse_int(params["offset"], 0),
       sort: String.to_atom(params["sort"] || "inserted_at"),
@@ -57,7 +58,7 @@ defmodule StashixWeb.BookController do
     ]
 
   def show(conn, %{"id" => id}) do
-    book = Library.get_book_with_series(id)
+    book = Library.get_book_with_series(conn.assigns.access, id)
     json(conn, %{book: book_json(book)})
   end
 
@@ -73,7 +74,7 @@ defmodule StashixWeb.BookController do
     ]
 
   def pages(conn, %{"id" => id} = params) do
-    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    book = Library.get_book!(conn.assigns.access, id) |> Stashix.Repo.preload(:files)
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
 
@@ -104,7 +105,7 @@ defmodule StashixWeb.BookController do
     ]
 
   def page(conn, %{"id" => id, "n" => n} = params) do
-    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    book = Library.get_book!(conn.assigns.access, id) |> Stashix.Repo.preload(:files)
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
     page_index = String.to_integer(n)
@@ -141,7 +142,7 @@ defmodule StashixWeb.BookController do
     ]
 
   def cover(conn, %{"id" => id} = params) do
-    book = Library.get_book!(id) |> Stashix.Repo.preload(:cover)
+    book = Library.get_book!(conn.assigns.access, id) |> Stashix.Repo.preload(:cover)
 
     case book.cover do
       nil ->
@@ -179,9 +180,12 @@ defmodule StashixWeb.BookController do
     user = Guardian.Plug.current_resource(conn)
     page = parse_int(params["page"], 0)
 
-    case Library.update_progress(user.id, id, page) do
+    case Library.update_progress(conn.assigns.access, user.id, id, page) do
       {:ok, _} ->
         json(conn, %{status: "ok", page: page})
+
+      {:error, :not_found} ->
+        conn |> put_status(:not_found) |> json(%{error: "not found"})
 
       {:error, reason} ->
         conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})

@@ -334,7 +334,11 @@ defmodule StashixWeb.Schemas do
       properties: %{
         library_id: %Schema{type: :string, format: :uuid},
         can_read: %Schema{type: :boolean},
-        max_age_rating: %Schema{type: :string, nullable: true}
+        max_age_rating: %Schema{type: :string, nullable: true},
+        hide_unrated: %Schema{
+          type: :boolean,
+          description: "Hide unrated books when max_age_rating sets a limit (default false)"
+        }
       }
     })
   end

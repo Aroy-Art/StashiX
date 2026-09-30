@@ -82,7 +82,7 @@ defmodule StashixWeb.AdminLive do
     socket
     |> assign(:page_title, "Admin · Publishers")
     |> assign(:publisher_tab, tab)
-    |> assign(:publishers, Library.list_publishers())
+    |> assign(:publishers, Library.list_publishers(Stashix.Library.Access.all()))
     |> assign(:publishers_with_aliases, Library.list_publishers_with_aliases())
     |> load_vis_publishers()
   end
@@ -91,7 +91,7 @@ defmodule StashixWeb.AdminLive do
     search = socket.assigns[:pub_vis_search] || ""
     page = socket.assigns[:pub_vis_page] || 1
     {pubs, total} = Library.list_all_publishers_admin(search: search, page: page, limit: 50)
-    stats = Library.publisher_stats(Enum.map(pubs, & &1.id))
+    stats = Library.publisher_stats(Stashix.Library.Access.all(), Enum.map(pubs, & &1.id))
 
     socket
     |> assign(:pub_vis_publishers, pubs)
@@ -380,12 +380,14 @@ defmodule StashixWeb.AdminLive do
       ) do
     can_read = Map.get(params, "can_read") == "true"
     max_age_rating = Map.get(params, "max_age_rating", "unknown")
+    hide_unrated = Map.get(params, "hide_unrated") == "true"
 
     attrs = %{
       user_id: user_id,
       library_id: library_id,
       can_read: can_read,
-      max_age_rating: max_age_rating
+      max_age_rating: max_age_rating,
+      hide_unrated: hide_unrated
     }
 
     case Library.set_library_permission(attrs) do
@@ -494,7 +496,7 @@ defmodule StashixWeb.AdminLive do
         {:noreply,
          socket
          |> assign(
-           publishers: Library.list_publishers(),
+           publishers: Library.list_publishers(Stashix.Library.Access.all()),
            publishers_with_aliases: Library.list_publishers_with_aliases(),
            alias_source_id: nil,
            alias_target_id: nil,
@@ -513,7 +515,7 @@ defmodule StashixWeb.AdminLive do
   def handle_event("toggle_publisher_hidden", %{"id" => id}, socket) do
     case Library.toggle_publisher_hidden(id) do
       {:ok, pub} ->
-        publishers = Library.list_publishers()
+        publishers = Library.list_publishers(Stashix.Library.Access.all())
 
         {:noreply,
          socket
@@ -534,7 +536,7 @@ defmodule StashixWeb.AdminLive do
 
     case Library.remove_publisher_alias(id) do
       {:ok, _} ->
-        publishers = Library.list_publishers()
+        publishers = Library.list_publishers(Stashix.Library.Access.all())
         publishers_with_aliases = Library.list_publishers_with_aliases()
 
         {:noreply,
@@ -748,6 +750,25 @@ defmodule StashixWeb.AdminLive do
                                   >
                                     {Phoenix.HTML.Form.options_for_select(rating_opts, current_rating)}
                                   </select>
+                                  <label
+                                    class={[
+                                      "flex items-center gap-2 text-xs",
+                                      if(current_rating == :unknown,
+                                        do: "text-gray-600 cursor-not-allowed",
+                                        else: "text-gray-400 cursor-pointer"
+                                      )
+                                    ]}
+                                    title="Unrated books are shown under an age limit unless this is checked"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      name="hide_unrated"
+                                      value="true"
+                                      checked={perm != nil && perm.hide_unrated}
+                                      disabled={current_rating == :unknown}
+                                      class="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                                    /> Hide unrated
+                                  </label>
                                 </div>
                               </form>
                             <% end %>
