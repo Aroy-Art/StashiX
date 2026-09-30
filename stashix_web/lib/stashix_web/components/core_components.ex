@@ -923,13 +923,18 @@ defmodule StashixWeb.CoreComponents do
   attr :options, :list, required: true
   attr :selected, :string, required: true
   attr :event, :string, default: "sort"
+  attr :class, :string, default: nil
+  attr :select_class, :string, default: nil
 
   def sort_select(assigns) do
     ~H"""
-    <form phx-change={@event}>
+    <form phx-change={@event} class={@class}>
       <select
         name="value"
-        class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+        class={[
+          "px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-violet-500 cursor-pointer",
+          @select_class
+        ]}
       >
         <%= for {label, value} <- @options do %>
           <option value={value} selected={@selected == value}>{label}</option>
