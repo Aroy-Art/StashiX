@@ -74,6 +74,29 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, socket}
   end
 
+  # Age rating lives on books; the series-level setting overwrites every issue.
+  defp maybe_cascade_age_rating(_series, rating, _only_unknown) when rating in [nil, ""], do: :ok
+
+  defp maybe_cascade_age_rating(series, rating, only_unknown) do
+    if rating != to_string(common_age_rating(series.books)) do
+      with {:ok, ids} <-
+             Library.set_series_age_rating(series.id, rating, only_unknown: only_unknown),
+           true <- Stashix.Settings.metadata()["write_to_files"] do
+        Enum.each(ids, &Metadata.enqueue_write/1)
+      end
+    end
+
+    :ok
+  end
+
+  # The shared age rating of all issues, or nil when mixed/empty.
+  defp common_age_rating(books) do
+    case books |> Enum.map(& &1.age_rating) |> Enum.uniq() do
+      [rating] -> rating
+      _ -> nil
+    end
+  end
+
   defp year_range(%{start_year: nil}), do: nil
   defp year_range(%{start_year: s, end_year: nil, ongoing: true}), do: "#{s}–"
   defp year_range(%{start_year: s, end_year: nil}), do: "#{s}"
@@ -103,11 +126,17 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
   end
 
-  def handle_event("save_metadata", %{"series" => params}, socket) do
+  def handle_event("save_metadata", %{"series" => params} = all_params, socket) do
     series = socket.assigns.series
 
     case Library.update_series(series, params) do
       {:ok, updated_series} ->
+        maybe_cascade_age_rating(
+          series,
+          all_params["age_rating"],
+          all_params["age_rating_only_unknown"] == "true"
+        )
+
         series = Library.get_series_with_books(updated_series.id)
         books = sort_books(series.books, socket.assigns.sort)
 
@@ -781,6 +810,48 @@ defmodule StashixWeb.SeriesLive do
                   value={@edit_form[:end_year].value}
                   class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
+              </div>
+
+              <div class="col-span-2">
+                <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+                <% current_rating = common_age_rating(@series.books) %>
+                <select
+                  name="age_rating"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                >
+                  <option value="" selected={is_nil(current_rating)}>
+                    {if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
+                  </option>
+                  <%= for {label, val} <- [{"Unknown", "unknown"}, {"Everyone", "everyone"}, {"Teen", "teen"}, {"Teen+", "teen_plus"}, {"Mature", "mature"}, {"Adult", "adult"}, {"Explicit", "explicit"}] do %>
+                    <option value={val} selected={to_string(current_rating) == val}>{label}</option>
+                  <% end %>
+                </select>
+                <% mixed = is_nil(current_rating) && @series.books != [] %>
+                <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
+                <div :if={mixed} class="flex items-center gap-2 mt-2">
+                  <input type="hidden" name="age_rating_only_unknown" value="false" />
+                  <input
+                    type="checkbox"
+                    id="age_rating_only_unknown"
+                    name="age_rating_only_unknown"
+                    value="true"
+                    checked
+                    class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                  />
+                  <label for="age_rating_only_unknown" class="text-sm text-gray-300 cursor-pointer">
+                    Only update issues rated Unknown ({unknown_count})
+                  </label>
+                </div>
+                <p class="flex items-start gap-1.5 text-xs text-amber-400/80 mt-1.5">
+                  <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
+                  <%= if mixed do %>
+                    Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
+                      @series.books
+                    )} issues.
+                  <% else %>
+                    Changing this overwrites the age rating of all {length(@series.books)} issues in this series.
+                  <% end %>
+                </p>
               </div>
 
               <div class="col-span-2 flex items-center gap-3">
