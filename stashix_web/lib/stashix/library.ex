@@ -152,8 +152,8 @@ defmodule Stashix.Library do
       from(c in Stashix.Library.BookCredit,
         join: cr in assoc(c, :creator),
         where: c.book_id in subquery(book_ids),
-        group_by: [cr.name, c.role],
-        select: {cr.name, c.role, count(c.id)}
+        group_by: [cr.name, c.role, cr.id],
+        select: {cr.name, c.role, count(c.id), cr.id}
       )
       |> Repo.all()
 
@@ -471,6 +471,50 @@ defmodule Stashix.Library do
     |> Repo.one()
   end
 
+  @doc """
+  Creators whose name contains `term`, prefix matches first, then by how many
+  (non-deleted) books credit them. Returns `[%{id, name, credits}]`.
+
+  Options: `:limit` (default 8), `:exclude` (creator ids to leave out).
+  """
+  def search_creators(term, opts \\ []) do
+    term = String.trim(term)
+    limit = Keyword.get(opts, :limit, 8)
+    exclude = Keyword.get(opts, :exclude, [])
+
+    if term == "" do
+      []
+    else
+      from(cr in Stashix.Library.Creator,
+        join: c in assoc(cr, :credits),
+        join: b in Book,
+        on: b.id == c.book_id and is_nil(b.deleted_at),
+        where: ilike(cr.name, ^like_pattern(term)) and cr.id not in ^exclude,
+        group_by: cr.id,
+        order_by: [
+          desc: fragment("? ILIKE ?", cr.name, ^(like_escape(term) <> "%")),
+          desc: count(b.id, :distinct),
+          asc: cr.name
+        ],
+        limit: ^limit,
+        select: %{id: cr.id, name: cr.name, credits: count(b.id, :distinct)}
+      )
+      |> Repo.all()
+    end
+  end
+
+  @doc "Creators for `ids`, in the order given (unknown ids are dropped)."
+  def get_creators([]), do: []
+
+  def get_creators(ids) do
+    by_id =
+      from(cr in Stashix.Library.Creator, where: cr.id in ^ids)
+      |> Repo.all()
+      |> Map.new(&{&1.id, &1})
+
+    ids |> Enum.map(&by_id[&1]) |> Enum.reject(&is_nil/1)
+  end
+
   def list_genre_names do
     from(g in Stashix.Library.BookGenre,
       join: b in Book,
@@ -494,7 +538,7 @@ defmodule Stashix.Library do
             query,
             [b],
             fragment("search_vec @@ plainto_tsquery('english', ?)", ^q) or
-              exists(credit_match_query(pattern, nil))
+              exists(credit_match_query(name_pattern: pattern))
           )
 
         _ ->
@@ -513,9 +557,9 @@ defmodule Stashix.Library do
     |> filter_read_status(filters[:read_status], filters[:user_id])
   end
 
-  # Books (bound as :book) with a credit whose creator name matches `pattern`
-  # and/or whose role equals `role`.
-  defp credit_match_query(pattern, role) do
+  # Credits on the parent book (bound as :book), narrowed by any of
+  # :name_pattern (ilike on creator name), :creator_id and :role.
+  defp credit_match_query(opts) do
     query =
       from(c in Stashix.Library.BookCredit,
         join: cr in assoc(c, :creator),
@@ -523,25 +567,49 @@ defmodule Stashix.Library do
         select: 1
       )
 
-    query = if pattern, do: where(query, [_c, cr], ilike(cr.name, ^pattern)), else: query
-    if role, do: where(query, [c], c.role == ^role), else: query
+    query =
+      if pattern = opts[:name_pattern],
+        do: where(query, [_c, cr], ilike(cr.name, ^pattern)),
+        else: query
+
+    query =
+      if creator_id = opts[:creator_id],
+        do: where(query, [c], c.creator_id == ^creator_id),
+        else: query
+
+    query =
+      case opts[:creator_ids] do
+        [_ | _] = ids -> where(query, [c], c.creator_id in ^ids)
+        _ -> query
+      end
+
+    if role = opts[:role], do: where(query, [c], c.role == ^role), else: query
   end
 
-  defp like_pattern(term) do
-    escaped = String.replace(term, ~r/[\\%_]/, "\\\\\\0")
-    "%#{escaped}%"
+  defp like_pattern(term), do: "%#{like_escape(term)}%"
+
+  defp like_escape(term), do: String.replace(term, ~r/[\\%_]/, "\\\\\\0")
+
+  # "all": every creator is credited on the book (each in `role`, if given).
+  # "any": at least one of them is.
+  defp filter_book_creators(query, [], _match, nil), do: query
+
+  defp filter_book_creators(query, [], _match, role),
+    do: where(query, exists(credit_match_query(role: role)))
+
+  defp filter_book_creators(query, ids, "any", role),
+    do: where(query, exists(credit_match_query(creator_ids: ids, role: role)))
+
+  defp filter_book_creators(query, ids, _all, role) do
+    Enum.reduce(ids, query, fn id, q ->
+      where(q, exists(credit_match_query(creator_id: id, role: role)))
+    end)
   end
 
   # Shared by books and series-with-matching-books: age rating, library,
   # publisher, genre, creator/role. Expects the book binding to be named :book.
   defp filter_book_attrs(query, filters) do
-    query =
-      if filters[:creator] || filters[:role] do
-        pattern = filters[:creator] && like_pattern(filters[:creator])
-        where(query, exists(credit_match_query(pattern, filters[:role])))
-      else
-        query
-      end
+    query = filter_book_creators(query, filters[:creator_ids] || [], filters[:creator_match], filters[:role])
 
     query =
       case filters[:age_ratings] do
@@ -668,7 +736,7 @@ defmodule Stashix.Library do
             from(b in Book,
               as: :book,
               where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
-              where: exists(credit_match_query(pattern, nil)),
+              where: exists(credit_match_query(name_pattern: pattern)),
               select: 1
             )
 
@@ -694,9 +762,9 @@ defmodule Stashix.Library do
         else: query
 
     # Book-level filters: keep series that contain at least one matching book.
-    book_filters = Map.take(filters, [:age_ratings, :publisher_id, :genre, :creator, :role])
+    book_filters = Map.take(filters, [:age_ratings, :publisher_id, :genre, :creator_ids, :creator_match, :role])
 
-    if Enum.any?(book_filters, fn {_k, v} -> v not in [nil, []] end) do
+    if Enum.any?(book_filters, fn {k, v} -> k != :creator_match and v not in [nil, []] end) do
       book_query =
         from(b in Book,
           as: :book,
