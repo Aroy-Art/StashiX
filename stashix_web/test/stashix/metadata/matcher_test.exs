@@ -180,6 +180,20 @@ defmodule Stashix.Metadata.MatcherTest do
       end
     end
 
+    test "a link from a source already linked replaces the old one", %{book: book} do
+      old_url = "http://comicvine.gamespot.com/iguana-1/4000-425845/"
+      Repo.insert!(%BookUrl{book_id: book.id, url: old_url, is_primary: true})
+      new_url = "https://comicvine.gamespot.com/the-iguana-1-tpb/4000-425845/"
+      metron_url = "https://metron.cloud/issue/iguana-1/"
+
+      settings = %{"write_to_files" => false}
+      metadata = %{urls: [%{url: new_url}, %{url: metron_url}]}
+      assert {:ok, _} = Metadata.apply_issue_metadata(book, "comic_vine", metadata, settings, [])
+
+      urls = Repo.all(from u in BookUrl, where: u.book_id == ^book.id, select: {u.url, u.is_primary})
+      assert Enum.sort(urls) == Enum.sort([{new_url, true}, {metron_url, false}])
+    end
+
     test "applying enqueues a file write when enabled", %{book: book} do
       Stashix.Settings.put("metadata", %{"write_to_files" => true})
       Req.Test.stub(Stashix.Metadata.HTTP, fn conn -> Req.Test.json(conn, metron_issue()) end)
