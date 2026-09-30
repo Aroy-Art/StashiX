@@ -90,6 +90,13 @@ defmodule StashixWeb.Live.Hooks do
     end
   end
 
+  # Pages that sync the navbar box (assign :navbar_sync_query) handle typing
+  # themselves instead of showing the quick-results dropdown.
+  defp handle_navbar_search("navbar_search", _params, %{assigns: %{navbar_sync_query: q}} = socket)
+       when is_binary(q) do
+    {:cont, socket}
+  end
+
   defp handle_navbar_search("navbar_search", %{"value" => q}, socket)
        when q == socket.assigns.navbar_search_query do
     {:halt, socket}

@@ -43,7 +43,7 @@ defmodule StashixWeb.SearchLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {year_min, year_max} = Library.search_year_bounds()
+    year_counts = Library.book_year_counts()
 
     {:ok,
      assign(socket,
@@ -58,8 +58,8 @@ defmodule StashixWeb.SearchLive do
        progress_map: %{},
        publishers: Library.list_publishers(),
        genres: Library.list_genre_names(),
-       year_min: year_min,
-       year_max: year_max,
+       year_counts: year_counts,
+       years: Enum.map(year_counts, &elem(&1, 0)),
        types: @types,
        read_statuses: @read_statuses,
        age_ratings: @age_ratings,
@@ -67,18 +67,19 @@ defmodule StashixWeb.SearchLive do
        creator_query: "",
        creator_suggestions: [],
        selected_creators: [],
+       navbar_sync_query: "",
        loading: true
      )}
   end
 
   @impl true
   def handle_params(params, _uri, socket) do
-    params = normalize_params(params)
+    params = normalize_params(params, socket.assigns.years)
     page = parse_int(params["page"]) || 1
 
     {:noreply,
      socket
-     |> assign(params: params, page: max(page, 1))
+     |> assign(params: params, page: max(page, 1), navbar_sync_query: params["q"])
      |> assign_selected_creators()
      |> load_results()}
   end
@@ -109,6 +110,17 @@ defmodule StashixWeb.SearchLive do
       |> Map.take(["type", "sort"])
       |> Map.merge(Map.take(form, ["q" | @filter_keys]))
 
+    {:noreply, patch(socket, params, replace: true)}
+  end
+
+  # The navbar search box mirrors this page's query (see navbar_sync_query).
+  def handle_event("navbar_search", %{"value" => q}, socket), do: {:noreply, set_query(socket, q)}
+  def handle_event("navbar_submit", %{"q" => q}, socket), do: {:noreply, set_query(socket, q)}
+  def handle_event("clear_query", _params, socket), do: {:noreply, set_query(socket, "")}
+
+  # From the YearRange slider hook; nil means "no bound".
+  def handle_event("set_years", %{"from" => from, "to" => to}, socket) do
+    params = Map.merge(socket.assigns.params, %{"from" => from, "to" => to})
     {:noreply, patch(socket, params, replace: true)}
   end
 
@@ -161,9 +173,18 @@ defmodule StashixWeb.SearchLive do
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
+  defp set_query(socket, q) do
+    if String.trim(q) == socket.assigns.params["q"],
+      do: socket,
+      else: patch(socket, Map.put(socket.assigns.params, "q", q), replace: true)
+  end
+
   # Any filter change resets pagination.
   defp patch(socket, params, opts \\ []) do
-    push_patch(socket, to: search_path(normalize_params(params), 1), replace: opts[:replace] || false)
+    push_patch(socket,
+      to: search_path(normalize_params(params, socket.assigns.years), 1),
+      replace: opts[:replace] || false
+    )
   end
 
   defp search_path(params, page) do
@@ -177,7 +198,8 @@ defmodule StashixWeb.SearchLive do
   end
 
   # Keep only known, well-formed params so the URL is the single source of truth.
-  defp normalize_params(params) do
+  # `years` are the release years present in the library; from/to must be one.
+  defp normalize_params(params, years) do
     q = params |> Map.get("q", "") |> to_string() |> String.trim()
 
     type = if params["type"] in Enum.map(@types, &elem(&1, 1)), do: params["type"], else: "all"
@@ -194,6 +216,8 @@ defmodule StashixWeb.SearchLive do
       |> Enum.filter(&(&1 in @age_rating_strings))
       |> Enum.uniq()
 
+    {year_from, year_to} = normalize_year_range(params["from"], params["to"], years)
+
     creators =
       params
       |> Map.get("creator", [])
@@ -209,8 +233,8 @@ defmodule StashixWeb.SearchLive do
       "q" => q,
       "type" => type,
       "sort" => sort,
-      "from" => params["from"] |> parse_int() |> maybe_to_string(),
-      "to" => params["to"] |> parse_int() |> maybe_to_string(),
+      "from" => year_from,
+      "to" => year_to,
       "age" => age,
       "library" => blank_to_nil(params["library"]),
       "publisher" => blank_to_nil(params["publisher"]),
@@ -222,6 +246,21 @@ defmodule StashixWeb.SearchLive do
       "page" => params["page"]
     }
     |> then(&Map.put(&1, "sort", &1["sort"] || default_sort(&1)))
+  end
+
+  # Drop years not in the library; a bound at the library's edge is no bound.
+  defp normalize_year_range(_from, _to, []), do: {nil, nil}
+
+  defp normalize_year_range(from, to, years) do
+    {first, last} = {List.first(years), List.last(years)}
+    valid = fn v -> (y = parse_int(v)) in years && y end
+    {from, to} = {valid.(from), valid.(to)}
+    {from, to} = if from && to && from > to, do: {to, from}, else: {from, to}
+
+    {
+      if(from && from != first, do: to_string(from)),
+      if(to && to != last, do: to_string(to))
+    }
   end
 
   defp default_sort(%{"q" => q}) when is_binary(q) and q != "", do: "relevance"
@@ -303,9 +342,6 @@ defmodule StashixWeb.SearchLive do
 
   defp parse_int(_), do: nil
 
-  defp maybe_to_string(nil), do: nil
-  defp maybe_to_string(n), do: to_string(n)
-
   defp cast_uuid(v) do
     case Ecto.UUID.cast(v || "") do
       {:ok, id} -> id
@@ -329,6 +365,7 @@ defmodule StashixWeb.SearchLive do
         {nil, nil} -> []
         {f, nil} -> [{"Released #{f}+", "year", nil}]
         {nil, t} -> [{"Released ≤ #{t}", "year", nil}]
+        {y, y} -> [{"Released #{y}", "year", nil}]
         {f, t} -> [{"Released #{f}–#{t}", "year", nil}]
       end
 
@@ -440,21 +477,43 @@ defmodule StashixWeb.SearchLive do
       <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-8">
         <form id="search-form" phx-change="filter" phx-submit="filter" class="contents">
           <%!-- Search input spans the full width --%>
-          <div class="relative order-1 lg:order-none lg:col-span-2">
+          <div class="relative group order-1 lg:order-none lg:col-span-2">
             <.icon
               name="lucide-search"
               class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
             />
             <input
+              id="search-q"
               type="search"
               name="q"
               value={@params["q"]}
+              data-ctrl-k-target
               phx-debounce="300"
               placeholder="Search books, series, creators..."
               autocomplete="off"
-              class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 text-lg"
+              class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-12 sm:pr-24 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 text-lg [&::-webkit-search-cancel-button]:appearance-none"
               autofocus
             />
+            <button
+              :if={@params["q"] != ""}
+              type="button"
+              phx-click={JS.push("clear_query") |> JS.dispatch("stashix:clear-input", to: "#search-q")}
+              aria-label="Clear search"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+            >
+              <.icon name="lucide-x" class="w-5 h-5" />
+            </button>
+            <kbd
+              :if={@params["q"] == ""}
+              class="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 pointer-events-none group-focus-within:opacity-0 transition-opacity duration-100"
+            >
+              <span class="text-[10px] text-gray-600 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 leading-none">
+                Ctrl
+              </span>
+              <span class="text-[10px] text-gray-600 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 leading-none">
+                K
+              </span>
+            </kbd>
           </div>
 
           <%!-- Filter sidebar --%>
@@ -475,30 +534,8 @@ defmodule StashixWeb.SearchLive do
                 </button>
               </div>
 
-              <.filter_section title="Release year">
-                <div class="flex items-center gap-2">
-                  <input
-                    type="number"
-                    name="from"
-                    value={@params["from"]}
-                    placeholder={@year_min && to_string(@year_min)}
-                    min="1800"
-                    max="2100"
-                    phx-debounce="500"
-                    class="w-full min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
-                  />
-                  <span class="text-gray-600">–</span>
-                  <input
-                    type="number"
-                    name="to"
-                    value={@params["to"]}
-                    placeholder={@year_max && to_string(@year_max)}
-                    min="1800"
-                    max="2100"
-                    phx-debounce="500"
-                    class="w-full min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
-                  />
-                </div>
+              <.filter_section :if={@year_counts != []} title="Release year">
+                <.year_range counts={@year_counts} from={@params["from"]} to={@params["to"]} />
               </.filter_section>
 
               <.filter_section title="Age rating">
@@ -737,6 +774,118 @@ defmodule StashixWeb.SearchLive do
     <div class="px-4 py-3 space-y-2">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">{@title}</h3>
       {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  attr :counts, :list, required: true
+  attr :from, :string, default: nil
+  attr :to, :string, default: nil
+
+  # Histogram of books per year with a two-handle slider underneath. Bars and
+  # handles share one linear axis (first..last year); the YearRange hook snaps
+  # handles to years that have books and pushes "set_years" on release.
+  defp year_range(assigns) do
+    {first, _} = List.first(assigns.counts)
+    {last, _} = List.last(assigns.counts)
+    by_year = Map.new(assigns.counts)
+    peak = assigns.counts |> Enum.map(&elem(&1, 1)) |> Enum.max()
+    lo = if assigns.from, do: String.to_integer(assigns.from), else: first
+    hi = if assigns.to, do: String.to_integer(assigns.to), else: last
+    span = max(last - first, 1)
+
+    bars =
+      for year <- first..last do
+        count = Map.get(by_year, year, 0)
+
+        %{
+          year: year,
+          count: count,
+          # keep tiny counts visible next to much bigger years
+          height: if(count > 0, do: max(count / peak * 100, 4), else: 0),
+          left: (year - first) / span * 100,
+          active: count > 0 and year >= lo and year <= hi
+        }
+      end
+
+    assigns =
+      assign(assigns,
+        first: first,
+        last: last,
+        lo: lo,
+        hi: hi,
+        bars: bars,
+        bar_width: 100 / (last - first + 1),
+        span: span,
+        total: Enum.sum(for b <- bars, b.active, do: b.count)
+      )
+
+    ~H"""
+    <div
+      id="year-range"
+      phx-hook="YearRange"
+      data-years={Jason.encode!(Enum.map(@counts, &elem(&1, 0)))}
+      data-counts={Jason.encode!(Map.new(@counts))}
+      data-min={@first}
+      data-max={@last}
+      class="space-y-1.5"
+    >
+      <div class="flex items-baseline justify-between text-xs">
+        <span data-label class="font-medium text-gray-200">
+          {if @lo == @first and @hi == @last, do: "Any year", else: "#{@lo} – #{@hi}"}
+        </span>
+        <span data-total class="text-gray-500">{@total} books</span>
+      </div>
+
+      <%!-- Inset by half a thumb so bar centres line up with handle centres --%>
+      <div class="relative h-14 mx-[7px]">
+        <div
+          :for={b <- @bars}
+          data-bar
+          data-year={b.year}
+          data-active={b.active}
+          title={"#{b.year}: #{b.count} #{if b.count == 1, do: "book", else: "books"}"}
+          class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-gray-700 data-[active]:bg-violet-500 transition-colors"
+          style={"left: #{b.left}%; width: max(#{@bar_width}%, 1px); height: #{b.height}%;"}
+        />
+      </div>
+
+      <div class="relative h-4">
+        <div class="absolute inset-x-[7px] top-1/2 -translate-y-1/2 h-1 rounded-full bg-gray-800">
+          <div
+            data-track
+            class="absolute inset-y-0 rounded-full bg-violet-500"
+            style={"left: #{(@lo - @first) / @span * 100}%; right: #{(@last - @hi) / @span * 100}%;"}
+          />
+        </div>
+        <input
+          type="range"
+          data-thumb="lo"
+          min={@first}
+          max={@last}
+          value={@lo}
+          aria-label="From year"
+          class="year-range-input absolute inset-0 w-full"
+        />
+        <input
+          type="range"
+          data-thumb="hi"
+          min={@first}
+          max={@last}
+          value={@hi}
+          aria-label="To year"
+          class="year-range-input absolute inset-0 w-full"
+        />
+      </div>
+
+      <div class="flex justify-between text-[10px] text-gray-600">
+        <span>{@first}</span>
+        <span>{@last}</span>
+      </div>
+
+      <%!-- Carry the range along when other filters change --%>
+      <input type="hidden" name="from" value={@from} />
+      <input type="hidden" name="to" value={@to} />
     </div>
     """
   end

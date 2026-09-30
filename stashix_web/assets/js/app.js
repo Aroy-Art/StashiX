@@ -260,11 +260,13 @@ Hooks.SearchNav = {
     this.onGlobalKeydown = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        if (document.activeElement === this.el) {
-          this.el.blur()
+        // A page can claim the shortcut for its own search box (e.g. /search)
+        const target = document.querySelector('[data-ctrl-k-target]') || this.el
+        if (document.activeElement === target) {
+          target.blur()
         } else {
-          this.el.focus()
-          this.el.select()
+          target.focus()
+          target.select()
         }
       }
     }
@@ -381,6 +383,89 @@ Hooks.CreatorCombobox = {
       }
     })
     this.activeIndex = idx
+  }
+}
+
+// Two-handle year slider over the release-year histogram on the search page.
+// Handles snap to years that have books; bars/label update live while
+// dragging and "set_years" is pushed on release (null = no bound).
+Hooks.YearRange = {
+  mounted() {
+    this.read()
+
+    this.onInput = (e) => {
+      const thumb = e.target.dataset.thumb
+      if (!thumb) return
+      // keep the surrounding filter form from treating this as a change
+      e.stopPropagation()
+      let v = this.snap(+e.target.value)
+      if (thumb === "lo") v = Math.min(v, +this.hi.value)
+      else v = Math.max(v, +this.lo.value)
+      e.target.value = v
+      this.render()
+    }
+
+    this.onChange = (e) => {
+      if (!e.target.dataset.thumb) return
+      e.stopPropagation()
+      const lo = +this.lo.value, hi = +this.hi.value
+      if (lo === this.from && hi === this.to) return
+      this.from = lo
+      this.to = hi
+      this.pushEvent("set_years", {
+        from: lo === this.min ? null : String(lo),
+        to: hi === this.max ? null : String(hi)
+      })
+    }
+
+    this.el.addEventListener("input", this.onInput)
+    this.el.addEventListener("change", this.onChange)
+  },
+
+  updated() {
+    this.read()
+  },
+
+  read() {
+    this.years = JSON.parse(this.el.dataset.years)
+    this.counts = JSON.parse(this.el.dataset.counts)
+    this.min = +this.el.dataset.min
+    this.max = +this.el.dataset.max
+    this.lo = this.el.querySelector("[data-thumb=lo]")
+    this.hi = this.el.querySelector("[data-thumb=hi]")
+    this.from = +this.lo.value
+    this.to = +this.hi.value
+    this.render()
+  },
+
+  // nearest year that actually has books
+  snap(v) {
+    return this.years.reduce((best, y) => Math.abs(y - v) < Math.abs(best - v) ? y : best)
+  },
+
+  render() {
+    const lo = +this.lo.value, hi = +this.hi.value
+    const span = Math.max(this.max - this.min, 1)
+    let total = 0
+
+    this.el.querySelectorAll("[data-bar]").forEach(bar => {
+      const y = +bar.dataset.year
+      const active = y >= lo && y <= hi && this.counts[y]
+      bar.toggleAttribute("data-active", !!active)
+      if (active) total += this.counts[y]
+    })
+
+    const track = this.el.querySelector("[data-track]")
+    track.style.left = `${(lo - this.min) / span * 100}%`
+    track.style.right = `${(this.max - hi) / span * 100}%`
+
+    this.el.querySelector("[data-label]").textContent =
+      lo === this.min && hi === this.max ? "Any year" : `${lo} – ${hi}`
+    this.el.querySelector("[data-total]").textContent = `${total} books`
+
+    // when both handles sit at the top end, keep the low one grabbable
+    this.lo.style.zIndex = lo > this.min + span / 2 ? 3 : 1
+    this.hi.style.zIndex = 2
   }
 }
 
@@ -904,6 +989,13 @@ if (window.__stashixBooted) {
   topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
   window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
   window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+  // Clear a text input client-side and keep the cursor in it. Used alongside a
+  // server push, since LiveView won't overwrite the value of a focused input.
+  window.addEventListener("stashix:clear-input", (e) => {
+    e.target.value = ""
+    e.target.focus()
+  })
 
   window.addEventListener("stashix:scroll-to", (e) => {
     const el = document.getElementById(e.detail.id)
