@@ -144,3 +144,51 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Two overlaid range inputs for the search page year slider: only the thumbs
+   take pointer events so both handles stay draggable. */
+.year-range-input {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  pointer-events: none;
+  margin: 0;
+  height: 1rem;
+}
+.year-range-input::-webkit-slider-runnable-track {
+  background: transparent;
+}
+.year-range-input::-moz-range-track {
+  background: transparent;
+}
+.year-range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #8b5cf6;
+  cursor: grab;
+}
+.year-range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #fff;
+  border: 2px solid #8b5cf6;
+  cursor: grab;
+}
+.year-range-input:active::-webkit-slider-thumb {
+  cursor: grabbing;
+}
+.year-range-input:focus-visible {
+  outline: none;
+}
+.year-range-input:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px rgb(139 92 246 / 0.45);
+}
+.year-range-input:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px rgb(139 92 246 / 0.45);
+}

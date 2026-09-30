@@ -47,11 +47,20 @@ defmodule StashixWeb.SearchLiveTest do
     assert html =~ "Sunny Days"
     assert html =~ "Night Watch"
 
-    {:ok, _view, html} = live(conn, ~p"/search?from=2000&to=2005")
+    # histogram covers the library's years
+    assert html =~ "1995: 1 book"
+    assert html =~ "2003: 0 books"
+
+    {:ok, _view, html} = live(conn, ~p"/search?from=2001&to=2001")
     assert html =~ "Sunny Days"
     refute html =~ "Dark Streets"
     refute html =~ "Dark Alleys"
-    assert html =~ "Released 2000–2005"
+    assert html =~ ~r/Released 2001\s*</
+
+    # years with no books are ignored, as is a bound at the library's edge
+    {:ok, _view, html} = live(conn, ~p"/search?from=2000&to=2010")
+    assert html =~ "Dark Streets"
+    refute html =~ "Released"
 
     {:ok, _view, html} = live(conn, ~p"/search?#{%{age: ["mature"]}}")
     assert html =~ "Dark Alleys"
@@ -146,6 +155,39 @@ defmodule StashixWeb.SearchLiveTest do
     refute path =~ "creator_match"
   end
 
+  test "navbar search box is synced with the page query", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/search?q=sunny&from=2001")
+    assert html =~ ~r/id="navbar-search-input"[^>]*value="sunny"/
+
+    # typing in the navbar updates results in place (keeping filters), no dropdown
+    view |> element("#navbar-search-input") |> render_keyup(%{"value" => "dark"})
+    path = assert_patch(view)
+    assert path =~ "q=dark"
+    assert path =~ "from=2001"
+    html = render(view)
+    refute html =~ "See all results for"
+    assert html =~ ~r/name="q"[^>]*value="dark"/
+
+    # Enter in the navbar stays on the page instead of a full GET
+    view |> element("#navbar-search-input") |> render_keyup(%{"value" => "dark"})
+    refute_patched(view)
+
+    view |> form("form[phx-submit=navbar_submit]", %{"q" => "streets"}) |> render_submit()
+    assert assert_patch(view) =~ "q=streets"
+
+    # the clear button empties the query but keeps filters
+    view |> element("button[aria-label='Clear search']") |> render_click()
+    path = assert_patch(view)
+    refute path =~ "q="
+    assert path =~ "from=2001"
+    refute has_element?(view, "button[aria-label='Clear search']")
+
+    # page box -> navbar box
+    view |> form("#search-form", %{"q" => "alleys"}) |> render_change()
+    assert_patch(view)
+    assert render(view) =~ ~r/id="navbar-search-input"[^>]*value="alleys"/
+  end
+
   defp type_creator(view, text) do
     view
     |> form("#search-form", %{"creator_search" => text})
@@ -155,12 +197,14 @@ defmodule StashixWeb.SearchLiveTest do
   test "form changes patch the URL and chips remove filters", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/search")
 
-    view
-    |> form("#search-form", %{"q" => "", "from" => "1990", "to" => "1999", "age" => ["teen"]})
-    |> render_change()
+    view |> form("#search-form", %{"age" => ["teen", "mature"]}) |> render_change()
+    assert assert_patch(view) =~ "age"
 
+    # slider release: from at the first year is no bound
+    view |> element("#year-range") |> render_hook("set_years", %{"from" => "1995", "to" => "2001"})
     path = assert_patch(view)
-    assert path =~ "from=1990"
+    assert path =~ "to=2001"
+    refute path =~ "from="
     assert path =~ "age"
 
     html = render(view)

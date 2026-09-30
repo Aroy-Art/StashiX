@@ -460,15 +460,19 @@ defmodule Stashix.Library do
     {series, total}
   end
 
-  def search_year_bounds do
+  @doc """
+  `[{year, book_count}]` for every release year that has books, ascending.
+  Year is the book's year, falling back to its cover date.
+  """
+  def book_year_counts do
     from(b in Book,
       where: is_nil(b.deleted_at),
-      select: {
-        min(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date)),
-        max(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date))
-      }
+      where: not is_nil(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date)),
+      group_by: fragment("1"),
+      order_by: fragment("1"),
+      select: {fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date), count(b.id)}
     )
-    |> Repo.one()
+    |> Repo.all()
   end
 
   @doc """
