@@ -21,11 +21,13 @@ defmodule StashixWeb.Router do
     plug CORSPlug
     plug :fetch_session
     plug StashixWeb.Plugs.MediaAuth
+    plug StashixWeb.Plugs.AssignAccess
   end
 
   pipeline :auth do
     plug Stashix.Auth.Pipeline
     plug :require_authenticated
+    plug StashixWeb.Plugs.AssignAccess
   end
 
   pipeline :admin do
@@ -78,8 +80,7 @@ defmodule StashixWeb.Router do
     get "/users/profile", UserController, :profile
     get "/tasks", TaskController, :index
 
-    resources "/libraries", LibraryController, only: [:index, :create, :show, :update]
-    post "/libraries/:id/scan", LibraryController, :scan
+    resources "/libraries", LibraryController, only: [:index, :show]
     get "/libraries/:id/books", BookController, :index
     get "/libraries/:id/series", SeriesController, :index
 
@@ -90,6 +91,13 @@ defmodule StashixWeb.Router do
     get "/series/:id", SeriesController, :show
 
     get "/search", SearchController, :search
+
+    scope "/" do
+      pipe_through :admin
+
+      resources "/libraries", LibraryController, only: [:create, :update]
+      post "/libraries/:id/scan", LibraryController, :scan
+    end
 
     scope "/admin" do
       pipe_through :admin

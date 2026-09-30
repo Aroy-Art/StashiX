@@ -21,6 +21,7 @@ defmodule StashixWeb.SearchController do
 
   def search(conn, %{"q" => query} = params) do
     opts = [
+      access: conn.assigns.access,
       limit: parse_int(params["limit"], 50),
       offset: parse_int(params["offset"], 0)
     ]

@@ -3,6 +3,7 @@ defmodule Stashix.Library do
   alias Stashix.Repo
 
   alias Stashix.Library.{
+    Access,
     Library,
     Book,
     BookFile,
@@ -27,6 +28,16 @@ defmodule Stashix.Library do
 
   def get_library!(id), do: Repo.get!(Library, id)
 
+  @doc "Library by id, raising `Ecto.NoResultsError` unless `access` can read it."
+  def get_readable_library!(access, id) do
+    case Access.library_ids(access) do
+      :all -> Repo.get!(Library, id)
+      ids -> Repo.get!(from(l in Library, where: l.id in ^ids), id)
+    end
+  end
+
+  defp access!(opts), do: Keyword.fetch!(opts, :access)
+
   def create_library(attrs) do
     %Library{}
     |> Library.changeset(attrs)
@@ -47,7 +58,7 @@ defmodule Stashix.Library do
     series_id = Keyword.get(opts, :series_id)
 
     query =
-      from b in Book,
+      from b in Access.books(access!(opts)),
         where: b.library_id == ^library_id and is_nil(b.deleted_at),
         preload: [:cover, :series],
         limit: ^limit,
@@ -101,16 +112,19 @@ defmodule Stashix.Library do
 
   def get_book!(id), do: Repo.get!(Book, id)
 
-  def get_book_with_series(id) do
+  @doc "Book by id, raising `Ecto.NoResultsError` unless `access` can see it."
+  def get_book!(access, id), do: Repo.get!(Access.books(access), id)
+
+  def get_book_with_series(access, id) do
     files_query = from(bf in BookFile, where: is_nil(bf.deleted_at), order_by: [asc: bf.format])
 
-    Repo.get!(Book, id)
+    get_book!(access, id)
     |> Repo.preload([:series, :cover, :publishers, files: files_query])
   end
 
   @doc "Book with all MetronInfo detail associations, for the book page's details panel."
-  def get_book_details(id) do
-    Repo.get!(Book, id)
+  def get_book_details(access, id) do
+    get_book!(access, id)
     |> Repo.preload([
       :imprint,
       :external_ids,
@@ -133,9 +147,11 @@ defmodule Stashix.Library do
   Series-level details: the series' own extra fields plus the most frequent
   creators, characters, teams, story arcs and genres across its live books.
   """
-  def series_details(series_id, limit \\ 20) do
-    series = Repo.get!(Series, series_id) |> Repo.preload([:external_ids, :alternative_names])
-    book_ids = from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
+  def series_details(access, series_id, limit \\ 20) do
+    series = get_series!(access, series_id) |> Repo.preload([:external_ids, :alternative_names])
+
+    book_ids =
+      from(b in Access.books(access), where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
 
     top = fn schema ->
       from(r in schema,
@@ -167,13 +183,13 @@ defmodule Stashix.Library do
     }
   end
 
-  def get_adjacent_books(%{series_id: nil}), do: {nil, nil}
+  def get_adjacent_books(_access, %{series_id: nil}), do: {nil, nil}
 
-  def get_adjacent_books(%{series_id: _series_id, issue_number: nil}), do: {nil, nil}
+  def get_adjacent_books(_access, %{series_id: _series_id, issue_number: nil}), do: {nil, nil}
 
-  def get_adjacent_books(%{id: id, series_id: series_id, issue_number: _issue_number}) do
+  def get_adjacent_books(access, %{id: id, series_id: series_id, issue_number: _issue_number}) do
     siblings =
-      from(b in Book,
+      from(b in Access.books(access),
         left_join: c in BookCover,
         on: c.book_id == b.id,
         where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
@@ -201,10 +217,11 @@ defmodule Stashix.Library do
     sort = Keyword.get(opts, :sort, "title_asc")
     limit = Keyword.get(opts, :limit)
     offset = Keyword.get(opts, :offset, 0)
+    access = access!(opts)
 
     query =
-      from s in Series,
-        left_join: b in Book,
+      from s in Access.series(access),
+        left_join: b in ^Access.books(access),
         on: b.series_id == s.id and is_nil(b.deleted_at),
         where: s.library_id == ^library_id and is_nil(s.deleted_at),
         group_by: s.id,
@@ -223,22 +240,32 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes()
+    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes(access)
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
 
-  def get_series_with_books(id) do
+  @doc "Series by id, raising `Ecto.NoResultsError` unless `access` can see it."
+  def get_series!(access, id), do: Repo.get!(Access.series(access), id)
+
+  def get_series_with_books(access, id) do
     books_query =
-      from(b in Book,
+      from(b in Access.books(access),
         where: is_nil(b.deleted_at),
         order_by: [asc: b.issue_number]
       )
 
-    Repo.get!(Series, id) |> Repo.preload([:publishers, books: {books_query, [:cover]}])
+    get_series!(access, id) |> Repo.preload([:publishers, books: {books_query, [:cover]}])
   end
 
-  def update_progress(user_id, book_id, page) do
+  @doc "Saves reading progress; `{:error, :not_found}` unless `access` can see the book."
+  def update_progress(access, user_id, book_id, page) do
+    if Repo.exists?(from(b in Access.books(access), where: b.id == ^book_id)),
+      do: put_progress(user_id, book_id, page),
+      else: {:error, :not_found}
+  end
+
+  defp put_progress(user_id, book_id, page) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
 
     Repo.insert(
@@ -268,11 +295,11 @@ defmodule Stashix.Library do
     |> Map.new()
   end
 
-  def in_progress_books(user_id, limit \\ 20) do
+  def in_progress_books(access, user_id, limit \\ 20) do
     results =
       from(rp in ReadingProgress,
         where: rp.user_id == ^user_id and rp.current_page > 0,
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == rp.book_id and is_nil(b.deleted_at),
         where: b.page_count == 0 or rp.current_page < b.page_count - 1,
         order_by: [desc: rp.updated_at],
@@ -285,7 +312,7 @@ defmodule Stashix.Library do
 
     series_query =
       from s in Series,
-        left_join: b in Book,
+        left_join: b in ^Access.books(access),
         on: b.series_id == s.id and is_nil(b.deleted_at),
         group_by: s.id,
         select: %{s | issue_count: count(b.id)}
@@ -298,11 +325,11 @@ defmodule Stashix.Library do
     end)
   end
 
-  def next_issue_books(user_id, limit \\ 20) do
+  def next_issue_books(access, user_id, limit \\ 20) do
     completed_by_series =
       from(rp in ReadingProgress,
         where: rp.user_id == ^user_id and rp.current_page > 0,
-        join: b in Book,
+        join: b in ^Access.books(access),
         on:
           b.id == rp.book_id and
             is_nil(b.deleted_at) and
@@ -324,7 +351,7 @@ defmodule Stashix.Library do
       series_ids = Enum.map(valid, &elem(&1, 0))
       max_issues = Map.new(valid)
 
-      from(b in Book,
+      from(b in Access.books(access),
         where: b.series_id in ^series_ids and is_nil(b.deleted_at),
         left_join: rp in ReadingProgress,
         on: rp.book_id == b.id and rp.user_id == ^user_id,
@@ -346,7 +373,7 @@ defmodule Stashix.Library do
     limit = Keyword.get(opts, :limit, 50)
     offset = Keyword.get(opts, :offset, 0)
 
-    from(b in Book,
+    from(b in Access.books(access!(opts)),
       where:
         fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
           is_nil(b.deleted_at),
@@ -360,9 +387,10 @@ defmodule Stashix.Library do
 
   def search_all(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 20)
+    access = access!(opts)
 
     issues =
-      from(b in Book,
+      from(b in Access.books(access),
         where:
           fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
             is_nil(b.deleted_at) and b.type == "issue",
@@ -373,7 +401,7 @@ defmodule Stashix.Library do
       |> Repo.all()
 
     books =
-      from(b in Book,
+      from(b in Access.books(access),
         where:
           fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
             is_nil(b.deleted_at) and b.type == "standalone",
@@ -386,8 +414,8 @@ defmodule Stashix.Library do
     pattern = "%#{String.replace(query_string, "%", "\\%")}%"
 
     series =
-      from(s in Series,
-        left_join: b in Book,
+      from(s in Access.series(access),
+        left_join: b in ^Access.books(access),
         on: b.series_id == s.id and is_nil(b.deleted_at),
         where: ilike(s.name, ^pattern) and is_nil(s.deleted_at),
         group_by: s.id,
@@ -396,7 +424,7 @@ defmodule Stashix.Library do
         limit: ^limit
       )
       |> Repo.all()
-      |> attach_series_blurhashes()
+      |> attach_series_blurhashes(access)
 
     %{series: series, issues: issues, books: books}
   end
@@ -422,7 +450,7 @@ defmodule Stashix.Library do
   def search_filtered_books(filters, opts \\ []) do
     limit = Keyword.get(opts, :limit, 48)
     offset = Keyword.get(opts, :offset, 0)
-    base = filtered_books_query(filters)
+    base = filtered_books_query(filters, access!(opts))
 
     total = Repo.aggregate(base, :count, :id)
 
@@ -440,13 +468,14 @@ defmodule Stashix.Library do
   def search_filtered_series(filters, opts \\ []) do
     limit = Keyword.get(opts, :limit, 48)
     offset = Keyword.get(opts, :offset, 0)
-    base = filtered_series_query(filters)
+    access = access!(opts)
+    base = filtered_series_query(filters, access)
 
     total = Repo.aggregate(base, :count, :id)
 
     series =
       from([series: s] in base,
-        left_join: b in Book,
+        left_join: b in ^Access.books(access),
         on: b.series_id == s.id and is_nil(b.deleted_at),
         group_by: s.id,
         select: %{s | issue_count: count(b.id)},
@@ -455,7 +484,7 @@ defmodule Stashix.Library do
       )
       |> sort_filtered_series(filters)
       |> Repo.all()
-      |> attach_series_blurhashes()
+      |> attach_series_blurhashes(access)
 
     {series, total}
   end
@@ -464,8 +493,8 @@ defmodule Stashix.Library do
   `[{year, book_count}]` for every release year that has books, ascending.
   Year is the book's year, falling back to its cover date.
   """
-  def book_year_counts do
-    from(b in Book,
+  def book_year_counts(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at),
       where: not is_nil(fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date)),
       group_by: fragment("1"),
@@ -485,13 +514,14 @@ defmodule Stashix.Library do
     term = String.trim(term)
     limit = Keyword.get(opts, :limit, 8)
     exclude = Keyword.get(opts, :exclude, [])
+    access = access!(opts)
 
     if term == "" do
       []
     else
       from(cr in Stashix.Library.Creator,
         join: c in assoc(cr, :credits),
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == c.book_id and is_nil(b.deleted_at),
         where: ilike(cr.name, ^like_pattern(term)) and cr.id not in ^exclude,
         group_by: cr.id,
@@ -519,9 +549,9 @@ defmodule Stashix.Library do
     ids |> Enum.map(&by_id[&1]) |> Enum.reject(&is_nil/1)
   end
 
-  def list_genre_names do
+  def list_genre_names(access) do
     from(g in Stashix.Library.BookGenre,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: g.book_id == b.id and is_nil(b.deleted_at),
       distinct: true,
       order_by: [asc: g.name],
@@ -530,8 +560,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  defp filtered_books_query(filters) do
-    query = from(b in Book, as: :book, where: is_nil(b.deleted_at))
+  defp filtered_books_query(filters, access) do
+    query = from(b in Access.books(access), as: :book, where: is_nil(b.deleted_at))
 
     query =
       case filters[:q] do
@@ -728,8 +758,8 @@ defmodule Stashix.Library do
     end
   end
 
-  defp filtered_series_query(filters) do
-    query = from(s in Series, as: :series, where: is_nil(s.deleted_at))
+  defp filtered_series_query(filters, access) do
+    query = from(s in Access.series(access), as: :series, where: is_nil(s.deleted_at))
 
     query =
       case filters[:q] do
@@ -737,7 +767,7 @@ defmodule Stashix.Library do
           pattern = like_pattern(q)
 
           credited_book =
-            from(b in Book,
+            from(b in Access.books(access),
               as: :book,
               where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
               where: exists(credit_match_query(name_pattern: pattern)),
@@ -770,7 +800,7 @@ defmodule Stashix.Library do
 
     if Enum.any?(book_filters, fn {k, v} -> k != :creator_match and v not in [nil, []] end) do
       book_query =
-        from(b in Book,
+        from(b in Access.books(access),
           as: :book,
           where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
           select: 1
@@ -794,8 +824,8 @@ defmodule Stashix.Library do
     end
   end
 
-  def get_series_cover(series_id) do
-    series = Repo.get!(Series, series_id)
+  def get_series_cover(access, series_id) do
+    series = get_series!(access, series_id)
 
     folder_cover =
       series.path &&
@@ -806,7 +836,7 @@ defmodule Stashix.Library do
 
     folder_cover ||
       from(bc in BookCover,
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == bc.book_id,
         where: b.series_id == ^series_id and is_nil(b.deleted_at),
         order_by: [asc_nulls_last: b.issue_number, asc: b.inserted_at],
@@ -1017,8 +1047,38 @@ defmodule Stashix.Library do
 
   def get_publisher!(id), do: Repo.get!(Publisher, id)
 
-  def get_publisher_with_aliases!(id) do
-    Repo.get!(Publisher, id) |> Repo.preload([:aliases, :canonical])
+  def get_publisher_with_aliases!(access, id) do
+    Repo.get!(visible_publishers(access), id) |> Repo.preload([:aliases, :canonical])
+  end
+
+  # Publishers credited on a book or series `access` can see, plus the
+  # canonical publishers of those (so a master shows when only an alias is used).
+  defp visible_publishers(%Access{all?: true}), do: from(p in Publisher)
+
+  defp visible_publishers(access) do
+    book_pubs =
+      from(bp in "book_publishers",
+        join: b in ^Access.books(access),
+        on: b.id == bp.book_id and is_nil(b.deleted_at),
+        select: type(bp.publisher_id, :binary_id)
+      )
+
+    series_pubs =
+      from(sp in "series_publishers",
+        join: s in subquery(Access.series(access)),
+        on: s.id == sp.series_id and is_nil(s.deleted_at),
+        select: type(sp.publisher_id, :binary_id)
+      )
+
+    used = union(book_pubs, ^series_pubs)
+
+    masters =
+      from(p in Publisher,
+        where: p.id in subquery(used) and not is_nil(p.canonical_publisher_id),
+        select: p.canonical_publisher_id
+      )
+
+    from(p in Publisher, where: p.id in subquery(used) or p.id in subquery(masters))
   end
 
   def set_publisher_alias(alias_id, master_id) when alias_id == master_id,
@@ -1052,10 +1112,11 @@ defmodule Stashix.Library do
     sort = Keyword.get(opts, :sort, "title_asc")
     limit = Keyword.get(opts, :limit, 48)
     offset = Keyword.get(opts, :offset, 0)
+    access = access!(opts)
     pub_bins = publisher_id_bins(publisher_id)
 
     query =
-      from s in Series,
+      from s in Access.series(access),
         join: sp in "series_publishers",
         on: sp.series_id == s.id,
         where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
@@ -1073,13 +1134,13 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> attach_series_blurhashes()
+    Repo.all(query) |> attach_series_blurhashes(access)
   end
 
-  def count_publisher_series(publisher_id) do
+  def count_publisher_series(access, publisher_id) do
     pub_bins = publisher_id_bins(publisher_id)
 
-    from(s in Series,
+    from(s in Access.series(access),
       join: sp in "series_publishers",
       on: sp.series_id == s.id,
       where: sp.publisher_id in ^pub_bins and is_nil(s.deleted_at),
@@ -1096,7 +1157,7 @@ defmodule Stashix.Library do
     pub_bins = publisher_id_bins(publisher_id)
 
     query =
-      from b in Book,
+      from b in Access.books(access!(opts)),
         join: bp in "book_publishers",
         on: bp.book_id == b.id,
         where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
@@ -1120,10 +1181,10 @@ defmodule Stashix.Library do
     Repo.all(query)
   end
 
-  def count_publisher_books(publisher_id, type) do
+  def count_publisher_books(access, publisher_id, type) do
     pub_bins = publisher_id_bins(publisher_id)
 
-    from(b in Book,
+    from(b in Access.books(access),
       join: bp in "book_publishers",
       on: bp.book_id == b.id,
       where: bp.publisher_id in ^pub_bins and is_nil(b.deleted_at) and b.type == ^type,
@@ -1132,8 +1193,8 @@ defmodule Stashix.Library do
     |> Repo.aggregate(:count, :id)
   end
 
-  def list_publishers do
-    from(p in Publisher,
+  def list_publishers(access) do
+    from(p in visible_publishers(access),
       where: is_nil(p.canonical_publisher_id) and not p.hidden,
       order_by: [asc: p.name]
     )
@@ -1225,8 +1286,8 @@ defmodule Stashix.Library do
     end)
   end
 
-  def count_publishers do
-    from(p in Publisher, where: is_nil(p.canonical_publisher_id) and not p.hidden)
+  def count_publishers(access) do
+    from(p in visible_publishers(access), where: is_nil(p.canonical_publisher_id) and not p.hidden)
     |> Repo.aggregate(:count, :id)
   end
 
@@ -1234,7 +1295,7 @@ defmodule Stashix.Library do
     limit = Keyword.get(opts, :limit, 24)
     offset = Keyword.get(opts, :offset, 0)
 
-    from(p in Publisher,
+    from(p in visible_publishers(access!(opts)),
       where: is_nil(p.canonical_publisher_id) and not p.hidden,
       order_by: [asc: p.name],
       limit: ^limit,
@@ -1243,9 +1304,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def publisher_stats(publisher_ids) when publisher_ids == [], do: %{}
+  def publisher_stats(_access, publisher_ids) when publisher_ids == [], do: %{}
 
-  def publisher_stats(publisher_ids) do
+  def publisher_stats(access, publisher_ids) do
     alias_rows =
       from(p in Publisher,
         where: p.canonical_publisher_id in ^publisher_ids,
@@ -1269,7 +1330,7 @@ defmodule Stashix.Library do
 
     series_counts =
       from(sp in "series_publishers",
-        join: s in Series,
+        join: s in subquery(Access.series(access)),
         on: s.id == sp.series_id,
         where: sp.publisher_id in ^all_bins and is_nil(s.deleted_at),
         group_by: sp.publisher_id,
@@ -1280,7 +1341,7 @@ defmodule Stashix.Library do
 
     books_counts =
       from(bp in "book_publishers",
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == bp.book_id,
         where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "standalone",
         group_by: bp.publisher_id,
@@ -1291,7 +1352,7 @@ defmodule Stashix.Library do
 
     issues_counts =
       from(bp in "book_publishers",
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == bp.book_id,
         where: bp.publisher_id in ^all_bins and is_nil(b.deleted_at) and b.type == "issue",
         group_by: bp.publisher_id,
@@ -1310,9 +1371,9 @@ defmodule Stashix.Library do
     end)
   end
 
-  def publisher_sample_covers(publisher_ids) when publisher_ids == [], do: %{}
+  def publisher_sample_covers(_access, publisher_ids) when publisher_ids == [], do: %{}
 
-  def publisher_sample_covers(publisher_ids) do
+  def publisher_sample_covers(access, publisher_ids) do
     alias_rows =
       from(p in Publisher,
         where: p.canonical_publisher_id in ^publisher_ids,
@@ -1328,7 +1389,7 @@ defmodule Stashix.Library do
     all_bins = Map.keys(id_to_master) |> Enum.map(&Ecto.UUID.dump!/1)
 
     from(bp in "book_publishers",
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: b.id == bp.book_id,
       join: c in BookCover,
       on: c.book_id == b.id,
@@ -1451,11 +1512,11 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def series_cover_blurhash_map([]), do: %{}
+  def series_cover_blurhash_map(_access, []), do: %{}
 
-  def series_cover_blurhash_map(series_ids) do
+  def series_cover_blurhash_map(access, series_ids) do
     from(bc in BookCover,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: b.id == bc.book_id and is_nil(b.deleted_at),
       where: b.series_id in ^series_ids,
       distinct: [asc: b.series_id],
@@ -1466,11 +1527,11 @@ defmodule Stashix.Library do
     |> Map.new()
   end
 
-  defp attach_series_blurhashes([]), do: []
+  defp attach_series_blurhashes([], _access), do: []
 
-  defp attach_series_blurhashes(series) do
+  defp attach_series_blurhashes(series, access) do
     ids = Enum.map(series, & &1.id)
-    bh_map = series_cover_blurhash_map(ids)
+    bh_map = series_cover_blurhash_map(access, ids)
     Enum.map(series, fn s -> %{s | cover_blurhash: Map.get(bh_map, s.id)} end)
   end
 
@@ -1497,9 +1558,9 @@ defmodule Stashix.Library do
     end
   end
 
-  def count_books(library_id) do
+  def count_books(access, library_id) do
     Repo.aggregate(
-      from(b in Book,
+      from(b in Access.books(access),
         where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
       ),
       :count,
@@ -1507,17 +1568,17 @@ defmodule Stashix.Library do
     )
   end
 
-  def count_series(library_id) do
+  def count_series(access, library_id) do
     Repo.aggregate(
-      from(s in Series, where: s.library_id == ^library_id and is_nil(s.deleted_at)),
+      from(s in Access.series(access), where: s.library_id == ^library_id and is_nil(s.deleted_at)),
       :count,
       :id
     )
   end
 
-  def count_issues(library_id) do
+  def count_issues(access, library_id) do
     Repo.aggregate(
-      from(b in Book,
+      from(b in Access.books(access),
         where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
       ),
       :count,
@@ -1525,10 +1586,10 @@ defmodule Stashix.Library do
     )
   end
 
-  def total_size_for_series(series_id) do
+  def total_size_for_series(access, series_id) do
     result =
       from(bf in BookFile,
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == bf.book_id,
         where: b.series_id == ^series_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
       )
@@ -1541,10 +1602,10 @@ defmodule Stashix.Library do
     end
   end
 
-  def total_size(library_id) do
+  def total_size(access, library_id) do
     result =
       from(bf in BookFile,
-        join: b in Book,
+        join: b in ^Access.books(access),
         on: b.id == bf.book_id,
         where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
       )
@@ -1557,9 +1618,9 @@ defmodule Stashix.Library do
     end
   end
 
-  def recent_books(library_id, limit \\ 10, type \\ nil) do
+  def recent_books(access, library_id, limit \\ 10, type \\ nil) do
     query =
-      from b in Book,
+      from b in Access.books(access),
         where: b.library_id == ^library_id and is_nil(b.deleted_at),
         order_by: [desc: b.inserted_at],
         limit: ^limit,
@@ -1571,9 +1632,9 @@ defmodule Stashix.Library do
     Repo.all(query)
   end
 
-  def recent_series(library_id, limit \\ 10) do
-    from(s in Series,
-      left_join: b in Book,
+  def recent_series(access, library_id, limit \\ 10) do
+    from(s in Access.series(access),
+      left_join: b in ^Access.books(access),
       on: b.series_id == s.id and is_nil(b.deleted_at),
       where: s.library_id == ^library_id and is_nil(s.deleted_at),
       group_by: s.id,
@@ -1582,11 +1643,11 @@ defmodule Stashix.Library do
       select: %{s | issue_count: count(b.id)}
     )
     |> Repo.all()
-    |> attach_series_blurhashes()
+    |> attach_series_blurhashes(access)
   end
 
-  def recent_issues(library_id, limit \\ 10) do
-    from(b in Book,
+  def recent_issues(access, library_id, limit \\ 10) do
+    from(b in Access.books(access),
       where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue",
       order_by: [desc: b.inserted_at],
       limit: ^limit,
@@ -1660,7 +1721,7 @@ defmodule Stashix.Library do
     library_id = Keyword.get(opts, :library_id)
 
     query =
-      from b in Book,
+      from b in Access.books(access!(opts)),
         left_join: s in assoc(b, :series),
         left_join: c in assoc(b, :cover),
         where: is_nil(b.deleted_at) and b.type == "issue",
@@ -1781,15 +1842,11 @@ defmodule Stashix.Library do
     offset = Keyword.get(opts, :offset, 0)
     sort = Keyword.get(opts, :sort, "title_asc")
     library_id = Keyword.get(opts, :library_id)
+    access = access!(opts)
 
     query =
       from s in Series,
-        where:
-          is_nil(s.deleted_at) and
-            fragment(
-              "EXISTS (SELECT 1 FROM books WHERE books.series_id = ? AND books.deleted_at IS NULL AND books.type = 'issue')",
-              s.id
-            ),
+        where: is_nil(s.deleted_at) and s.id in subquery(series_with_issues(access)),
         limit: ^limit,
         offset: ^offset
 
@@ -1806,7 +1863,7 @@ defmodule Stashix.Library do
       end
 
     issues_query =
-      from b in Book,
+      from b in Access.books(access),
         where: is_nil(b.deleted_at) and b.type == "issue",
         order_by: [asc_nulls_last: b.issue_number, asc: b.title]
 
@@ -1818,22 +1875,24 @@ defmodule Stashix.Library do
 
     query =
       from s in Series,
-        where:
-          is_nil(s.deleted_at) and
-            fragment(
-              "EXISTS (SELECT 1 FROM books WHERE books.series_id = ? AND books.deleted_at IS NULL AND books.type = 'issue')",
-              s.id
-            )
+        where: is_nil(s.deleted_at) and s.id in subquery(series_with_issues(access!(opts)))
 
     query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
     Repo.aggregate(query, :count, :id)
+  end
+
+  defp series_with_issues(access) do
+    from(b in Access.books(access),
+      where: is_nil(b.deleted_at) and b.type == "issue" and not is_nil(b.series_id),
+      select: b.series_id
+    )
   end
 
   def list_ungrouped_issues(opts \\ []) do
     library_id = Keyword.get(opts, :library_id)
 
     query =
-      from b in Book,
+      from b in Access.books(access!(opts)),
         where: is_nil(b.deleted_at) and b.type == "issue" and is_nil(b.series_id),
         order_by: [asc: b.title],
         preload: [:cover]
@@ -1850,7 +1909,7 @@ defmodule Stashix.Library do
     library_id = Keyword.get(opts, :library_id)
 
     query =
-      from b in Book,
+      from b in Access.books(access!(opts)),
         where: is_nil(b.deleted_at),
         preload: [:cover, :series],
         limit: ^limit,
@@ -1878,7 +1937,7 @@ defmodule Stashix.Library do
     type = Keyword.get(opts, :type)
     library_id = Keyword.get(opts, :library_id)
 
-    query = from b in Book, where: is_nil(b.deleted_at)
+    query = from b in Access.books(access!(opts)), where: is_nil(b.deleted_at)
     query = if type, do: where(query, [b], b.type == ^type), else: query
     query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 
@@ -1890,10 +1949,11 @@ defmodule Stashix.Library do
     offset = Keyword.get(opts, :offset, 0)
     sort = Keyword.get(opts, :sort, "title_asc")
     library_id = Keyword.get(opts, :library_id)
+    access = access!(opts)
 
     query =
-      from s in Series,
-        left_join: b in Book,
+      from s in Access.series(access),
+        left_join: b in ^Access.books(access),
         on: b.series_id == s.id and is_nil(b.deleted_at),
         where: is_nil(s.deleted_at),
         group_by: s.id,
@@ -1913,13 +1973,13 @@ defmodule Stashix.Library do
         _ -> order_by(query, [s], asc: s.name)
       end
 
-    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes()
+    Repo.all(query) |> Repo.preload(:publishers) |> attach_series_blurhashes(access)
   end
 
   def count_all_series(opts \\ []) do
     library_id = Keyword.get(opts, :library_id)
 
-    query = from s in Series, where: is_nil(s.deleted_at)
+    query = from s in Access.series(access!(opts)), where: is_nil(s.deleted_at)
     query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
 
     Repo.aggregate(query, :count, :id)
@@ -2093,10 +2153,10 @@ defmodule Stashix.Library do
     result
   end
 
-  # Stats queries (global, across all libraries)
+  # Stats queries (across the libraries `access` can see)
 
-  def stats_books_by_year do
-    from(b in Book,
+  def stats_books_by_year(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at) and not is_nil(b.year),
       group_by: b.year,
       order_by: b.year,
@@ -2105,8 +2165,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_books_by_type do
-    from(b in Book,
+  def stats_books_by_type(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at),
       group_by: b.type,
       select: {b.type, count(b.id)}
@@ -2114,8 +2174,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_added_by_month do
-    from(b in Book,
+  def stats_added_by_month(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at),
       group_by: fragment("to_char(?, 'YYYY-MM')", b.inserted_at),
       order_by: fragment("to_char(?, 'YYYY-MM')", b.inserted_at),
@@ -2124,9 +2184,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_reading_progress(user_id) do
+  def stats_reading_progress(access, user_id) do
     total =
-      from(b in Book, where: is_nil(b.deleted_at), select: count(b.id))
+      from(b in Access.books(access), where: is_nil(b.deleted_at), select: count(b.id))
       |> Repo.one()
 
     if total == 0 do
@@ -2134,7 +2194,7 @@ defmodule Stashix.Library do
     else
       progress_rows =
         from(rp in ReadingProgress,
-          join: b in Book,
+          join: b in ^Access.books(access),
           on: rp.book_id == b.id,
           where: rp.user_id == ^user_id and is_nil(b.deleted_at),
           select: {rp.current_page, b.page_count}
@@ -2157,18 +2217,21 @@ defmodule Stashix.Library do
     end
   end
 
-  def stats_top_series(limit \\ 10) do
+  def stats_top_series(access, limit \\ 10) do
     from(s in Series,
-      where: is_nil(s.deleted_at) and s.issue_count > 0,
-      order_by: [desc: s.issue_count],
+      join: b in ^Access.books(access),
+      on: b.series_id == s.id and is_nil(b.deleted_at),
+      where: is_nil(s.deleted_at),
+      group_by: [s.id, s.name],
+      order_by: [desc: count(b.id)],
       limit: ^limit,
-      select: {s.name, s.issue_count}
+      select: {s.name, count(b.id)}
     )
     |> Repo.all()
   end
 
-  def stats_series_by_format do
-    from(s in Series,
+  def stats_series_by_format(access) do
+    from(s in Access.series(access),
       where: is_nil(s.deleted_at) and not is_nil(s.format),
       group_by: s.format,
       select: {s.format, count(s.id)}
@@ -2176,9 +2239,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_file_size_by_publisher do
+  def stats_file_size_by_publisher(access) do
     from(bf in BookFile,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bf.book_id == b.id and is_nil(b.deleted_at),
       join: bp in "book_publishers",
       on: bp.book_id == b.id,
@@ -2192,9 +2255,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_books_by_file_format do
+  def stats_books_by_file_format(access) do
     from(bf in BookFile,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bf.book_id == b.id,
       where: is_nil(bf.deleted_at) and is_nil(b.deleted_at),
       group_by: bf.format,
@@ -2204,8 +2267,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_books_by_language do
-    from(b in Book,
+  def stats_books_by_language(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at) and not is_nil(b.language),
       group_by: fragment("lower(?)", b.language),
       order_by: [desc: count(b.id)],
@@ -2214,8 +2277,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_books_by_age_rating do
-    from(b in Book,
+  def stats_books_by_age_rating(access) do
+    from(b in Access.books(access),
       where: is_nil(b.deleted_at) and not is_nil(b.age_rating),
       group_by: b.age_rating,
       order_by: [desc: count(b.id)],
@@ -2224,9 +2287,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_top_genres(limit \\ 20) do
+  def stats_top_genres(access, limit \\ 20) do
     from(g in Stashix.Library.BookGenre,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: g.book_id == b.id and is_nil(b.deleted_at),
       group_by: g.name,
       order_by: [desc: count(g.id)],
@@ -2236,11 +2299,11 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_top_creators(limit \\ 20) do
+  def stats_top_creators(access, limit \\ 20) do
     from(c in Stashix.Library.Creator,
       join: bc in Stashix.Library.BookCredit,
       on: bc.creator_id == c.id,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bc.book_id == b.id and is_nil(b.deleted_at),
       group_by: c.name,
       order_by: [desc: count(bc.id)],
@@ -2250,9 +2313,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_credits_by_role do
+  def stats_credits_by_role(access) do
     from(bc in Stashix.Library.BookCredit,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bc.book_id == b.id and is_nil(b.deleted_at),
       group_by: bc.role,
       order_by: [desc: count(bc.id)],
@@ -2261,9 +2324,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_top_characters(limit \\ 20) do
+  def stats_top_characters(access, limit \\ 20) do
     from(ch in Stashix.Library.BookCharacter,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: ch.book_id == b.id and is_nil(b.deleted_at),
       group_by: ch.name,
       order_by: [desc: count(ch.id)],
@@ -2273,11 +2336,11 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_top_publishers_by_count(limit \\ 20) do
+  def stats_top_publishers_by_count(access, limit \\ 20) do
     from(p in Publisher,
       join: bp in "book_publishers",
       on: bp.publisher_id == p.id,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bp.book_id == b.id and is_nil(b.deleted_at),
       where: is_nil(p.canonical_publisher_id) and p.hidden == false,
       group_by: [p.id, p.name],
@@ -2288,9 +2351,9 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  def stats_total_pages do
+  def stats_total_pages(access) do
     from(bf in BookFile,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bf.book_id == b.id and is_nil(b.deleted_at),
       where: is_nil(bf.deleted_at),
       select: sum(bf.page_count)
@@ -2298,9 +2361,9 @@ defmodule Stashix.Library do
     |> Repo.one()
   end
 
-  def stats_total_file_size do
+  def stats_total_file_size(access) do
     from(bf in BookFile,
-      join: b in Book,
+      join: b in ^Access.books(access),
       on: bf.book_id == b.id and is_nil(b.deleted_at),
       where: is_nil(bf.deleted_at),
       select: sum(bf.file_size)
@@ -2308,20 +2371,20 @@ defmodule Stashix.Library do
     |> Repo.one()
   end
 
-  def stats_metadata_coverage do
+  def stats_metadata_coverage(access) do
     total =
-      from(b in Book, where: is_nil(b.deleted_at), select: count(b.id))
+      from(b in Access.books(access), where: is_nil(b.deleted_at), select: count(b.id))
       |> Repo.one()
 
     with_summary =
-      from(b in Book,
+      from(b in Access.books(access),
         where: is_nil(b.deleted_at) and not is_nil(b.summary) and b.summary != "",
         select: count(b.id)
       )
       |> Repo.one()
 
     with_genres =
-      from(b in Book,
+      from(b in Access.books(access),
         join: g in Stashix.Library.BookGenre,
         on: g.book_id == b.id,
         where: is_nil(b.deleted_at),
@@ -2330,7 +2393,7 @@ defmodule Stashix.Library do
       |> Repo.one()
 
     with_credits =
-      from(b in Book,
+      from(b in Access.books(access),
         join: bc in Stashix.Library.BookCredit,
         on: bc.book_id == b.id,
         where: is_nil(b.deleted_at),
@@ -2339,7 +2402,7 @@ defmodule Stashix.Library do
       |> Repo.one()
 
     with_external_ids =
-      from(b in Book,
+      from(b in Access.books(access),
         join: ei in Stashix.Library.BookExternalId,
         on: ei.book_id == b.id,
         where: is_nil(b.deleted_at),

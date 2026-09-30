@@ -8,13 +8,15 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
+  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    series = Library.get_series_with_books(id)
-    library = Library.get_library!(series.library_id)
+    series = Library.get_series_with_books(socket.assigns.access, id)
+    library = Library.get_readable_library!(socket.assigns.access, series.library_id)
 
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
-    total_size = Library.total_size_for_series(series.id)
+    total_size = Library.total_size_for_series(socket.assigns.access, series.id)
     sort = "issue_asc"
     books = sort_books(series.books, sort)
     cover_book = List.first(books)
@@ -46,7 +48,7 @@ defmodule StashixWeb.SeriesLive do
        show_edit_dialog: false,
        show_identify_dialog: false,
        edit_form: nil,
-       series_details: Library.series_details(series.id),
+       series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers()
      )}
   end
@@ -110,6 +112,13 @@ defmodule StashixWeb.SeriesLive do
   end
 
   @impl true
+  # Metadata editing and rescans are admin-only; the UI hides them for other
+  # users, and this drops the events if sent anyway.
+  def handle_event(event, _params, %{assigns: %{current_user: %{role: role}}} = socket)
+      when event in @admin_events and role != :admin do
+    {:noreply, socket}
+  end
+
   def handle_event("sort", %{"value" => sort}, socket) do
     {:noreply, assign(socket, sort: sort, books: sort_books(socket.assigns.series.books, sort))}
   end
@@ -137,7 +146,7 @@ defmodule StashixWeb.SeriesLive do
           all_params["age_rating_only_unknown"] == "true"
         )
 
-        series = Library.get_series_with_books(updated_series.id)
+        series = Library.get_series_with_books(socket.assigns.access, updated_series.id)
         books = sort_books(series.books, socket.assigns.sort)
 
         {:noreply,
@@ -191,12 +200,12 @@ defmodule StashixWeb.SeriesLive do
 
   @impl true
   def handle_info({:scan_progress, %{done: true}}, socket) do
-    series = Library.get_series_with_books(socket.assigns.series.id)
+    series = Library.get_series_with_books(socket.assigns.access, socket.assigns.series.id)
     books = sort_books(series.books, socket.assigns.sort)
     book_ids = Enum.map(series.books, & &1.id)
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
-    total_size = Library.total_size_for_series(series.id)
+    total_size = Library.total_size_for_series(socket.assigns.access, series.id)
 
     {:noreply,
      assign(socket,
@@ -213,19 +222,9 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_info({:cover_updated, book_id}, socket) do
-    updated = Library.get_book_with_series(book_id)
-
-    books =
-      Enum.map(socket.assigns.books, fn b ->
-        if b.id == book_id, do: updated, else: b
-      end)
-
-    cover_book =
-      if socket.assigns.cover_book && socket.assigns.cover_book.id == book_id,
-        do: updated,
-        else: socket.assigns.cover_book
-
-    {:noreply, assign(socket, books: books, cover_book: cover_book)}
+    if Enum.any?(socket.assigns.books, &(&1.id == book_id)),
+      do: {:noreply, replace_book_cover(socket, book_id)},
+      else: {:noreply, socket}
   end
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
@@ -250,8 +249,24 @@ defmodule StashixWeb.SeriesLive do
      |> push_patch(to: ~p"/series/#{socket.assigns.series.id}")}
   end
 
+  defp replace_book_cover(socket, book_id) do
+    updated = Library.get_book_with_series(socket.assigns.access, book_id)
+
+    books =
+      Enum.map(socket.assigns.books, fn b ->
+        if b.id == book_id, do: updated, else: b
+      end)
+
+    cover_book =
+      if socket.assigns.cover_book && socket.assigns.cover_book.id == book_id,
+        do: updated,
+        else: socket.assigns.cover_book
+
+    assign(socket, books: books, cover_book: cover_book)
+  end
+
   defp reload_series(socket) do
-    series = Library.get_series_with_books(socket.assigns.series.id)
+    series = Library.get_series_with_books(socket.assigns.access, socket.assigns.series.id)
     books = sort_books(series.books, socket.assigns.sort)
 
     assign(socket,
@@ -259,7 +274,7 @@ defmodule StashixWeb.SeriesLive do
       books: books,
       page_title: series.name,
       summary_info: derive_summary(series, books),
-      series_details: Library.series_details(series.id)
+      series_details: Library.series_details(socket.assigns.access, series.id)
     )
   end
 

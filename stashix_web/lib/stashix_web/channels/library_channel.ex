@@ -1,7 +1,8 @@
 defmodule StashixWeb.LibraryChannel do
   use StashixWeb, :channel
 
-  alias Stashix.Library
+  alias Stashix.{Accounts, Library}
+  alias Stashix.Library.Access
 
   @impl true
   def join("library:" <> user_id, _params, socket) do
@@ -15,8 +16,9 @@ defmodule StashixWeb.LibraryChannel do
   @impl true
   def handle_in("update_progress", %{"book_id" => book_id, "page" => page}, socket) do
     user_id = socket.assigns.user_id
+    access = Access.for_user(Accounts.get_user(user_id))
 
-    case Library.update_progress(user_id, book_id, page) do
+    case Library.update_progress(access, user_id, book_id, page) do
       {:ok, _} ->
         {:reply, {:ok, %{page: page}}, socket}
 

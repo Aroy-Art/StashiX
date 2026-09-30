@@ -4,6 +4,7 @@ defmodule StashixWeb.Live.Hooks do
 
   alias Stashix.Auth.TokenHelper
   alias Stashix.Library
+  alias Stashix.Library.Access
 
   def on_mount(:require_auth, _params, session, socket) do
     case authenticate_from_session(session) do
@@ -22,6 +23,7 @@ defmodule StashixWeb.Live.Hooks do
           socket
           |> assign(
             current_user: user,
+            access: Access.for_user(user),
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             navbar_search_query: "",
@@ -58,6 +60,7 @@ defmodule StashixWeb.Live.Hooks do
           socket
           |> assign(
             current_user: user,
+            access: Access.for_user(user),
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             navbar_search_query: "",
@@ -105,7 +108,8 @@ defmodule StashixWeb.Live.Hooks do
   defp handle_navbar_search("navbar_search", %{"value" => q}, socket) do
     results =
       if String.length(q) >= 2 do
-        %{series: series, issues: issues, books: books} = Library.search_all(q, limit: 12)
+        %{series: series, issues: issues, books: books} =
+          Library.search_all(q, limit: 12, access: socket.assigns.access)
 
         flat =
           Enum.map(series, fn s ->
@@ -151,6 +155,11 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_navbar_search(_event, _params, socket), do: {:cont, socket}
+
+  defp handle_sidebar_scan(event, _params, %{assigns: %{current_user: %{role: role}}} = socket)
+       when event in ["sidebar_scan", "sidebar_force_scan"] and role != :admin do
+    {:halt, socket}
+  end
 
   defp handle_sidebar_scan("sidebar_scan", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)

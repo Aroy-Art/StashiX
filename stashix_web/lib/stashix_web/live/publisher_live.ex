@@ -38,14 +38,15 @@ defmodule StashixWeb.PublisherLive do
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
-    publisher = Library.get_publisher_with_aliases!(id)
+    publisher = Library.get_publisher_with_aliases!(socket.assigns.access, id)
 
     if publisher.canonical_publisher_id do
       {:ok, push_navigate(socket, to: ~p"/publisher/#{publisher.canonical_publisher_id}")}
     else
-      series_count = Library.count_publisher_series(id)
-      books_count = Library.count_publisher_books(id, "standalone")
-      issues_count = Library.count_publisher_books(id, "issue")
+      access = socket.assigns.access
+      series_count = Library.count_publisher_series(access, id)
+      books_count = Library.count_publisher_books(access, id, "standalone")
+      issues_count = Library.count_publisher_books(access, id, "issue")
 
       {:ok,
        assign(socket,
@@ -72,13 +73,14 @@ defmodule StashixWeb.PublisherLive do
     sort = params["sort"] || "title_asc"
     pub_id = socket.assigns.publisher.id
     user_id = socket.assigns.current_user.id
+    access = socket.assigns.access
 
     socket =
       case socket.assigns.live_action do
         :show ->
-          recent_series = Library.list_publisher_series(pub_id, limit: 20)
-          recent_books = Library.list_publisher_books(pub_id, type: "standalone", limit: 20)
-          recent_issues = Library.list_publisher_books(pub_id, type: "issue", limit: 20)
+          recent_series = Library.list_publisher_series(pub_id, limit: 20, access: access)
+          recent_books = Library.list_publisher_books(pub_id, type: "standalone", limit: 20, access: access)
+          recent_issues = Library.list_publisher_books(pub_id, type: "issue", limit: 20, access: access)
 
           assign(socket,
             recent_series: recent_series,
@@ -89,7 +91,7 @@ defmodule StashixWeb.PublisherLive do
 
         :series ->
           opts = [sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
-          items = Library.list_publisher_series(pub_id, opts)
+          items = Library.list_publisher_series(pub_id, [access: access] ++ opts)
           total = socket.assigns.series_count
 
           assign(socket,
@@ -111,7 +113,7 @@ defmodule StashixWeb.PublisherLive do
             offset: (page - 1) * @page_size
           ]
 
-          items = Library.list_publisher_books(pub_id, opts)
+          items = Library.list_publisher_books(pub_id, [access: access] ++ opts)
           total = socket.assigns.books_count
           progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
 
@@ -128,7 +130,7 @@ defmodule StashixWeb.PublisherLive do
 
         :issues ->
           opts = [type: "issue", sort: sort, limit: @page_size, offset: (page - 1) * @page_size]
-          items = Library.list_publisher_books(pub_id, opts)
+          items = Library.list_publisher_books(pub_id, [access: access] ++ opts)
           total = socket.assigns.issues_count
           progress_map = Library.progress_map(user_id, Enum.map(items, & &1.id))
 

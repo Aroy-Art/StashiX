@@ -8,24 +8,25 @@ defmodule StashixWeb.StatsLive do
   @impl true
   def mount(_params, _session, socket) do
     user_id = socket.assigns.current_user.id
+    access = socket.assigns.access
 
-    by_year = Library.stats_books_by_year()
-    by_type = Library.stats_books_by_type()
-    by_month = Library.stats_added_by_month()
-    reading = Library.stats_reading_progress(user_id)
-    top_series = Library.stats_top_series(15)
-    by_file_format = Library.stats_books_by_file_format()
-    size_by_publisher = Library.stats_file_size_by_publisher()
-    by_language = Library.stats_books_by_language()
-    by_age_rating = Library.stats_books_by_age_rating()
-    top_genres = Library.stats_top_genres(20)
-    top_creators = Library.stats_top_creators(20)
-    credits_by_role = Library.stats_credits_by_role()
-    top_characters = Library.stats_top_characters(20)
-    top_publishers = Library.stats_top_publishers_by_count(20)
-    total_pages = Library.stats_total_pages()
-    total_file_size = Library.stats_total_file_size()
-    metadata = Library.stats_metadata_coverage()
+    by_year = Library.stats_books_by_year(access)
+    by_type = Library.stats_books_by_type(access)
+    by_month = Library.stats_added_by_month(access)
+    reading = Library.stats_reading_progress(access, user_id)
+    top_series = Library.stats_top_series(access, 15)
+    by_file_format = Library.stats_books_by_file_format(access)
+    size_by_publisher = Library.stats_file_size_by_publisher(access)
+    by_language = Library.stats_books_by_language(access)
+    by_age_rating = Library.stats_books_by_age_rating(access)
+    top_genres = Library.stats_top_genres(access, 20)
+    top_creators = Library.stats_top_creators(access, 20)
+    credits_by_role = Library.stats_credits_by_role(access)
+    top_characters = Library.stats_top_characters(access, 20)
+    top_publishers = Library.stats_top_publishers_by_count(access, 20)
+    total_pages = Library.stats_total_pages(access)
+    total_file_size = Library.stats_total_file_size(access)
+    metadata = Library.stats_metadata_coverage(access)
 
     {:ok,
      assign(socket,

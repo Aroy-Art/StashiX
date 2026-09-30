@@ -43,7 +43,7 @@ defmodule StashixWeb.SearchLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    year_counts = Library.book_year_counts()
+    year_counts = Library.book_year_counts(socket.assigns.access)
 
     {:ok,
      assign(socket,
@@ -56,8 +56,8 @@ defmodule StashixWeb.SearchLive do
        series_total: 0,
        total_pages: 1,
        progress_map: %{},
-       publishers: Library.list_publishers(),
-       genres: Library.list_genre_names(),
+       publishers: Library.list_publishers(socket.assigns.access),
+       genres: Library.list_genre_names(socket.assigns.access),
        year_counts: year_counts,
        years: Enum.map(year_counts, &elem(&1, 0)),
        types: @types,
@@ -100,7 +100,11 @@ defmodule StashixWeb.SearchLive do
     {:noreply,
      assign(socket,
        creator_query: query,
-       creator_suggestions: Library.search_creators(query, exclude: socket.assigns.params["creator"])
+       creator_suggestions:
+         Library.search_creators(query,
+           exclude: socket.assigns.params["creator"],
+           access: socket.assigns.access
+         )
      )}
   end
 
@@ -271,6 +275,7 @@ defmodule StashixWeb.SearchLive do
     user_id = socket.assigns.current_user.id
     filters = build_filters(params, user_id)
     offset = (page - 1) * @page_size
+    access = socket.assigns.access
 
     {books, books_total} =
       case params["type"] do
@@ -280,23 +285,32 @@ defmodule StashixWeb.SearchLive do
         "all" ->
           Library.search_filtered_books(Map.put(filters, :types, ["issue", "standalone"]),
             limit: @page_size,
-            offset: offset
+            offset: offset,
+            access: access
           )
 
         type ->
           Library.search_filtered_books(Map.put(filters, :types, [type]),
             limit: @page_size,
-            offset: offset
+            offset: offset,
+            access: access
           )
       end
 
     # Read status is per-book, so it can't meaningfully narrow series.
     {series, series_total} =
       cond do
-        params["status"] -> {[], 0}
-        params["type"] == "series" -> Library.search_filtered_series(filters, limit: @page_size, offset: offset)
-        params["type"] == "all" and page == 1 -> Library.search_filtered_series(filters, limit: @series_preview)
-        true -> {[], 0}
+        params["status"] ->
+          {[], 0}
+
+        params["type"] == "series" ->
+          Library.search_filtered_series(filters, limit: @page_size, offset: offset, access: access)
+
+        params["type"] == "all" and page == 1 ->
+          Library.search_filtered_series(filters, limit: @series_preview, access: access)
+
+        true ->
+          {[], 0}
       end
 
     paged_total = if params["type"] == "series", do: series_total, else: books_total

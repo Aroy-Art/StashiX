@@ -9,7 +9,7 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
-    book = Library.get_book!(id) |> Stashix.Repo.preload(:files)
+    book = Library.get_book!(socket.assigns.access, id) |> Stashix.Repo.preload(:files)
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
 
@@ -117,7 +117,7 @@ defmodule StashixWeb.ReaderLive do
     page = socket.assigns.current_page
 
     if page > 0 do
-      Library.update_progress(socket.assigns.current_user.id, socket.assigns.book.id, page)
+      Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, page)
     end
 
     {:noreply, assign(socket, :save_timer, nil)}

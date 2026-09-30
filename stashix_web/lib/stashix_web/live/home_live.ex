@@ -8,15 +8,16 @@ defmodule StashixWeb.HomeLive do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
+    access = socket.assigns.access
     libraries = Library.list_libraries(user)
 
-    libraries_data = Enum.map(libraries, &load_library_data/1)
-    continue_reading = Library.in_progress_books(user.id, 20)
-    next_issue = Library.next_issue_books(user.id, 20)
+    libraries_data = Enum.map(libraries, &load_library_data(access, &1))
+    continue_reading = Library.in_progress_books(access, user.id, 20)
+    next_issue = Library.next_issue_books(access, user.id, 20)
 
-    total_books = Library.count_all_books(type: "standalone")
-    total_issues = Library.count_all_books(type: "issue")
-    total_series = Library.count_all_series([])
+    total_books = Library.count_all_books(access: access, type: "standalone")
+    total_issues = Library.count_all_books(access: access, type: "issue")
+    total_series = Library.count_all_series(access: access)
 
     {:ok,
      assign(socket,
@@ -78,20 +79,20 @@ defmodule StashixWeb.HomeLive do
   defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
   defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
-  defp load_library_data(lib) do
-    recent_standalone = Library.recent_books(lib.id, 20, "standalone")
-    recent_issues = Library.recent_issues(lib.id, 20)
+  defp load_library_data(access, lib) do
+    recent_standalone = Library.recent_books(access, lib.id, 20, "standalone")
+    recent_issues = Library.recent_issues(access, lib.id, 20)
     cover_books = Enum.take(recent_standalone ++ recent_issues, 5)
 
     %{
       library: lib,
-      book_count: Library.count_books(lib.id),
-      series_count: Library.count_series(lib.id),
-      issue_count: Library.count_issues(lib.id),
-      total_size: Library.total_size(lib.id),
+      book_count: Library.count_books(access, lib.id),
+      series_count: Library.count_series(access, lib.id),
+      issue_count: Library.count_issues(access, lib.id),
+      total_size: Library.total_size(access, lib.id),
       cover_books: cover_books,
       recent_books: recent_standalone,
-      recent_series: Library.recent_series(lib.id, 20),
+      recent_series: Library.recent_series(access, lib.id, 20),
       recent_issues: recent_issues
     }
   end
@@ -130,18 +131,19 @@ defmodule StashixWeb.HomeLive do
 
   def handle_info({:book_added, _book}, socket) do
     user = socket.assigns.current_user
+    access = socket.assigns.access
     libraries = Library.list_libraries(user)
-    libraries_data = Enum.map(libraries, &load_library_data/1)
-    continue_reading = Library.in_progress_books(user.id, 20)
+    libraries_data = Enum.map(libraries, &load_library_data(access, &1))
+    continue_reading = Library.in_progress_books(access, user.id, 20)
 
     {:noreply,
      assign(socket,
        libraries_data: libraries_data,
        continue_reading: continue_reading,
-       next_issue: Library.next_issue_books(user.id, 20),
-       total_books: Library.count_all_books(type: "standalone"),
-       total_issues: Library.count_all_books(type: "issue"),
-       total_series: Library.count_all_series([]),
+       next_issue: Library.next_issue_books(access, user.id, 20),
+       total_books: Library.count_all_books(access: access, type: "standalone"),
+       total_issues: Library.count_all_books(access: access, type: "issue"),
+       total_series: Library.count_all_series(access: access),
        spotlight: pick_spotlight(libraries_data, continue_reading),
        recommendations: pick_recommendations(libraries_data)
      )}
