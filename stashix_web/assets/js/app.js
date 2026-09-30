@@ -297,6 +297,93 @@ Hooks.SearchNav = {
   }
 }
 
+// Keyboard navigation + click-outside for the server-rendered creator picker
+// on the search page. Options are buttons marked [data-option].
+Hooks.CreatorCombobox = {
+  mounted() {
+    this.activeIndex = -1
+    this.input = this.el.querySelector("input[type=text]")
+
+    this.onKeydown = (e) => {
+      const options = this.options()
+
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        if (options.length === 0) return
+        e.preventDefault()
+        const next = e.key === "ArrowDown"
+          ? Math.min(this.activeIndex + 1, options.length - 1)
+          : Math.max(this.activeIndex - 1, 0)
+        this.setActive(next)
+      } else if (e.key === "Enter") {
+        // never submit the surrounding filter form from here
+        e.preventDefault()
+        const target = options[this.activeIndex] || options[0]
+        if (target) target.click()
+      } else if (e.key === "Escape") {
+        this.close()
+      }
+    }
+
+    this.onClickOutside = (e) => {
+      if (!this.el.contains(e.target) && this.isOpen()) this.close()
+    }
+
+    // After picking, clear the box and keep focus so the next creator can be
+    // typed straight away (LiveView won't overwrite a focused input's value).
+    this.onPick = (e) => {
+      if (!e.target.closest("[data-option]")) return
+      this.activeIndex = -1
+      this.input.value = ""
+      this.input.focus()
+    }
+
+    this.input.addEventListener("keydown", this.onKeydown)
+    this.el.addEventListener("click", this.onPick)
+    document.addEventListener("click", this.onClickOutside)
+  },
+
+  updated() {
+    // suggestions were re-rendered; restore highlight if still in range
+    this.input = this.el.querySelector("input[type=text]")
+    this.input.removeEventListener("keydown", this.onKeydown)
+    this.input.addEventListener("keydown", this.onKeydown)
+    const options = this.options()
+    this.setActive(this.activeIndex < options.length ? this.activeIndex : -1)
+  },
+
+  destroyed() {
+    document.removeEventListener("click", this.onClickOutside)
+  },
+
+  options() {
+    return Array.from(this.el.querySelectorAll("[data-option]"))
+  },
+
+  isOpen() {
+    return this.el.querySelector("[role=listbox]") !== null
+  },
+
+  close() {
+    this.activeIndex = -1
+    this.input.value = ""
+    this.pushEvent("close_creator_suggestions", {})
+  },
+
+  setActive(idx) {
+    this.options().forEach((el, i) => {
+      if (i === idx) {
+        el.setAttribute("data-active", "")
+        el.setAttribute("aria-selected", "true")
+        el.scrollIntoView({ block: "nearest" })
+      } else {
+        el.removeAttribute("data-active")
+        el.removeAttribute("aria-selected")
+      }
+    })
+    this.activeIndex = idx
+  }
+}
+
 Hooks.CoverImage = {
   mounted() {
     const hash = this.el.dataset.blurhash

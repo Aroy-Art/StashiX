@@ -38,7 +38,8 @@ defmodule StashixWeb.SearchLive do
   @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
   # URL params that count as filters (everything except q, type, sort, page).
-  @filter_keys ~w(from to age creator role library publisher genre status)
+  @filter_keys ~w(from to age creator creator_match role library publisher genre status)
+  @max_creators 10
 
   @impl true
   def mount(_params, _session, socket) do
@@ -63,6 +64,9 @@ defmodule StashixWeb.SearchLive do
        read_statuses: @read_statuses,
        age_ratings: @age_ratings,
        credit_roles: @credit_roles,
+       creator_query: "",
+       creator_suggestions: [],
+       selected_creators: [],
        loading: true
      )}
   end
@@ -75,10 +79,30 @@ defmodule StashixWeb.SearchLive do
     {:noreply,
      socket
      |> assign(params: params, page: max(page, 1))
+     |> assign_selected_creators()
      |> load_results()}
   end
 
+  defp assign_selected_creators(socket) do
+    ids = socket.assigns.params["creator"]
+
+    if Enum.map(socket.assigns.selected_creators, & &1.id) == ids,
+      do: socket,
+      else: assign(socket, selected_creators: Library.get_creators(ids))
+  end
+
   @impl true
+  # Typing in the creator box only refreshes suggestions; picking one filters.
+  def handle_event("filter", %{"_target" => ["creator_search"]} = form, socket) do
+    query = form["creator_search"] || ""
+
+    {:noreply,
+     assign(socket,
+       creator_query: query,
+       creator_suggestions: Library.search_creators(query, exclude: socket.assigns.params["creator"])
+     )}
+  end
+
   def handle_event("filter", form, socket) do
     params =
       socket.assigns.params
@@ -86,6 +110,19 @@ defmodule StashixWeb.SearchLive do
       |> Map.merge(Map.take(form, ["q" | @filter_keys]))
 
     {:noreply, patch(socket, params, replace: true)}
+  end
+
+  def handle_event("select_creator", %{"id" => id}, socket) do
+    ids = socket.assigns.params["creator"] ++ [id]
+
+    {:noreply,
+     socket
+     |> assign(creator_query: "", creator_suggestions: [])
+     |> patch(Map.put(socket.assigns.params, "creator", ids))}
+  end
+
+  def handle_event("close_creator_suggestions", _params, socket) do
+    {:noreply, assign(socket, creator_query: "", creator_suggestions: [])}
   end
 
   def handle_event("set_type", %{"type" => type}, socket) do
@@ -96,9 +133,10 @@ defmodule StashixWeb.SearchLive do
     {:noreply, patch(socket, Map.put(socket.assigns.params, "sort", sort))}
   end
 
-  def handle_event("remove_filter", %{"key" => "age", "value" => value}, socket) do
-    ages = List.delete(socket.assigns.params["age"] || [], value)
-    {:noreply, patch(socket, Map.put(socket.assigns.params, "age", ages))}
+  def handle_event("remove_filter", %{"key" => key, "value" => value}, socket)
+      when key in ["age", "creator"] do
+    values = List.delete(socket.assigns.params[key] || [], value)
+    {:noreply, patch(socket, Map.put(socket.assigns.params, key, values))}
   end
 
   def handle_event("remove_filter", %{"key" => "year"}, socket) do
@@ -156,6 +194,15 @@ defmodule StashixWeb.SearchLive do
       |> Enum.filter(&(&1 in @age_rating_strings))
       |> Enum.uniq()
 
+    creators =
+      params
+      |> Map.get("creator", [])
+      |> List.wrap()
+      |> Enum.map(&cast_uuid/1)
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+      |> Enum.take(@max_creators)
+
     status = if params["status"] in ["unread", "in_progress", "read"], do: params["status"]
 
     %{
@@ -168,7 +215,8 @@ defmodule StashixWeb.SearchLive do
       "library" => blank_to_nil(params["library"]),
       "publisher" => blank_to_nil(params["publisher"]),
       "genre" => blank_to_nil(params["genre"]),
-      "creator" => blank_to_nil(params["creator"]),
+      "creator" => creators,
+      "creator_match" => if(length(creators) > 1 and params["creator_match"] == "any", do: "any"),
       "role" => if(params["role"] in @credit_roles, do: params["role"]),
       "status" => status,
       "page" => params["page"]
@@ -234,7 +282,8 @@ defmodule StashixWeb.SearchLive do
       library_id: params["library"],
       publisher_id: params["publisher"],
       genre: params["genre"],
-      creator: params["creator"],
+      creator_ids: params["creator"],
+      creator_match: params["creator_match"] || "all",
       role: params["role"],
       read_status: params["status"],
       user_id: user_id,
@@ -256,6 +305,13 @@ defmodule StashixWeb.SearchLive do
 
   defp maybe_to_string(nil), do: nil
   defp maybe_to_string(n), do: to_string(n)
+
+  defp cast_uuid(v) do
+    case Ecto.UUID.cast(v || "") do
+      {:ok, id} -> id
+      :error -> nil
+    end
+  end
 
   defp blank_to_nil(v) when is_binary(v) do
     case String.trim(v) do
@@ -295,7 +351,17 @@ defmodule StashixWeb.SearchLive do
       end
 
     genre = if g = params["genre"], do: [{g, "genre", nil}], else: []
-    creator = if c = params["creator"], do: [{"Creator: #{c}", "creator", nil}], else: []
+
+    joiner = if params["creator_match"] == "any", do: "or", else: "and"
+
+    creator =
+      assigns.selected_creators
+      |> Enum.with_index()
+      |> Enum.map(fn {c, i} ->
+        label = if i == 0, do: "Creator: #{c.name}", else: "#{joiner} #{c.name}"
+        {label, "creator", c.id}
+      end)
+
     role = if r = params["role"], do: [{"Role: #{r}", "role", nil}], else: []
 
     status =
@@ -319,7 +385,8 @@ defmodule StashixWeb.SearchLive do
 
   defp filter_count(params) do
     Enum.count(@filter_keys, fn
-      "age" -> params["age"] != []
+      k when k in ["age", "creator"] -> params[k] != []
+      "creator_match" -> false
       k -> params[k] != nil
     end)
   end
@@ -482,14 +549,11 @@ defmodule StashixWeb.SearchLive do
               </.filter_section>
 
               <.filter_section title="Creator">
-                <input
-                  type="text"
-                  name="creator"
-                  value={@params["creator"]}
-                  placeholder="Name"
-                  autocomplete="off"
-                  phx-debounce="400"
-                  class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+                <.creator_picker
+                  selected={@selected_creators}
+                  match={@params["creator_match"] || "all"}
+                  query={@creator_query}
+                  suggestions={@creator_suggestions}
                 />
                 <.filter_select name="role" selected={@params["role"]} prompt="Any role">
                   <option :for={r <- @credit_roles} value={r} selected={@params["role"] == r}>
@@ -673,6 +737,102 @@ defmodule StashixWeb.SearchLive do
     <div class="px-4 py-3 space-y-2">
       <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">{@title}</h3>
       {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  attr :selected, :list, required: true
+  attr :match, :string, required: true
+  attr :query, :string, required: true
+  attr :suggestions, :list, required: true
+
+  defp creator_picker(assigns) do
+    assigns = assign(assigns, :full, length(assigns.selected) >= @max_creators)
+
+    ~H"""
+    <div :if={@selected != []} class="flex flex-wrap gap-1.5">
+      <span
+        :for={c <- @selected}
+        class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 bg-violet-600/20 border border-violet-500/40 rounded-lg text-sm text-violet-100"
+      >
+        <input type="hidden" name="creator[]" value={c.id} />
+        <span class="truncate">{c.name}</span>
+        <button
+          type="button"
+          phx-click="remove_filter"
+          phx-value-key="creator"
+          phx-value-value={c.id}
+          aria-label={"Remove #{c.name}"}
+          class="p-0.5 rounded-md text-violet-300 hover:text-white hover:bg-violet-600/40"
+        >
+          <.icon name="lucide-x" class="w-3.5 h-3.5" />
+        </button>
+      </span>
+    </div>
+
+    <div
+      :if={length(@selected) > 1}
+      class="grid grid-cols-2 gap-1.5"
+      title="Match books credited to all selected creators, or to any of them"
+    >
+      <label
+        :for={{label, value} <- [{"All of them", "all"}, {"Any of them", "any"}]}
+        class={[
+          "cursor-pointer select-none text-center px-2 py-1 text-xs rounded-lg border transition-colors",
+          if(@match == value,
+            do: "bg-violet-600 border-violet-500 text-white",
+            else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
+          )
+        ]}
+      >
+        <input
+          type="radio"
+          name="creator_match"
+          value={value}
+          checked={@match == value}
+          class="sr-only"
+        />
+        {label}
+      </label>
+    </div>
+
+    <div :if={!@full} id="creator-picker" phx-hook="CreatorCombobox" class="relative">
+      <input
+        id="creator-search"
+        type="text"
+        name="creator_search"
+        value={@query}
+        placeholder={if @selected == [], do: "Search creators...", else: "Add another creator..."}
+        autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls="creator-options"
+        aria-expanded={to_string(@query != "")}
+        phx-debounce="200"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+      />
+      <div
+        :if={@query != ""}
+        id="creator-options"
+        role="listbox"
+        class="absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl"
+      >
+        <button
+          :for={c <- @suggestions}
+          type="button"
+          role="option"
+          data-option
+          phx-click="select_creator"
+          phx-value-id={c.id}
+          class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-gray-700 data-[active]:text-white"
+        >
+          <span class="truncate">{c.name}</span>
+          <span class="shrink-0 text-xs text-gray-500">{c.credits}</span>
+        </button>
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-500">
+          No creators found
+        </div>
+      </div>
     </div>
     """
   end
