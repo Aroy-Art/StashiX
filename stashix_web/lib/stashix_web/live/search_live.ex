@@ -2,7 +2,7 @@ defmodule StashixWeb.SearchLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Formatters, Library}
-  alias Stashix.Library.Book
+  alias Stashix.Library.{Book, BookCredit}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -35,9 +35,10 @@ defmodule StashixWeb.SearchLive do
 
   @age_ratings Ecto.Enum.values(Book, :age_rating)
   @age_rating_strings Enum.map(@age_ratings, &to_string/1)
+  @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
   # URL params that count as filters (everything except q, type, sort, page).
-  @filter_keys ~w(from to age library publisher genre status)
+  @filter_keys ~w(from to age creator role library publisher genre status)
 
   @impl true
   def mount(_params, _session, socket) do
@@ -61,6 +62,7 @@ defmodule StashixWeb.SearchLive do
        types: @types,
        read_statuses: @read_statuses,
        age_ratings: @age_ratings,
+       credit_roles: @credit_roles,
        loading: true
      )}
   end
@@ -166,6 +168,8 @@ defmodule StashixWeb.SearchLive do
       "library" => blank_to_nil(params["library"]),
       "publisher" => blank_to_nil(params["publisher"]),
       "genre" => blank_to_nil(params["genre"]),
+      "creator" => blank_to_nil(params["creator"]),
+      "role" => if(params["role"] in @credit_roles, do: params["role"]),
       "status" => status,
       "page" => params["page"]
     }
@@ -230,6 +234,8 @@ defmodule StashixWeb.SearchLive do
       library_id: params["library"],
       publisher_id: params["publisher"],
       genre: params["genre"],
+      creator: params["creator"],
+      role: params["role"],
       read_status: params["status"],
       user_id: user_id,
       sort: params["sort"]
@@ -251,8 +257,13 @@ defmodule StashixWeb.SearchLive do
   defp maybe_to_string(nil), do: nil
   defp maybe_to_string(n), do: to_string(n)
 
-  defp blank_to_nil(v) when v in [nil, ""], do: nil
-  defp blank_to_nil(v) when is_binary(v), do: v
+  defp blank_to_nil(v) when is_binary(v) do
+    case String.trim(v) do
+      "" -> nil
+      trimmed -> trimmed
+    end
+  end
+
   defp blank_to_nil(_), do: nil
 
   # Chips for the active-filter bar: {label, key, value}
@@ -284,6 +295,8 @@ defmodule StashixWeb.SearchLive do
       end
 
     genre = if g = params["genre"], do: [{g, "genre", nil}], else: []
+    creator = if c = params["creator"], do: [{"Creator: #{c}", "creator", nil}], else: []
+    role = if r = params["role"], do: [{"Role: #{r}", "role", nil}], else: []
 
     status =
       if s = params["status"] do
@@ -292,7 +305,7 @@ defmodule StashixWeb.SearchLive do
         []
       end
 
-    year ++ ages ++ library ++ publisher ++ genre ++ status
+    year ++ ages ++ creator ++ role ++ library ++ publisher ++ genre ++ status
   end
 
   defp short_age_label("unknown"), do: "Unrated"
@@ -466,6 +479,23 @@ defmodule StashixWeb.SearchLive do
                     </label>
                   <% end %>
                 </div>
+              </.filter_section>
+
+              <.filter_section title="Creator">
+                <input
+                  type="text"
+                  name="creator"
+                  value={@params["creator"]}
+                  placeholder="Name"
+                  autocomplete="off"
+                  phx-debounce="400"
+                  class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+                />
+                <.filter_select name="role" selected={@params["role"]} prompt="Any role">
+                  <option :for={r <- @credit_roles} value={r} selected={@params["role"] == r}>
+                    {r}
+                  </option>
+                </.filter_select>
               </.filter_section>
 
               <.filter_section :if={length(@sidebar_libraries) > 1} title="Library">
