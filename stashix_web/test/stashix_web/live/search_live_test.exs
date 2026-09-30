@@ -4,7 +4,7 @@ defmodule StashixWeb.SearchLiveTest do
   import Phoenix.LiveViewTest
 
   alias Stashix.{Accounts, Library, Repo}
-  alias Stashix.Library.Series
+  alias Stashix.Library.{BookCredit, Creator, Series}
   alias Stashix.Auth.TokenHelper
 
   setup %{conn: conn} do
@@ -28,9 +28,15 @@ defmodule StashixWeb.SearchLiveTest do
       b
     end
 
-    book.(%{title: "Dark Streets", year: 1995, age_rating: :teen, series_id: series.id, issue_number: 1})
-    book.(%{title: "Dark Alleys", year: 2010, age_rating: :mature, series_id: series.id, issue_number: 2})
+    streets = book.(%{title: "Dark Streets", year: 1995, age_rating: :teen, series_id: series.id, issue_number: 1})
+    alleys = book.(%{title: "Dark Alleys", year: 2010, age_rating: :mature, series_id: series.id, issue_number: 2})
     book.(%{title: "Sunny Days", year: 2001, age_rating: :everyone, type: "standalone"})
+
+    moore = Repo.insert!(%Creator{name: "Alan Moore"})
+    gibbons = Repo.insert!(%Creator{name: "Dave Gibbons"})
+    Repo.insert!(%BookCredit{book_id: streets.id, creator_id: moore.id, role: :Writer})
+    Repo.insert!(%BookCredit{book_id: alleys.id, creator_id: moore.id, role: :Artist})
+    Repo.insert!(%BookCredit{book_id: alleys.id, creator_id: gibbons.id, role: :Writer})
 
     %{conn: conn}
   end
@@ -56,6 +62,25 @@ defmodule StashixWeb.SearchLiveTest do
     assert html =~ "Sunny Days"
     refute html =~ "Dark Streets"
     refute html =~ "Night Watch"
+  end
+
+  test "free-text search and creator filter match credits", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/search?q=moore")
+    assert html =~ "Dark Streets"
+    assert html =~ "Dark Alleys"
+    refute html =~ "Sunny Days"
+
+    {:ok, _view, html} = live(conn, ~p"/search?creator=moore&role=Writer")
+    assert html =~ "Dark Streets"
+    refute html =~ "Dark Alleys"
+    assert html =~ "Creator: moore"
+    assert html =~ "Role: Writer"
+
+    # series surface when one of their books matches the creator
+    {:ok, _view, html} = live(conn, ~p"/search?creator=gibbons")
+    assert html =~ "Night Watch"
+    assert html =~ "Dark Alleys"
+    refute html =~ "Dark Streets"
   end
 
   test "form changes patch the URL and chips remove filters", %{conn: conn} do

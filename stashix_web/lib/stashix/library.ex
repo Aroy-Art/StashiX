@@ -488,7 +488,14 @@ defmodule Stashix.Library do
     query =
       case filters[:q] do
         q when is_binary(q) and q != "" ->
-          where(query, [b], fragment("search_vec @@ plainto_tsquery('english', ?)", ^q))
+          pattern = like_pattern(q)
+
+          where(
+            query,
+            [b],
+            fragment("search_vec @@ plainto_tsquery('english', ?)", ^q) or
+              exists(credit_match_query(pattern, nil))
+          )
 
         _ ->
           query
@@ -506,9 +513,36 @@ defmodule Stashix.Library do
     |> filter_read_status(filters[:read_status], filters[:user_id])
   end
 
+  # Books (bound as :book) with a credit whose creator name matches `pattern`
+  # and/or whose role equals `role`.
+  defp credit_match_query(pattern, role) do
+    query =
+      from(c in Stashix.Library.BookCredit,
+        join: cr in assoc(c, :creator),
+        where: c.book_id == parent_as(:book).id,
+        select: 1
+      )
+
+    query = if pattern, do: where(query, [_c, cr], ilike(cr.name, ^pattern)), else: query
+    if role, do: where(query, [c], c.role == ^role), else: query
+  end
+
+  defp like_pattern(term) do
+    escaped = String.replace(term, ~r/[\\%_]/, "\\\\\\0")
+    "%#{escaped}%"
+  end
+
   # Shared by books and series-with-matching-books: age rating, library,
-  # publisher, genre. Expects the book binding to be named :book.
+  # publisher, genre, creator/role. Expects the book binding to be named :book.
   defp filter_book_attrs(query, filters) do
+    query =
+      if filters[:creator] || filters[:role] do
+        pattern = filters[:creator] && like_pattern(filters[:creator])
+        where(query, exists(credit_match_query(pattern, filters[:role])))
+      else
+        query
+      end
+
     query =
       case filters[:age_ratings] do
         [_ | _] = ratings -> where(query, [book: b], b.age_rating in ^ratings)
@@ -628,8 +662,17 @@ defmodule Stashix.Library do
     query =
       case filters[:q] do
         q when is_binary(q) and q != "" ->
-          pattern = "%#{String.replace(q, "%", "\\%")}%"
-          where(query, [s], ilike(s.name, ^pattern))
+          pattern = like_pattern(q)
+
+          credited_book =
+            from(b in Book,
+              as: :book,
+              where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
+              where: exists(credit_match_query(pattern, nil)),
+              select: 1
+            )
+
+          where(query, [s], ilike(s.name, ^pattern) or exists(credited_book))
 
         _ ->
           query
@@ -651,14 +694,16 @@ defmodule Stashix.Library do
         else: query
 
     # Book-level filters: keep series that contain at least one matching book.
-    if (filters[:age_ratings] not in [nil, []] or filters[:publisher_id]) || filters[:genre] do
+    book_filters = Map.take(filters, [:age_ratings, :publisher_id, :genre, :creator, :role])
+
+    if Enum.any?(book_filters, fn {_k, v} -> v not in [nil, []] end) do
       book_query =
         from(b in Book,
           as: :book,
           where: b.series_id == parent_as(:series).id and is_nil(b.deleted_at),
           select: 1
         )
-        |> filter_book_attrs(Map.take(filters, [:age_ratings, :publisher_id, :genre]))
+        |> filter_book_attrs(book_filters)
 
       where(query, [s], exists(book_query))
     else
