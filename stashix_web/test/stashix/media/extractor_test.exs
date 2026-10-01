@@ -23,7 +23,8 @@ defmodule Stashix.Media.ExtractorTest do
           "001.jpg",
           "002.jpg",
           "zSoU-Nerd.jpg",
-          "zAd-Group.png"
+          "zAd-Group.png",
+          "zzdelirium_dargh.png"
         ])
 
       assert {:ok, pages} = Extractor.list_pages(cbz)
