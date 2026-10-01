@@ -1,6 +1,13 @@
 defmodule Stashix.Media.Extractor do
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
+  # Exclude scanner/group credit pages — e.g. "zSoU-Nerd.jpg".
+  # These are sorted last by prefixing 'z' and contain no page numbers.
+  defp credit_page?(name) do
+    basename = name |> Path.basename() |> Path.rootname()
+    String.match?(basename, ~r/^z[^0-9]/i)
+  end
+
   def list_pages(book_path) do
     ext = book_path |> Path.extname() |> String.downcase()
 
@@ -53,6 +60,7 @@ defmodule Stashix.Media.Extractor do
           |> Enum.map(fn {:zip_file, name, _info, _comment, _offset, _comp_size} ->
             to_string(name)
           end)
+          |> Enum.reject(&credit_page?/1)
           |> Enum.sort()
 
         {:ok, pages}
@@ -72,6 +80,7 @@ defmodule Stashix.Media.Extractor do
             |> Enum.filter(fn name ->
               String.downcase(Path.extname(name)) in @image_exts
             end)
+            |> Enum.reject(&credit_page?/1)
             |> Enum.sort()
 
           {:ok, pages}
@@ -96,6 +105,7 @@ defmodule Stashix.Media.Extractor do
             |> Enum.filter(fn name ->
               String.downcase(Path.extname(name)) in @image_exts
             end)
+            |> Enum.reject(&credit_page?/1)
             |> Enum.sort()
 
           {:ok, pages}
