@@ -96,6 +96,13 @@ defmodule StashixWeb.Telemetry do
           {0, 0}
       end
 
+    # Re-emitted as one event so the metrics below get the DB totals too.
+    :telemetry.execute(
+      [:stashix, :live_view, :callback],
+      %{duration: measurements.duration, db_time: db_time, queries: queries},
+      %{phase: metric_phase(kind, phase), view: inspect(meta[:component] || meta.socket.view)}
+    )
+
     ms = System.convert_time_unit(measurements.duration, :native, :microsecond) / 1000
     slow? = ms >= slow_ms()
 
@@ -116,6 +123,9 @@ defmodule StashixWeb.Telemetry do
       end)
     end
   end
+
+  defp metric_phase(:live_view, phase), do: phase
+  defp metric_phase(:live_component, phase), do: :"component_#{phase}"
 
   defp slow_ms, do: Application.get_env(:stashix, :slow_live_view_ms, 200)
 
@@ -176,6 +186,22 @@ defmodule StashixWeb.Telemetry do
         tags: [:event],
         unit: {:native, :millisecond},
         reporter_options: [buckets: [5, 25, 50, 100, 250]]
+      ),
+
+      # LiveView callback timings (see handle_live_view_timing/4)
+      distribution("stashix.live_view.callback.duration",
+        tags: [:phase, :view],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [5, 10, 25, 50, 100, 250, 500, 1000]]
+      ),
+      distribution("stashix.live_view.callback.db_time",
+        tags: [:phase, :view],
+        unit: {:native, :millisecond},
+        reporter_options: [buckets: [5, 10, 25, 50, 100, 250, 500, 1000]]
+      ),
+      distribution("stashix.live_view.callback.queries",
+        tags: [:phase, :view],
+        reporter_options: [buckets: [1, 2, 5, 10, 25, 50, 100]]
       ),
 
       # Database Metrics
