@@ -71,7 +71,7 @@ defmodule StashixWeb.DetailComponents do
 
   def hero_cover(assigns) do
     ~H"""
-    <div class="cover-stack relative w-44 sm:w-52 md:w-60 aspect-[2/3] flex-shrink-0">
+    <div class="cover-stack rise relative w-44 sm:w-52 md:w-60 aspect-[2/3] flex-shrink-0">
       <div
         :for={{url, depth} <- @stack |> Enum.with_index(1) |> Enum.reverse()}
         class="cover-stack-card absolute inset-0 rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10 shadow-2xl"
@@ -140,12 +140,20 @@ defmodule StashixWeb.DetailComponents do
     assigns = assign(assigns, item: Enum.filter(assigns.item, &Map.get(&1, :show, true)))
 
     ~H"""
-    <dl :if={@item != []} class="flex flex-wrap gap-x-10 gap-y-4 border-y border-white/10 py-4">
-      <div :for={item <- @item} class="min-w-0">
-        <dt class="text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500 mb-1">{item.label}</dt>
-        <dd class="text-sm text-gray-200 tabular-nums">{render_slot(item)}</dd>
-      </div>
-    </dl>
+    <div
+      :if={@item != []}
+      class="indicia relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10"
+    >
+      <div class="halftone absolute inset-0" aria-hidden="true"></div>
+      <dl class="relative flex flex-wrap gap-x-10 gap-y-4 px-6 py-5">
+        <div :for={item <- @item} class="min-w-0">
+          <dt class="text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80 mb-1">{item.label}</dt>
+          <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums">
+            {render_slot(item)}
+          </dd>
+        </div>
+      </dl>
+    </div>
     """
   end
 end

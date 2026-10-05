@@ -457,21 +457,19 @@ defmodule StashixWeb.SeriesLive do
           {issue_count}
         </span>
 
-        <div class="rise" style="--i:0">
-          <.hero_cover
-            id={"series-cover-#{@series.id}"}
-            src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=l"}
-            full_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=xl"}
-            alt={@series.name}
-            blurhash={has_cover && @cover_book.cover.blurhash}
-            stack={
-              issue_sorted
-              |> Enum.filter(&(&1.cover && (!@cover_book || &1.id != @cover_book.id)))
-              |> Enum.take(2)
-              |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
-            }
-          />
-        </div>
+        <.hero_cover
+          id={"series-cover-#{@series.id}"}
+          src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=l"}
+          full_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=xl"}
+          alt={@series.name}
+          blurhash={has_cover && @cover_book.cover.blurhash}
+          stack={
+            issue_sorted
+            |> Enum.filter(&(&1.cover && (!@cover_book || &1.id != @cover_book.id)))
+            |> Enum.take(2)
+            |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
+          }
+        />
 
         <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
           <p

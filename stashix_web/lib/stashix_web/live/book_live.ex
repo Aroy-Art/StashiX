@@ -372,15 +372,13 @@ defmodule StashixWeb.BookLive do
           {issue_no}
         </span>
 
-        <div class="rise" style="--i:0">
-          <.hero_cover
-            id={"book-cover-#{@book.id}"}
-            src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=l"}
-            full_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=xl"}
-            alt={@book.title}
-            blurhash={@book.cover && @book.cover.blurhash}
-          />
-        </div>
+        <.hero_cover
+          id={"book-cover-#{@book.id}"}
+          src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=l"}
+          full_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=xl"}
+          alt={@book.title}
+          blurhash={@book.cover && @book.cover.blurhash}
+        />
 
         <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
           <%!-- Issue sticker + series eyebrow --%>
@@ -474,7 +472,7 @@ defmodule StashixWeb.BookLive do
           <%!-- Read button --%>
           <div
             :if={@book.page_count > 0 && @selected_file}
-            class="rise flex items-stretch justify-center sm:justify-start mt-7"
+            class="ink-split rise relative z-10 inline-flex items-stretch rounded-md mt-7"
             style="--i:5"
           >
             <.link
@@ -483,7 +481,7 @@ defmodule StashixWeb.BookLive do
                   do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
                   else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
               }
-              class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-l-md"
+              class="inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-l-md transition-colors"
             >
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
@@ -494,7 +492,7 @@ defmodule StashixWeb.BookLive do
             </.link>
             <.dropdown_menu id="read-options-menu" class="flex">
               <.dropdown_menu_trigger
-                class="ink-btn flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40"
+                class="flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40 transition-colors"
                 aria-label="More reading options"
               >
                 <.icon name="lucide-chevron-down" class="w-4 h-4" />

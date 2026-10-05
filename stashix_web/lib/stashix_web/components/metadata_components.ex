@@ -33,24 +33,28 @@ defmodule StashixWeb.MetadataComponents do
   def expander(assigns) do
     ~H"""
     <div>
-      <button
-        type="button"
-        phx-click={
-          JS.toggle(to: "##{@id}")
-          |> JS.toggle_class("rotate-180", to: "##{@id}-chevron")
-          |> JS.toggle(to: "##{@id}-more", display: "inline")
-          |> JS.toggle(to: "##{@id}-less", display: "inline")
-        }
-        class="group inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-gray-200 transition-colors"
-        aria-controls={@id}
-      >
-        <span id={"#{@id}-more"} class="group-hover:text-gray-200">More info</span>
-        <span id={"#{@id}-less"} class="hidden group-hover:text-gray-200">Less info</span>
-        <span id={"#{@id}-chevron"} class="inline-flex transition-transform duration-200">
-          <.icon name="lucide-chevron-down" class="w-3.5 h-3.5" />
-        </span>
-      </button>
-      <div id={@id} class="hidden mt-5 space-y-6 border-t border-gray-800/60 pt-5">
+      <div class="flex items-center gap-4">
+        <span class="h-px flex-1 bg-white/10"></span>
+        <button
+          type="button"
+          phx-click={
+            JS.toggle(to: "##{@id}")
+            |> JS.toggle_class("rotate-180", to: "##{@id}-chevron")
+            |> JS.toggle(to: "##{@id}-more", display: "inline")
+            |> JS.toggle(to: "##{@id}-less", display: "inline")
+          }
+          class="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full border border-white/15 bg-white/5 text-xs font-bold tracking-[0.16em] uppercase text-gray-100 hover:border-ink hover:bg-ink/10 hover:text-white transition-colors"
+          aria-controls={@id}
+        >
+          <span id={"#{@id}-more"}>More info</span>
+          <span id={"#{@id}-less"} class="hidden">Less info</span>
+          <span id={"#{@id}-chevron"} class="inline-flex text-ink transition-transform duration-200">
+            <.icon name="lucide-chevron-down" class="w-4 h-4" />
+          </span>
+        </button>
+        <span class="h-px flex-1 bg-white/10"></span>
+      </div>
+      <div id={@id} class="hidden mt-6 space-y-6">
         {render_slot(@inner_block)}
       </div>
     </div>
