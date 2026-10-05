@@ -42,7 +42,12 @@ defmodule StashixWeb.IdentifyComponent do
   end
 
   defp init(socket) do
-    target = socket.assigns.target
+    target =
+      case socket.assigns.target do
+        %Book{} = b -> Repo.preload(b, [:files, :library])
+        other -> other
+      end
+
     kind = if match?(%Series{}, target), do: :series, else: :issue
     review = socket.assigns[:review]
 
@@ -64,6 +69,7 @@ defmodule StashixWeb.IdentifyComponent do
     socket =
       socket
       |> assign(
+        target: target,
         kind: kind,
         sources: sources,
         known_ids: known_ids,
@@ -649,7 +655,14 @@ defmodule StashixWeb.IdentifyComponent do
           <h2 id={"#{@id}-title"} class="text-lg font-semibold">
             {if @kind == :series, do: "Identify Series", else: "Identify Issue"}
           </h2>
-          <p class="text-sm text-gray-400 mb-4">Search a metadata source and pick the matching entry.</p>
+          <p class="text-sm text-gray-400">Search a metadata source and pick the matching entry.</p>
+          <%= if @kind == :issue && @target.files != [] do %>
+            <p class="text-[11px] text-gray-600 font-mono truncate mb-4 mt-0.5">
+              {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
+            </p>
+          <% else %>
+            <div class="mb-4" />
+          <% end %>
 
           <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
             <span class="text-gray-500">Linked IDs:</span>

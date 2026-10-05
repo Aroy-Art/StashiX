@@ -774,7 +774,8 @@ defmodule StashixWeb.AdminMetadataLive do
             </p>
             <%= if review.book && review.book.files != [] do %>
               <p class="text-[11px] text-gray-600 font-mono truncate mt-0.5">
-                {List.first(review.book.files).path}
+                {review.book.library.name <>
+                  "/" <> Path.relative_to(List.first(review.book.files).path, review.book.library.root_path)}
               </p>
             <% end %>
           </div>

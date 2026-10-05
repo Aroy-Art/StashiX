@@ -260,7 +260,7 @@ defmodule Stashix.Metadata do
       where: r.status == ^status,
       order_by: [desc: r.updated_at],
       limit: ^Keyword.get(opts, :limit, 100),
-      preload: [book: [:series, :cover, :files], series: []]
+      preload: [book: [:series, :cover, :files, :library], series: []]
     )
     |> Repo.all()
   end
@@ -269,7 +269,8 @@ defmodule Stashix.Metadata do
     Repo.aggregate(from(r in MatchReview, where: r.status == ^status), :count)
   end
 
-  def get_review!(id), do: Repo.get!(MatchReview, id) |> Repo.preload(book: [:series, :cover, :files], series: [])
+  def get_review!(id),
+    do: Repo.get!(MatchReview, id) |> Repo.preload(book: [:series, :cover, :files, :library], series: [])
 
   def pending_review_for(book_id: book_id),
     do: Repo.one(from r in MatchReview, where: r.book_id == ^book_id and r.status == "pending", limit: 1)
