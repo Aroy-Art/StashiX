@@ -117,8 +117,11 @@ defmodule StashixWeb.BookController do
       {:ok, data} ->
         content_type = detect_image_type(data)
 
+        # Lets the reader's hidden preload images (and back/forward page turns)
+        # be served from the browser cache. Private: pages are access-controlled.
         conn
         |> put_resp_content_type(content_type)
+        |> put_resp_header("cache-control", "private, max-age=86400")
         |> send_resp(200, data)
 
       {:error, :page_not_found} ->
