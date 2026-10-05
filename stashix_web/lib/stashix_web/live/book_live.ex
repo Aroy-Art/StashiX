@@ -5,6 +5,7 @@ defmodule StashixWeb.BookLive do
   alias Stashix.Library.Book
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
+  import StashixWeb.DetailComponents
   import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -254,338 +255,307 @@ defmodule StashixWeb.BookLive do
       "/" <> (String.replace_prefix(path, library.root_path, "") |> String.trim_leading("/"))
   end
 
+  attr :book, :map, required: true
+  attr :dir, :atom, required: true, values: [:prev, :next]
+
+  defp adjacent_card(assigns) do
+    ~H"""
+    <.link
+      navigate={~p"/book/#{@book.id}"}
+      class={[
+        "group flex items-center gap-4 min-w-0 p-2 rounded-md bg-white/[0.03] hover:bg-white/[0.08] ring-1 ring-white/10 hover:ring-white/25 transition-colors",
+        @dir == :next && "flex-row-reverse text-right"
+      ]}
+    >
+      <div class="relative w-12 md:w-16 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-gray-900">
+        <.blurhash_image
+          id={"nav-#{@dir}-#{@book.id}"}
+          src={~p"/api/books/#{@book.id}/cover?s=s"}
+          blurhash={@book.blurhash}
+          onerror="this.style.display='none'"
+        />
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class={[
+          "flex items-center gap-1 text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500",
+          @dir == :next && "justify-end"
+        ]}>
+          <.icon :if={@dir == :prev} name="lucide-arrow-left" class="w-3 h-3" />
+          {if @dir == :prev, do: "Previous", else: "Next"}
+          <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
+        </p>
+        <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-white mt-1 tabular-nums">
+          #{Decimal.to_integer(@book.issue_number)}
+        </p>
+        <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors mt-1">
+          {@book.title}
+        </p>
+        <p class="text-[10px] text-gray-600 mt-0.5 tabular-nums">
+          {[@book.year, @book.page_count > 0 && "#{@book.page_count} pp"]
+          |> Enum.filter(& &1)
+          |> Enum.join(" · ")}
+        </p>
+      </div>
+    </.link>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-4xl mx-auto space-y-6">
-      <%!-- Breadcrumbs --%>
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
-        <button
-          onclick="history.back()"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0"
-        >
-          <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
-        </button>
-        <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
-          <span class="text-gray-700 flex-shrink-0">/</span>
-          <.link
-            navigate={~p"/library/#{@library.id}"}
-            class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-          >{@library.name}</.link>
-          <%= if @book.series do %>
-            <span class="text-gray-700 flex-shrink-0">/</span>
-            <.link
-              navigate={~p"/series/#{@book.series.id}"}
-              class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-            >{@book.series.name}</.link>
-          <% end %>
-          <span class="text-gray-700 flex-shrink-0">/</span>
-          <span class="text-gray-300 truncate min-w-0">
-            <%= if @book.issue_number && !standalone_volume?(@book) do %>
-              <span class="hidden sm:inline">Issue </span>#{Decimal.to_integer(@book.issue_number)}
-            <% else %>
-              {@book.title}
-            <% end %>
-          </span>
-        </div>
-        <%= if @current_user.role == :admin do %>
-          <div class="ml-auto">
-            <.dropdown_menu id="book-admin-menu">
-              <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
-                <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
-                <.icon name="lucide-chevron-down" class="w-3 h-3" />
-              </.dropdown_menu_trigger>
-              <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("open_edit_dialog")}
-                >
-                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("fetch_metadata")}
-                >
-                  <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("open_identify_dialog")}
-                >
-                  <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify…
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("toggle_metadata_lock")}
-                >
-                  <%= if @book.metadata_locked do %>
-                    <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
-                  <% else %>
-                    <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
-                  <% end %>
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400 disabled:opacity-50"
-                  on-select={JS.push("rescan_book")}
-                >
-                  <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
-                  <% else %>
-                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
-                  <% end %>
-                </.dropdown_menu_item>
-              </.dropdown_menu_content>
-            </.dropdown_menu>
-          </div>
-        <% end %>
-      </div>
-
-      <%!-- Editorial header — cover floats left, info BFC beside it, summary wraps below --%>
-      <div class="overflow-hidden">
-        <%!-- Cover — floated left --%>
-        <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative group">
-            <%= if @book.cover do %>
-              <.blurhash_image
-                id={"book-cover-#{@book.id}"}
-                src={~p"/api/books/#{@book.id}/cover?s=l"}
-                alt={@book.title}
-                blurhash={@book.cover.blurhash}
-              />
-              <button
-                phx-click={JS.show(to: "#book-cover-lightbox")}
-                class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
-                aria-label="View cover full screen"
+    <% numbered = @book.issue_number && !standalone_volume?(@book) %>
+    <% issue_no = numbered && Decimal.to_integer(@book.issue_number) %>
+    <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
+    <.detail_page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
+      <.detail_crumbs crumbs={
+        [{"Home", "/"}, {@library.name, ~p"/library/#{@library.id}"}] ++
+          if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series.id}"}], else: []) ++
+          [{if(numbered, do: "##{issue_no}", else: @book.title), nil}]
+      }>
+        <:actions :if={@current_user.role == :admin}>
+          <.dropdown_menu id="book-admin-menu">
+            <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
+              <.icon name="lucide-chevron-down" class="w-3 h-3" />
+            </.dropdown_menu_trigger>
+            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_edit_dialog")}
               >
-                <.icon
-                  name="lucide-zoom-in"
-                  class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
-                />
-              </button>
-            <% else %>
-              <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
-                <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
-              </div>
-            <% end %>
-          </div>
+                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("fetch_metadata")}
+              >
+                <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_identify_dialog")}
+              >
+                <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify…
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("toggle_metadata_lock")}
+              >
+                <%= if @book.metadata_locked do %>
+                  <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
+                <% else %>
+                  <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
+                <% end %>
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400 disabled:opacity-50"
+                on-select={JS.push("rescan_book")}
+              >
+                <%= if @scanning do %>
+                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
+                <% else %>
+                  <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
+                <% end %>
+              </.dropdown_menu_item>
+            </.dropdown_menu_content>
+          </.dropdown_menu>
+        </:actions>
+      </.detail_crumbs>
+
+      <%!-- Hero: tilted cover, giant issue number behind the title --%>
+      <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-10 pt-2">
+        <span
+          :if={numbered}
+          class="ghost-numeral hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem] pointer-events-none"
+          aria-hidden="true"
+        >
+          {issue_no}
+        </span>
+
+        <div class="rise" style="--i:0">
+          <.hero_cover
+            id={"book-cover-#{@book.id}"}
+            src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=l"}
+            full_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=xl"}
+            alt={@book.title}
+            blurhash={@book.cover && @book.cover.blurhash}
+          />
         </div>
 
-        <%!-- BFC wrapper: forced beside the float --%>
-        <div class="overflow-hidden pt-1">
-          <%!-- Series eyebrow --%>
-          <%= if @book.series && !standalone_volume?(@book) do %>
-            <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
-              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-violet-300 transition-colors">
+        <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
+          <%!-- Issue sticker + series eyebrow --%>
+          <div
+            :if={numbered || (@book.series && !standalone_volume?(@book))}
+            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-2 mb-3"
+            style="--i:1"
+          >
+            <span
+              :if={numbered}
+              class="inline-block -rotate-3 px-2 pt-0.5 rounded-sm bg-ink text-gray-950 font-display font-black text-2xl leading-none tabular-nums"
+            >
+              #{issue_no}
+            </span>
+            <p
+              :if={@book.series && !standalone_volume?(@book)}
+              class="text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300"
+            >
+              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-white transition-colors">
                 {@book.series.name}
               </.link>
-              <%= if @book.series.start_year do %>
-                <span class="text-gray-600 normal-case tracking-normal font-normal ml-1">
-                  ({@book.series.start_year}{cond do
-                    @book.series.end_year -> "–#{@book.series.end_year}"
-                    @book.series.ongoing -> "–"
-                    true -> ""
-                  end})
-                </span>
-              <% end %>
+              <span :if={@book.series.start_year} class="text-gray-500 tracking-normal font-normal ml-1">
+                ({@book.series.start_year}{cond do
+                  @book.series.end_year -> "–#{@book.series.end_year}"
+                  @book.series.ongoing -> "–"
+                  true -> ""
+                end})
+              </span>
             </p>
-          <% end %>
+          </div>
 
-          <%!-- Title --%>
-          <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight mb-3">
-            <%= if @book.issue_number && !standalone_volume?(@book) do %>
-              #{Decimal.to_integer(@book.issue_number)} –
-            <% end %>
+          <h1
+            class="rise font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance break-words"
+            style="--i:2"
+          >
             {book_display_title(@book)}
           </h1>
 
-          <%!-- Status row --%>
-          <div class="flex items-center flex-wrap gap-2 mb-5">
-            <%= if @book.year do %>
-              <span class="text-sm text-gray-400">{@book.year}</span>
-              <span class="text-gray-700 select-none">·</span>
-            <% end %>
-            <%= if @book.page_count > 0 do %>
-              <span class="text-sm text-gray-400">{@book.page_count} pages</span>
-              <span class="text-gray-700 select-none">·</span>
-            <% end %>
-            <%= if @fully_read do %>
-              <.badge class="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
-                <.icon name="lucide-check" class="w-3 h-3" /> Read
-              </.badge>
-            <% else %>
-              <%= if @progress > 0 && @book.page_count > 0 do %>
-                <span class="text-sm text-gray-400">{@progress}/{@book.page_count} pages</span>
-              <% end %>
-            <% end %>
+          <div
+            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+            style="--i:3"
+          >
+            <span :if={@book.year}>{@book.year}</span>
+            <span :if={@book.page_count > 0}>{@book.page_count} pages</span>
+            <span :if={@fully_read} class="inline-flex items-center gap-1 text-emerald-300">
+              <.icon name="lucide-check" class="w-3.5 h-3.5" /> Read
+            </span>
+            <span :if={in_progress} class="text-violet-300">
+              Page {@progress} of {@book.page_count}
+            </span>
+          </div>
+
+          <%!-- Progress bar --%>
+          <div
+            :if={in_progress}
+            class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs rounded-full bg-white/10 overflow-hidden"
+            style="--i:3"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax={@book.page_count}
+            aria-valuenow={@progress}
+          >
+            <div class="h-full bg-violet-500 rounded-full" style={"width: #{round(@progress / @book.page_count * 100)}%"}>
+            </div>
           </div>
 
           <%!-- Format pills (only when multiple files exist) --%>
-          <%= if length(@book.files) > 1 do %>
-            <div class="flex items-center gap-1.5 mb-5">
-              <span class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-600 mr-1">Format</span>
-              <%= for f <- @book.files do %>
-                <%= if @selected_file && f.id == @selected_file.id do %>
-                  <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-violet-600 text-white">
-                    {String.upcase(to_string(f.format))}
-                  </span>
-                <% else %>
-                  <button
-                    phx-click="select_format"
-                    phx-value-format={to_string(f.format)}
-                    class="px-2.5 py-1 text-xs font-semibold rounded-md border border-gray-700 text-gray-400 hover:border-violet-500 hover:text-violet-300 transition-colors"
-                  >
-                    {String.upcase(to_string(f.format))}
-                  </button>
-                <% end %>
-              <% end %>
-            </div>
-          <% end %>
-
-          <%!-- Progress bar --%>
-          <%= if !@fully_read && @progress > 0 && @book.page_count > 0 do %>
-            <.progress
-              value={round(@progress / @book.page_count * 100)}
-              class="h-1 [&>div]:bg-violet-500 bg-gray-800 mb-5 rounded-full"
-            />
-          <% end %>
-
-          <%!-- Read button --%>
-          <%= if @book.page_count > 0 && @selected_file do %>
-            <div class="flex items-center gap-0">
-              <.link
-                navigate={
-                  if @fully_read,
-                    do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
-                    else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
-                }
-                class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-l-lg transition-colors"
-              >
-                <.icon name="lucide-play" class="w-4 h-4" />
-                {cond do
-                  @fully_read -> "Read Again"
-                  @progress > 0 -> "Continue"
-                  true -> "Read"
-                end}
-              </.link>
-              <.dropdown_menu id="read-options-menu" class="flex">
-                <.dropdown_menu_trigger class="flex items-center py-3 px-2 bg-violet-700 hover:bg-violet-600 text-white rounded-r-lg border-l border-violet-500 transition-colors">
-                  <.icon name="lucide-chevron-down" class="w-4 h-4" />
-                </.dropdown_menu_trigger>
-                <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
-                  <.link
-                    navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
-                    hidden={@progress == 0 || @fully_read}
-                    class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                  >
-                    <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
-                  </.link>
-                  <button
-                    phx-click={
-                      JS.push("mark_read")
-                      |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
-                    }
-                    hidden={@fully_read}
-                    class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                  >
-                    <.icon name="lucide-circle-check-big" class="w-4 h-4 mr-2" /> Mark as Read
-                  </button>
-                  <button
-                    phx-click={
-                      JS.push("mark_unread")
-                      |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
-                    }
-                    hidden={!@fully_read && @progress == 0}
-                    class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                  >
-                    <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
-                  </button>
-                </.dropdown_menu_content>
-              </.dropdown_menu>
-            </div>
-          <% end %>
-        </div>
-
-        <%!-- Summary — outside BFC, wraps around float then expands to full width --%>
-        <%= if @book.summary && @book.summary != "" do %>
-          <p class="text-sm text-gray-400 leading-relaxed mt-5 whitespace-pre-line">{@book.summary}</p>
-        <% end %>
-      </div>
-
-      <%!-- Full-width metadata strip --%>
-      <div class="flex flex-wrap gap-px bg-gray-800 rounded-lg overflow-hidden text-xs">
-        <%= if @book.publishers != [] do %>
-          <div class="flex-1 min-w-[9rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
-              Publisher
-            </p>
-            <p class="text-gray-300">
-              <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
-                <%= if idx > 0 do %>
-                  <span class="text-gray-600"> / </span>
-                <% end %>
-                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</.link>
-              <% end %>
-            </p>
-          </div>
-        <% end %>
-        <%= if @book.year do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Year</p>
-            <p class="text-gray-300">{@book.year}</p>
-          </div>
-        <% end %>
-        <%= if @book.page_count > 0 do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Pages</p>
-            <p class="text-gray-300">{@book.page_count}</p>
-          </div>
-        <% end %>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Format</p>
-          <%= if length(@book.files) > 1 do %>
-            <p class="text-gray-300 flex flex-wrap gap-x-1">
-              <%= for f <- @book.files do %>
+          <div
+            :if={length(@book.files) > 1}
+            class="rise flex items-center justify-center sm:justify-start gap-1.5 mt-5"
+            style="--i:4"
+          >
+            <span class="text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500 mr-1">Format</span>
+            <%= for f <- @book.files do %>
+              <%= if @selected_file && f.id == @selected_file.id do %>
+                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-white text-gray-950">
+                  {String.upcase(to_string(f.format))}
+                </span>
+              <% else %>
                 <button
                   phx-click="select_format"
                   phx-value-format={to_string(f.format)}
-                  class={
-                    if @selected_file && f.id == @selected_file.id,
-                      do: "text-violet-400 font-semibold",
-                      else: "text-gray-400 hover:text-violet-400 transition-colors"
-                  }
+                  class="px-2.5 py-1 text-xs font-semibold rounded-full border border-white/15 text-gray-300 hover:border-white/50 hover:text-white transition-colors"
                 >
                   {String.upcase(to_string(f.format))}
                 </button>
               <% end %>
-            </p>
-          <% else %>
-            <p class="text-gray-300">
-              {if @selected_file, do: String.upcase(to_string(@selected_file.format)), else: "—"}
-            </p>
+            <% end %>
+          </div>
+
+          <%!-- Read button --%>
+          <div
+            :if={@book.page_count > 0 && @selected_file}
+            class="rise flex items-stretch justify-center sm:justify-start mt-7"
+            style="--i:5"
+          >
+            <.link
+              navigate={
+                if @fully_read,
+                  do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
+                  else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
+              }
+              class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-l-md"
+            >
+              <.icon name="lucide-play" class="w-4 h-4" />
+              {cond do
+                @fully_read -> "Read Again"
+                @progress > 0 -> "Continue"
+                true -> "Read"
+              end}
+            </.link>
+            <.dropdown_menu id="read-options-menu" class="flex">
+              <.dropdown_menu_trigger
+                class="ink-btn flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40"
+                aria-label="More reading options"
+              >
+                <.icon name="lucide-chevron-down" class="w-4 h-4" />
+              </.dropdown_menu_trigger>
+              <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
+                <.link
+                  navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
+                  hidden={@progress == 0 || @fully_read}
+                  class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                >
+                  <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
+                </.link>
+                <button
+                  phx-click={
+                    JS.push("mark_read")
+                    |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                  }
+                  hidden={@fully_read}
+                  class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                >
+                  <.icon name="lucide-circle-check-big" class="w-4 h-4 mr-2" /> Mark as Read
+                </button>
+                <button
+                  phx-click={
+                    JS.push("mark_unread")
+                    |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                  }
+                  hidden={!@fully_read && @progress == 0}
+                  class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                >
+                  <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
+                </button>
+              </.dropdown_menu_content>
+            </.dropdown_menu>
+          </div>
+        </div>
+      </header>
+
+      <%!-- Summary --%>
+      <section :if={@book.summary && @book.summary != ""} class="max-w-3xl">
+        <p class="text-[15px] text-gray-300 leading-7 whitespace-pre-line">{@book.summary}</p>
+      </section>
+
+      <.indicia>
+        <:item label="Publisher" show={@book.publishers != []}>
+          <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
+            <span :if={idx > 0} class="text-gray-600"> / </span>
+            <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
           <% end %>
-        </div>
-        <%= if @selected_file && @selected_file.file_size > 0 do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Size</p>
-            <p class="text-gray-300">{Formatters.format_file_size(@selected_file.file_size)}</p>
-          </div>
-        <% end %>
-        <%= if @book.language do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
-              Language
-            </p>
-            <p class="text-gray-300">{Formatters.language_name(@book.language)}</p>
-          </div>
-        <% end %>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
-            Age Rating
-          </p>
-          <p class="text-gray-300">{Formatters.format_age_rating(@book.age_rating)}</p>
-        </div>
-      </div>
+        </:item>
+        <:item label="Format">
+          {if @selected_file, do: String.upcase(to_string(@selected_file.format)), else: "—"}
+        </:item>
+        <:item label="Size" show={@selected_file != nil && @selected_file.file_size > 0}>
+          {Formatters.format_file_size(@selected_file.file_size)}
+        </:item>
+        <:item label="Language" show={@book.language != nil}>
+          {Formatters.language_name(@book.language)}
+        </:item>
+        <:item label="Age Rating">{Formatters.format_age_rating(@book.age_rating)}</:item>
+      </.indicia>
 
       <%!-- Credits + details expander --%>
       <% credit_groups = Roles.group(@book_details.credits) %>
@@ -680,147 +650,54 @@ defmodule StashixWeb.BookLive do
         </div>
       <% end %>
 
-      <%!-- External metadata sources --%>
-      <%= if @external_ids.external_ids != [] || @book.metadata_source || @book.metadata_locked do %>
-        <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500 -mt-4">
-          <%= if @book.metadata_locked do %>
-            <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
-              <.icon name="lucide-lock" class="w-3 h-3" /> Locked
-            </span>
-          <% end %>
-          <%= if @book.metadata_matched_at do %>
-            <span>
-              Metadata from {(Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
-                                Stashix.Metadata.Sources.module(@book.metadata_source).name()) ||
-                @book.metadata_source} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
-            </span>
-          <% end %>
-          <%= for {source, id, href} <- external_links(@external_ids) do %>
-            <%= if href do %>
-              <a
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-gray-800 hover:border-gray-600 hover:text-gray-300"
-              >
-                {source} <.icon name="lucide-external-link" class="w-3 h-3" />
-              </a>
-            <% else %>
-              <span class="px-2 py-0.5 rounded border border-gray-800" title={id}>{source}</span>
-            <% end %>
-          <% end %>
-        </div>
-      <% end %>
-
       <%!-- Prev / Next navigation --%>
-      <%= if @prev_book || @next_book do %>
-        <div class="flex gap-2">
-          <%= if @prev_book do %>
-            <.link
-              navigate={~p"/book/#{@prev_book.id}"}
-              class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 bg-linear-to-l from-gray-900 to-gray-700/60"
-            >
-              <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
-                <.blurhash_image
-                  id={"nav-prev-#{@prev_book.id}"}
-                  src={~p"/api/books/#{@prev_book.id}/cover?s=s"}
-                  blurhash={@prev_book.blurhash}
-                  class="w-full h-full object-contain block"
-                  onerror="this.style.display='none'"
-                />
-              </div>
-              <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5">
-                <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Previous</p>
-                <p class="text-base font-bold text-white leading-tight tracking-tight">
-                  <%= if @prev_book.issue_number do %>
-                    #{Decimal.to_integer(@prev_book.issue_number)}
-                  <% end %>
-                </p>
-                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors">
-                  {@prev_book.title}
-                </p>
-                <p class="text-[10px] text-gray-600 mt-0.5">
-                  {[@prev_book.year, @prev_book.page_count > 0 && "#{@prev_book.page_count} pp"]
-                  |> Enum.filter(& &1)
-                  |> Enum.join(" · ")}
-                </p>
-              </div>
-            </.link>
-          <% else %>
-            <div class="flex-1" />
-          <% end %>
-          <%= if @next_book do %>
-            <.link
-              navigate={~p"/book/#{@next_book.id}"}
-              class="flex-1 flex items-stretch rounded-lg border border-gray-800 hover:border-gray-700 transition-colors group overflow-hidden min-w-0 flex-row-reverse bg-linear-to-r from-gray-900 to-gray-700/60"
-            >
-              <div class="w-16 md:w-24 flex-shrink-0 bg-gray-950 relative self-stretch">
-                <.blurhash_image
-                  id={"nav-next-#{@next_book.id}"}
-                  src={~p"/api/books/#{@next_book.id}/cover?s=s"}
-                  blurhash={@next_book.blurhash}
-                  class="w-full h-full object-contain block"
-                  onerror="this.style.display='none'"
-                />
-              </div>
-              <div class="flex flex-col justify-center px-4 py-3 min-w-0 gap-0.5 text-right">
-                <p class="text-[9px] font-bold tracking-[0.15em] uppercase text-gray-600">Next</p>
-                <p class="text-base font-bold text-white leading-tight tracking-tight">
-                  <%= if @next_book.issue_number do %>
-                    #{Decimal.to_integer(@next_book.issue_number)}
-                  <% end %>
-                </p>
-                <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors">
-                  {@next_book.title}
-                </p>
-                <p class="text-[10px] text-gray-600 mt-0.5">
-                  {[@next_book.year, @next_book.page_count > 0 && "#{@next_book.page_count} pp"]
-                  |> Enum.filter(& &1)
-                  |> Enum.join(" · ")}
-                </p>
-              </div>
-            </.link>
-          <% else %>
-            <div class="flex-1" />
-          <% end %>
-        </div>
-      <% end %>
+      <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label="Adjacent issues">
+        <.adjacent_card :if={@prev_book} book={@prev_book} dir={:prev} />
+        <div :if={!@prev_book}></div>
+        <.adjacent_card :if={@next_book} book={@next_book} dir={:next} />
+      </nav>
 
-      <%!-- File path --%>
-      <%= if @current_user.role == :admin && @selected_file do %>
-        <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug mt-2">
+      <%!-- External metadata sources + file path --%>
+      <footer class="space-y-2">
+        <%= if @external_ids.external_ids != [] || @book.metadata_source || @book.metadata_locked do %>
+          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <%= if @book.metadata_locked do %>
+              <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
+                <.icon name="lucide-lock" class="w-3 h-3" /> Locked
+              </span>
+            <% end %>
+            <%= if @book.metadata_matched_at do %>
+              <span>
+                Metadata from {(Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
+                                  Stashix.Metadata.Sources.module(@book.metadata_source).name()) ||
+                  @book.metadata_source} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
+              </span>
+            <% end %>
+            <%= for {source, id, href} <- external_links(@external_ids) do %>
+              <%= if href do %>
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-white/10 hover:border-white/30 hover:text-gray-300 transition-colors"
+                >
+                  {source} <.icon name="lucide-external-link" class="w-3 h-3" />
+                </a>
+              <% else %>
+                <span class="px-2 py-0.5 rounded-full border border-white/10" title={id}>{source}</span>
+              <% end %>
+            <% end %>
+          </div>
+        <% end %>
+        <div
+          :if={@current_user.role == :admin && @selected_file}
+          class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug"
+        >
           <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
           {relative_path(@selected_file.path, @library)}
         </div>
-      <% end %>
-    </div>
-
-    <%!-- Cover Lightbox --%>
-    <%= if @book.cover do %>
-      <div id="book-cover-lightbox" style="display:none" class="fixed inset-0 z-50">
-        <div
-          phx-click={JS.hide(to: "#book-cover-lightbox")}
-          class="absolute inset-0 bg-black/90 cursor-zoom-out"
-        >
-        </div>
-        <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none">
-          <img
-            src={~p"/api/books/#{@book.id}/cover?s=xl"}
-            alt={@book.title}
-            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
-            style="pointer-events:auto"
-            onclick="event.stopPropagation()"
-          />
-        </div>
-        <button
-          phx-click={JS.hide(to: "#book-cover-lightbox")}
-          class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
-          aria-label="Close"
-        >
-          <.icon name="lucide-x" class="w-5 h-5" />
-        </button>
-      </div>
-    <% end %>
+      </footer>
+    </.detail_page>
 
     <%!-- Identify Dialog --%>
     <%= if @current_user.role == :admin && @show_identify_dialog do %>

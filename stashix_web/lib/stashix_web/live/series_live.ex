@@ -5,6 +5,7 @@ defmodule StashixWeb.SeriesLive do
   alias Stashix.Library.Series
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
+  import StashixWeb.DetailComponents
   import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -321,6 +322,26 @@ defmodule StashixWeb.SeriesLive do
     end
   end
 
+  # Fraction read (0.0–1.0), or nil when the book has never been opened.
+  defp book_progress(book, progress_map) do
+    prog = progress_map[book.id]
+
+    if prog && book.page_count && book.page_count > 1,
+      do: min(prog / (book.page_count - 1), 1.0),
+      else: nil
+  end
+
+  defp run_segment_title(book, progress_map) do
+    state =
+      case book_progress(book, progress_map) do
+        p when p in [nil, 0.0] -> "unread"
+        p when p >= 1.0 -> "read"
+        p -> "#{round(p * 100)}% read"
+      end
+
+    [issue_label(book), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+  end
+
   defp issue_label(%{issue_number: nil}), do: nil
   defp issue_label(%{issue_number: n}), do: "##{Decimal.to_integer(n)}"
 
@@ -352,266 +373,224 @@ defmodule StashixWeb.SeriesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="max-w-4xl mx-auto space-y-6">
-      <%!-- Breadcrumbs --%>
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
-        <button
-          onclick="history.back()"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0"
-        >
-          <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
-        </button>
-        <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
-          <span class="text-gray-700 flex-shrink-0">/</span>
-          <.link
-            navigate={~p"/library/#{@library.id}"}
-            class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-          >{@library.name}</.link>
-          <span class="text-gray-700 flex-shrink-0">/</span>
-          <span class="text-gray-300 truncate min-w-0">{@series.name}</span>
-        </div>
-        <%= if @current_user.role == :admin do %>
-          <div class="ml-auto">
-            <.dropdown_menu id="series-admin-menu">
-              <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-gray-200 border border-gray-700 transition-colors">
-                <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
-                <.icon name="lucide-chevron-down" class="w-3 h-3" />
-              </.dropdown_menu_trigger>
-              <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("open_edit_dialog")}
-                >
-                  <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("fetch_metadata")}
-                >
-                  <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("open_identify_dialog")}
-                >
-                  <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify Series…
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("toggle_metadata_lock")}
-                >
-                  <%= if @series.metadata_locked do %>
-                    <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
-                  <% else %>
-                    <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
-                  <% end %>
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                  on-select={JS.push("rescan_series")}
-                >
-                  <%= if @scanning do %>
-                    <.icon
-                      name="lucide-loader-circle"
-                      class="w-4 h-4 mr-2 animate-spin text-violet-400"
-                    /> Scanning…
-                  <% else %>
-                    <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Series
-                  <% end %>
-                </.dropdown_menu_item>
-                <.dropdown_menu_item
-                  class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
-                  on-select={JS.push("force_rescan_series")}
-                >
-                  <%= if @scanning do %>
-                    <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
-                  <% else %>
-                    <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
-                  <% end %>
-                </.dropdown_menu_item>
-              </.dropdown_menu_content>
-            </.dropdown_menu>
-          </div>
-        <% end %>
-      </div>
-
-      <%!-- Editorial header — cover floats left, info BFC sits beside it, summary wraps below --%>
-      <div class="overflow-hidden">
-        <%!-- Cover — floated left; inline style bypasses Tailwind purge; aspect-ratio gives immediate height --%>
-        <div style="float:left; margin-right:2rem; margin-bottom:1rem;" class="w-40 md:w-52">
-          <div class="rounded-lg overflow-hidden shadow-[0_8px_40px_rgba(0,0,0,0.65)] aspect-[2/3] relative group">
-            <%= if @cover_book && @cover_book.cover do %>
-              <.blurhash_image
-                id={"series-cover-#{@series.id}"}
-                src={~p"/api/books/#{@cover_book.id}/cover?s=l"}
-                alt={@series.name}
-                blurhash={@cover_book.cover.blurhash}
-              />
-              <button
-                phx-click={JS.show(to: "#series-cover-lightbox")}
-                class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
-                aria-label="View cover full screen"
+    <% issue_sorted = sort_books(@series.books, "issue_asc") %>
+    <% first_book = List.first(issue_sorted) %>
+    <% issue_count = length(issue_sorted) %>
+    <% read_count = Enum.count(issue_sorted, &((book_progress(&1, @progress_map) || 0.0) >= 1.0)) %>
+    <% has_cover = @cover_book && @cover_book.cover %>
+    <.detail_page cover_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=s"}>
+      <.detail_crumbs crumbs={[
+        {"Home", "/"},
+        {@library.name, ~p"/library/#{@library.id}"},
+        {@series.name, nil}
+      ]}>
+        <:actions :if={@current_user.role == :admin}>
+          <.dropdown_menu id="series-admin-menu">
+            <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
+              <.icon name="lucide-chevron-down" class="w-3 h-3" />
+            </.dropdown_menu_trigger>
+            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_edit_dialog")}
               >
-                <.icon
-                  name="lucide-zoom-in"
-                  class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
-                />
-              </button>
-            <% else %>
-              <div class="w-full h-full flex items-center justify-center bg-gray-800/60 text-gray-600">
-                <.icon name="lucide-layers" class="w-10 h-10 md:w-14 md:h-14" />
-              </div>
-            <% end %>
-          </div>
+                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("fetch_metadata")}
+              >
+                <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("open_identify_dialog")}
+              >
+                <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify Series…
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("toggle_metadata_lock")}
+              >
+                <%= if @series.metadata_locked do %>
+                  <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
+                <% else %>
+                  <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
+                <% end %>
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
+                on-select={JS.push("rescan_series")}
+              >
+                <%= if @scanning do %>
+                  <.icon
+                    name="lucide-loader-circle"
+                    class="w-4 h-4 mr-2 animate-spin text-violet-400"
+                  /> Scanning…
+                <% else %>
+                  <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Series
+                <% end %>
+              </.dropdown_menu_item>
+              <.dropdown_menu_item
+                class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
+                on-select={JS.push("force_rescan_series")}
+              >
+                <%= if @scanning do %>
+                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
+                <% else %>
+                  <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
+                <% end %>
+              </.dropdown_menu_item>
+            </.dropdown_menu_content>
+          </.dropdown_menu>
+        </:actions>
+      </.detail_crumbs>
+
+      <%!-- Hero: fanned cover stack, giant issue count behind the title --%>
+      <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-14 pt-2">
+        <span
+          :if={issue_count > 1}
+          class="ghost-numeral hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem] pointer-events-none"
+          aria-hidden="true"
+        >
+          {issue_count}
+        </span>
+
+        <div class="rise" style="--i:0">
+          <.hero_cover
+            id={"series-cover-#{@series.id}"}
+            src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=l"}
+            full_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=xl"}
+            alt={@series.name}
+            blurhash={has_cover && @cover_book.cover.blurhash}
+            stack={
+              issue_sorted
+              |> Enum.filter(&(&1.cover && (!@cover_book || &1.id != @cover_book.id)))
+              |> Enum.take(2)
+              |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
+            }
+          />
         </div>
 
-        <%!-- BFC wrapper: forced beside the float, never overlaps it --%>
-        <div class="overflow-hidden pt-1">
-          <%!-- Publisher eyebrow --%>
-          <%= if @series.publishers != [] do %>
-            <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-violet-400 mb-2">
-              <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
-                <%= if idx > 0 do %>
-                  <span class="text-violet-800"> / </span>
-                <% end %>
-                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
-              <% end %>
-            </p>
-          <% end %>
+        <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
+          <p
+            :if={@series.publishers != []}
+            class="rise text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300 mb-3"
+            style="--i:1"
+          >
+            <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
+              <span :if={idx > 0} class="text-white/25"> / </span>
+              <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-white transition-colors">{pub.name}</.link>
+            <% end %>
+          </p>
 
-          <%!-- Title --%>
-          <h1 class="text-2xl md:text-3xl font-bold text-white tracking-tight leading-tight mb-3">
+          <h1
+            class="rise font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance break-words"
+            style="--i:2"
+          >
             {@series.name}
           </h1>
 
-          <%!-- Year + Status --%>
-          <div class="flex items-center flex-wrap gap-2 mb-5">
-            <%= if yr = year_range(@series) do %>
-              <span class="text-sm text-gray-400">{yr}</span>
-              <span class="text-gray-700 select-none">·</span>
-            <% end %>
+          <div
+            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300"
+            style="--i:3"
+          >
+            <span :if={yr = year_range(@series)} class="tabular-nums">{yr}</span>
             <%= if @series.ongoing do %>
-              <.badge class="bg-emerald-500/15 text-emerald-400 border-emerald-500/20 gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span> Ongoing
-              </.badge>
+              <span class="inline-flex items-center gap-1.5 text-emerald-300">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ongoing
+              </span>
             <% else %>
-              <.badge variant="outline" class="text-gray-400 border-gray-600 gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-500 inline-block"></span> Completed
-              </.badge>
+              <span class="inline-flex items-center gap-1.5 text-gray-400">
+                <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span> Completed
+              </span>
             <% end %>
+            <span class="tabular-nums">
+              {issue_count} {if issue_count == 1, do: "issue", else: "issues"}
+            </span>
           </div>
 
           <%!-- Read buttons --%>
           <%= if @continue_book do %>
-            <% has_progress = @progress_map[@continue_book.id] && @progress_map[@continue_book.id] > 0 %>
-            <% first_book =
-              List.first(
-                Enum.sort_by(@books, fn b ->
-                  if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-                end)
-              ) %>
-            <div class="flex items-center gap-3 flex-wrap">
+            <% has_progress = (@progress_map[@continue_book.id] || 0) > 0 %>
+            <div class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7" style="--i:4">
               <.link
                 navigate={~p"/read/#{@continue_book.id}"}
-                class="inline-flex items-center gap-2 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-lg transition-colors"
+                class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
               >
                 <.icon name="lucide-play" class="w-4 h-4" />
-                <%= if has_progress do %>
-                  Continue{if lbl = issue_label(@continue_book), do: " — #{lbl}"}
-                <% else %>
-                  Start Reading{if lbl = issue_label(@continue_book), do: " — #{lbl}"}
-                <% end %>
+                {if has_progress, do: "Continue", else: "Start Reading"}
+                <span :if={lbl = issue_label(@continue_book)} class="text-ink">{lbl}</span>
               </.link>
-              <%= if has_progress && first_book && first_book.id != @continue_book.id do %>
-                <.link
-                  navigate={~p"/read/#{first_book.id}"}
-                  class="inline-flex items-center gap-2 px-4 py-2.5 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white text-sm font-medium rounded-lg border border-gray-700 hover:border-gray-600 transition-colors"
-                >
-                  <.icon name="lucide-book-open" class="w-4 h-4" /> Read from #1
-                </.link>
-              <% end %>
+              <.link
+                :if={has_progress && first_book && first_book.id != @continue_book.id}
+                navigate={~p"/read/#{first_book.id}"}
+                class="inline-flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white underline decoration-white/25 hover:decoration-white underline-offset-4 transition-colors"
+              >
+                <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from #1
+              </.link>
             </div>
           <% end %>
         </div>
+      </header>
 
-        <%!-- Summary — outside BFC wrapper, so it continues beside the float then expands below --%>
-        <%= if @summary_info do %>
-          <p class="text-sm text-gray-400 leading-relaxed mt-5 whitespace-pre-line">{@summary_info.text}</p>
-          <%= if @summary_info.source do %>
-            <p class="mt-1.5 text-[11px] text-gray-600 italic">From issue {@summary_info.source}</p>
-          <% end %>
-        <% end %>
-      </div>
-
-      <%!-- Full-width metadata strip --%>
-      <div class="flex flex-wrap gap-px bg-gray-800 rounded-lg overflow-hidden text-xs">
-        <%= if @series.publishers != [] do %>
-          <div class="flex-1 min-w-[9rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
-              Publisher
-            </p>
-            <p class="text-gray-300">
-              <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
-                <%= if idx > 0 do %>
-                  <span class="text-gray-600"> / </span>
-                <% end %>
-                <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-400 transition-colors">{pub.name}</.link>
-              <% end %>
-            </p>
-          </div>
-        <% end %>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Issues</p>
-          <p class="text-gray-300">{length(@books)}</p>
-        </div>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Status</p>
-          <%= if @series.ongoing do %>
-            <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>Ongoing
-            </span>
-          <% else %>
-            <span class="text-gray-400">Completed</span>
-          <% end %>
-        </div>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Years</p>
-          <p class="text-gray-300">{year_range(@series) || "—"}</p>
-        </div>
-        <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-          <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Pages</p>
-          <p class="text-gray-300">
-            {if @total_pages > 0 do
-              :erlang.integer_to_list(@total_pages)
-              |> List.to_string()
-              |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
-            else
-              "—"
-            end}
+      <%!-- The run: one segment per issue, filled by reading progress --%>
+      <section :if={issue_count > 1} class="rise" style="--i:5">
+        <div class="flex items-baseline justify-between mb-2">
+          <h2 class="text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500">The run</h2>
+          <p class="text-xs text-gray-400 tabular-nums">
+            <span class="text-white font-semibold">{read_count}</span> / {issue_count} read
           </p>
         </div>
-        <%= if fs = Formatters.format_file_size(@total_size) do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Size</p>
-            <p class="text-gray-300">{fs}</p>
-          </div>
-        <% end %>
-        <%= if @series.volume do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">Volume</p>
-            <p class="text-gray-300">Vol. {@series.volume}</p>
-          </div>
-        <% end %>
-        <%= if @series.language do %>
-          <div class="flex-1 min-w-[6rem] bg-gray-900 px-4 py-3">
-            <p class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-1">
-              Language
-            </p>
-            <p class="text-gray-300">{Formatters.language_name(@series.language)}</p>
-          </div>
-        <% end %>
-      </div>
+        <div class={["flex items-end h-7", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
+          <.link
+            :for={b <- issue_sorted}
+            navigate={~p"/book/#{b.id}"}
+            title={run_segment_title(b, @progress_map)}
+            class={[
+              "flex-1 min-w-0 rounded-[2px] overflow-hidden bg-white/10 hover:bg-white/30 hover:h-7 transition-[height,background-color] duration-150",
+              if(@continue_book && b.id == @continue_book.id,
+                do: "h-7 outline outline-1 outline-ink",
+                else: "h-4"
+              )
+            ]}
+          >
+            <span
+              class="block h-full bg-violet-500"
+              style={"width: #{round((book_progress(b, @progress_map) || 0.0) * 100)}%"}
+            ></span>
+          </.link>
+        </div>
+      </section>
+
+      <%!-- Summary --%>
+      <section :if={@summary_info} class="max-w-3xl">
+        <p class="text-[15px] text-gray-300 leading-7 whitespace-pre-line">{@summary_info.text}</p>
+        <p :if={@summary_info.source} class="mt-2 text-xs text-gray-500 italic">
+          From issue {@summary_info.source}
+        </p>
+      </section>
+
+      <.indicia>
+        <:item label="Pages" show={@total_pages > 0}>
+          {@total_pages
+          |> Integer.to_string()
+          |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")}
+        </:item>
+        <:item label="Size" show={Formatters.format_file_size(@total_size) != nil}>
+          {Formatters.format_file_size(@total_size)}
+        </:item>
+        <:item label="Volume" show={@series.volume != nil}>Vol. {@series.volume}</:item>
+        <:item label="Language" show={@series.language != nil}>
+          {Formatters.language_name(@series.language)}
+        </:item>
+        <:item label="Metadata" show={@series.metadata_locked}>
+          <span class="inline-flex items-center gap-1 text-amber-300/90">
+            <.icon name="lucide-lock" class="w-3 h-3" /> Locked
+          </span>
+        </:item>
+      </.indicia>
 
       <%!-- Series details expander --%>
       <% sd = @series_details %>
@@ -661,24 +640,17 @@ defmodule StashixWeb.SeriesLive do
         </div>
       <% end %>
 
-      <%!-- Folder path --%>
-      <%= if @current_user.role == :admin do %>
-        <%= if @series.path do %>
-          <div class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug -mt-4">
-            <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
-            {relative_folder(@series, @library)}
-          </div>
-        <% end %>
-      <% end %>
-
       <%!-- Issues --%>
-      <div>
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-lg font-semibold text-gray-300">{length(@books)} Issues</h2>
+      <section>
+        <div class="flex items-end justify-between mb-4">
+          <h2 class="font-display font-black uppercase text-3xl leading-none text-white">
+            Issues <span class="text-gray-600 tabular-nums">{issue_count}</span>
+          </h2>
           <form phx-change="sort">
             <select
               name="value"
-              class="px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-indigo-500 cursor-pointer"
+              aria-label="Sort issues"
+              class="px-3 py-1.5 text-xs font-medium rounded-full border bg-white/5 border-white/10 text-gray-300 hover:text-white hover:border-white/25 focus:outline-none focus:border-violet-500 cursor-pointer transition-colors"
             >
               <%= for {label, value} <- [
                 {"Issue # ↑", "issue_asc"},
@@ -690,18 +662,13 @@ defmodule StashixWeb.SeriesLive do
                 {"Date Added ↓", "added_desc"},
                 {"Date Added ↑", "added_asc"}
               ] do %>
-                <option value={value} selected={@sort == value}>{label}</option>
+                <option value={value} selected={@sort == value} class="bg-gray-900">{label}</option>
               <% end %>
             </select>
           </form>
         </div>
         <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
           <%= for book <- @books do %>
-            <% prog = @progress_map[book.id] %>
-            <% progress =
-              if prog && book.page_count && book.page_count > 1,
-                do: prog / (book.page_count - 1),
-                else: nil %>
             <.media_card
               navigate={~p"/book/#{book.id}"}
               title={book.title}
@@ -715,41 +682,23 @@ defmodule StashixWeb.SeriesLive do
                   true -> nil
                 end
               }
-              progress={progress}
+              progress={book_progress(book, @progress_map)}
               type={:book}
               blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <%!-- Cover Lightbox --%>
-    <%= if @cover_book && @cover_book.cover do %>
-      <div id="series-cover-lightbox" style="display:none" class="fixed inset-0 z-50">
-        <div
-          phx-click={JS.hide(to: "#series-cover-lightbox")}
-          class="absolute inset-0 bg-black/90 cursor-zoom-out"
-        >
-        </div>
-        <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none">
-          <img
-            src={~p"/api/books/#{@cover_book.id}/cover?s=xl"}
-            alt={@series.name}
-            class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
-            style="pointer-events:auto"
-            onclick="event.stopPropagation()"
-          />
-        </div>
-        <button
-          phx-click={JS.hide(to: "#series-cover-lightbox")}
-          class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
-          aria-label="Close"
-        >
-          <.icon name="lucide-x" class="w-5 h-5" />
-        </button>
+      <%!-- Folder path --%>
+      <div
+        :if={@current_user.role == :admin && @series.path}
+        class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug"
+      >
+        <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+        {relative_folder(@series, @library)}
       </div>
-    <% end %>
+    </.detail_page>
 
     <%!-- Identify Dialog --%>
     <%= if @current_user.role == :admin && @show_identify_dialog do %>
