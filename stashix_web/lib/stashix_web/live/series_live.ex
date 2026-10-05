@@ -684,7 +684,7 @@ defmodule StashixWeb.SeriesLive do
           <h2 class="font-display font-black uppercase text-3xl leading-none text-white">
             Issues <span class="text-gray-600 tabular-nums">{issue_count}</span>
           </h2>
-          <form phx-change="sort">
+          <form id="issue-sort" phx-change="sort">
             <select
               name="value"
               aria-label="Sort issues"

@@ -920,6 +920,7 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  attr :id, :string, default: "sort-select"
   attr :options, :list, required: true
   attr :selected, :string, required: true
   attr :event, :string, default: "sort"
@@ -928,7 +929,7 @@ defmodule StashixWeb.CoreComponents do
 
   def sort_select(assigns) do
     ~H"""
-    <form phx-change={@event} class={@class}>
+    <form id={@id} phx-change={@event} class={@class}>
       <select
         name="value"
         class={[

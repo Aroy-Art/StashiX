@@ -725,6 +725,7 @@ defmodule StashixWeb.AdminLive do
                               rating_opts =
                                 Enum.map(age_ratings, &{Formatters.format_age_rating(&1), &1}) %>
                               <form
+                                id={"permission-form-#{user.id}-#{lib.id}"}
                                 phx-change="set_permission"
                                 class="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-900 border border-gray-800"
                               >
