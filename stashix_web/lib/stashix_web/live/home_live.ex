@@ -342,7 +342,7 @@ defmodule StashixWeb.HomeLive do
             </p>
             <%= if hero_pct do %>
               <div class="flex items-center gap-3">
-                <div class="w-32 sm:w-44 h-0.5 bg-gray-700 rounded-full overflow-hidden">
+                <div class="w-32 sm:w-44 h-1 bg-gray-700 rounded-full overflow-hidden">
                   <div class="h-full bg-violet-500 rounded-full" style={"width:#{hero_pct}%"}></div>
                 </div>
                 <span class="text-xs text-gray-500">{hero_pct}%</span>
@@ -431,7 +431,7 @@ defmodule StashixWeb.HomeLive do
                       </p>
                       <%= if pct do %>
                         <div class="flex items-center gap-2">
-                          <div class="flex-1 h-px bg-gray-700 rounded-full overflow-hidden">
+                          <div class="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                             <div class="h-full bg-violet-500 rounded-full" style={"width:#{pct}%"}></div>
                           </div>
                           <span class="text-[10px] text-gray-500">{pct}%</span>
