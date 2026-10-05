@@ -35,6 +35,9 @@ defmodule StashixWeb.LoginLive do
            form: to_form(%{"login" => login, "password" => password})
          )}
 
+      {:error, :rate_limited} ->
+        {:noreply, assign(socket, error: "Too many failed attempts. Try again in a few minutes.")}
+
       {:error, _} ->
         {:noreply, assign(socket, error: "Invalid email/username or password")}
     end

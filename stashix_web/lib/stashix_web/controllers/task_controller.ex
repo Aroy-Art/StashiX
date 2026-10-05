@@ -2,6 +2,7 @@ defmodule StashixWeb.TaskController do
   use StashixWeb, :controller
   use OpenApiSpex.ControllerSpecs
 
+  alias Stashix.Library.Access
   alias StashixWeb.Schemas
 
   operation :index,
@@ -19,7 +20,9 @@ defmodule StashixWeb.TaskController do
     ]
 
   def index(conn, _params) do
-    tasks = Stashix.Scanner.list_active_tasks()
+    tasks =
+      Enum.filter(Stashix.Scanner.list_active_tasks(), &Access.can_read_library?(conn.assigns.access, &1.library_id))
+
     json(conn, %{tasks: tasks})
   end
 end

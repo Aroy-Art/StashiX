@@ -30,10 +30,10 @@ docker compose up -d
 
 Access at `http://localhost:4000`. A setup wizard runs on first launch.
 
-Generate `SECRET_KEY_BASE` with:
+Generate `SECRET_KEY_BASE` and `JWT_SECRET` (a different value for each) with:
 
 ```bash
-docker compose run --rm phoenix ./bin/stashix eval "IO.puts(:crypto.strong_rand_bytes(48) |> Base.encode64())"
+openssl rand -base64 48
 ```
 
 ## Development
@@ -52,7 +52,7 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 | ----------------- | -------------------------------------- | ------------------------------------------- |
 | `DATABASE_URL`    | _dev.exs default_                      | Ecto DB URL (`ecto://user:pass@host/db`)    |
 | `SECRET_KEY_BASE` | _required in prod_                     | Phoenix cookie/session encryption           |
-| `JWT_SECRET`      | `dev-secret-change-in-production`      | Guardian JWT signing secret                 |
+| `JWT_SECRET`      | _required in prod_                     | Guardian JWT signing secret                 |
 | `PHX_HOST`        | `localhost`                            | Public hostname (used in URLs)              |
 | `PORT`            | `4000`                                 | HTTP port                                   |
 | `LIBRARY_PATH`    | `/libraries`                           | Root path where book files are scanned from |

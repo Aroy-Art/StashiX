@@ -34,7 +34,7 @@ defmodule StashixWeb.BookController do
       access: conn.assigns.access,
       limit: parse_int(params["limit"], 50),
       offset: parse_int(params["offset"], 0),
-      sort: String.to_atom(params["sort"] || "inserted_at"),
+      sort: params["sort"] || "title_asc",
       type: params["type"]
     ]
 

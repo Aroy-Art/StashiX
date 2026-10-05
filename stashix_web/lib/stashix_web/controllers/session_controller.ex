@@ -15,7 +15,13 @@ defmodule StashixWeb.SessionController do
         conn
         |> put_session("guardian_default_token", access_token)
         |> put_session("guardian_refresh_token", refresh_token)
+        |> put_session(:live_socket_id, Accounts.session_topic(user.id))
         |> redirect(to: ~p"/")
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_flash(:error, "Too many failed attempts. Try again in a few minutes.")
+        |> redirect(to: ~p"/login")
 
       {:error, _} ->
         conn
@@ -51,6 +57,7 @@ defmodule StashixWeb.SessionController do
         conn
         |> put_session("guardian_default_token", access_token)
         |> put_session("guardian_refresh_token", refresh_token)
+        |> put_session(:live_socket_id, Accounts.session_topic(user.id))
         |> redirect(to: ~p"/")
       else
         {:error, _} ->
@@ -63,7 +70,7 @@ defmodule StashixWeb.SessionController do
 
   def delete(conn, _params) do
     conn
-    |> delete_session("guardian_default_token")
+    |> configure_session(drop: true)
     |> redirect(to: ~p"/login")
   end
 end

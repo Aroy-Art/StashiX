@@ -1,24 +1,15 @@
 defmodule StashixWeb.UserSocket do
   use Phoenix.Socket
 
-  alias Stashix.Auth.Guardian
+  alias Stashix.Auth.TokenHelper
 
   channel "library:*", StashixWeb.LibraryChannel
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do
-    case Guardian.decode_and_verify(token) do
-      {:ok, claims} ->
-        case Guardian.resource_from_claims(claims) do
-          {:ok, user} ->
-            {:ok, assign(socket, :user_id, user.id)}
-
-          {:error, _} ->
-            :error
-        end
-
-      {:error, _} ->
-        :error
+    case TokenHelper.resource_from_token(token) do
+      {:ok, user} -> {:ok, assign(socket, :user_id, user.id)}
+      {:error, _} -> :error
     end
   end
 

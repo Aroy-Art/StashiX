@@ -7,7 +7,9 @@ services:
       - "4000:4000"
     environment:
       DATABASE_URL: ${DATABASE_URL:-postgresql://stashix:stashix@db/stashix}
-      SECRET_KEY_BASE: ${SECRET_KEY_BASE:-dev_only_secret_key_base_replace_in_prod_with_mix_phx_gen_secret}
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      STASHIX_ENCRYPTION_KEY: ${STASHIX_ENCRYPTION_KEY:-}
       PHX_HOST: ${PHX_HOST:-localhost}
       PORT: 4000
       DATA_DIR: /data

@@ -25,14 +25,13 @@ defmodule StashixWeb.LibraryController do
 
     data =
       Enum.map(libraries, fn lib ->
-        %{
+        with_root_path(user, lib, %{
           id: lib.id,
           name: lib.name,
-          root_path: lib.root_path,
           book_count: Library.count_books(conn.assigns.access, lib.id),
           series_count: Library.count_series(conn.assigns.access, lib.id),
           inserted_at: lib.inserted_at
-        }
+        })
       end)
 
     json(conn, %{libraries: data})
@@ -51,16 +50,22 @@ defmodule StashixWeb.LibraryController do
   def show(conn, %{"id" => id}) do
     library = Library.get_readable_library!(conn.assigns.access, id)
 
-    json(conn, %{
-      id: library.id,
-      name: library.name,
-      root_path: library.root_path,
-      standalone_folders: library.standalone_folders,
-      book_count: Library.count_books(conn.assigns.access, library.id),
-      series_count: Library.count_series(conn.assigns.access, library.id),
-      inserted_at: library.inserted_at
-    })
+    json(
+      conn,
+      with_root_path(Guardian.Plug.current_resource(conn), library, %{
+        id: library.id,
+        name: library.name,
+        standalone_folders: library.standalone_folders,
+        book_count: Library.count_books(conn.assigns.access, library.id),
+        series_count: Library.count_series(conn.assigns.access, library.id),
+        inserted_at: library.inserted_at
+      })
+    )
   end
+
+  # The server path is only of use to admins, so other users don't get it.
+  defp with_root_path(%{role: :admin}, library, data), do: Map.put(data, :root_path, library.root_path)
+  defp with_root_path(_user, _library, data), do: data
 
   operation :create,
     summary: "Create library",

@@ -14,6 +14,8 @@ defmodule Stashix.Accounts.User do
     field :role, Ecto.Enum, values: [:admin, :user], default: :user
     field :birth_date, :date
     field :reader_settings, :map, default: %{}
+    # Embedded in issued tokens; bumping it revokes every token issued before.
+    field :token_version, :integer, default: 0
 
     has_many :library_permissions, Stashix.Library.LibraryPermission
 
@@ -43,7 +45,18 @@ defmodule Stashix.Accounts.User do
     |> unique_constraint(:email)
     |> unique_constraint(:username)
     |> maybe_hash_password()
+    |> revoke_tokens_on_credential_change()
   end
+
+  defp revoke_tokens_on_credential_change(%Ecto.Changeset{valid?: true} = changeset) do
+    if changed?(changeset, :password_hash) or changed?(changeset, :role) do
+      put_change(changeset, :token_version, changeset.data.token_version + 1)
+    else
+      changeset
+    end
+  end
+
+  defp revoke_tokens_on_credential_change(changeset), do: changeset
 
   defp hash_password(%Ecto.Changeset{valid?: true, changes: %{password: password}} = changeset) do
     put_change(changeset, :password_hash, Bcrypt.hash_pwd_salt(password))

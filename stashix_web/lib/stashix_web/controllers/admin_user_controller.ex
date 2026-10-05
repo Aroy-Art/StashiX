@@ -142,6 +142,9 @@ defmodule StashixWeb.AdminUserController do
       {:ok, _} ->
         json(conn, %{status: "deleted"})
 
+      {:error, :last_admin} ->
+        conn |> put_status(:unprocessable_entity) |> json(%{error: "cannot delete the last admin"})
+
       {:error, reason} ->
         conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
     end

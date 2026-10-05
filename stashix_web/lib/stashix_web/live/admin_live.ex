@@ -117,7 +117,7 @@ defmodule StashixWeb.AdminLive do
            email: email,
            username: username,
            password: password,
-           role: String.to_atom(role)
+           role: role
          }) do
       {:ok, _user} ->
         {:noreply,
@@ -137,8 +137,12 @@ defmodule StashixWeb.AdminLive do
       {:noreply, put_flash(socket, :error, "Cannot delete yourself")}
     else
       user = Accounts.get_user!(id)
-      Accounts.delete_user(user)
-      {:noreply, assign(socket, :users, Accounts.list_users())}
+
+      case Accounts.delete_user(user) do
+        {:ok, _} -> {:noreply, assign(socket, :users, Accounts.list_users())}
+        {:error, :last_admin} -> {:noreply, put_flash(socket, :error, "Cannot delete the last admin")}
+        {:error, _} -> {:noreply, put_flash(socket, :error, "Could not delete user")}
+      end
     end
   end
 

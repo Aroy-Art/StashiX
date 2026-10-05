@@ -126,12 +126,12 @@ defmodule StashixWeb.Schemas do
       properties: %{
         id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
-        root_path: %Schema{type: :string},
+        root_path: %Schema{type: :string, description: "Admins only"},
         book_count: %Schema{type: :integer},
         series_count: %Schema{type: :integer},
         inserted_at: %Schema{type: :string, format: :"date-time"}
       },
-      required: [:id, :name, :root_path]
+      required: [:id, :name]
     })
   end
 
@@ -144,13 +144,13 @@ defmodule StashixWeb.Schemas do
       properties: %{
         id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
-        root_path: %Schema{type: :string},
+        root_path: %Schema{type: :string, description: "Admins only"},
         standalone_folders: %Schema{type: :boolean},
         book_count: %Schema{type: :integer},
         series_count: %Schema{type: :integer},
         inserted_at: %Schema{type: :string, format: :"date-time"}
       },
-      required: [:id, :name, :root_path]
+      required: [:id, :name]
     })
   end
 

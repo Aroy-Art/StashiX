@@ -12,7 +12,8 @@ defmodule StashixWeb.AuthController do
     request_body: {"Login credentials", "application/json", Schemas.LoginRequest, required: true},
     responses: [
       ok: {"Auth tokens and user", "application/json", Schemas.AuthResponse},
-      unauthorized: {"Invalid credentials", "application/json", Schemas.Error}
+      unauthorized: {"Invalid credentials", "application/json", Schemas.Error},
+      too_many_requests: {"Too many failed attempts", "application/json", Schemas.Error}
     ]
 
   def login(conn, params) do
@@ -44,6 +45,11 @@ defmodule StashixWeb.AuthController do
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "invalid credentials"})
+
+      {:error, :rate_limited} ->
+        conn
+        |> put_status(:too_many_requests)
+        |> json(%{error: "too many failed attempts, try again later"})
     end
   end
 

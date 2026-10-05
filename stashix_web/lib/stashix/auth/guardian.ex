@@ -7,10 +7,16 @@ defmodule Stashix.Auth.Guardian do
     {:ok, to_string(user.id)}
   end
 
-  def resource_from_claims(%{"sub" => id}) do
+  def build_claims(claims, user, _opts) do
+    {:ok, Map.put(claims, "ver", user.token_version)}
+  end
+
+  # Tokens issued before the user's password or role last changed carry an
+  # older "ver" and are rejected.
+  def resource_from_claims(%{"sub" => id} = claims) do
     case Accounts.get_user(id) do
       nil -> {:error, :resource_not_found}
-      user -> {:ok, user}
+      user -> if user.token_version == claims["ver"], do: {:ok, user}, else: {:error, :token_revoked}
     end
   end
 end

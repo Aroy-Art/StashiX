@@ -870,8 +870,10 @@ defmodule Stashix.Library do
   def get_series_cover(access, series_id) do
     series = get_series!(access, series_id)
 
+    # The folder cover is unrated, so it is only served to users who can see
+    # every book of the series; others get the cover of a book they can see.
     folder_cover =
-      series.path &&
+      series.path && sees_whole_series?(access, series_id) &&
         Enum.find_value(~w(cover.jpg cover.jpeg cover.png cover.webp), fn name ->
           path = Path.join(series.path, name)
           if File.exists?(path), do: path
@@ -887,6 +889,18 @@ defmodule Stashix.Library do
         select: bc.path
       )
       |> Repo.one()
+  end
+
+  defp sees_whole_series?(%Access{all?: true}, _series_id), do: true
+
+  defp sees_whole_series?(access, series_id) do
+    visible = from(b in Access.books(access), select: b.id)
+
+    not Repo.exists?(
+      from(b in Book,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and b.id not in subquery(visible)
+      )
+    )
   end
 
   def update_series_counts(library_id) do
@@ -1585,19 +1599,26 @@ defmodule Stashix.Library do
   end
 
   def set_library_permission(attrs) do
-    case Repo.get_by(LibraryPermission,
-           user_id: attrs[:user_id],
-           library_id: attrs[:library_id]
-         ) do
-      nil ->
-        %LibraryPermission{}
-        |> LibraryPermission.changeset(attrs)
-        |> Repo.insert()
+    result =
+      case Repo.get_by(LibraryPermission,
+             user_id: attrs[:user_id],
+             library_id: attrs[:library_id]
+           ) do
+        nil ->
+          %LibraryPermission{}
+          |> LibraryPermission.changeset(attrs)
+          |> Repo.insert()
 
-      permission ->
-        permission
-        |> LibraryPermission.changeset(attrs)
-        |> Repo.update()
+        permission ->
+          permission
+          |> LibraryPermission.changeset(attrs)
+          |> Repo.update()
+      end
+
+    # Open LiveViews hold the access computed at mount; make them remount.
+    with {:ok, permission} <- result do
+      Stashix.Accounts.disconnect_sessions(permission.user_id)
+      {:ok, permission}
     end
   end
 

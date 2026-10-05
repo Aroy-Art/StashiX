@@ -20,7 +20,22 @@ if System.get_env("PHX_SERVER") || System.get_env("MIX_ENV") == "prod" do
   config :stashix, StashixWeb.Endpoint, server: true
 end
 
-config :stashix, Stashix.Auth.Guardian, secret_key: System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
+jwt_secret =
+  case {System.get_env("JWT_SECRET"), config_env()} do
+    {secret, _env} when is_binary(secret) and secret != "" ->
+      secret
+
+    {_, :prod} ->
+      raise """
+      environment variable JWT_SECRET is missing.
+      You can generate one by calling: mix phx.gen.secret
+      """
+
+    _ ->
+      "dev-secret-change-in-production"
+  end
+
+config :stashix, Stashix.Auth.Guardian, secret_key: jwt_secret
 
 vault_key =
   case System.get_env("STASHIX_ENCRYPTION_KEY") do
@@ -28,7 +43,6 @@ vault_key =
       Base.decode64!(key)
 
     _ ->
-      jwt_secret = System.get_env("JWT_SECRET") || "dev-secret-change-in-production"
       :crypto.hash(:sha256, "stashix-vault:" <> jwt_secret)
   end
 

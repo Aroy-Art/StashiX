@@ -14,8 +14,9 @@ defmodule Stashix.Auth.TokenHelper do
     Guardian.decode_and_verify(token, %{"typ" => "refresh"})
   end
 
+  @doc "User for an access token; refresh tokens are rejected."
   def resource_from_token(token) do
-    with {:ok, claims} <- Guardian.decode_and_verify(token),
+    with {:ok, claims} <- Guardian.decode_and_verify(token, %{"typ" => "access"}),
          {:ok, user} <- Guardian.resource_from_claims(claims) do
       {:ok, user}
     end
