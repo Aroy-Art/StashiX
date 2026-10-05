@@ -39,7 +39,17 @@ defmodule StashixWeb.SearchLive do
   @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
   # URL params that count as filters (everything except q, type, sort, page).
-  @filter_keys ~w(from to age creator creator_match role library publisher genre status)
+  @filter_keys ~w(from to age creator creator_match role library publisher genre tag character team location status)
+  # Name-based book facets, each with a typeahead picker: {param, title, plural}.
+  @facets [
+    {"genre", "Genre", "genres"},
+    {"tag", "Tag", "tags"},
+    {"character", "Character", "characters"},
+    {"team", "Team", "teams"},
+    {"location", "Location", "locations"}
+  ]
+  @facet_keys Enum.map(@facets, &elem(&1, 0))
+  @max_facet_names 10
   @max_creators 10
 
   @impl true
@@ -60,7 +70,11 @@ defmodule StashixWeb.SearchLive do
        total_pages: 1,
        progress_map: %{},
        publishers: Library.list_publishers(socket.assigns.access),
-       genres: Library.list_genre_names(socket.assigns.access),
+       facets: @facets,
+       # Facets nothing in the library uses stay out of the sidebar.
+       facets_present: Enum.filter(@facet_keys, &Library.facet_any?(String.to_existing_atom(&1))),
+       facet_query: {nil, ""},
+       facet_suggestions: [],
        year_counts: year_counts,
        years: Enum.map(year_counts, &elem(&1, 0)),
        types: @types,
@@ -111,6 +125,23 @@ defmodule StashixWeb.SearchLive do
      )}
   end
 
+  # Same for the genre/tag/character/team/location boxes.
+  def handle_event("filter", %{"_target" => [target]} = form, socket)
+      when target in ~w(genre_search tag_search character_search team_search location_search) do
+    key = String.replace_suffix(target, "_search", "")
+    query = form[target] || ""
+
+    {:noreply,
+     assign(socket,
+       facet_query: {key, query},
+       facet_suggestions:
+         Library.search_facet_names(String.to_existing_atom(key), query,
+           exclude: socket.assigns.params[key],
+           access: socket.assigns.access
+         )
+     )}
+  end
+
   def handle_event("filter", form, socket) do
     params =
       socket.assigns.params
@@ -140,8 +171,17 @@ defmodule StashixWeb.SearchLive do
      |> patch(Map.put(socket.assigns.params, "creator", ids))}
   end
 
+  def handle_event("select_facet", %{"facet" => key, "name" => name}, socket) when key in @facet_keys do
+    {:noreply,
+     socket
+     |> assign(facet_query: {nil, ""}, facet_suggestions: [])
+     |> patch(Map.put(socket.assigns.params, key, socket.assigns.params[key] ++ [name]))}
+  end
+
+  # Pushed by the combobox hook, which all the pickers share.
   def handle_event("close_creator_suggestions", _params, socket) do
-    {:noreply, assign(socket, creator_query: "", creator_suggestions: [])}
+    {:noreply,
+     assign(socket, creator_query: "", creator_suggestions: [], facet_query: {nil, ""}, facet_suggestions: [])}
   end
 
   def handle_event("set_type", %{"type" => type}, socket) do
@@ -153,7 +193,7 @@ defmodule StashixWeb.SearchLive do
   end
 
   def handle_event("remove_filter", %{"key" => key, "value" => value}, socket)
-      when key in ["age", "creator"] do
+      when key in ["age", "creator" | @facet_keys] do
     values = List.delete(socket.assigns.params[key] || [], value)
     {:noreply, patch(socket, Map.put(socket.assigns.params, key, values))}
   end
@@ -245,13 +285,13 @@ defmodule StashixWeb.SearchLive do
       "age" => age,
       "library" => blank_to_nil(params["library"]),
       "publisher" => blank_to_nil(params["publisher"]),
-      "genre" => blank_to_nil(params["genre"]),
       "creator" => creators,
       "creator_match" => if(length(creators) > 1 and params["creator_match"] == "any", do: "any"),
       "role" => if(params["role"] in @credit_roles, do: params["role"]),
       "status" => status,
       "page" => params["page"]
     }
+    |> Map.merge(Map.new(@facet_keys, &{&1, normalize_names(params[&1])}))
     |> then(&Map.put(&1, "sort", &1["sort"] || default_sort(&1)))
   end
 
@@ -349,7 +389,6 @@ defmodule StashixWeb.SearchLive do
       age_ratings: Enum.map(params["age"], &String.to_existing_atom/1),
       library_id: params["library"],
       publisher_id: params["publisher"],
-      genre: params["genre"],
       creator_ids: params["creator"],
       creator_match: params["creator_match"] || "all",
       role: params["role"],
@@ -357,6 +396,7 @@ defmodule StashixWeb.SearchLive do
       user_id: user_id,
       sort: params["sort"]
     }
+    |> Map.merge(Map.new(@facet_keys, &{String.to_existing_atom(&1), params[&1]}))
   end
 
   defp parse_int(nil), do: nil
@@ -416,8 +456,6 @@ defmodule StashixWeb.SearchLive do
         []
       end
 
-    genre = if g = params["genre"], do: [{g, "genre", nil}], else: []
-
     joiner = if params["creator_match"] == "any", do: "or", else: "and"
 
     creator =
@@ -437,7 +475,20 @@ defmodule StashixWeb.SearchLive do
         []
       end
 
-    year ++ ages ++ creator ++ role ++ library ++ publisher ++ genre ++ status
+    facets = for {key, title, _} <- @facets, name <- params[key], do: {"#{title}: #{name}", key, name}
+
+    year ++ ages ++ creator ++ role ++ library ++ publisher ++ facets ++ status
+  end
+
+  # A facet param is a name or a list of names (chips on book pages link with one).
+  defp normalize_names(value) do
+    value
+    |> List.wrap()
+    |> Enum.filter(&is_binary/1)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.uniq()
+    |> Enum.take(@max_facet_names)
   end
 
   defp short_age_label("unknown"), do: "Unrated"
@@ -451,7 +502,7 @@ defmodule StashixWeb.SearchLive do
 
   defp filter_count(params) do
     Enum.count(@filter_keys, fn
-      k when k in ["age", "creator"] -> params[k] != []
+      k when k in ["age", "creator" | @facet_keys] -> params[k] != []
       "creator_match" -> false
       k -> params[k] != nil
     end)
@@ -645,10 +696,18 @@ defmodule StashixWeb.SearchLive do
                 </.filter_select>
               </.filter_section>
 
-              <.filter_section :if={@genres != []} title="Genre">
-                <.filter_select name="genre" selected={@params["genre"]} prompt="All genres">
-                  <option :for={g <- @genres} value={g} selected={@params["genre"] == g}>{g}</option>
-                </.filter_select>
+              <.filter_section
+                :for={{key, title, plural} <- @facets}
+                :if={key in @facets_present || @params[key] != []}
+                title={title}
+              >
+                <.facet_picker
+                  key={key}
+                  plural={plural}
+                  selected={@params[key]}
+                  query={if elem(@facet_query, 0) == key, do: elem(@facet_query, 1), else: ""}
+                  suggestions={@facet_suggestions}
+                />
               </.filter_section>
             </div>
           </aside>
@@ -1042,6 +1101,79 @@ defmodule StashixWeb.SearchLive do
         </button>
         <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-500">
           No creators found
+        </div>
+      </div>
+    </div>
+    """
+  end
+
+  attr :key, :string, required: true
+  attr :plural, :string, required: true
+  attr :selected, :list, required: true
+  attr :query, :string, required: true
+  attr :suggestions, :list, required: true
+
+  # Typeahead for a name-based facet; same interaction as the creator picker.
+  defp facet_picker(assigns) do
+    assigns = assign(assigns, :full, length(assigns.selected) >= @max_facet_names)
+
+    ~H"""
+    <div :if={@selected != []} class="flex flex-wrap gap-1.5">
+      <span
+        :for={name <- @selected}
+        class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 bg-violet-600/20 border border-violet-500/40 rounded-lg text-sm text-violet-100"
+      >
+        <input type="hidden" name={"#{@key}[]"} value={name} />
+        <span class="truncate">{name}</span>
+        <button
+          type="button"
+          phx-click="remove_filter"
+          phx-value-key={@key}
+          phx-value-value={name}
+          aria-label={"Remove #{name}"}
+          class="p-0.5 rounded-md text-violet-300 hover:text-white hover:bg-violet-600/40"
+        >
+          <.icon name="lucide-x" class="w-3.5 h-3.5" />
+        </button>
+      </span>
+    </div>
+
+    <div :if={!@full} id={"#{@key}-picker"} phx-hook="CreatorCombobox" class="relative">
+      <input
+        id={"#{@key}-search"}
+        type="text"
+        name={"#{@key}_search"}
+        value={@query}
+        placeholder={if @selected == [], do: "Search #{@plural}...", else: "Add another..."}
+        autocomplete="off"
+        role="combobox"
+        aria-autocomplete="list"
+        aria-controls={"#{@key}-options"}
+        aria-expanded={to_string(@query != "")}
+        phx-debounce="200"
+        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+      />
+      <div
+        :if={@query != ""}
+        id={"#{@key}-options"}
+        role="listbox"
+        class="absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl"
+      >
+        <button
+          :for={s <- @suggestions}
+          type="button"
+          role="option"
+          data-option
+          phx-click="select_facet"
+          phx-value-facet={@key}
+          phx-value-name={s.name}
+          class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-gray-700 data-[active]:text-white"
+        >
+          <span class="truncate">{s.name}</span>
+          <span class="shrink-0 text-xs text-gray-500">{s.books}</span>
+        </button>
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-500">
+          No {@plural} found
         </div>
       </div>
     </div>

@@ -644,7 +644,7 @@ defmodule StashixWeb.SeriesLive do
               </.detail_section>
 
               <.detail_section label="Tags" show={sd.tags != []}>
-                <.chips items={sd.tags} />
+                <.chips items={sd.tags} search_param="tag" />
               </.detail_section>
 
               <.detail_section label="Story Arcs" show={sd.arcs != []}>
@@ -652,15 +652,15 @@ defmodule StashixWeb.SeriesLive do
               </.detail_section>
 
               <.detail_section label="Characters" show={sd.characters != []}>
-                <.chips items={sd.characters} />
+                <.chips items={sd.characters} search_param="character" />
               </.detail_section>
 
               <.detail_section label="Teams" show={sd.teams != []}>
-                <.chips items={sd.teams} />
+                <.chips items={sd.teams} search_param="team" />
               </.detail_section>
 
               <.detail_section label="Locations" show={sd.locations != []}>
-                <.chips items={sd.locations} />
+                <.chips items={sd.locations} search_param="location" />
               </.detail_section>
 
               <.detail_section label="Universes" show={sd.universes != []}>

@@ -444,7 +444,8 @@ defmodule Stashix.Library do
   #   :age_ratings  - list of age rating atoms
   #   :library_id   - library UUID
   #   :publisher_id - canonical publisher UUID (aliases are included)
-  #   :genre        - genre name
+  #   :genre / :tag / :character / :team / :location - lists of names; a book
+  #                   must have all of them
   #   :read_status  - "unread" | "in_progress" | "read" (requires :user_id)
   #   :user_id      - current user, for read status
   #   :sort         - "relevance" | "title_asc" | "title_desc" | "year_asc" |
@@ -553,15 +554,51 @@ defmodule Stashix.Library do
     ids |> Enum.map(&by_id[&1]) |> Enum.reject(&is_nil/1)
   end
 
-  def list_genre_names(access) do
-    from(g in Stashix.Library.BookGenre,
-      join: b in ^Access.books(access),
-      on: g.book_id == b.id and is_nil(b.deleted_at),
-      distinct: true,
-      order_by: [asc: g.name],
-      select: g.name
-    )
-    |> Repo.all()
+  @book_facets %{
+    genre: Stashix.Library.BookGenre,
+    tag: Stashix.Library.BookTag,
+    character: Stashix.Library.BookCharacter,
+    team: Stashix.Library.BookTeam,
+    location: Stashix.Library.BookLocation
+  }
+
+  @doc "Book facets that can be filtered by name in search."
+  def book_facets, do: Map.keys(@book_facets)
+
+  @doc "Whether any book has an entry for the facet at all."
+  def facet_any?(facet), do: Repo.exists?(Map.fetch!(@book_facets, facet))
+
+  @doc """
+  Names in a book facet (`:genre`, `:tag`, `:character`, `:team`, `:location`) containing
+  `term`, prefix matches first, then by how many (non-deleted) books use them.
+  Returns `[%{name, books}]`.
+
+  Options: `:limit` (default 8), `:exclude` (names to leave out).
+  """
+  def search_facet_names(facet, term, opts \\ []) do
+    term = String.trim(term)
+    limit = Keyword.get(opts, :limit, 8)
+    exclude = Keyword.get(opts, :exclude, [])
+    access = access!(opts)
+
+    if term == "" do
+      []
+    else
+      from(f in Map.fetch!(@book_facets, facet),
+        join: b in ^Access.books(access),
+        on: b.id == f.book_id and is_nil(b.deleted_at),
+        where: ilike(f.name, ^like_pattern(term)) and f.name not in ^exclude,
+        group_by: f.name,
+        order_by: [
+          desc: fragment("? ILIKE ?", f.name, ^(like_escape(term) <> "%")),
+          desc: count(b.id, :distinct),
+          asc: f.name
+        ],
+        limit: ^limit,
+        select: %{name: f.name, books: count(b.id, :distinct)}
+      )
+      |> Repo.all()
+    end
   end
 
   defp filtered_books_query(filters, access) do
@@ -645,7 +682,7 @@ defmodule Stashix.Library do
   end
 
   # Shared by books and series-with-matching-books: age rating, library,
-  # publisher, genre, creator/role. Expects the book binding to be named :book.
+  # publisher, genre/tag/character/team/location, creator/role. Expects the book binding to be named :book.
   defp filter_book_attrs(query, filters) do
     query = filter_book_creators(query, filters[:creator_ids] || [], filters[:creator_match], filters[:role])
 
@@ -678,22 +715,23 @@ defmodule Stashix.Library do
         query
       end
 
-    if filters[:genre] do
-      genre = filters[:genre]
+    Enum.reduce(@book_facets, query, fn {key, schema}, query ->
+      filter_book_named(query, schema, filters[key])
+    end)
+  end
 
+  # Keep books that have a row in `schema` (genres, tags, …) for every given name.
+  defp filter_book_named(query, schema, names) do
+    names
+    |> List.wrap()
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.reduce(query, fn name, query ->
       where(
         query,
         [book: b],
-        exists(
-          from(g in Stashix.Library.BookGenre,
-            where: g.book_id == parent_as(:book).id and g.name == ^genre,
-            select: 1
-          )
-        )
+        exists(from(r in schema, where: r.book_id == parent_as(:book).id and r.name == ^name, select: 1))
       )
-    else
-      query
-    end
+    end)
   end
 
   defp filter_book_year(query, nil, nil), do: query
@@ -800,7 +838,8 @@ defmodule Stashix.Library do
         else: query
 
     # Book-level filters: keep series that contain at least one matching book.
-    book_filters = Map.take(filters, [:age_ratings, :publisher_id, :genre, :creator_ids, :creator_match, :role])
+    book_filters =
+      Map.take(filters, [:age_ratings, :publisher_id, :creator_ids, :creator_match, :role | book_facets()])
 
     if Enum.any?(book_filters, fn {k, v} -> k != :creator_match and v not in [nil, []] end) do
       book_query =

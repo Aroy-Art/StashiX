@@ -218,4 +218,59 @@ defmodule StashixWeb.SearchLiveTest do
     assert_patch(view, ~p"/search")
     assert render(view) =~ "Sunny Days"
   end
+
+  test "genre, tag, character, team and location filters match books by name", %{conn: conn} do
+    alias Stashix.Library.{Book, BookCharacter, BookGenre, BookLocation, BookTag, BookTeam}
+
+    streets = Repo.get_by!(Book, title: "Dark Streets")
+    alleys = Repo.get_by!(Book, title: "Dark Alleys")
+    Repo.insert!(%BookGenre{book_id: alleys.id, name: "Mystery"})
+    Repo.insert!(%BookTag{book_id: streets.id, name: "Noir"})
+    Repo.insert!(%BookCharacter{book_id: streets.id, name: "Rorschach & Co"})
+    Repo.insert!(%BookTeam{book_id: alleys.id, name: "Minutemen"})
+    Repo.insert!(%BookLocation{book_id: alleys.id, name: "New York"})
+
+    for {param, value, hit, miss} <- [
+          {"genre", "Mystery", "Dark Alleys", "Dark Streets"},
+          {"tag", "Noir", "Dark Streets", "Dark Alleys"},
+          {"character", "Rorschach & Co", "Dark Streets", "Dark Alleys"},
+          {"team", "Minutemen", "Dark Alleys", "Dark Streets"},
+          {"location", "New York", "Dark Alleys", "Dark Streets"}
+        ] do
+      {:ok, _view, html} = live(conn, ~p"/search?#{%{param => value, "type" => "issue"}}")
+      assert html =~ hit
+      refute html =~ miss
+      refute html =~ "Sunny Days"
+    end
+
+    # the series tab keeps series containing a matching book
+    {:ok, _view, html} = live(conn, ~p"/search?tag=Noir&type=series")
+    assert html =~ "Night Watch"
+
+    {:ok, _view, html} = live(conn, ~p"/search?tag=Nope&type=series")
+    refute html =~ "Night Watch"
+
+    # several names in one facet must all be on the book
+    Repo.insert!(%BookTag{book_id: streets.id, name: "Crime"})
+    Repo.insert!(%BookTag{book_id: alleys.id, name: "Crime"})
+
+    {:ok, _view, html} = live(conn, ~p"/search?#{%{tag: ["Crime", "Noir"], type: "issue"}}")
+    assert html =~ "Dark Streets"
+    refute html =~ "Dark Alleys"
+
+    # the picker suggests names and adds the chosen one to the URL
+    {:ok, view, _html} = live(conn, ~p"/search")
+
+    html =
+      view
+      |> form("#search-form")
+      |> render_change(%{"_target" => ["team_search"], "team_search" => "minu"})
+
+    assert html =~ "Minutemen"
+    view |> element("#team-options button", "Minutemen") |> render_click()
+    assert_patch(view, ~p"/search?#{%{team: ["Minutemen"]}}")
+    assert render(view) =~ "Team: Minutemen"
+    view |> element("#search-filters button[phx-click=clear_filters]") |> render_click()
+    assert_patch(view, ~p"/search")
+  end
 end

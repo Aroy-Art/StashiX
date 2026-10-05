@@ -617,19 +617,19 @@ defmodule StashixWeb.BookLive do
               </.detail_section>
 
               <.detail_section label="Tags" show={@book_details.tags != []}>
-                <.chips items={Enum.map(@book_details.tags, & &1.name)} />
+                <.chips items={Enum.map(@book_details.tags, & &1.name)} search_param="tag" />
               </.detail_section>
 
               <.detail_section label="Characters" show={@book_details.characters != []}>
-                <.chips items={Enum.map(@book_details.characters, & &1.name)} />
+                <.chips items={Enum.map(@book_details.characters, & &1.name)} search_param="character" />
               </.detail_section>
 
               <.detail_section label="Teams" show={@book_details.teams != []}>
-                <.chips items={Enum.map(@book_details.teams, & &1.name)} />
+                <.chips items={Enum.map(@book_details.teams, & &1.name)} search_param="team" />
               </.detail_section>
 
               <.detail_section label="Locations" show={@book_details.locations != []}>
-                <.chips items={Enum.map(@book_details.locations, & &1.name)} />
+                <.chips items={Enum.map(@book_details.locations, & &1.name)} search_param="location" />
               </.detail_section>
 
               <.detail_section label="Universes" show={@book_details.universes != []}>

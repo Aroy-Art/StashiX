@@ -160,10 +160,10 @@ defmodule StashixWeb.MetadataComponents do
         <.link
           :if={@search_param}
           navigate={"/search?" <> URI.encode_query(%{@search_param => entry_name(item)})}
-          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-ink/10 border border-ink/30 text-xs text-gray-100 hover:bg-ink/20 hover:border-ink transition-colors"
+          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors"
         >
           {entry_name(item)}
-          <span :if={entry_count(item)} class="text-ink/70">{entry_count(item)}</span>
+          <span :if={entry_count(item)} class="text-gray-500">{entry_count(item)}</span>
         </.link>
         <span
           :if={!@search_param}
