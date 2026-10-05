@@ -964,6 +964,64 @@ if ("serviceWorker" in navigator) {
   })
 }
 
+// Live navigation swaps the page over the WebSocket, so the target's images only
+// start loading once the new page has rendered. Hovering (or touching/focusing)
+// a link warms the HTTP cache with them instead. The URLs have to match what the
+// target page renders exactly -- see BookLive's hero cover/backdrop and
+// ReaderLive's page <img>.
+const prefetchedImages = new Set()
+
+function prefetchImagesFor(href) {
+  let url
+  try { url = new URL(href, window.location.href) } catch (_) { return [] }
+  if (url.origin !== window.location.origin) return []
+
+  let m
+  if ((m = url.pathname.match(/^\/book\/(\d+)$/))) {
+    return [`/api/books/${m[1]}/cover?s=l`, `/api/books/${m[1]}/cover?s=s`]
+  }
+  if ((m = url.pathname.match(/^\/read\/(\d+)$/))) {
+    // Without page=0 the reader resumes at a page only the server knows.
+    const format = url.searchParams.get("format")
+    if (url.searchParams.get("page") === "0" && format) {
+      return [`/api/books/${m[1]}/page/0?format=${encodeURIComponent(format)}`]
+    }
+  }
+  return []
+}
+
+function prefetchLink(link) {
+  if (navigator.connection?.saveData) return
+  for (const src of prefetchImagesFor(link.href)) {
+    if (prefetchedImages.has(src)) continue
+    prefetchedImages.add(src)
+    new Image().src = src
+  }
+}
+
+function initImagePrefetch() {
+  const linkOf = (e) => e.target.closest?.("a[href]")
+  let hoverTimer = null
+
+  // Short delay so sweeping the pointer across a grid does not fetch every cover.
+  document.addEventListener("mouseover", (e) => {
+    const link = linkOf(e)
+    if (!link) return
+    clearTimeout(hoverTimer)
+    hoverTimer = setTimeout(() => prefetchLink(link), 65)
+  })
+  document.addEventListener("mouseout", (e) => {
+    if (linkOf(e)) clearTimeout(hoverTimer)
+  })
+
+  const now = (e) => {
+    const link = linkOf(e)
+    if (link) prefetchLink(link)
+  }
+  document.addEventListener("touchstart", now, {passive: true})
+  document.addEventListener("focusin", now)
+}
+
 // A second copy of this bundle on the page would stand up a second LiveSocket,
 // which fails with "Cannot bind multiple views to the same DOM element" and
 // leaves every hook mounted twice -- two ReaderZoom instances fighting over the
@@ -1005,6 +1063,8 @@ if (window.__stashixBooted) {
     const el = document.getElementById(e.detail.id)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
   })
+
+  initImagePrefetch()
 
   // connect if there are any LiveViews on the page
   liveSocket.connect()
