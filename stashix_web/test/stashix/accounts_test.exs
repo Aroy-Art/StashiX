@@ -51,10 +51,10 @@ defmodule Stashix.AccountsTest do
       admin = user("boss", %{role: :admin})
       other = user("deputy", %{role: :admin})
 
-      assert {:ok, _} = Accounts.update_user(other, %{role: :user})
+      assert {:ok, other} = Accounts.update_user(other, %{role: :user})
       assert {:error, :last_admin} = Accounts.delete_user(admin)
 
-      {:ok, _} = Accounts.update_user(other, %{role: :admin})
+      assert {:ok, %{role: :admin}} = Accounts.update_user(other, %{role: :admin})
       assert {:ok, _} = Accounts.delete_user(admin)
     end
   end
