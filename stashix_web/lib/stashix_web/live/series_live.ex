@@ -5,6 +5,7 @@ defmodule StashixWeb.SeriesLive do
   alias Stashix.Library.Series
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
+  import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -31,7 +32,9 @@ defmodule StashixWeb.SeriesLive do
     end
 
     {:ok,
-     assign(socket,
+     socket
+     |> track_dialogs(~w(edit identify))
+     |> assign(
        page_title: series.name,
        series: series,
        library: library,
@@ -132,7 +135,7 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_event("close_edit_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
+    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series.id}")}
   end
 
   def handle_event("save_metadata", %{"series" => params} = all_params, socket) do
@@ -157,7 +160,7 @@ defmodule StashixWeb.SeriesLive do
            page_title: series.name,
            summary_info: derive_summary(series, books)
          )
-         |> push_patch(to: ~p"/series/#{series.id}")}
+         |> close_dialog(~p"/series/#{series.id}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, edit_form: to_form(changeset))}
@@ -179,7 +182,7 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}")}
+    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series.id}")}
   end
 
   def handle_event("toggle_metadata_lock", _params, socket) do
@@ -246,7 +249,7 @@ defmodule StashixWeb.SeriesLive do
      socket
      |> reload_series()
      |> put_flash(:info, "Series metadata applied")
-     |> push_patch(to: ~p"/series/#{socket.assigns.series.id}")}
+     |> close_dialog(~p"/series/#{socket.assigns.series.id}")}
   end
 
   defp replace_book_cover(socket, book_id) do

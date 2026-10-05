@@ -990,6 +990,10 @@ if (window.__stashixBooted) {
   window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
   window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+  // Closing a URL-driven dialog pops the history entry that opened it (see
+  // StashixWeb.DialogHistory), so "back" does not reopen it.
+  window.addEventListener("phx:history-back", () => window.history.back())
+
   // Clear a text input client-side and keep the cursor in it. Used alongside a
   // server push, since LiveView won't overwrite the value of a focused input.
   window.addEventListener("stashix:clear-input", (e) => {

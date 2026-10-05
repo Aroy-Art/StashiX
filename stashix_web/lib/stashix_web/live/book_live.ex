@@ -5,6 +5,7 @@ defmodule StashixWeb.BookLive do
   alias Stashix.Library.Book
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
+  import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -27,7 +28,9 @@ defmodule StashixWeb.BookLive do
     end
 
     {:ok,
-     assign(socket,
+     socket
+     |> track_dialogs(~w(edit identify))
+     |> assign(
        page_title: book.title,
        book: book,
        library: library,
@@ -103,7 +106,7 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_event("close_edit_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}")}
+    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book.id}")}
   end
 
   def handle_event("save_metadata", %{"book" => params}, socket) do
@@ -117,7 +120,7 @@ defmodule StashixWeb.BookLive do
         {:noreply,
          socket
          |> assign(book: book, page_title: book.title)
-         |> push_patch(to: ~p"/book/#{book.id}")}
+         |> close_dialog(~p"/book/#{book.id}")}
 
       {:error, changeset} ->
         {:noreply, assign(socket, edit_form: to_form(changeset))}
@@ -143,7 +146,7 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}")}
+    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book.id}")}
   end
 
   def handle_event("toggle_metadata_lock", _params, socket) do
@@ -204,7 +207,7 @@ defmodule StashixWeb.BookLive do
      socket
      |> reload_book()
      |> put_flash(:info, "Metadata applied")
-     |> push_patch(to: ~p"/book/#{socket.assigns.book.id}")}
+     |> close_dialog(~p"/book/#{socket.assigns.book.id}")}
   end
 
   defp reload_book(socket) do
