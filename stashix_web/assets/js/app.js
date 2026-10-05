@@ -469,6 +469,45 @@ Hooks.YearRange = {
   }
 }
 
+// Cross-fades the blurred cover wash behind a page header when its source
+// changes (the search page swaps it to the top hit as results change). The
+// element is phx-update="ignore"; only data-src is patched by the server.
+Hooks.BackdropFade = {
+  mounted() {
+    this.show(this.el.dataset.src)
+  },
+
+  updated() {
+    if ((this.el.dataset.src || "") !== this.src) this.show(this.el.dataset.src)
+  },
+
+  show(src) {
+    this.src = src || ""
+    const old = Array.from(this.el.children)
+    const fadeOut = () => old.forEach(img => {
+      img.classList.add("is-hidden")
+      setTimeout(() => img.remove(), 650)
+    })
+    if (!src) return fadeOut()
+
+    const img = new Image()
+    img.alt = ""
+    img.className = "backdrop-layer is-hidden w-full h-full object-cover"
+    img.onload = () => {
+      // a newer cover was requested while this one loaded
+      if (this.src !== src) return
+      requestAnimationFrame(() => img.classList.remove("is-hidden"))
+      fadeOut()
+    }
+    img.onerror = () => {
+      img.remove()
+      if (this.src === src) fadeOut()
+    }
+    this.el.appendChild(img)
+    img.src = src
+  }
+}
+
 Hooks.CoverImage = {
   mounted() {
     const hash = this.el.dataset.blurhash

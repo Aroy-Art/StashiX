@@ -167,8 +167,8 @@
   width: 14px;
   height: 14px;
   border-radius: 9999px;
-  background: #fff;
-  border: 2px solid #8b5cf6;
+  background: var(--color-ink);
+  border: 2px solid #030712;
   cursor: grab;
 }
 .year-range-input::-moz-range-thumb {
@@ -176,8 +176,8 @@
   width: 14px;
   height: 14px;
   border-radius: 9999px;
-  background: #fff;
-  border: 2px solid #8b5cf6;
+  background: var(--color-ink);
+  border: 2px solid #030712;
   cursor: grab;
 }
 .year-range-input:active::-webkit-slider-thumb {
@@ -229,6 +229,16 @@
   filter: blur(56px) saturate(1.5);
   transform: scale(1.35);
   opacity: 0.38;
+}
+
+/* Layers managed by the BackdropFade hook: the new cover fades in over the old. */
+.detail-backdrop > img.backdrop-layer {
+  position: absolute;
+  inset: 0;
+  transition: opacity 600ms ease;
+}
+.detail-backdrop > img.backdrop-layer.is-hidden {
+  opacity: 0;
 }
 
 /* Print-dot texture, densest in the top-right corner. */
@@ -300,6 +310,61 @@
 }
 .cover-stack:hover > .cover-stack-top { transform: rotate(-4deg) translateX(-3%); }
 
+/* ── Search page ────────────────────────────────────────────────────────── */
+
+/* The query is the headline: a display-type input on a heavy rule. */
+.search-headline {
+  font-family: var(--font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  line-height: 1;
+  caret-color: var(--color-ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 4px solid rgb(255 255 255 / 0.3);
+  border-radius: 0;
+  box-shadow: none;
+  transition: border-color 160ms ease;
+}
+.search-headline::placeholder {
+  color: rgb(255 255 255 / 0.42);
+  opacity: 1;
+}
+.search-headline:hover {
+  border-bottom-color: rgb(255 255 255 / 0.55);
+}
+.search-headline:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--color-ink);
+}
+.search-headline::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Filters: a rail beside the results on large screens, a slide-over below lg. */
+@media (width < 64rem) {
+  .filter-drawer {
+    position: fixed;
+    inset-block: 0;
+    right: 0;
+    z-index: 50;
+    width: min(22rem, 100vw);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s 260ms;
+  }
+  .filter-drawer.is-open {
+    transform: none;
+    visibility: visible;
+    transition-delay: 0s;
+    box-shadow: -24px 0 60px -12px rgb(0 0 0 / 0.9);
+  }
+}
+
 /* Staggered entrance; --i sets the order. */
 @media (prefers-reduced-motion: no-preference) {
   .rise {
@@ -311,5 +376,5 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .cover-stack > *, .ink-btn { transition: none; }
+  .cover-stack > *, .ink-btn, .filter-drawer, .detail-backdrop > img.backdrop-layer { transition: none; }
 }

@@ -3,6 +3,7 @@ defmodule StashixWeb.SearchLive do
 
   alias Stashix.{Formatters, Library}
   alias Stashix.Library.{Book, BookCredit}
+  import StashixWeb.DetailComponents
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -508,20 +509,25 @@ defmodule StashixWeb.SearchLive do
     end)
   end
 
-  defp results_summary(assigns) do
-    count =
-      case assigns.params["type"] do
-        "series" -> assigns.series_total
-        "all" -> assigns.books_total + assigns.standalone_books_total + assigns.series_total
-        _ -> assigns.books_total
-      end
-
-    noun = if count == 1, do: "result", else: "results"
-
-    if assigns.params["q"] != "",
-      do: "#{count} #{noun} for “#{assigns.params["q"]}”",
-      else: "#{count} #{noun}"
+  defp result_count(assigns) do
+    case assigns.params["type"] do
+      "series" -> assigns.series_total
+      "all" -> assigns.books_total + assigns.standalone_books_total + assigns.series_total
+      _ -> assigns.books_total
+    end
   end
+
+  # Cover of the top hit, washed across the hero like on the detail pages.
+  defp backdrop_cover(%{series: [s | _]}), do: ~p"/api/series/#{s.id}/cover?s=s"
+
+  defp backdrop_cover(assigns) do
+    case Enum.find(assigns.standalone_books ++ assigns.books, & &1.cover) do
+      nil -> nil
+      book -> ~p"/api/books/#{book.id}/cover?s=s"
+    end
+  end
+
+  defp delimit(n), do: n |> Integer.to_string() |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
 
   defp book_title(%{type: "issue", issue_number: n} = book) when not is_nil(n),
     do: "##{n} – #{book.title}"
@@ -543,75 +549,117 @@ defmodule StashixWeb.SearchLive do
         active: active_filters(assigns.params, assigns),
         filter_count: filter_count(assigns.params),
         sort_options: @sort_options,
+        count: result_count(assigns),
+        backdrop: backdrop_cover(assigns),
         show_series: assigns.series != [] and assigns.params["type"] in ["all", "series"],
         show_standalone_books: assigns.standalone_books != [] and assigns.params["type"] == "all",
         show_books: assigns.books != []
       )
 
     ~H"""
-    <div class="space-y-6">
-      <div>
-        <h1 class="text-2xl font-bold text-white">Search</h1>
-        <p class="text-sm text-gray-500 mt-0.5">{results_summary(assigns)}</p>
-      </div>
-
-      <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-8">
+    <.detail_page wide fade cover_src={@backdrop}>
+      <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-7">
         <form id="search-form" phx-change="filter" phx-submit="filter" class="contents">
-          <%!-- Search input spans the full width --%>
-          <div class="relative group order-1 lg:order-none lg:col-span-2">
-            <.icon
-              name="lucide-search"
-              class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
-            />
-            <input
-              id="search-q"
-              type="search"
-              name="q"
-              value={@params["q"]}
-              data-ctrl-k-target
-              phx-debounce="300"
-              placeholder="Search books, series, creators..."
-              autocomplete="off"
-              class="w-full bg-gray-900 border border-gray-700 rounded-xl pl-12 pr-12 sm:pr-24 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 text-lg [&::-webkit-search-cancel-button]:appearance-none"
-              autofocus
-            />
-            <button
-              :if={@params["q"] != ""}
-              type="button"
-              phx-click={JS.push("clear_query") |> JS.dispatch("stashix:clear-input", to: "#search-q")}
-              aria-label="Clear search"
-              class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-gray-800 transition-colors"
+          <%!-- Hero: the query is the headline, the result count looms behind it --%>
+          <header class="relative lg:col-span-2 pt-2">
+            <span
+              :if={@count > 0}
+              class="ghost-numeral hidden lg:block absolute top-1 right-0 text-[7rem] xl:text-[8rem] pointer-events-none"
+              aria-hidden="true"
             >
-              <.icon name="lucide-x" class="w-5 h-5" />
-            </button>
-            <kbd
-              :if={@params["q"] == ""}
-              class="absolute right-4 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-0.5 pointer-events-none group-focus-within:opacity-0 transition-opacity duration-100"
-            >
-              <span class="text-[10px] text-gray-600 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 leading-none">
-                Ctrl
-              </span>
-              <span class="text-[10px] text-gray-600 bg-gray-800 border border-gray-700 rounded px-1 py-0.5 leading-none">
-                K
-              </span>
-            </kbd>
-          </div>
+              {@count}
+            </span>
 
-          <%!-- Filter sidebar --%>
+            <div class="rise relative flex items-center gap-3 mb-2" style="--i:1">
+              <p class="text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300">Search the stash</p>
+              <kbd class="hidden sm:flex items-center gap-1 pointer-events-none">
+                <span class="text-[10px] font-semibold text-gray-300 bg-gray-900/80 border border-white/20 rounded px-1.5 py-0.5 leading-none">
+                  Ctrl
+                </span>
+                <span class="text-[10px] font-semibold text-gray-300 bg-gray-900/80 border border-white/20 rounded px-1.5 py-0.5 leading-none">
+                  K
+                </span>
+              </kbd>
+            </div>
+
+            <div class="rise relative" style="--i:2">
+              <.icon
+                name="lucide-search"
+                class="w-7 h-7 sm:w-9 sm:h-9 md:w-10 md:h-10 absolute left-0 top-1/2 -translate-y-1/2 text-ink pointer-events-none"
+              />
+              <input
+                id="search-q"
+                type="search"
+                name="q"
+                value={@params["q"]}
+                data-ctrl-k-target
+                phx-debounce="300"
+                placeholder="Title or creator"
+                aria-label="Search"
+                autocomplete="off"
+                class="search-headline w-full pt-1 pb-2 pl-10 sm:pl-12 md:pl-14 pr-12 sm:pr-14 text-4xl sm:text-5xl md:text-6xl text-white"
+                autofocus
+              />
+              <button
+                :if={@params["q"] != ""}
+                type="button"
+                phx-click={JS.push("clear_query") |> JS.dispatch("stashix:clear-input", to: "#search-q")}
+                aria-label="Clear search"
+                class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800 hover:bg-ink text-gray-200 hover:text-gray-950 transition-colors"
+              >
+                <.icon name="lucide-x" class="w-5 h-5" />
+              </button>
+            </div>
+
+            <p
+              class="rise relative flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+              style="--i:3"
+            >
+              <span>
+                <span class="text-white font-semibold">{delimit(@count)}</span>
+                {if @count == 1, do: "result", else: "results"}
+              </span>
+              <%= if @params["type"] == "all" do %>
+                <span :if={@series_total > 0}>{delimit(@series_total)} series</span>
+                <span :if={@standalone_books_total > 0}>
+                  {delimit(@standalone_books_total)} {if @standalone_books_total == 1, do: "book", else: "books"}
+                </span>
+                <span :if={@books_total > 0}>
+                  {delimit(@books_total)} {if @books_total == 1, do: "issue", else: "issues"}
+                </span>
+              <% end %>
+            </p>
+          </header>
+
+          <%!-- Filters: rail on lg+, slide-over drawer below --%>
           <aside
             id="search-filters"
-            class="hidden order-3 lg:order-none lg:block lg:col-start-1 lg:row-start-2 lg:row-span-2 lg:self-start lg:sticky lg:top-4"
+            aria-label="Filters"
+            class="filter-drawer lg:col-start-1 lg:row-start-2 lg:row-span-2 lg:self-start"
           >
-            <div class="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800">
-              <div class="flex items-center justify-between px-4 py-3">
-                <h2 class="text-sm font-semibold text-white">Filters</h2>
+            <div class="relative min-h-full lg:min-h-0 bg-gray-900 border-l-4 border-ink lg:rounded-lg lg:ring-1 lg:ring-white/10 divide-y divide-gray-800">
+              <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-gray-900 lg:static">
+                <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
+                  Filters <span :if={@filter_count > 0} class="text-ink tabular-nums">{@filter_count}</span>
+                </h2>
                 <button
                   :if={@filter_count > 0}
                   type="button"
                   phx-click="clear_filters"
-                  class="text-xs text-gray-400 hover:text-white"
+                  class="ml-auto text-xs font-medium text-gray-300 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
                 >
                   Clear all
+                </button>
+                <button
+                  type="button"
+                  phx-click={close_filters()}
+                  aria-label="Close filters"
+                  class={[
+                    "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors",
+                    @filter_count == 0 && "ml-auto"
+                  ]}
+                >
+                  <.icon name="lucide-x" class="w-4 h-4" />
                 </button>
               </div>
 
@@ -623,13 +671,7 @@ defmodule StashixWeb.SearchLive do
                 <div class="flex flex-wrap gap-1.5">
                   <%= for rating <- @age_ratings do %>
                     <% value = to_string(rating) %>
-                    <label class={[
-                      "cursor-pointer select-none px-2.5 py-1 text-xs rounded-lg border transition-colors",
-                      if(value in @params["age"],
-                        do: "bg-violet-600 border-violet-500 text-white",
-                        else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-                      )
-                    ]}>
+                    <label class={pill_class(value in @params["age"])}>
                       <input
                         type="checkbox"
                         name="age[]"
@@ -646,13 +688,7 @@ defmodule StashixWeb.SearchLive do
               <.filter_section title="Read status">
                 <div class="grid grid-cols-2 gap-1.5">
                   <%= for {label, value} <- @read_statuses do %>
-                    <label class={[
-                      "cursor-pointer select-none text-center px-2 py-1 text-xs rounded-lg border transition-colors",
-                      if((@params["status"] || "") == value,
-                        do: "bg-violet-600 border-violet-500 text-white",
-                        else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-                      )
-                    ]}>
+                    <label class={[pill_class((@params["status"] || "") == value), "text-center"]}>
                       <input
                         type="radio"
                         name="status"
@@ -709,23 +745,45 @@ defmodule StashixWeb.SearchLive do
                   suggestions={@facet_suggestions}
                 />
               </.filter_section>
+
+              <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-gray-900">
+                <button
+                  type="button"
+                  phx-click={close_filters()}
+                  class="ink-btn w-full px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
+                >
+                  Show {delimit(@count)} {if @count == 1, do: "result", else: "results"}
+                </button>
+              </div>
             </div>
           </aside>
         </form>
 
+        <div
+          id="search-filters-backdrop"
+          phx-click={close_filters()}
+          phx-window-keydown={close_filters()}
+          phx-key="Escape"
+          class="hidden lg:hidden fixed inset-0 z-40 bg-black/70"
+          aria-hidden="true"
+        >
+        </div>
+
         <%!-- Type tabs, filter toggle and sort --%>
-        <div class="order-2 lg:order-none lg:col-start-2 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-3 gap-y-6">
-          <div class="flex w-full sm:w-auto items-center gap-1 p-1 bg-gray-900 border border-gray-800 rounded-xl">
+        <div class="lg:col-start-2 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-white/15">
+          <div class="flex items-center gap-1 sm:gap-2" role="tablist" aria-label="Result type">
             <%= for {label, value} <- @types do %>
               <button
                 type="button"
+                role="tab"
+                aria-selected={to_string(@params["type"] == value)}
                 phx-click="set_type"
                 phx-value-type={value}
                 class={[
-                  "flex-1 sm:flex-none px-3 py-1 text-sm rounded-lg transition-colors",
+                  "px-2.5 sm:px-3 pt-1 pb-0.5 font-display font-black uppercase text-2xl sm:text-3xl leading-none rounded-sm transition-colors",
                   if(@params["type"] == value,
-                    do: "bg-gray-100 text-gray-900 font-semibold",
-                    else: "text-gray-400 hover:text-white"
+                    do: "bg-ink text-gray-950 -rotate-2",
+                    else: "text-gray-300 hover:text-white hover:bg-white/10"
                   )
                 ]}
               >
@@ -736,32 +794,39 @@ defmodule StashixWeb.SearchLive do
           <div class="flex w-full sm:w-auto items-center gap-2">
             <button
               type="button"
-              phx-click={JS.toggle_class("hidden", to: "#search-filters")}
-              class="lg:hidden inline-flex items-center gap-2 h-8 px-3 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-300 hover:text-white"
+              phx-click={open_filters()}
+              class="lg:hidden inline-flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 transition-colors"
             >
-              <.icon name="lucide-sliders-horizontal" class="w-4 h-4" /> Filters
+              <.icon name="lucide-sliders-horizontal" class="w-3.5 h-3.5" /> Filters
               <span
                 :if={@filter_count > 0}
-                class="px-1.5 rounded-full bg-violet-600 text-white text-xs font-semibold"
+                class="px-1.5 rounded-sm bg-ink text-gray-950 text-xs font-bold tabular-nums"
               >
                 {@filter_count}
               </span>
             </button>
-            <.sort_select
-              class="ml-auto"
-              select_class="h-8"
-              options={
-                if @params["q"] == "",
-                  do: Enum.reject(@sort_options, &(elem(&1, 1) == "relevance")),
-                  else: @sort_options
-              }
-              selected={@params["sort"]}
-            />
+            <form id="search-sort" phx-change="sort" class="ml-auto">
+              <select
+                name="value"
+                aria-label="Sort results"
+                class="h-9 px-4 text-sm font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 focus:outline-none focus:border-ink cursor-pointer transition-colors"
+              >
+                <option
+                  :for={{label, value} <- @sort_options}
+                  :if={value != "relevance" or @params["q"] != ""}
+                  value={value}
+                  selected={@params["sort"] == value}
+                  class="bg-gray-900"
+                >
+                  {label}
+                </option>
+              </select>
+            </form>
           </div>
         </div>
 
         <%!-- Results --%>
-        <div class="order-4 lg:order-none lg:col-start-2 lg:row-start-3 space-y-6 min-w-0">
+        <div class="lg:col-start-2 lg:row-start-3 space-y-8 min-w-0">
           <div :if={@active != []} class="flex flex-wrap items-center gap-2">
             <%= for {label, key, value} <- @active do %>
               <button
@@ -769,7 +834,7 @@ defmodule StashixWeb.SearchLive do
                 phx-click="remove_filter"
                 phx-value-key={key}
                 phx-value-value={value}
-                class="inline-flex items-center gap-1.5 pl-3 pr-2 py-1 text-xs rounded-full bg-violet-600/20 border border-violet-500/40 text-violet-200 hover:bg-violet-600/30"
+                class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 text-xs font-semibold rounded-sm bg-gray-900 border border-ink/70 text-ink hover:bg-ink hover:text-gray-950 transition-colors"
               >
                 {label}
                 <.icon name="lucide-x" class="w-3 h-3" />
@@ -778,31 +843,22 @@ defmodule StashixWeb.SearchLive do
             <button
               type="button"
               phx-click="clear_filters"
-              class="text-xs text-gray-500 hover:text-white px-1"
+              class="px-1 text-xs font-medium text-gray-300 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
             >
               Clear all
             </button>
           </div>
 
-          <section :if={@show_series} class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">
-                Series <span class="text-gray-600 font-normal">{@series_total}</span>
-              </h2>
-              <button
-                :if={@params["type"] == "all" and @series_total > length(@series)}
-                type="button"
-                phx-click="set_type"
-                phx-value-type="series"
-                class="text-xs text-violet-400 hover:text-violet-300"
-              >
-                Show all →
-              </button>
-            </div>
-            <.media_grid id={if @params["type"] == "series", do: "page-top"}>
+          <section :if={@show_series}>
+            <.results_heading
+              title="Series"
+              total={@series_total}
+              show_all={@params["type"] == "all" and @series_total > 6 and "series"}
+            />
+            <.results_grid id={if @params["type"] == "series", do: "page-top"}>
               <.media_card
                 :for={{s, i} <- Enum.with_index(@series)}
-                class={if @params["type"] == "all" and i >= 6, do: "hidden sm:block"}
+                class={if @params["type"] == "all", do: series_preview_class(i)}
                 navigate={~p"/series/#{s.id}"}
                 title={s.name}
                 cover_url={~p"/api/series/#{s.id}/cover"}
@@ -812,28 +868,19 @@ defmodule StashixWeb.SearchLive do
                 type={:series}
                 blurhash={s.cover_blurhash}
               />
-            </.media_grid>
+            </.results_grid>
           </section>
 
-          <section :if={@show_standalone_books} class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">
-                Books <span class="text-gray-600 font-normal">{@standalone_books_total}</span>
-              </h2>
-              <button
-                :if={@standalone_books_total > length(@standalone_books)}
-                type="button"
-                phx-click="set_type"
-                phx-value-type="standalone"
-                class="text-xs text-violet-400 hover:text-violet-300"
-              >
-                Show all →
-              </button>
-            </div>
-            <.media_grid>
+          <section :if={@show_standalone_books}>
+            <.results_heading
+              title="Books"
+              total={@standalone_books_total}
+              show_all={@standalone_books_total > 4 and "standalone"}
+            />
+            <.results_grid>
               <.media_card
                 :for={{b, i} <- Enum.with_index(@standalone_books)}
-                class={if i >= 6, do: "hidden sm:block"}
+                class={standalone_preview_class(i)}
                 navigate={~p"/book/#{b.id}"}
                 title={book_title(b)}
                 cover_url={b.cover && ~p"/api/books/#{b.id}/cover"}
@@ -844,17 +891,12 @@ defmodule StashixWeb.SearchLive do
                 type={:book}
                 blurhash={b.cover && b.cover.blurhash}
               />
-            </.media_grid>
+            </.results_grid>
           </section>
 
-          <section :if={@show_books} class="space-y-3">
-            <h2
-              :if={@params["type"] == "all"}
-              class="text-sm font-semibold uppercase tracking-widest text-gray-400"
-            >
-              Issues <span class="text-gray-600 font-normal">{@books_total}</span>
-            </h2>
-            <.media_grid id="page-top">
+          <section :if={@show_books}>
+            <.results_heading :if={@params["type"] == "all"} title="Issues" total={@books_total} />
+            <.results_grid id="page-top">
               <.media_card
                 :for={book <- @books}
                 navigate={~p"/book/#{book.id}"}
@@ -867,22 +909,102 @@ defmodule StashixWeb.SearchLive do
                 type={:book}
                 blurhash={book.cover && book.cover.blurhash}
               />
-            </.media_grid>
+            </.results_grid>
           </section>
 
           <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
 
-          <.browse_empty
+          <%!-- Empty long box --%>
+          <div
             :if={!@loading and !@show_series and !@show_standalone_books and !@show_books}
-            icon="lucide-search-x"
-            label={
-              if @filter_count > 0 or @params["q"] != "",
-                do: "Nothing matches these filters.",
-                else: "Nothing here yet."
-            }
-          />
+            class="relative flex flex-col items-center text-center py-10 sm:py-14"
+          >
+            <span class="ghost-numeral text-[10rem] sm:text-[13rem]" aria-hidden="true">0</span>
+            <h2 class="-mt-9 sm:-mt-12 font-display font-black uppercase text-4xl sm:text-5xl leading-[0.9] text-white text-balance">
+              {if @filter_count > 0 or @params["q"] != "", do: "Nothing in the long box", else: "Nothing here yet"}
+            </h2>
+            <p :if={@filter_count > 0 or @params["q"] != ""} class="mt-3 max-w-sm text-sm text-gray-300">
+              Loosen the filters or try another spelling.
+            </p>
+            <button
+              :if={@filter_count > 0}
+              type="button"
+              phx-click="clear_filters"
+              class="ink-btn inline-flex items-center gap-2.5 mt-7 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
+            >
+              <.icon name="lucide-filter-x" class="w-4 h-4" /> Clear filters
+            </button>
+          </div>
         </div>
       </div>
+    </.detail_page>
+    """
+  end
+
+  # The filter drawer below lg; on lg+ the same element is a rail and these do nothing visible.
+  defp open_filters do
+    JS.add_class("is-open", to: "#search-filters")
+    |> JS.remove_class("hidden", to: "#search-filters-backdrop")
+  end
+
+  defp close_filters do
+    JS.remove_class("is-open", to: "#search-filters")
+    |> JS.add_class("hidden", to: "#search-filters-backdrop")
+  end
+
+  defp pill_class(selected) do
+    [
+      "cursor-pointer select-none px-2.5 py-1 text-xs rounded-full border transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white",
+      if(selected,
+        do: "bg-ink border-ink text-gray-950 font-semibold",
+        else: "bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400 hover:text-white"
+      )
+    ]
+  end
+
+  # The All tab previews whole rows only; the grid is 3/4/5/6/8 columns wide.
+  defp series_preview_class(i) when i >= 10, do: "hidden sm:block md:hidden xl:block 2xl:hidden"
+  defp series_preview_class(i) when i >= 8, do: "hidden sm:block 2xl:hidden"
+  defp series_preview_class(i) when i >= 6, do: "hidden sm:block"
+  defp series_preview_class(_), do: nil
+
+  defp standalone_preview_class(5), do: "sm:max-xl:hidden"
+  defp standalone_preview_class(4), do: "sm:max-md:hidden"
+  defp standalone_preview_class(_), do: nil
+
+  attr :title, :string, required: true
+  attr :total, :integer, required: true
+  attr :show_all, :any, default: false, doc: "type to switch to, or false"
+
+  defp results_heading(assigns) do
+    ~H"""
+    <div class="flex items-end justify-between gap-4 mb-4">
+      <h2 class="font-display font-black uppercase text-3xl leading-none text-white">
+        {@title} <span class="text-gray-400 tabular-nums">{delimit(@total)}</span>
+      </h2>
+      <button
+        :if={@show_all}
+        type="button"
+        phx-click="set_type"
+        phx-value-type={@show_all}
+        class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-200 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
+      >
+        Show all <.icon name="lucide-arrow-right" class="w-3.5 h-3.5" />
+      </button>
+    </div>
+    """
+  end
+
+  attr :id, :string, default: nil
+  slot :inner_block, required: true
+
+  defp results_grid(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 scroll-mt-4"
+    >
+      {render_slot(@inner_block)}
     </div>
     """
   end
@@ -892,8 +1014,8 @@ defmodule StashixWeb.SearchLive do
 
   defp filter_section(assigns) do
     ~H"""
-    <div class="px-4 py-3 space-y-2">
-      <h3 class="text-xs font-semibold uppercase tracking-wider text-gray-500">{@title}</h3>
+    <div class="px-5 py-4 space-y-2.5">
+      <h3 class="text-[11px] font-bold tracking-[0.16em] uppercase text-gray-300">{@title}</h3>
       {render_slot(@inner_block)}
     </div>
     """
@@ -951,11 +1073,14 @@ defmodule StashixWeb.SearchLive do
       data-max={@last}
       class="space-y-1.5"
     >
-      <div class="flex items-baseline justify-between text-xs">
-        <span data-label class="font-medium text-gray-200">
+      <div class="flex items-baseline justify-between">
+        <span
+          data-label
+          class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums"
+        >
           {if @lo == @first and @hi == @last, do: "Any year", else: "#{@lo} – #{@hi}"}
         </span>
-        <span data-total class="text-gray-500">{@total} books</span>
+        <span data-total class="text-xs text-gray-400 tabular-nums">{@total} books</span>
       </div>
 
       <%!-- Inset by half a thumb so bar centres line up with handle centres --%>
@@ -966,7 +1091,7 @@ defmodule StashixWeb.SearchLive do
           data-year={b.year}
           data-active={b.active}
           title={"#{b.year}: #{b.count} #{if b.count == 1, do: "book", else: "books"}"}
-          class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-gray-700 data-[active]:bg-violet-500 transition-colors"
+          class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-gray-600 data-[active]:bg-violet-500 transition-colors"
           style={"left: #{b.left}%; width: max(#{@bar_width}%, 1px); height: #{b.height}%;"}
         />
       </div>
@@ -999,7 +1124,7 @@ defmodule StashixWeb.SearchLive do
         />
       </div>
 
-      <div class="flex justify-between text-[10px] text-gray-600">
+      <div class="flex justify-between text-[10px] text-gray-400 tabular-nums">
         <span>{@first}</span>
         <span>{@last}</span>
       </div>
@@ -1021,23 +1146,7 @@ defmodule StashixWeb.SearchLive do
 
     ~H"""
     <div :if={@selected != []} class="flex flex-wrap gap-1.5">
-      <span
-        :for={c <- @selected}
-        class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 bg-violet-600/20 border border-violet-500/40 rounded-lg text-sm text-violet-100"
-      >
-        <input type="hidden" name="creator[]" value={c.id} />
-        <span class="truncate">{c.name}</span>
-        <button
-          type="button"
-          phx-click="remove_filter"
-          phx-value-key="creator"
-          phx-value-value={c.id}
-          aria-label={"Remove #{c.name}"}
-          class="p-0.5 rounded-md text-violet-300 hover:text-white hover:bg-violet-600/40"
-        >
-          <.icon name="lucide-x" class="w-3.5 h-3.5" />
-        </button>
-      </span>
+      <.picked :for={c <- @selected} name="creator[]" key="creator" value={c.id} label={c.name} />
     </div>
 
     <div
@@ -1047,13 +1156,7 @@ defmodule StashixWeb.SearchLive do
     >
       <label
         :for={{label, value} <- [{"All of them", "all"}, {"Any of them", "any"}]}
-        class={[
-          "cursor-pointer select-none text-center px-2 py-1 text-xs rounded-lg border transition-colors",
-          if(@match == value,
-            do: "bg-violet-600 border-violet-500 text-white",
-            else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-          )
-        ]}
+        class={[pill_class(@match == value), "text-center"]}
       >
         <input
           type="radio"
@@ -1079,14 +1182,9 @@ defmodule StashixWeb.SearchLive do
         aria-controls="creator-options"
         aria-expanded={to_string(@query != "")}
         phx-debounce="200"
-        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+        class={field_class()}
       />
-      <div
-        :if={@query != ""}
-        id="creator-options"
-        role="listbox"
-        class="absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl"
-      >
+      <div :if={@query != ""} id="creator-options" role="listbox" class={listbox_class()}>
         <button
           :for={c <- @suggestions}
           type="button"
@@ -1094,12 +1192,12 @@ defmodule StashixWeb.SearchLive do
           data-option
           phx-click="select_creator"
           phx-value-id={c.id}
-          class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-gray-700 data-[active]:text-white"
+          class={option_class()}
         >
           <span class="truncate">{c.name}</span>
-          <span class="shrink-0 text-xs text-gray-500">{c.credits}</span>
+          <span class="shrink-0 text-xs text-gray-400 tabular-nums">{c.credits}</span>
         </button>
-        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-500">
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-400">
           No creators found
         </div>
       </div>
@@ -1119,23 +1217,7 @@ defmodule StashixWeb.SearchLive do
 
     ~H"""
     <div :if={@selected != []} class="flex flex-wrap gap-1.5">
-      <span
-        :for={name <- @selected}
-        class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 bg-violet-600/20 border border-violet-500/40 rounded-lg text-sm text-violet-100"
-      >
-        <input type="hidden" name={"#{@key}[]"} value={name} />
-        <span class="truncate">{name}</span>
-        <button
-          type="button"
-          phx-click="remove_filter"
-          phx-value-key={@key}
-          phx-value-value={name}
-          aria-label={"Remove #{name}"}
-          class="p-0.5 rounded-md text-violet-300 hover:text-white hover:bg-violet-600/40"
-        >
-          <.icon name="lucide-x" class="w-3.5 h-3.5" />
-        </button>
-      </span>
+      <.picked :for={name <- @selected} name={"#{@key}[]"} key={@key} value={name} label={name} />
     </div>
 
     <div :if={!@full} id={"#{@key}-picker"} phx-hook="CreatorCombobox" class="relative">
@@ -1151,14 +1233,9 @@ defmodule StashixWeb.SearchLive do
         aria-controls={"#{@key}-options"}
         aria-expanded={to_string(@query != "")}
         phx-debounce="200"
-        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500"
+        class={field_class()}
       />
-      <div
-        :if={@query != ""}
-        id={"#{@key}-options"}
-        role="listbox"
-        class="absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-xl"
-      >
+      <div :if={@query != ""} id={"#{@key}-options"} role="listbox" class={listbox_class()}>
         <button
           :for={s <- @suggestions}
           type="button"
@@ -1167,18 +1244,55 @@ defmodule StashixWeb.SearchLive do
           phx-click="select_facet"
           phx-value-facet={@key}
           phx-value-name={s.name}
-          class="w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-gray-700 data-[active]:text-white"
+          class={option_class()}
         >
           <span class="truncate">{s.name}</span>
-          <span class="shrink-0 text-xs text-gray-500">{s.books}</span>
+          <span class="shrink-0 text-xs text-gray-400 tabular-nums">{s.books}</span>
         </button>
-        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-500">
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-400">
           No {@plural} found
         </div>
       </div>
     </div>
     """
   end
+
+  attr :name, :string, required: true
+  attr :key, :string, required: true
+  attr :value, :string, required: true
+  attr :label, :string, required: true
+
+  # A picked creator/facet value: carries the value in the form, removable.
+  defp picked(assigns) do
+    ~H"""
+    <span class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-sm bg-gray-950 border border-ink/70 text-xs font-semibold text-ink">
+      <input type="hidden" name={@name} value={@value} />
+      <span class="truncate">{@label}</span>
+      <button
+        type="button"
+        phx-click="remove_filter"
+        phx-value-key={@key}
+        phx-value-value={@value}
+        aria-label={"Remove #{@label}"}
+        class="p-0.5 rounded-sm hover:bg-ink hover:text-gray-950 transition-colors"
+      >
+        <.icon name="lucide-x" class="w-3.5 h-3.5" />
+      </button>
+    </span>
+    """
+  end
+
+  defp field_class,
+    do:
+      "w-full bg-gray-800 border border-gray-600 rounded-md px-2.5 py-1.5 text-sm text-white placeholder-gray-400 hover:border-gray-400 focus:outline-none focus:border-ink transition-colors"
+
+  defp listbox_class,
+    do:
+      "absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-2xl"
+
+  defp option_class,
+    do:
+      "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-ink data-[active]:text-gray-950"
 
   attr :name, :string, required: true
   attr :selected, :string, default: nil
@@ -1189,7 +1303,10 @@ defmodule StashixWeb.SearchLive do
     ~H"""
     <select
       name={@name}
-      class="w-full bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-sm text-white focus:outline-none focus:border-violet-500 cursor-pointer"
+      class={[
+        "w-full bg-gray-800 border rounded-md px-2.5 py-1.5 text-sm hover:border-gray-400 focus:outline-none focus:border-ink cursor-pointer transition-colors",
+        if(@selected, do: "border-ink text-white", else: "border-gray-600 text-gray-200")
+      ]}
     >
       <option value="" selected={is_nil(@selected)}>{@prompt}</option>
       {render_slot(@inner_block)}

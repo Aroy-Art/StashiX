@@ -9,21 +9,33 @@ defmodule StashixWeb.DetailComponents do
   @doc """
   Full-bleed wrapper for a detail page: a blurred wash of the cover plus a
   halftone texture behind the content. Negative margins cancel the layout's
-  page padding so the wash reaches the edges.
+  page padding so the wash reaches the edges. `wide` drops the reading-width
+  cap for pages that lay out their own columns (search).
   """
   attr :cover_src, :string, default: nil
+  attr :wide, :boolean, default: false
+  attr :fade, :boolean, default: false, doc: "cross-fade the wash when cover_src changes on a live page"
   slot :inner_block, required: true
 
   def detail_page(assigns) do
     ~H"""
     <div class="relative overflow-x-clip -mx-6 -mt-6 px-6 pt-6 xl:-mx-12 xl:px-12 2xl:-mx-20 2xl:px-20">
       <div class="absolute inset-x-0 top-0 h-[34rem] overflow-hidden pointer-events-none" aria-hidden="true">
-        <div :if={@cover_src} class="detail-backdrop absolute inset-0">
+        <div
+          :if={@fade}
+          id="detail-backdrop"
+          phx-hook="BackdropFade"
+          phx-update="ignore"
+          data-src={@cover_src}
+          class="detail-backdrop absolute inset-0"
+        >
+        </div>
+        <div :if={!@fade && @cover_src} class="detail-backdrop absolute inset-0">
           <img src={@cover_src} alt="" class="w-full h-full object-cover" />
         </div>
         <div class="halftone absolute inset-0"></div>
       </div>
-      <div class="relative max-w-5xl mx-auto space-y-8">
+      <div class={["relative space-y-8", !@wide && "max-w-5xl mx-auto"]}>
         {render_slot(@inner_block)}
       </div>
     </div>
