@@ -135,4 +135,36 @@ defmodule StashixWeb.AdminMetadataLiveTest do
     assert book.upc == "76194134182900111"
     assert Stashix.Metadata.count_reviews() == 0
   end
+
+  test "jobs tab previews and runs the summary cleanup", %{conn: conn} do
+    tmp = Path.join(System.tmp_dir!(), "stashix_lv_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(tmp)
+    on_exit(fn -> File.rm_rf!(tmp) end)
+    Stashix.Settings.put("metadata", %{"write_to_files" => false})
+
+    junk = "List of covers and their creators:CoverNameCreator(s)Sidebar LocationARegular CoverWinston Young1"
+    lib = library_fixture(tmp)
+    series = series_fixture(lib, %{summary: junk})
+    dirty = book_fixture(lib, series, %{summary: "Belle returns!\n\n" <> junk})
+    clean = book_fixture(lib, series, %{title: "Batman 002", summary: "List of covers is mentioned here"})
+
+    {:ok, view, html} = live(conn, ~p"/admin/metadata/jobs")
+    refute html =~ "Sidebar Location"
+
+    html = view |> element("button[phx-click=preview_summary_cleanup]") |> render_click()
+    assert html =~ "Sidebar Location"
+    assert html =~ "Clean 2 summaries"
+    assert Library.get_book!(dirty.id).summary =~ "Sidebar Location"
+
+    html = view |> element("button[phx-click=run_summary_cleanup]") |> render_click()
+    assert html =~ "Cleaned 1 book and 1 series summaries"
+    refute has_element?(view, "#summary-cleanup-preview")
+
+    assert Library.get_book!(dirty.id).summary == "Belle returns!"
+    assert Library.get_book!(clean.id).summary == "List of covers is mentioned here"
+    assert Stashix.Repo.get!(Stashix.Library.Series, series.id).summary == nil
+
+    html = view |> element("button[phx-click=preview_summary_cleanup]") |> render_click()
+    assert html =~ "Nothing to clean up"
+  end
 end

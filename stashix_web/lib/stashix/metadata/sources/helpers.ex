@@ -58,6 +58,9 @@ defmodule Stashix.Metadata.Sources.Helpers do
 
   def strip_html(html) when is_binary(html) do
     html
+    # Tables (e.g. "List of covers and their creators") flatten to garbage;
+    # drop them along with the heading that introduces them.
+    |> String.replace(~r/(?:<h[1-6][^>]*>(?:(?!<\/h[1-6]>).)*<\/h[1-6]>\s*)?<table\b.*?<\/table>/is, "")
     |> String.replace(~r/<br\s*\/?>/i, "\n")
     |> String.replace(~r/<\/p>/i, "\n\n")
     |> String.replace(~r/<[^>]+>/, "")
@@ -70,6 +73,22 @@ defmodule Stashix.Metadata.Sources.Helpers do
     |> String.replace(~r/\n{3,}/, "\n\n")
     |> String.trim()
     |> case do
+      "" -> nil
+      s -> s
+    end
+  end
+
+  @cover_list ~r/\s*List of covers and their creators:\s*Cover\s*Name\s*Creator\(s\).*\z/s
+
+  @doc """
+  Cuts a flattened Comic Vine cover table off the end of an already-stored
+  summary (imported before `strip_html/1` dropped tables). Returns nil when
+  nothing else is left.
+  """
+  def strip_cover_list(nil), do: nil
+
+  def strip_cover_list(summary) when is_binary(summary) do
+    case @cover_list |> Regex.replace(summary, "") |> String.trim() do
       "" -> nil
       s -> s
     end
