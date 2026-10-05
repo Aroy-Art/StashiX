@@ -4,6 +4,7 @@ defmodule StashixWeb.AdminMetadataLive do
 
   alias Stashix.{Library, Metadata, Settings}
   alias Stashix.Metadata.Sources
+  import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_admin}
 
@@ -14,7 +15,9 @@ defmodule StashixWeb.AdminMetadataLive do
     if connected?(socket), do: Metadata.subscribe_admin()
 
     {:ok,
-     assign(socket,
+     socket
+     |> track_dialogs(~w(identify))
+     |> assign(
        admin_sidebar: true,
        sources: [],
        testing: MapSet.new(),
@@ -26,6 +29,7 @@ defmodule StashixWeb.AdminMetadataLive do
        identify_review: nil,
        job_counts: %{},
        libraries: [],
+       summary_cleanup: nil,
        refresh_timer: nil
      )}
   end
@@ -60,7 +64,11 @@ defmodule StashixWeb.AdminMetadataLive do
 
   defp apply_action(socket, :metadata_jobs, _params) do
     socket
-    |> assign(page_title: "Admin · Metadata Jobs", libraries: Library.list_libraries(%{role: :admin}))
+    |> assign(
+      page_title: "Admin · Metadata Jobs",
+      libraries: Library.list_libraries(%{role: :admin}),
+      summary_cleanup: nil
+    )
     |> load_jobs()
   end
 
@@ -183,7 +191,7 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/admin/metadata/review")}
+    {:noreply, close_dialog(socket, ~p"/admin/metadata/review")}
   end
 
   # ── Jobs ────────────────────────────────────────────────────────────────────
@@ -207,6 +215,24 @@ defmodule StashixWeb.AdminMetadataLive do
   def handle_event("cancel_pending", _params, socket) do
     Metadata.cancel_pending_jobs()
     {:noreply, load_jobs(socket)}
+  end
+
+  def handle_event("preview_summary_cleanup", _params, socket) do
+    {:noreply, assign(socket, summary_cleanup: Metadata.summary_cleanup_preview())}
+  end
+
+  def handle_event("cancel_summary_cleanup", _params, socket) do
+    {:noreply, assign(socket, summary_cleanup: nil)}
+  end
+
+  def handle_event("run_summary_cleanup", _params, socket) do
+    %{books: books, series: series} = Metadata.clean_summaries()
+
+    {:noreply,
+     socket
+     |> assign(summary_cleanup: nil)
+     |> load_jobs()
+     |> put_flash(:info, "Cleaned #{books} book and #{series} series summaries")}
   end
 
   defp mark_saved(socket, key) do
@@ -253,7 +279,7 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   def handle_info({:identify_applied, _kind, _id}, socket) do
-    {:noreply, socket |> put_flash(:info, "Metadata applied") |> push_patch(to: ~p"/admin/metadata/review")}
+    {:noreply, socket |> put_flash(:info, "Metadata applied") |> close_dialog(~p"/admin/metadata/review")}
   end
 
   def handle_info(:refresh_jobs, socket) do
@@ -325,7 +351,13 @@ defmodule StashixWeb.AdminMetadataLive do
       <% end %>
 
       <%= if @live_action == :metadata_jobs do %>
-        <.jobs_tab job_counts={@job_counts} libraries={@libraries} cache_count={@cache_count} />
+        <.jobs_tab
+          job_counts={@job_counts}
+          libraries={@libraries}
+          cache_count={@cache_count}
+          summary_cleanup={@summary_cleanup}
+          write_to_files={@settings["write_to_files"]}
+        />
       <% end %>
     </div>
     """
@@ -740,6 +772,11 @@ defmodule StashixWeb.AdminMetadataLive do
                   No candidates found
               <% end %>
             </p>
+            <%= if review.book && review.book.files != [] do %>
+              <p class="text-[11px] text-gray-600 font-mono truncate mt-0.5">
+                {List.first(review.book.files).path}
+              </p>
+            <% end %>
           </div>
           <div class="flex gap-2 flex-shrink-0">
             <.link
@@ -772,6 +809,8 @@ defmodule StashixWeb.AdminMetadataLive do
   attr :job_counts, :map
   attr :libraries, :list
   attr :cache_count, :integer
+  attr :summary_cleanup, :map
+  attr :write_to_files, :boolean
 
   defp jobs_tab(assigns) do
     ~H"""
@@ -850,6 +889,86 @@ defmodule StashixWeb.AdminMetadataLive do
             </div>
           </div>
         <% end %>
+      </div>
+
+      <div class="space-y-3">
+        <h2 class="text-base font-semibold text-white">Maintenance</h2>
+        <div class="rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 space-y-3">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <p class="text-white text-sm font-medium">Clean up summaries</p>
+              <p class="text-gray-500 text-xs">
+                Remove the "List of covers and their creators" table that older Comic Vine imports left at the end of summaries.
+              </p>
+            </div>
+            <button
+              :if={!@summary_cleanup}
+              phx-click="preview_summary_cleanup"
+              class="shrink-0 px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
+            >
+              Preview cleanup
+            </button>
+          </div>
+
+          <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-gray-800 pt-3">
+            <%= if @summary_cleanup.books + @summary_cleanup.series == 0 do %>
+              <p class="text-sm text-gray-400">Nothing to clean up. No summaries contain a cover table.</p>
+              <button
+                phx-click="cancel_summary_cleanup"
+                class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
+              >
+                Close
+              </button>
+            <% else %>
+              <p class="text-sm text-gray-300">
+                This will rewrite the summary of <span class="font-semibold text-white">{@summary_cleanup.books}</span>
+                books and <span class="font-semibold text-white">{@summary_cleanup.series}</span>
+                series. Only the cover table at the end is removed; the rest of each summary is kept.
+              </p>
+              <p :if={@write_to_files and @summary_cleanup.books > 0} class="text-xs text-amber-400">
+                Writing metadata to files is on, so {@summary_cleanup.books} file writes will be queued.
+              </p>
+              <p :if={!@write_to_files} class="text-xs text-gray-500">
+                Writing metadata to files is off, so book files are not touched.
+              </p>
+
+              <div class="space-y-2">
+                <%= for sample <- @summary_cleanup.samples do %>
+                  <div class="rounded-lg bg-gray-800/50 p-3 text-xs space-y-1">
+                    <p class="text-gray-400">
+                      <span class="text-gray-500">{sample.kind}</span> · {sample.label || "Untitled"}
+                    </p>
+                    <p class="text-gray-300 line-clamp-2">
+                      {if sample.kept == "", do: "(summary becomes empty)", else: sample.kept}
+                    </p>
+                    <p class="text-red-400 line-through line-clamp-3">{sample.removed}</p>
+                  </div>
+                <% end %>
+                <p
+                  :if={@summary_cleanup.books + @summary_cleanup.series > length(@summary_cleanup.samples)}
+                  class="text-xs text-gray-500"
+                >
+                  Showing {length(@summary_cleanup.samples)} examples.
+                </p>
+              </div>
+
+              <div class="flex gap-2">
+                <button
+                  phx-click="run_summary_cleanup"
+                  class="px-3 py-1.5 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
+                >
+                  Clean {@summary_cleanup.books + @summary_cleanup.series} summaries
+                </button>
+                <button
+                  phx-click="cancel_summary_cleanup"
+                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
+                >
+                  Cancel
+                </button>
+              </div>
+            <% end %>
+          </div>
+        </div>
       </div>
     </div>
     """

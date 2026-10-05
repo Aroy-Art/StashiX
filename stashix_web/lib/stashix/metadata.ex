@@ -194,6 +194,63 @@ defmodule Stashix.Metadata do
     |> Oban.cancel_all_jobs()
   end
 
+  ## Summary cleanup
+
+  @cover_list_marker "%List of covers and their creators:%"
+
+  @doc """
+  Dry run of `clean_summaries/0`: how many book and series summaries end in a
+  flattened Comic Vine cover table, with a few before/after samples.
+  """
+  def summary_cleanup_preview(sample_size \\ 5) do
+    books = dirty_summaries(Book, :title)
+    series = dirty_summaries(Series, :name)
+
+    samples =
+      for {kind, rows} <- [{"Book", books}, {"Series", series}],
+          {_id, label, summary, cleaned} <- Enum.take(rows, sample_size) do
+        kept = cleaned || ""
+        %{kind: kind, label: label, kept: kept, removed: String.trim(String.replace_prefix(summary, kept, ""))}
+      end
+
+    %{books: length(books), series: length(series), samples: samples}
+  end
+
+  @doc """
+  Removes flattened Comic Vine cover tables from stored book and series
+  summaries. Changed books are queued for a file write when that is enabled.
+  """
+  def clean_summaries(settings \\ Settings.metadata()) do
+    books = dirty_summaries(Book, :title)
+    series = dirty_summaries(Series, :name)
+
+    Repo.transaction(fn ->
+      for {schema, rows} <- [{Book, books}, {Series, series}], {id, _label, _summary, cleaned} <- rows do
+        Repo.update_all(from(r in schema, where: r.id == ^id), set: [summary: cleaned])
+      end
+    end)
+
+    if settings["write_to_files"], do: Enum.each(books, fn {id, _, _, _} -> enqueue_write(id) end)
+
+    %{books: length(books), series: length(series)}
+  end
+
+  # {id, label, summary, cleaned} for rows whose summary actually changes
+  defp dirty_summaries(schema, label_field) do
+    from(r in schema,
+      where: like(r.summary, ^@cover_list_marker),
+      order_by: field(r, ^label_field),
+      select: {r.id, field(r, ^label_field), r.summary}
+    )
+    |> Repo.all()
+    |> Enum.flat_map(fn {id, label, summary} ->
+      case Sources.Helpers.strip_cover_list(summary) do
+        ^summary -> []
+        cleaned -> [{id, label, summary, cleaned}]
+      end
+    end)
+  end
+
   ## Reviews
 
   def list_reviews(opts \\ []) do
@@ -203,7 +260,7 @@ defmodule Stashix.Metadata do
       where: r.status == ^status,
       order_by: [desc: r.updated_at],
       limit: ^Keyword.get(opts, :limit, 100),
-      preload: [book: [:series, :cover], series: []]
+      preload: [book: [:series, :cover, :files], series: []]
     )
     |> Repo.all()
   end
@@ -212,7 +269,7 @@ defmodule Stashix.Metadata do
     Repo.aggregate(from(r in MatchReview, where: r.status == ^status), :count)
   end
 
-  def get_review!(id), do: Repo.get!(MatchReview, id) |> Repo.preload(book: [:series, :cover], series: [])
+  def get_review!(id), do: Repo.get!(MatchReview, id) |> Repo.preload(book: [:series, :cover, :files], series: [])
 
   def pending_review_for(book_id: book_id),
     do: Repo.one(from r in MatchReview, where: r.book_id == ^book_id and r.status == "pending", limit: 1)
