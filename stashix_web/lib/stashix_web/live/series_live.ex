@@ -8,7 +8,7 @@ defmodule StashixWeb.SeriesLive do
   import StashixWeb.DetailComponents
   import StashixWeb.DialogHistory
 
-  on_mount {StashixWeb.Live.Hooks, :require_auth}
+  on_mount({StashixWeb.Live.Hooks, :require_auth})
 
   @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series)
 
@@ -126,7 +126,10 @@ defmodule StashixWeb.SeriesLive do
   defp metadata_source_label(series) do
     mod = Stashix.Metadata.Sources.module(series.metadata_source || "")
     name = (mod && mod.name()) || series.metadata_source
-    [name, Calendar.strftime(series.metadata_matched_at, "%Y-%m-%d")] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+
+    [name, Calendar.strftime(series.metadata_matched_at, "%Y-%m-%d")]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
   end
 
   defp relative_folder(series, library) do
@@ -591,6 +594,7 @@ defmodule StashixWeb.SeriesLive do
         </p>
       </section>
 
+      <% series_age_rating = common_age_rating(@series.books) %>
       <.indicia>
         <:item label="Pages" show={@total_pages > 0}>
           {@total_pages
@@ -599,6 +603,9 @@ defmodule StashixWeb.SeriesLive do
         </:item>
         <:item label="Size" show={Formatters.format_file_size(@total_size) != nil}>
           {Formatters.format_file_size(@total_size)}
+        </:item>
+        <:item label="Age Rating" show={series_age_rating != nil}>
+          {Formatters.format_age_rating(series_age_rating)}
         </:item>
         <:item label="Volume" show={@series.volume != nil}>Vol. {@series.volume}</:item>
         <:item label="Language" show={@series.language != nil}>
