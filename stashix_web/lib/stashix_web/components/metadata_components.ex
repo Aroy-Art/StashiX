@@ -5,24 +5,29 @@ defmodule StashixWeb.MetadataComponents do
   alias Phoenix.LiveView.JS
   import StashixUi.Icon, only: [icon: 1]
 
-  @doc "Compact 'Writer … · Artist …' line."
+  @doc "Headline credits as one column per role; long lists are cut with a '+N more' marker."
   attr :groups, :list, required: true, doc: "[{heading, [name | {name, count}]}]"
+  attr :limit, :integer, default: 4
 
   def credits_line(assigns) do
     ~H"""
-    <div :if={@groups != []} class="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-      <div :for={{label, names} <- @groups} class="min-w-0">
-        <span class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mr-1.5">{label}</span>
-        <span class="text-gray-300">
-          <span :for={{n, i} <- Enum.with_index(names)}>
-            <.link
-              navigate={"/search?creator=#{entry_id(n)}"}
-              class="hover:text-white hover:underline transition-colors"
-            >{entry_name(n)}</.link><span :if={i < length(names) - 1}>, </span>
+    <dl :if={@groups != []} class="grid grid-cols-1 sm:grid-cols-3 gap-x-10 gap-y-5">
+      <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-white/10 pl-4">
+        <dt class="text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80 mb-1.5">{label}</dt>
+        <dd class="text-sm text-gray-200 leading-6">
+          <.link
+            :for={n <- Enum.take(names, @limit)}
+            navigate={"/search?creator=#{entry_id(n)}"}
+            class="block truncate hover:text-white hover:underline underline-offset-4 transition-colors"
+          >
+            {String.trim(entry_name(n))}
+          </.link>
+          <span :if={length(names) > @limit} class="block text-xs text-gray-500">
+            +{length(names) - @limit} more
           </span>
-        </span>
+        </dd>
       </div>
-    </div>
+    </dl>
     """
   end
 
@@ -137,9 +142,13 @@ defmodule StashixWeb.MetadataComponents do
     """
   end
 
-  @doc "Chip list; items are names or `{name, count}`. Long lists are cut with a '+N' marker."
+  @doc """
+  Chip list; items are names or `{name, count}`. Long lists are cut with a '+N' marker.
+  With `search_param`, each chip links to the search page filtered on that param.
+  """
   attr :items, :list, required: true
   attr :limit, :integer, default: 40
+  attr :search_param, :string, default: nil
 
   def chips(assigns) do
     {shown, rest} = Enum.split(assigns.items, assigns.limit)
@@ -147,13 +156,23 @@ defmodule StashixWeb.MetadataComponents do
 
     ~H"""
     <div class="flex flex-wrap gap-1.5">
-      <span
-        :for={item <- @shown}
-        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300"
-      >
-        {entry_name(item)}
-        <span :if={entry_count(item)} class="text-gray-600">{entry_count(item)}</span>
-      </span>
+      <%= for item <- @shown do %>
+        <.link
+          :if={@search_param}
+          navigate={"/search?" <> URI.encode_query(%{@search_param => entry_name(item)})}
+          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-ink/10 border border-ink/30 text-xs text-gray-100 hover:bg-ink/20 hover:border-ink transition-colors"
+        >
+          {entry_name(item)}
+          <span :if={entry_count(item)} class="text-ink/70">{entry_count(item)}</span>
+        </.link>
+        <span
+          :if={!@search_param}
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300"
+        >
+          {entry_name(item)}
+          <span :if={entry_count(item)} class="text-gray-600">{entry_count(item)}</span>
+        </span>
+      <% end %>
       <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-gray-600">+{@rest} more</span>
     </div>
     """

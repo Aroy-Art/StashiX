@@ -145,7 +145,8 @@ defmodule Stashix.Library do
 
   @doc """
   Series-level details: the series' own extra fields plus the most frequent
-  creators, characters, teams, story arcs and genres across its live books.
+  creators, characters, teams, story arcs, genres, tags, locations and
+  universes across its live books.
   """
   def series_details(access, series_id, limit \\ 20) do
     series = get_series!(access, series_id) |> Repo.preload([:external_ids, :alternative_names])
@@ -179,7 +180,10 @@ defmodule Stashix.Library do
       characters: top.(Stashix.Library.BookCharacter),
       teams: top.(Stashix.Library.BookTeam),
       arcs: top.(Stashix.Library.BookStoryArc),
-      genres: top.(Stashix.Library.BookGenre)
+      genres: top.(Stashix.Library.BookGenre),
+      tags: top.(Stashix.Library.BookTag),
+      locations: top.(Stashix.Library.BookLocation),
+      universes: top.(Stashix.Library.BookUniverse)
     }
   end
 

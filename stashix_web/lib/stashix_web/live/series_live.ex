@@ -108,6 +108,27 @@ defmodule StashixWeb.SeriesLive do
   defp year_range(%{start_year: s, end_year: nil}), do: "#{s}"
   defp year_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 
+  # Series-level facts for the details grid; empty values are dropped by the grid.
+  defp series_facts(series) do
+    [
+      {"Format", series.format && to_string(series.format)},
+      {"Also known as", Enum.map_join(series.alternative_names, " · ", & &1.name)},
+      {"Published issues", series.issue_count > 0 && series.issue_count},
+      {"Volumes", series.volume_count > 0 && series.volume_count},
+      {"Metadata source", metadata_source_label(series)},
+      {"External IDs", Enum.map_join(series.external_ids, " · ", &"#{&1.source} #{&1.source_id}")}
+    ]
+    |> Enum.map(fn {label, value} -> {label, value || nil} end)
+  end
+
+  defp metadata_source_label(%{metadata_matched_at: nil}), do: nil
+
+  defp metadata_source_label(series) do
+    mod = Stashix.Metadata.Sources.module(series.metadata_source || "")
+    name = (mod && mod.name()) || series.metadata_source
+    [name, Calendar.strftime(series.metadata_matched_at, "%Y-%m-%d")] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+  end
+
   defp relative_folder(series, library) do
     library.name <>
       "/" <>
@@ -594,44 +615,56 @@ defmodule StashixWeb.SeriesLive do
       <% sd = @series_details %>
       <% creator_groups = Roles.group_counts(sd.creators) %>
       <% headline_groups = Roles.headline(creator_groups) %>
+      <% facts = series_facts(sd.series) %>
       <% has_extras =
         sd.characters != [] || sd.teams != [] || sd.arcs != [] || sd.genres != [] ||
-          creator_groups != [] %>
+          sd.tags != [] || sd.locations != [] || sd.universes != [] ||
+          creator_groups != [] || Enum.any?(facts, fn {_, v} -> v not in [nil, ""] end) %>
       <%= if headline_groups != [] || has_extras do %>
-        <div class="space-y-3">
+        <div class="space-y-5">
           <.credits_line groups={headline_groups} />
           <%= if has_extras do %>
             <.expander id="series-details">
               <.detail_section label="Creators" show={creator_groups != []}>
-                <div class="space-y-2">
-                  <div :for={{label, entries} <- creator_groups} class="flex flex-wrap gap-x-4 gap-y-0.5 text-sm">
-                    <span class="w-20 shrink-0 text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 pt-0.5">{label}</span>
-                    <span class="text-gray-300">
-                      <span :for={{entry, i} <- Enum.with_index(entries)}>
-                        <.link
-                          navigate={"/search?creator=#{elem(entry, 2)}"}
-                          class="hover:text-white hover:underline transition-colors"
-                        >{elem(entry, 0)}</.link><span :if={i < length(entries) - 1}>, </span>
-                      </span>
-                    </span>
-                  </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+                  <%= for {role, entries} <- creator_groups, {name, count, creator_id} <- entries do %>
+                    <.creator_card
+                      name={name}
+                      role={if count > 1, do: "#{role} · #{count} issues", else: role}
+                      creator_id={creator_id}
+                    />
+                  <% end %>
                 </div>
               </.detail_section>
 
+              <.detail_grid entries={facts} />
+
               <.detail_section label="Genres" show={sd.genres != []}>
-                <.chips items={Enum.map(sd.genres, fn {name, count} -> {name, count} end)} />
+                <.chips items={sd.genres} search_param="genre" />
+              </.detail_section>
+
+              <.detail_section label="Tags" show={sd.tags != []}>
+                <.chips items={sd.tags} />
               </.detail_section>
 
               <.detail_section label="Story Arcs" show={sd.arcs != []}>
-                <.chips items={Enum.map(sd.arcs, fn {name, count} -> {name, count} end)} />
+                <.chips items={sd.arcs} />
               </.detail_section>
 
               <.detail_section label="Characters" show={sd.characters != []}>
-                <.chips items={Enum.map(sd.characters, fn {name, count} -> {name, count} end)} />
+                <.chips items={sd.characters} />
               </.detail_section>
 
               <.detail_section label="Teams" show={sd.teams != []}>
-                <.chips items={Enum.map(sd.teams, fn {name, count} -> {name, count} end)} />
+                <.chips items={sd.teams} />
+              </.detail_section>
+
+              <.detail_section label="Locations" show={sd.locations != []}>
+                <.chips items={sd.locations} />
+              </.detail_section>
+
+              <.detail_section label="Universes" show={sd.universes != []}>
+                <.chips items={sd.universes} />
               </.detail_section>
             </.expander>
           <% end %>

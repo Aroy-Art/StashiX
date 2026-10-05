@@ -243,6 +243,35 @@ defmodule StashixWeb.BookLive do
     end)
   end
 
+  # Scalar facts for the details grid; empty values are dropped by the grid.
+  defp book_facts(d) do
+    [
+      {"Stories", Enum.map_join(d.stories, ", ", & &1.name)},
+      {"Story Arcs",
+       Enum.map_join(d.story_arcs, ", ", fn a ->
+         if a.arc_number, do: "#{a.name} ##{a.arc_number}", else: a.name
+       end)},
+      {"Imprint", d.imprint && d.imprint.name},
+      {"Type", d.type not in [nil, "", "issue"] && String.capitalize(d.type)},
+      {"Collection", d.collection_title},
+      {"Alt. number", d.alternative_number},
+      {"Cover date", d.cover_date && Calendar.strftime(d.cover_date, "%B %Y")},
+      {"In stores", d.store_date && Calendar.strftime(d.store_date, "%Y-%m-%d")},
+      {"Price", Enum.map_join(d.prices, " / ", fn p -> "#{p.amount} #{p.country}" end)},
+      {"Community rating", community_rating(d)},
+      {"ISBN", d.isbn},
+      {"UPC", d.upc}
+    ]
+    |> Enum.map(fn {label, value} -> {label, value || nil} end)
+  end
+
+  defp community_rating(%{community_rating: nil}), do: nil
+
+  defp community_rating(%{community_rating: rating, community_rating_count: count}) do
+    votes = if count && count > 0, do: " · #{count} #{if count == 1, do: "vote", else: "votes"}", else: ""
+    "#{Float.round(rating, 1)}#{votes}"
+  end
+
   defp book_display_title(book), do: book.title
 
   # A CV "volume" with exactly one issue is a standalone TPB/OGN — don't show
@@ -563,11 +592,11 @@ defmodule StashixWeb.BookLive do
           @book_details.story_arcs != [] || @book_details.genres != [] ||
           @book_details.tags != [] || @book_details.locations != [] ||
           @book_details.universes != [] || @book_details.reprints != [] ||
-          @book_details.prices != [] || @book_details.stories != [] ||
-          @book_details.imprint || credit_groups != [] ||
+          @book_details.urls != [] || credit_groups != [] ||
+          Enum.any?(book_facts(@book_details), fn {_, v} -> v not in [nil, ""] end) ||
           (@book.notes || "") != "" %>
       <%= if credit_groups != [] || has_extras do %>
-        <div class="space-y-3">
+        <div class="space-y-5">
           <.credits_line groups={headline_groups} />
           <%= if has_extras do %>
             <.expander id="book-details">
@@ -580,23 +609,11 @@ defmodule StashixWeb.BookLive do
                 </div>
               </.detail_section>
 
-              <%!-- Scalars grid --%>
-              <.detail_grid entries={[
-                {"Stories", Enum.map_join(@book_details.stories, ", ", & &1.name)},
-                {"Story Arcs",
-                 Enum.map_join(@book_details.story_arcs, ", ", fn a ->
-                   if a.arc_number, do: "#{a.name} ##{a.arc_number}", else: a.name
-                 end)},
-                {"Imprint", @book_details.imprint && @book_details.imprint.name},
-                {"Price",
-                 Enum.map_join(@book_details.prices, " / ", fn p ->
-                   "#{p.amount} #{p.country}"
-                 end)}
-              ]} />
+              <.detail_grid entries={book_facts(@book_details)} />
 
               <%!-- Chips sections --%>
               <.detail_section label="Genres" show={@book_details.genres != []}>
-                <.chips items={Enum.map(@book_details.genres, & &1.name)} />
+                <.chips items={Enum.map(@book_details.genres, & &1.name)} search_param="genre" />
               </.detail_section>
 
               <.detail_section label="Tags" show={@book_details.tags != []}>
@@ -616,7 +633,11 @@ defmodule StashixWeb.BookLive do
               </.detail_section>
 
               <.detail_section label="Universes" show={@book_details.universes != []}>
-                <.chips items={Enum.map(@book_details.universes, & &1.name)} />
+                <.chips items={
+                  Enum.map(@book_details.universes, fn u ->
+                    if u.designation in [nil, ""], do: u.name, else: "#{u.name} (#{u.designation})"
+                  end)
+                } />
               </.detail_section>
 
               <.detail_section label="Reprints" show={@book_details.reprints != []}>
