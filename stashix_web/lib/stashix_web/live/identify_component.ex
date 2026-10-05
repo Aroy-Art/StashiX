@@ -346,7 +346,8 @@ defmodule StashixWeb.IdentifyComponent do
   def handle_async(:apply, {:ok, {:ok, updated}}, socket) do
     kind = if match?(%Series{}, updated), do: :series, else: :book
     send(self(), {:identify_applied, kind, updated.id})
-    {:noreply, assign(socket, applying: false)}
+    # Stay in the applying state: the parent closes the dialog next.
+    {:noreply, socket}
   end
 
   def handle_async(:apply, {:ok, {:error, reason}}, socket) do
@@ -738,7 +739,7 @@ defmodule StashixWeb.IdentifyComponent do
                   <.icon
                     name={if @searching, do: "lucide-loader-circle", else: "lucide-search"}
                     class={if @searching, do: "w-4 h-4 animate-spin", else: "w-4 h-4"}
-                  /> Search
+                  /> {if @searching, do: "Searching…", else: "Search"}
                 </button>
               </div>
             </.form>
@@ -780,6 +781,14 @@ defmodule StashixWeb.IdentifyComponent do
             >
               <p :if={@candidates == [] and not @searching} class="text-sm text-gray-500 py-6 text-center">
                 No results yet.
+              </p>
+              <p
+                :if={@candidates == [] and @searching}
+                role="status"
+                class="flex items-center justify-center gap-2 text-sm text-gray-400 py-6"
+              >
+                <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
+                Searching {source_name(@sources, @source_key)}…
               </p>
               <%= for {c, idx} <- Enum.with_index(@candidates) do %>
                 <button
@@ -957,8 +966,25 @@ defmodule StashixWeb.IdentifyComponent do
               class="inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white"
             >
               <.icon :if={@applying} name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
-              Apply {if @preview, do: "(#{MapSet.size(@selected_fields)})"}
+              <%= if @applying do %>
+                Applying…
+              <% else %>
+                Apply {if @preview, do: "(#{MapSet.size(@selected_fields)})"}
+              <% end %>
             </button>
+          </div>
+
+          <div
+            :if={@applying}
+            id={"#{@id}-applying"}
+            role="status"
+            class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-gray-900/80 text-sm text-gray-200"
+          >
+            <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-emerald-400" />
+            <p>Applying metadata…</p>
+            <p :if={@kind == :series and @queue_issues} class="text-xs text-gray-500">
+              Issues are queued for matching afterwards.
+            </p>
           </div>
         </div>
       </div>
