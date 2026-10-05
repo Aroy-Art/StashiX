@@ -7,12 +7,12 @@ defmodule StashixWeb.MetadataComponents do
 
   @doc "Headline credits as one column per role; long lists are cut with a '+N more' marker."
   attr :groups, :list, required: true, doc: "[{heading, [name | {name, count}]}]"
-  attr :limit, :integer, default: 4
+  attr :limit, :integer, default: 3
 
   def credits_line(assigns) do
     ~H"""
-    <dl :if={@groups != []} class="grid grid-cols-1 sm:grid-cols-3 gap-x-10 gap-y-5">
-      <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-white/10 pl-4">
+    <dl :if={@groups != []} class="grid grid-cols-3 gap-x-4 gap-y-5 sm:gap-x-10">
+      <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-white/10 pl-3 sm:pl-4">
         <dt class="text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80 mb-1.5">{label}</dt>
         <dd class="text-sm text-gray-200 leading-6">
           <.link

@@ -644,7 +644,7 @@ defmodule StashixWeb.SeriesLive do
           <%= if has_extras do %>
             <.expander id="series-details">
               <.detail_section label="Creators" show={creator_groups != []}>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
                   <%= for {role, entries} <- creator_groups, {name, count, creator_id} <- entries do %>
                     <.creator_card
                       name={name}
