@@ -347,6 +347,25 @@ defmodule StashixWeb.SeriesLive do
   end
 
   # Fraction read (0.0–1.0), or nil when the book has never been opened.
+  defp run_fill_style(book, progress_map) do
+    prog = book_progress(book, progress_map) || 0.0
+    width = "width: #{round(prog * 100)}%;"
+
+    bg =
+      cond do
+        prog >= 1.0 ->
+          "background: #7c3aed;"
+
+        prog > 0.0 ->
+          "background: repeating-linear-gradient(-45deg, #7c3aed 0, #7c3aed 6px, #1e1b4b 6px, #1e1b4b 12px);"
+
+        true ->
+          ""
+      end
+
+    width <> bg
+  end
+
   defp book_progress(book, progress_map) do
     prog = progress_map[book.id]
 
@@ -557,31 +576,23 @@ defmodule StashixWeb.SeriesLive do
         </div>
       </header>
 
-      <%!-- The run: one segment per issue, filled by reading progress --%>
+      <%!-- The run: solid = read, striped = in progress, dark = unread --%>
       <section :if={issue_count > 1} class="rise" style="--i:5">
-        <div class="flex items-baseline justify-between mb-2">
-          <h2 class="text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500">The run</h2>
-          <p class="text-xs text-gray-400 tabular-nums">
-            <span class="text-white font-semibold">{read_count}</span> / {issue_count} read
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">The Run</h2>
+          <p class="tabular-nums leading-none">
+            <span class="font-display font-black text-3xl text-white">{read_count}</span>
+            <span class="text-gray-600 text-sm"> / {issue_count} read</span>
           </p>
         </div>
-        <div class={["flex items-end h-7", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
+        <div class={["flex items-stretch h-5", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
           <.link
             :for={b <- issue_sorted}
             navigate={~p"/book/#{b.id}"}
             title={run_segment_title(b, @progress_map)}
-            class={[
-              "flex-1 min-w-0 rounded-[2px] overflow-hidden bg-white/10 hover:bg-white/30 hover:h-7 transition-[height,background-color] duration-150",
-              if(@continue_book && b.id == @continue_book.id,
-                do: "h-7 outline outline-1 outline-ink",
-                else: "h-4"
-              )
-            ]}
+            class="flex-1 min-w-0 rounded-[2px] overflow-hidden bg-white/[0.07] transition-[filter] duration-100 hover:brightness-125"
           >
-            <span
-              class="block h-full bg-violet-500"
-              style={"width: #{round((book_progress(b, @progress_map) || 0.0) * 100)}%"}
-            ></span>
+            <span class="block h-full" style={run_fill_style(b, @progress_map)} />
           </.link>
         </div>
       </section>
