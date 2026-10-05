@@ -343,6 +343,13 @@
   appearance: none;
 }
 
+/* Filter panel backing: an ink-to-violet gradient that shows as a 4px edge
+   down the right side of the panel sitting on top of it. */
+.filter-rail {
+  padding-right: 4px;
+  background: linear-gradient(to bottom, var(--color-ink), var(--color-violet-500));
+}
+
 /* Filters: a rail beside the results on large screens, a slide-over below lg. */
 @media (width < 64rem) {
   .filter-drawer {

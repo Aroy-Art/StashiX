@@ -8,8 +8,9 @@ defmodule StashixWeb.SearchLive do
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @page_size 48
-  @series_preview 12
-  @standalone_preview 6
+  # Per-section sample on the All tab; the grid shows 12/15/18/16 of these
+  # depending on its column count (see preview_class/1).
+  @preview 18
 
   @types [
     {"All", "all"},
@@ -327,11 +328,7 @@ defmodule StashixWeb.SearchLive do
           {[], 0}
 
         "all" ->
-          Library.search_filtered_books(Map.put(filters, :types, ["issue"]),
-            limit: @page_size,
-            offset: offset,
-            access: access
-          )
+          Library.search_filtered_books(Map.put(filters, :types, ["issue"]), limit: @preview, access: access)
 
         type ->
           Library.search_filtered_books(Map.put(filters, :types, [type]),
@@ -342,11 +339,8 @@ defmodule StashixWeb.SearchLive do
       end
 
     {standalone_books, standalone_books_total} =
-      if params["type"] == "all" and page == 1 do
-        Library.search_filtered_books(Map.put(filters, :types, ["standalone"]),
-          limit: @standalone_preview,
-          access: access
-        )
+      if params["type"] == "all" do
+        Library.search_filtered_books(Map.put(filters, :types, ["standalone"]), limit: @preview, access: access)
       else
         {[], 0}
       end
@@ -360,14 +354,20 @@ defmodule StashixWeb.SearchLive do
         params["type"] == "series" ->
           Library.search_filtered_series(filters, limit: @page_size, offset: offset, access: access)
 
-        params["type"] == "all" and page == 1 ->
-          Library.search_filtered_series(filters, limit: @series_preview, access: access)
+        params["type"] == "all" ->
+          Library.search_filtered_series(filters, limit: @preview, access: access)
 
         true ->
           {[], 0}
       end
 
-    paged_total = if params["type"] == "series", do: series_total, else: books_total
+    # The All tab only samples each section; paging lives on the type tabs.
+    paged_total =
+      case params["type"] do
+        "all" -> 0
+        "series" -> series_total
+        _ -> books_total
+      end
 
     assign(socket,
       books: books,
@@ -558,7 +558,7 @@ defmodule StashixWeb.SearchLive do
 
     ~H"""
     <.detail_page wide fade cover_src={@backdrop}>
-      <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-7">
+      <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_17rem] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-7">
         <form id="search-form" phx-change="filter" phx-submit="filter" class="contents">
           <%!-- Hero: the query is the headline, the result count looms behind it --%>
           <header class="relative lg:col-span-2 pt-2">
@@ -635,125 +635,127 @@ defmodule StashixWeb.SearchLive do
           <aside
             id="search-filters"
             aria-label="Filters"
-            class="filter-drawer lg:col-start-1 lg:row-start-2 lg:row-span-2 lg:self-start"
+            class="filter-drawer lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-start"
           >
-            <div class="relative min-h-full lg:min-h-0 bg-gray-900 border-l-4 border-ink lg:rounded-lg lg:ring-1 lg:ring-white/10 divide-y divide-gray-800">
-              <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-gray-900 lg:static">
-                <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
-                  Filters <span :if={@filter_count > 0} class="text-ink tabular-nums">{@filter_count}</span>
-                </h2>
-                <button
-                  :if={@filter_count > 0}
-                  type="button"
-                  phx-click="clear_filters"
-                  class="ml-auto text-xs font-medium text-gray-300 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
-                >
-                  Clear all
-                </button>
-                <button
-                  type="button"
-                  phx-click={close_filters()}
-                  aria-label="Close filters"
-                  class={[
-                    "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors",
-                    @filter_count == 0 && "ml-auto"
-                  ]}
-                >
-                  <.icon name="lucide-x" class="w-4 h-4" />
-                </button>
-              </div>
-
-              <.filter_section :if={@year_counts != []} title="Release year">
-                <.year_range counts={@year_counts} from={@params["from"]} to={@params["to"]} />
-              </.filter_section>
-
-              <.filter_section title="Age rating">
-                <div class="flex flex-wrap gap-1.5">
-                  <%= for rating <- @age_ratings do %>
-                    <% value = to_string(rating) %>
-                    <label class={pill_class(value in @params["age"])}>
-                      <input
-                        type="checkbox"
-                        name="age[]"
-                        value={value}
-                        checked={value in @params["age"]}
-                        class="sr-only"
-                      />
-                      <span title={Formatters.format_age_rating(rating)}>{short_age_label(value)}</span>
-                    </label>
-                  <% end %>
+            <div class="filter-rail flex min-h-full lg:min-h-0 lg:rounded-lg">
+              <div class="relative flex-1 min-w-0 bg-gray-900 lg:rounded-lg lg:ring-1 lg:ring-white/10 divide-y divide-gray-800">
+                <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-gray-900 lg:static lg:bg-transparent">
+                  <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
+                    Filters <span :if={@filter_count > 0} class="text-ink tabular-nums">{@filter_count}</span>
+                  </h2>
+                  <button
+                    :if={@filter_count > 0}
+                    type="button"
+                    phx-click="clear_filters"
+                    class="ml-auto text-sm md:text-base font-medium text-gray-300 hover:text-white underline decoration-2 decoration-violet-500 hover:decoration-violet-300 underline-offset-4 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                  <button
+                    type="button"
+                    phx-click={close_filters()}
+                    aria-label="Close filters"
+                    class={[
+                      "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors",
+                      @filter_count == 0 && "ml-auto"
+                    ]}
+                  >
+                    <.icon name="lucide-x" class="w-4 h-4" />
+                  </button>
                 </div>
-              </.filter_section>
 
-              <.filter_section title="Read status">
-                <div class="grid grid-cols-2 gap-1.5">
-                  <%= for {label, value} <- @read_statuses do %>
-                    <label class={[pill_class((@params["status"] || "") == value), "text-center"]}>
-                      <input
-                        type="radio"
-                        name="status"
-                        value={value}
-                        checked={(@params["status"] || "") == value}
-                        class="sr-only"
-                      />
-                      {label}
-                    </label>
-                  <% end %>
-                </div>
-              </.filter_section>
+                <.filter_section :if={@year_counts != []} title="Release year">
+                  <.year_range counts={@year_counts} from={@params["from"]} to={@params["to"]} />
+                </.filter_section>
 
-              <.filter_section title="Creator">
-                <.creator_picker
-                  selected={@selected_creators}
-                  match={@params["creator_match"] || "all"}
-                  query={@creator_query}
-                  suggestions={@creator_suggestions}
-                />
-                <.filter_select name="role" selected={@params["role"]} prompt="Any role">
-                  <option :for={r <- @credit_roles} value={r} selected={@params["role"] == r}>
-                    {r}
-                  </option>
-                </.filter_select>
-              </.filter_section>
+                <.filter_section title="Age rating">
+                  <div class="flex flex-wrap gap-1.5">
+                    <%= for rating <- @age_ratings do %>
+                      <% value = to_string(rating) %>
+                      <label class={pill_class(value in @params["age"])}>
+                        <input
+                          type="checkbox"
+                          name="age[]"
+                          value={value}
+                          checked={value in @params["age"]}
+                          class="sr-only"
+                        />
+                        <span title={Formatters.format_age_rating(rating)}>{short_age_label(value)}</span>
+                      </label>
+                    <% end %>
+                  </div>
+                </.filter_section>
 
-              <.filter_section :if={length(@sidebar_libraries) > 1} title="Library">
-                <.filter_select name="library" selected={@params["library"]} prompt="All libraries">
-                  <option :for={lib <- @sidebar_libraries} value={lib.id} selected={@params["library"] == lib.id}>
-                    {lib.name}
-                  </option>
-                </.filter_select>
-              </.filter_section>
+                <.filter_section title="Read status">
+                  <div class="grid grid-cols-2 gap-1.5">
+                    <%= for {label, value} <- @read_statuses do %>
+                      <label class={[pill_class((@params["status"] || "") == value), "text-center"]}>
+                        <input
+                          type="radio"
+                          name="status"
+                          value={value}
+                          checked={(@params["status"] || "") == value}
+                          class="sr-only"
+                        />
+                        {label}
+                      </label>
+                    <% end %>
+                  </div>
+                </.filter_section>
 
-              <.filter_section :if={@publishers != []} title="Publisher">
-                <.filter_select name="publisher" selected={@params["publisher"]} prompt="All publishers">
-                  <option :for={p <- @publishers} value={p.id} selected={@params["publisher"] == p.id}>
-                    {p.name}
-                  </option>
-                </.filter_select>
-              </.filter_section>
+                <.filter_section title="Creator">
+                  <.creator_picker
+                    selected={@selected_creators}
+                    match={@params["creator_match"] || "all"}
+                    query={@creator_query}
+                    suggestions={@creator_suggestions}
+                  />
+                  <.filter_select name="role" selected={@params["role"]} prompt="Any role">
+                    <option :for={r <- @credit_roles} value={r} selected={@params["role"] == r}>
+                      {r}
+                    </option>
+                  </.filter_select>
+                </.filter_section>
 
-              <.filter_section
-                :for={{key, title, plural} <- @facets}
-                :if={key in @facets_present || @params[key] != []}
-                title={title}
-              >
-                <.facet_picker
-                  key={key}
-                  plural={plural}
-                  selected={@params[key]}
-                  query={if elem(@facet_query, 0) == key, do: elem(@facet_query, 1), else: ""}
-                  suggestions={@facet_suggestions}
-                />
-              </.filter_section>
+                <.filter_section :if={length(@sidebar_libraries) > 1} title="Library">
+                  <.filter_select name="library" selected={@params["library"]} prompt="All libraries">
+                    <option :for={lib <- @sidebar_libraries} value={lib.id} selected={@params["library"] == lib.id}>
+                      {lib.name}
+                    </option>
+                  </.filter_select>
+                </.filter_section>
 
-              <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-gray-900">
-                <button
-                  type="button"
-                  phx-click={close_filters()}
-                  class="ink-btn w-full px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
+                <.filter_section :if={@publishers != []} title="Publisher">
+                  <.filter_select name="publisher" selected={@params["publisher"]} prompt="All publishers">
+                    <option :for={p <- @publishers} value={p.id} selected={@params["publisher"] == p.id}>
+                      {p.name}
+                    </option>
+                  </.filter_select>
+                </.filter_section>
+
+                <.filter_section
+                  :for={{key, title, plural} <- @facets}
+                  :if={key in @facets_present || @params[key] != []}
+                  title={title}
                 >
-                  Show {delimit(@count)} {if @count == 1, do: "result", else: "results"}
-                </button>
+                  <.facet_picker
+                    key={key}
+                    plural={plural}
+                    selected={@params[key]}
+                    query={if elem(@facet_query, 0) == key, do: elem(@facet_query, 1), else: ""}
+                    suggestions={@facet_suggestions}
+                  />
+                </.filter_section>
+
+                <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-gray-900">
+                  <button
+                    type="button"
+                    phx-click={close_filters()}
+                    class="ink-btn w-full px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
+                  >
+                    Show {delimit(@count)} {if @count == 1, do: "result", else: "results"}
+                  </button>
+                </div>
               </div>
             </div>
           </aside>
@@ -770,7 +772,7 @@ defmodule StashixWeb.SearchLive do
         </div>
 
         <%!-- Type tabs, filter toggle and sort --%>
-        <div class="lg:col-start-2 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-white/15">
+        <div class="lg:col-start-1 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-white/15">
           <div class="flex items-center gap-1 sm:gap-2" role="tablist" aria-label="Result type">
             <%= for {label, value} <- @types do %>
               <button
@@ -826,7 +828,7 @@ defmodule StashixWeb.SearchLive do
         </div>
 
         <%!-- Results --%>
-        <div class="lg:col-start-2 lg:row-start-3 space-y-8 min-w-0">
+        <div class="lg:col-start-1 lg:row-start-3 space-y-8 min-w-0">
           <div :if={@active != []} class="flex flex-wrap items-center gap-2">
             <%= for {label, key, value} <- @active do %>
               <button
@@ -843,7 +845,7 @@ defmodule StashixWeb.SearchLive do
             <button
               type="button"
               phx-click="clear_filters"
-              class="px-1 text-xs font-medium text-gray-300 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
+              class="px-1 text-sm md:text-base font-medium text-gray-300 hover:text-white underline decoration-2 decoration-violet-500 hover:decoration-violet-300 underline-offset-4 transition-colors"
             >
               Clear all
             </button>
@@ -853,12 +855,12 @@ defmodule StashixWeb.SearchLive do
             <.results_heading
               title="Series"
               total={@series_total}
-              show_all={@params["type"] == "all" and @series_total > 6 and "series"}
+              show_all={@params["type"] == "all" and @series_total > 12 and "series"}
             />
             <.results_grid id={if @params["type"] == "series", do: "page-top"}>
               <.media_card
                 :for={{s, i} <- Enum.with_index(@series)}
-                class={if @params["type"] == "all", do: series_preview_class(i)}
+                class={if @params["type"] == "all", do: preview_class(i)}
                 navigate={~p"/series/#{s.id}"}
                 title={s.name}
                 cover_url={~p"/api/series/#{s.id}/cover"}
@@ -869,18 +871,19 @@ defmodule StashixWeb.SearchLive do
                 blurhash={s.cover_blurhash}
               />
             </.results_grid>
+            <.show_more :if={@params["type"] == "all"} total={@series_total} type="series" one="series" many="series" />
           </section>
 
           <section :if={@show_standalone_books}>
             <.results_heading
               title="Books"
               total={@standalone_books_total}
-              show_all={@standalone_books_total > 4 and "standalone"}
+              show_all={@standalone_books_total > 12 and "standalone"}
             />
             <.results_grid>
               <.media_card
                 :for={{b, i} <- Enum.with_index(@standalone_books)}
-                class={standalone_preview_class(i)}
+                class={preview_class(i)}
                 navigate={~p"/book/#{b.id}"}
                 title={book_title(b)}
                 cover_url={b.cover && ~p"/api/books/#{b.id}/cover"}
@@ -892,13 +895,20 @@ defmodule StashixWeb.SearchLive do
                 blurhash={b.cover && b.cover.blurhash}
               />
             </.results_grid>
+            <.show_more total={@standalone_books_total} type="standalone" one="book" many="books" />
           </section>
 
           <section :if={@show_books}>
-            <.results_heading :if={@params["type"] == "all"} title="Issues" total={@books_total} />
+            <.results_heading
+              :if={@params["type"] == "all"}
+              title="Issues"
+              total={@books_total}
+              show_all={@books_total > 12 and "issue"}
+            />
             <.results_grid id="page-top">
               <.media_card
-                :for={book <- @books}
+                :for={{book, i} <- Enum.with_index(@books)}
+                class={if @params["type"] == "all", do: preview_class(i)}
                 navigate={~p"/book/#{book.id}"}
                 title={book_title(book)}
                 cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
@@ -910,6 +920,7 @@ defmodule StashixWeb.SearchLive do
                 blurhash={book.cover && book.cover.blurhash}
               />
             </.results_grid>
+            <.show_more :if={@params["type"] == "all"} total={@books_total} type="issue" one="issue" many="issues" />
           </section>
 
           <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
@@ -962,15 +973,12 @@ defmodule StashixWeb.SearchLive do
     ]
   end
 
-  # The All tab previews whole rows only; the grid is 3/4/5/6/8 columns wide.
-  defp series_preview_class(i) when i >= 10, do: "hidden sm:block md:hidden xl:block 2xl:hidden"
-  defp series_preview_class(i) when i >= 8, do: "hidden sm:block 2xl:hidden"
-  defp series_preview_class(i) when i >= 6, do: "hidden sm:block"
-  defp series_preview_class(_), do: nil
-
-  defp standalone_preview_class(5), do: "sm:max-xl:hidden"
-  defp standalone_preview_class(4), do: "sm:max-md:hidden"
-  defp standalone_preview_class(_), do: nil
+  # The All tab previews whole rows only. The grid is 3/4/5/6/8 columns wide,
+  # so each section shows 12 below md, 15 on md, 18 on xl and 16 on 2xl.
+  defp preview_class(i) when i >= 16, do: "hidden xl:block 2xl:hidden"
+  defp preview_class(15), do: "hidden xl:block"
+  defp preview_class(i) when i >= 12, do: "hidden md:block"
+  defp preview_class(_), do: nil
 
   attr :title, :string, required: true
   attr :total, :integer, required: true
@@ -987,11 +995,46 @@ defmodule StashixWeb.SearchLive do
         type="button"
         phx-click="set_type"
         phx-value-type={@show_all}
-        class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-200 hover:text-white underline decoration-white/40 hover:decoration-white underline-offset-4 transition-colors"
+        class="inline-flex items-center gap-1.5 text-sm md:text-base font-medium text-gray-200 hover:text-white underline decoration-2 decoration-violet-500 hover:decoration-violet-300 underline-offset-4 transition-colors"
       >
-        Show all <.icon name="lucide-arrow-right" class="w-3.5 h-3.5" />
+        Show all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
       </button>
     </div>
+    """
+  end
+
+  attr :total, :integer, required: true
+  attr :type, :string, required: true
+  attr :one, :string, required: true
+  attr :many, :string, required: true
+
+  # "Show N more" under a preview grid. How many cards are visible depends on
+  # the column count (see preview_class/1), so each breakpoint gets its own
+  # button with the matching remainder.
+  defp show_more(assigns) do
+    ~H"""
+    <button
+      :for={
+        {shown, visible} <- [
+          {12, "flex md:hidden"},
+          {15, "hidden md:flex xl:hidden"},
+          {18, "hidden xl:flex 2xl:hidden"},
+          {16, "hidden 2xl:flex"}
+        ]
+      }
+      :if={@total > shown}
+      type="button"
+      phx-click="set_type"
+      phx-value-type={@type}
+      class={[
+        visible,
+        "group items-center justify-center gap-2.5 w-full mt-4 px-5 py-3 rounded-md border border-gray-600 bg-gray-900 text-white font-display font-extrabold uppercase text-xl leading-none tracking-wide hover:border-ink hover:bg-gray-800 transition-colors"
+      ]}
+    >
+      Show <span class="text-ink tabular-nums">{delimit(@total - shown)}</span>
+      more {if @total - shown == 1, do: @one, else: @many}
+      <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink transition-transform group-hover:translate-x-1" />
+    </button>
     """
   end
 
