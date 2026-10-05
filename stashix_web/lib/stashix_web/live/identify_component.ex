@@ -33,6 +33,8 @@ defmodule StashixWeb.IdentifyComponent do
   def update(assigns, socket) do
     first_mount? = not Map.has_key?(socket.assigns, :kind)
     socket = assign(socket, assigns)
+    # The parent re-sends its own copy of the target whenever it reloads it.
+    socket = assign(socket, target: preload_target(socket.assigns.target))
 
     if first_mount? do
       {:ok, init(socket)}
@@ -41,13 +43,11 @@ defmodule StashixWeb.IdentifyComponent do
     end
   end
 
-  defp init(socket) do
-    target =
-      case socket.assigns.target do
-        %Book{} = b -> Repo.preload(b, [:files, :library])
-        other -> other
-      end
+  defp preload_target(%Book{} = book), do: Repo.preload(book, [:files, :library])
+  defp preload_target(other), do: other
 
+  defp init(socket) do
+    target = socket.assigns.target
     kind = if match?(%Series{}, target), do: :series, else: :issue
     review = socket.assigns[:review]
 
