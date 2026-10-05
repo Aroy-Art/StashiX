@@ -8,6 +8,7 @@ defmodule StashixWeb.SearchLive do
 
   @page_size 48
   @series_preview 12
+  @standalone_preview 6
 
   @types [
     {"All", "all"},
@@ -52,6 +53,8 @@ defmodule StashixWeb.SearchLive do
        page: 1,
        books: [],
        books_total: 0,
+       standalone_books: [],
+       standalone_books_total: 0,
        series: [],
        series_total: 0,
        total_pages: 1,
@@ -283,7 +286,7 @@ defmodule StashixWeb.SearchLive do
           {[], 0}
 
         "all" ->
-          Library.search_filtered_books(Map.put(filters, :types, ["issue", "standalone"]),
+          Library.search_filtered_books(Map.put(filters, :types, ["issue"]),
             limit: @page_size,
             offset: offset,
             access: access
@@ -295,6 +298,16 @@ defmodule StashixWeb.SearchLive do
             offset: offset,
             access: access
           )
+      end
+
+    {standalone_books, standalone_books_total} =
+      if params["type"] == "all" and page == 1 do
+        Library.search_filtered_books(Map.put(filters, :types, ["standalone"]),
+          limit: @standalone_preview,
+          access: access
+        )
+      else
+        {[], 0}
       end
 
     # Read status is per-book, so it can't meaningfully narrow series.
@@ -318,10 +331,12 @@ defmodule StashixWeb.SearchLive do
     assign(socket,
       books: books,
       books_total: books_total,
+      standalone_books: standalone_books,
+      standalone_books_total: standalone_books_total,
       series: series,
       series_total: series_total,
       total_pages: max(1, ceil(paged_total / @page_size)),
-      progress_map: Library.progress_map(user_id, Enum.map(books, & &1.id)),
+      progress_map: Library.progress_map(user_id, Enum.map(books ++ standalone_books, & &1.id)),
       loading: false
     )
   end
@@ -446,7 +461,7 @@ defmodule StashixWeb.SearchLive do
     count =
       case assigns.params["type"] do
         "series" -> assigns.series_total
-        "all" -> assigns.books_total + assigns.series_total
+        "all" -> assigns.books_total + assigns.standalone_books_total + assigns.series_total
         _ -> assigns.books_total
       end
 
@@ -478,6 +493,7 @@ defmodule StashixWeb.SearchLive do
         filter_count: filter_count(assigns.params),
         sort_options: @sort_options,
         show_series: assigns.series != [] and assigns.params["type"] in ["all", "series"],
+        show_standalone_books: assigns.standalone_books != [] and assigns.params["type"] == "all",
         show_books: assigns.books != []
       )
 
@@ -740,12 +756,44 @@ defmodule StashixWeb.SearchLive do
             </.media_grid>
           </section>
 
+          <section :if={@show_standalone_books} class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-semibold uppercase tracking-widest text-gray-400">
+                Books <span class="text-gray-600 font-normal">{@standalone_books_total}</span>
+              </h2>
+              <button
+                :if={@standalone_books_total > length(@standalone_books)}
+                type="button"
+                phx-click="set_type"
+                phx-value-type="standalone"
+                class="text-xs text-violet-400 hover:text-violet-300"
+              >
+                Show all →
+              </button>
+            </div>
+            <.media_grid>
+              <.media_card
+                :for={{b, i} <- Enum.with_index(@standalone_books)}
+                class={if i >= 6, do: "hidden sm:block"}
+                navigate={~p"/book/#{b.id}"}
+                title={book_title(b)}
+                cover_url={b.cover && ~p"/api/books/#{b.id}/cover"}
+                size="m"
+                subtitle={book_subtitle(b)}
+                progress={book_progress(@progress_map, b)}
+                page_count={b.page_count}
+                type={:book}
+                blurhash={b.cover && b.cover.blurhash}
+              />
+            </.media_grid>
+          </section>
+
           <section :if={@show_books} class="space-y-3">
             <h2
               :if={@params["type"] == "all"}
               class="text-sm font-semibold uppercase tracking-widest text-gray-400"
             >
-              Books &amp; Issues <span class="text-gray-600 font-normal">{@books_total}</span>
+              Issues <span class="text-gray-600 font-normal">{@books_total}</span>
             </h2>
             <.media_grid id="page-top">
               <.media_card
@@ -766,7 +814,7 @@ defmodule StashixWeb.SearchLive do
           <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
 
           <.browse_empty
-            :if={!@loading and !@show_series and !@show_books}
+            :if={!@loading and !@show_series and !@show_standalone_books and !@show_books}
             icon="lucide-search-x"
             label={
               if @filter_count > 0 or @params["q"] != "",
