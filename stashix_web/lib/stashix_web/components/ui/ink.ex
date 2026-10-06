@@ -291,8 +291,10 @@ defmodule StashixWeb.UI.Ink do
   @doc """
   Rounded toggle: ink when `active`. Wrap a visually hidden checkbox or radio
   with the default `label` tag, or use `tag="button"` with a `phx-click`.
+  With `static` (and `tag="span"`) it is only a label in the same shape.
   """
   attr :active, :boolean, default: false
+  attr :static, :boolean, default: false, doc: "a label, not a control: no pointer cursor, no hover"
   attr :tag, :string, default: "label", values: ~w(label button span)
   attr :class, :any, default: nil
   attr :rest, :global, include: @button_attrs
@@ -303,11 +305,14 @@ defmodule StashixWeb.UI.Ink do
     <.dynamic_tag
       tag_name={@tag}
       class={[
-        "cursor-pointer select-none px-2.5 py-1 text-xs rounded-full border transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white",
-        if(@active,
-          do: "bg-ink border-ink text-gray-950 font-semibold",
-          else: "bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400 hover:text-white"
-        ),
+        "px-2.5 py-1 text-xs rounded-full border",
+        !@static &&
+          "cursor-pointer select-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white",
+        cond do
+          @active -> "bg-ink border-ink text-gray-950 font-semibold"
+          @static -> "inline-block bg-gray-800 border-gray-600 text-gray-200 tabular-nums"
+          true -> "bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400 hover:text-white"
+        end,
         @class
       ]}
       {@rest}

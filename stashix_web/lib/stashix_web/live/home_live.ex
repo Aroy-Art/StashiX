@@ -428,9 +428,9 @@ defmodule StashixWeb.HomeLive do
               <:menu :if={@current_user.role == :admin}>
                 <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
               </:menu>
-              <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-400 tabular-nums">
+              <.pill :if={data.total_size > 0} tag="span" static>
                 {Stashix.Formatters.format_bytes(data.total_size)}
-              </p>
+              </.pill>
               <.scan_status
                 :if={@scan_progress[data.library.id]}
                 progress={@scan_progress[data.library.id]}

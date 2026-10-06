@@ -160,6 +160,7 @@ defmodule StashixWeb.Dev.UiLive do
         >
           Fit {value}
         </.pill>
+        <.pill tag="span" static>Static pill</.pill>
         <.chip navigate="/dev/ui" count={3}>Link chip</.chip>
         <.chip count={3}>Flat chip</.chip>
       </.specimen>
@@ -423,7 +424,7 @@ defmodule StashixWeb.Dev.UiLive do
           stats={[{"series", 341}, {"books", 391}, {"issues", 2302}]}
           class="w-64"
         >
-          <.chip>262 GiB</.chip>
+          <.pill tag="span" static>262 GiB</.pill>
         </.collection_card>
         <.collection_card
           navigate="/dev/ui"

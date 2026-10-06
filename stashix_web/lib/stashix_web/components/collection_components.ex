@@ -121,8 +121,9 @@ defmodule StashixWeb.CollectionComponents do
   end
 
   @doc """
-  Card for a library or a publisher, drawn as an indicia panel: a strip of its
-  covers, its name and its counts under ink labels. `:menu` sits in the
+  Card for a library or a publisher: a plain panel with an ink left edge and
+  halftone dots, a strip of its covers, its name and its counts under ink
+  labels. `:menu` sits in the
   top-right corner, outside the link; the default slot is a line below the
   counts.
   """
@@ -140,10 +141,10 @@ defmodule StashixWeb.CollectionComponents do
     assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
 
     ~H"""
-    <%!-- An indicia panel (ink left edge, violet-to-aqua wash, halftone) with a
-         strip of covers across the top. --%>
+    <%!-- A plain panel with the ink left edge and the halftone dots of an
+         indicia, without its colour wash, and a strip of covers across the top. --%>
     <div class={[
-      "collection-card indicia group relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
+      "collection-card group relative overflow-hidden rounded-lg bg-gray-900 border-l-4 border-ink ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
       @class
     ]}>
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
