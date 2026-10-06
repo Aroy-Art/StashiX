@@ -469,3 +469,6 @@ Add a dated line when a phase closes or a decision changes.
   gray-950 panel). The plain-sans version looked out of place next to the
   rest. Readability of the sidebar is still an open complaint; do not retry
   the sans route.
+- 2026-10-06 — Sidebar readability settled inside the design language: same
+  display type, 18px (was 15px), gray-200 (was gray-400), wider tracking
+  (0.07em), 18px icons. Panel and ink bar unchanged.

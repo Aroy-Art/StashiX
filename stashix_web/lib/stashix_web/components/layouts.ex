@@ -32,14 +32,14 @@ defmodule StashixWeb.Layouts do
       navigate={@navigate}
       aria-current={@active && "page"}
       class={[
-        "ink-menu-item group flex items-center gap-3 min-w-0 px-3 py-2 rounded-sm font-display font-bold uppercase tracking-wide text-[15px] leading-5 transition-colors",
-        if(@active, do: "is-active", else: "text-gray-400 hover:text-white hover:bg-white/[0.05]"),
+        "ink-menu-item group flex items-center gap-3 min-w-0 px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-lg leading-6 transition-colors",
+        if(@active, do: "is-active", else: "text-gray-200 hover:text-white hover:bg-white/[0.06]"),
         @class
       ]}
     >
       <.icon
         name={@icon}
-        class={"ink-menu-icon w-4 h-4 shrink-0 #{@icon_class || "text-gray-500 group-hover:text-gray-300"}"}
+        class={"ink-menu-icon w-[18px] h-[18px] shrink-0 #{@icon_class || "text-gray-400 group-hover:text-gray-200"}"}
       />
       {render_slot(@inner_block)}
     </.link>
