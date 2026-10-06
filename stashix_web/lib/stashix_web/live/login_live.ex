@@ -1,6 +1,8 @@
 defmodule StashixWeb.LoginLive do
   use StashixWeb, :live_view
 
+  import StashixWeb.AuthComponents
+
   alias Stashix.Accounts
 
   on_mount {StashixWeb.Live.Hooks, :optional_auth}
@@ -46,63 +48,42 @@ defmodule StashixWeb.LoginLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="min-h-screen bg-gray-950 flex items-center justify-center">
-      <div class="w-full max-w-md">
-        <div class="text-center mb-8">
-          <h1 class="text-3xl font-bold text-white">Stashix</h1>
-          <p class="text-gray-400 mt-2">Sign in to your library</p>
-        </div>
+    <.cover_page heading="Sign in" issue="#1">
+      <p
+        :if={@error}
+        role="alert"
+        class="mb-4 px-3 py-2 border-l-4 border-red-500 bg-red-500/10 text-sm font-medium text-red-200"
+      >
+        {@error}
+      </p>
 
-        <div class="bg-gray-900 rounded-xl border border-gray-800 p-8">
-          <%= if @error do %>
-            <p role="alert" class="mb-4 px-3 py-2 rounded-md border-l-4 border-red-500 bg-red-500/10 text-sm text-red-200">
-              {@error}
-            </p>
-          <% end %>
-
-          <form
-            id="login-form"
-            method="post"
-            action={~p"/login"}
-            phx-submit="login"
-            phx-trigger-action={@trigger_submit}
-            class="space-y-4"
-          >
-            <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Email or Username</label>
-              <input
-                type="text"
-                name="login"
-                value={@form["login"].value}
-                required
-                autocomplete="username"
-                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                placeholder="you@example.com or username"
-              />
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
-              <input
-                type="password"
-                name="password"
-                required
-                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <button
-              type="submit"
-              class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Sign In
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
+      <form
+        id="login-form"
+        method="post"
+        action={~p"/login"}
+        phx-submit="login"
+        phx-trigger-action={@trigger_submit}
+        class="space-y-4"
+      >
+        <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+        <.field label="Email or username">
+          <.text_input
+            name="login"
+            value={@form["login"].value}
+            required
+            autofocus
+            autocomplete="username"
+            placeholder="you@example.com"
+          />
+        </.field>
+        <.field label="Password">
+          <.text_input type="password" name="password" required autocomplete="current-password" />
+        </.field>
+        <.ink_button type="submit" class="w-full mt-2">
+          <.icon name="lucide-book-open" class="w-4 h-4" /> Open the box
+        </.ink_button>
+      </form>
+    </.cover_page>
     """
   end
 end

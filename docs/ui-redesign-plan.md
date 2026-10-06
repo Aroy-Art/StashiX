@@ -275,7 +275,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   - [x] publishers (aliases + visibility)
 - [x] `admin_metadata_live.ex`: sources, settings, review, jobs.
 - [x] `identify_component.ex`: dialog shell, form fields, result rows.
-- [ ] `login_live.ex`, `setup_live.ex`: comic-cover layout (approved
+- [x] `login_live.ex`, `setup_live.ex`: comic-cover layout (approved
   2026-10-06): masthead, issue box with the app version, halftone field, form
   where the art would be, barcode strip.
 - [ ] Error pages (`error_html.ex`): reader ghost (approved 2026-10-06): hollow
