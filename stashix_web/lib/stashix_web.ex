@@ -102,6 +102,9 @@ defmodule StashixWeb do
       # Core UI components (overrides any SaladUI conflicts)
       import StashixWeb.CoreComponents
 
+      # Shared "ink" design language components
+      import StashixWeb.UI.Ink
+
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
 

@@ -81,36 +81,38 @@ defmodule StashixWeb.Dev.UiLive do
           <p class="text-[15px] text-gray-300 leading-7 max-w-xl">
             Body copy sits in the system sans at 15px on a relaxed leading, gray-300 on the page background.
           </p>
-          <a class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-200 hover:text-white underline decoration-2 decoration-violet-500 hover:decoration-violet-300 underline-offset-4 transition-colors">
-            Text link <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
-          </a>
+          <div class="flex items-center gap-6">
+            <.text_link href="#">
+              Text link <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+            </.text_link>
+            <.text_link tone="subtle" href="#">
+              <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Subtle link
+            </.text_link>
+          </div>
         </div>
       </.specimen>
 
-      <.specimen title="Buttons" note=".ink-btn, .ink-split">
-        <button class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md">
+      <.specimen title="Buttons" note="ink_button, split_button, icon_button">
+        <.ink_button>
           <.icon name="lucide-play" class="w-4 h-4" /> Continue <span class="text-ink">#4</span>
-        </button>
-        <button class="inline-flex items-center gap-2 px-4 py-2.5 rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors">
-          <.icon name="lucide-book-open" class="w-4 h-4" /> Ghost
-        </button>
-        <div class="ink-split inline-flex items-stretch rounded-md">
-          <button class="inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-l-md transition-colors">
-            <.icon name="lucide-play" class="w-4 h-4" /> Read
-          </button>
-          <button
-            class="flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40 transition-colors"
-            aria-label="More"
-          >
-            <.icon name="lucide-chevron-down" class="w-4 h-4" />
-          </button>
-        </div>
-        <button
-          class="flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors"
-          aria-label="Icon button"
-        >
-          <.icon name="lucide-arrow-left" class="w-4 h-4" />
-        </button>
+        </.ink_button>
+        <.ink_button variant="ghost"><.icon name="lucide-book-open" class="w-4 h-4" /> Ghost</.ink_button>
+        <.ink_button variant="danger"><.icon name="lucide-trash-2" class="w-4 h-4" /> Danger</.ink_button>
+        <.split_button>
+          <.icon name="lucide-play" class="w-4 h-4" /> Read
+          <:aside>
+            <button class={split_aside_class()} aria-label="More">
+              <.icon name="lucide-chevron-down" class="w-4 h-4" />
+            </button>
+          </:aside>
+        </.split_button>
+        <.icon_button icon="lucide-arrow-left" label="Icon button" />
+      </.specimen>
+
+      <.specimen title="Buttons, medium" note={~s(size="md")}>
+        <.ink_button size="md">Save</.ink_button>
+        <.ink_button size="md" variant="ghost">Cancel</.ink_button>
+        <.ink_button size="md" variant="danger">Delete</.ink_button>
       </.specimen>
 
       <.specimen title="Stickers and pills" note=".sticker">
