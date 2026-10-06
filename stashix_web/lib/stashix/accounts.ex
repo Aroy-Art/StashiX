@@ -2,7 +2,7 @@ defmodule Stashix.Accounts do
   import Ecto.Query
 
   alias Stashix.Repo
-  alias Stashix.Accounts.User
+  alias Stashix.Accounts.{Session, User}
   alias Stashix.Auth.LoginThrottle
 
   def get_user(id) do
@@ -76,6 +76,95 @@ defmodule Stashix.Accounts do
       payload: %{}
     })
   end
+
+  # ---------------------------------------------------------------------------
+  # Sessions: a record of each sign-in, for the list under Settings > Security.
+  # ---------------------------------------------------------------------------
+
+  # As long as a refresh token lives; see Stashix.Auth.TokenHelper.
+  @session_ttl 7 * 24 * 60 * 60
+  # How stale `last_seen_at` may get before a page load writes it again.
+  @session_touch_interval 5 * 60
+
+  @doc "Records a sign-in. Rows of the user that are no longer live are cleared on the way."
+  def create_session(%User{} = user, user_agent) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    Repo.delete_all(
+      from s in Session,
+        where: s.user_id == ^user.id and (s.expires_at <= ^now or s.token_version != ^user.token_version)
+    )
+
+    Repo.insert(%Session{
+      user_id: user.id,
+      user_agent: user_agent && String.slice(user_agent, 0, 500),
+      token_version: user.token_version,
+      last_seen_at: now,
+      expires_at: DateTime.add(now, @session_ttl)
+    })
+  end
+
+  @doc "The user's live sessions, most recently used first."
+  def list_sessions(%User{} = user) do
+    now = DateTime.utc_now()
+
+    Repo.all(
+      from s in Session,
+        where: s.user_id == ^user.id and s.token_version == ^user.token_version and s.expires_at > ^now,
+        order_by: [desc: s.last_seen_at, desc: s.inserted_at]
+    )
+  end
+
+  @doc """
+  Marks a session as in use now. Writes at most once per few minutes, so it is
+  cheap to call on every page load. With `extend: true` it always writes and
+  also pushes the expiry out, for when the client was handed a new refresh
+  token.
+  """
+  def touch_session(id, opts \\ [])
+  def touch_session(nil, _opts), do: :ok
+
+  def touch_session(id, opts) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    if opts[:extend] do
+      Repo.update_all(from(s in Session, where: s.id == ^id),
+        set: [last_seen_at: now, expires_at: DateTime.add(now, @session_ttl)]
+      )
+    else
+      stale = DateTime.add(now, -@session_touch_interval)
+      Repo.update_all(from(s in Session, where: s.id == ^id and s.last_seen_at < ^stale), set: [last_seen_at: now])
+    end
+
+    :ok
+  end
+
+  @doc "Ends a session, on sign-out: its tokens stop working."
+  def delete_session(nil), do: :ok
+
+  def delete_session(id) do
+    Repo.delete_all(from s in Session, where: s.id == ^id)
+    :ok
+  end
+
+  @doc """
+  Signs one of the user's sessions out. Their open sockets are closed so the
+  one that just lost its session lands on the login page; the others
+  reconnect. Returns `{:error, :not_found}` for a session that is not theirs.
+  """
+  def revoke_session(%User{} = user, id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         {1, _} <- Repo.delete_all(from s in Session, where: s.id == ^id and s.user_id == ^user.id) do
+      disconnect_sessions(user.id)
+      :ok
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc "Whether tokens of this session still count. Tokens without one (nil) always do."
+  def session_open?(nil), do: true
+  def session_open?(id), do: Repo.exists?(from s in Session, where: s.id == ^id)
 
   defp last_admin?(%User{role: :admin, id: id}) do
     not Repo.exists?(from(u in User, where: u.role == :admin and u.id != ^id))

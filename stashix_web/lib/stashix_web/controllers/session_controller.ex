@@ -10,12 +10,8 @@ defmodule StashixWeb.SessionController do
 
     case Accounts.authenticate_user(login, password) do
       {:ok, user} ->
-        {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
-
         conn
-        |> put_session("guardian_default_token", access_token)
-        |> put_session("guardian_refresh_token", refresh_token)
-        |> put_session(:live_socket_id, Accounts.session_topic(user.id))
+        |> sign_in(user)
         |> redirect(to: ~p"/")
 
       {:error, :rate_limited} ->
@@ -52,12 +48,9 @@ defmodule StashixWeb.SessionController do
            {:ok, library} <-
              Stashix.Library.create_library(%{name: library_name, root_path: library_path}) do
         Stashix.Scanner.scan_library(library.id)
-        {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
 
         conn
-        |> put_session("guardian_default_token", access_token)
-        |> put_session("guardian_refresh_token", refresh_token)
-        |> put_session(:live_socket_id, Accounts.session_topic(user.id))
+        |> sign_in(user)
         |> redirect(to: ~p"/")
       else
         {:error, _} ->
@@ -69,8 +62,22 @@ defmodule StashixWeb.SessionController do
   end
 
   def delete(conn, _params) do
+    Accounts.delete_session(get_session(conn, "session_id"))
+
     conn
     |> configure_session(drop: true)
     |> redirect(to: ~p"/login")
+  end
+
+  @doc "Starts a recorded session for the user and writes it to the cookie."
+  def sign_in(conn, user) do
+    user_agent = conn |> get_req_header("user-agent") |> List.first()
+    {:ok, access_token, refresh_token, session_id} = TokenHelper.start_session(user, user_agent)
+
+    conn
+    |> put_session("guardian_default_token", access_token)
+    |> put_session("guardian_refresh_token", refresh_token)
+    |> put_session("session_id", session_id)
+    |> put_session(:live_socket_id, Accounts.session_topic(user.id))
   end
 end

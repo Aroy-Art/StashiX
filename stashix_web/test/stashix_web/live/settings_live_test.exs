@@ -98,4 +98,80 @@ defmodule StashixWeb.SettingsLiveTest do
     assert {:error, :token_revoked} = TokenHelper.resource_from_token(access)
     assert {:ok, _} = TokenHelper.resource_from_token(get_session(conn, "guardian_default_token"))
   end
+
+  describe "the sessions list" do
+    @firefox "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
+    @chrome_android "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Mobile Safari/537.36"
+
+    defp sign_in(user_agent) do
+      build_conn()
+      |> put_req_header("user-agent", user_agent)
+      |> post(~p"/login", %{"login" => "sam", "password" => "password1234"})
+    end
+
+    test "names each sign-in and marks the one being used", %{user: user} do
+      conn = sign_in(@firefox)
+      {:ok, _} = Accounts.create_session(user, @chrome_android)
+
+      {:ok, view, _html} = conn |> recycle() |> live(~p"/settings/security")
+
+      assert view |> element("#sessions li", "Firefox on Linux") |> render() =~ "This one"
+      refute view |> element("#sessions li", "Chrome on Android") |> render() =~ "This one"
+      refute has_element?(view, "#sessions-empty")
+    end
+
+    test "says so when nothing is recorded", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/settings/security")
+      assert has_element?(view, "#sessions-empty")
+    end
+
+    test "signing out removes the session", %{user: user} do
+      conn = sign_in(@firefox)
+      assert [_] = Accounts.list_sessions(user)
+
+      conn |> recycle() |> delete(~p"/logout")
+      assert [] = Accounts.list_sessions(user)
+    end
+
+    test "a session can be signed out on its own, which ends its tokens", %{user: user} do
+      conn = sign_in(@firefox)
+      {:ok, access, refresh, other_id} = TokenHelper.start_session(user, @chrome_android)
+      assert {:ok, _} = TokenHelper.resource_from_token(access)
+
+      {:ok, view, _html} = conn |> recycle() |> live(~p"/settings/security")
+      # This browser comes first and has no button of its own.
+      refute has_element?(view, "#sessions li:first-child button")
+
+      html = view |> element("#sessions button[phx-value-id='#{other_id}']") |> render_click()
+      refute html =~ "Chrome on Android"
+      assert html =~ "Firefox on Linux"
+
+      assert {:error, :token_revoked} = TokenHelper.resource_from_token(access)
+      assert {:error, :token_revoked} = TokenHelper.refresh_tokens(refresh)
+      assert {:ok, _} = TokenHelper.resource_from_token(get_session(conn, "guardian_default_token"))
+    end
+
+    test "nobody signs out a session that is not theirs, nor the one in use", %{user: user} do
+      {:ok, other} = Accounts.create_user(%{email: "pat@example.com", username: "pat", password: "password1234"})
+      {:ok, theirs} = Accounts.create_session(other, @firefox)
+      assert {:error, :not_found} = Accounts.revoke_session(user, theirs.id)
+      assert {:error, :not_found} = Accounts.revoke_session(user, "nonsense")
+      assert [_] = Accounts.list_sessions(other)
+
+      conn = sign_in(@firefox)
+      {:ok, view, _html} = conn |> recycle() |> live(~p"/settings/security")
+      render_click(view, "revoke_session", %{"id" => get_session(conn, "session_id")})
+      assert [_] = Accounts.list_sessions(user)
+    end
+
+    test "signing out everywhere else leaves only this browser", %{user: user} do
+      conn = sign_in(@firefox)
+      {:ok, _} = Accounts.create_session(user, @chrome_android)
+
+      conn = conn |> recycle() |> put_req_header("user-agent", @firefox) |> post(~p"/settings/sessions/revoke", %{})
+
+      assert [session] = Accounts.list_sessions(Accounts.get_user!(user.id))
+      assert session.id == get_session(conn, "session_id")
+    end
+  end
 end

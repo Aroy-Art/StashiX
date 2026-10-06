@@ -9,20 +9,29 @@ defmodule StashixWeb.SettingsLive do
   use StashixWeb, :live_view
 
   alias Stashix.Accounts
-  alias Stashix.Accounts.User
+  alias Stashix.Accounts.{Session, User}
   alias Stashix.Library
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(_params, session, socket) do
     {:ok,
      socket
-     |> assign(page_title: "Settings", preview_covers: preview_covers(socket))
+     |> assign(
+       page_title: "Settings",
+       preview_covers: preview_covers(socket),
+       current_session_id: session["session_id"],
+       sessions: []
+     )
      |> assign_profile_form(User.profile_changeset(socket.assigns.current_user, %{}))}
   end
 
   @impl true
+  def handle_params(_params, _uri, %{assigns: %{live_action: :security}} = socket) do
+    {:noreply, assign_sessions(socket)}
+  end
+
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
 
   @impl true
@@ -54,9 +63,25 @@ defmodule StashixWeb.SettingsLive do
     end
   end
 
+  # The current session is left alone: ending it is what the sign-out menu is for.
+  def handle_event("revoke_session", %{"id" => id}, socket) do
+    if id != socket.assigns.current_session_id, do: Accounts.revoke_session(socket.assigns.current_user, id)
+    {:noreply, assign_sessions(socket)}
+  end
+
   # Scan broadcasts reach every page through the sidebar subscriptions.
   @impl true
   def handle_info(_message, socket), do: {:noreply, socket}
+
+  # This browser first, then the rest as listed: most recently used first.
+  defp assign_sessions(socket) do
+    sessions =
+      socket.assigns.current_user
+      |> Accounts.list_sessions()
+      |> Enum.sort_by(&(&1.id != socket.assigns.current_session_id))
+
+    assign(socket, sessions: sessions)
+  end
 
   defp assign_profile_form(socket, changeset), do: assign(socket, profile_form: to_form(changeset, as: :profile))
 
@@ -77,6 +102,16 @@ defmodule StashixWeb.SettingsLive do
   end
 
   defp cover_path(book_id), do: ~p"/api/books/#{book_id}/cover"
+
+  defp last_seen(%Session{last_seen_at: at}) do
+    case DateTime.diff(DateTime.utc_now(), at, :minute) do
+      minutes when minutes < 10 -> "Active now"
+      minutes when minutes < 60 -> "Active #{minutes} min ago"
+      minutes when minutes < 60 * 24 -> "Active #{div(minutes, 60)} h ago"
+      minutes when minutes < 60 * 48 -> "Active yesterday"
+      minutes -> "Active #{div(minutes, 60 * 24)} days ago"
+    end
+  end
 
   defp field_error(form, field) do
     case form[field].errors do
@@ -104,7 +139,12 @@ defmodule StashixWeb.SettingsLive do
 
       <.ui_tab :if={@live_action == :ui} current_user={@current_user} preview_covers={@preview_covers} />
       <.personal_tab :if={@live_action == :personal} form={@profile_form} current_user={@current_user} />
-      <.security_tab :if={@live_action == :security} current_user={@current_user} />
+      <.security_tab
+        :if={@live_action == :security}
+        current_user={@current_user}
+        sessions={@sessions}
+        current_session_id={@current_session_id}
+      />
     </.page>
     """
   end
@@ -200,6 +240,8 @@ defmodule StashixWeb.SettingsLive do
   end
 
   attr :current_user, :map, required: true
+  attr :sessions, :list, required: true
+  attr :current_session_id, :string, default: nil
 
   defp security_tab(assigns) do
     assigns = assign(assigns, csrf: Plug.CSRFProtection.get_csrf_token())
@@ -250,8 +292,38 @@ defmodule StashixWeb.SettingsLive do
 
         <.panel class="p-5 sm:p-6">
           <.display_heading size="panel" class="mb-1">Sessions</.display_heading>
+          <p class="mb-4 text-sm text-gray-400">Where this account is signed in.</p>
+          <ul :if={@sessions != []} id="sessions" class="mb-5 border-y border-white/10 divide-y divide-white/10">
+            <li :for={session <- @sessions} class="flex items-center justify-between gap-3 py-3">
+              <div class="min-w-0">
+                <p class="font-display font-bold uppercase text-lg leading-tight tracking-wide text-white truncate">
+                  {Session.device(session)}
+                </p>
+                <p class="text-xs text-gray-400">
+                  {last_seen(session)} · signed in {Calendar.strftime(session.inserted_at, "%-d %b %Y")}
+                </p>
+              </div>
+              <.sticker :if={session.id == @current_session_id} size="xs" tilt={false} class="shrink-0 uppercase">
+                This one
+              </.sticker>
+              <.ink_button
+                :if={session.id != @current_session_id}
+                variant="ghost"
+                size="md"
+                class="shrink-0"
+                phx-click="revoke_session"
+                phx-value-id={session.id}
+                aria-label={"Sign out #{Session.device(session)}"}
+              >
+                Sign out
+              </.ink_button>
+            </li>
+          </ul>
+          <p :if={@sessions == []} id="sessions-empty" class="mb-5 text-sm text-gray-500">
+            None recorded yet. Sign-ins from before this list existed show up once they sign in again.
+          </p>
           <p class="mb-5 text-sm text-gray-400">
-            Signs this account out of every browser and app except this one. Use it if you left a device signed in.
+            Left a device signed in? This signs the account out of every browser and app except this one.
           </p>
           <form id="sessions-form" method="post" action={~p"/settings/sessions/revoke"}>
             <input type="hidden" name="_csrf_token" value={@csrf} />

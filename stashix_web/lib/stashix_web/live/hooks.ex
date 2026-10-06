@@ -13,6 +13,7 @@ defmodule StashixWeb.Live.Hooks do
 
         initial_progress =
           if connected?(socket) do
+            Stashix.Accounts.touch_session(session["session_id"])
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
             load_active_scan_progress(libraries)
           else
@@ -56,6 +57,7 @@ defmodule StashixWeb.Live.Hooks do
 
         initial_progress =
           if connected?(socket) do
+            Stashix.Accounts.touch_session(session["session_id"])
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
             load_active_scan_progress(libraries)
           else

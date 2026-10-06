@@ -12,11 +12,17 @@ defmodule Stashix.Auth.Guardian do
   end
 
   # Tokens issued before the user's password or role last changed carry an
-  # older "ver" and are rejected.
+  # older "ver" and are rejected. So are tokens of a session ("sid") that has
+  # been signed out.
   def resource_from_claims(%{"sub" => id} = claims) do
     case Accounts.get_user(id) do
-      nil -> {:error, :resource_not_found}
-      user -> if user.token_version == claims["ver"], do: {:ok, user}, else: {:error, :token_revoked}
+      nil ->
+        {:error, :resource_not_found}
+
+      user ->
+        if user.token_version == claims["ver"] and Accounts.session_open?(claims["sid"]),
+          do: {:ok, user},
+          else: {:error, :token_revoked}
     end
   end
 end

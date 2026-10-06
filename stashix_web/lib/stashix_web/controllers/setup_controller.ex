@@ -40,7 +40,8 @@ defmodule StashixWeb.SetupController do
              role: :admin
            }) do
         {:ok, user} ->
-          {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
+          {:ok, access_token, refresh_token, _session_id} =
+            TokenHelper.start_session(user, conn |> get_req_header("user-agent") |> List.first())
 
           conn
           |> put_status(:created)

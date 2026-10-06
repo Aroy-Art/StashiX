@@ -37,6 +37,73 @@ defmodule Stashix.AccountsTest do
     end
   end
 
+  describe "sessions" do
+    alias Stashix.Accounts.Session
+
+    test "are listed while live: not expired and not revoked" do
+      user = user("sessions")
+      {:ok, kept} = Accounts.create_session(user, "Mozilla/5.0 (X11; Linux x86_64) Firefox/130.0")
+      {:ok, expired} = Accounts.create_session(user, nil)
+
+      Repo.update_all(from(s in Session, where: s.id == ^expired.id),
+        set: [expires_at: DateTime.add(DateTime.utc_now(), -60)]
+      )
+
+      assert [%Session{id: id}] = Accounts.list_sessions(user)
+      assert id == kept.id
+
+      {:ok, user} = Accounts.revoke_sessions(user)
+      assert [] = Accounts.list_sessions(user)
+
+      # The next sign-in clears the dead rows.
+      {:ok, fresh} = Accounts.create_session(user, nil)
+      assert [fresh.id] == Repo.all(from s in Session, where: s.user_id == ^user.id, select: s.id)
+    end
+
+    test "touching writes last_seen_at only once it has gone stale" do
+      user = user("touch")
+      {:ok, session} = Accounts.create_session(user, nil)
+      old = DateTime.add(session.last_seen_at, -3600)
+
+      Accounts.touch_session(session.id)
+      assert Repo.get!(Session, session.id).last_seen_at == session.last_seen_at
+
+      Repo.update_all(from(s in Session, where: s.id == ^session.id), set: [last_seen_at: old, expires_at: old])
+      Accounts.touch_session(session.id)
+      touched = Repo.get!(Session, session.id)
+      assert DateTime.compare(touched.last_seen_at, old) == :gt
+      assert touched.expires_at == old
+
+      Accounts.touch_session(session.id, extend: true)
+      assert DateTime.compare(Repo.get!(Session, session.id).expires_at, DateTime.utc_now()) == :gt
+      assert :ok = Accounts.touch_session(nil)
+    end
+
+    test "a refresh keeps the session of the token it replaces" do
+      user = user("refresh")
+      {:ok, _access, refresh, session_id} = TokenHelper.start_session(user, "okhttp/4.12")
+      {:ok, _user, _access, new_refresh} = TokenHelper.refresh_tokens(refresh)
+
+      assert {:ok, %{"sid" => ^session_id}} = TokenHelper.verify_refresh_token(new_refresh)
+      assert [%Session{id: ^session_id} = session] = Accounts.list_sessions(user)
+      assert Session.device(session) == "okhttp/4.12"
+    end
+
+    test "device names" do
+      for {user_agent, name} <- [
+            {"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/128.0 Safari/537.36 Edg/128.0",
+             "Edge on Windows"},
+            {"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15",
+             "Safari on macOS"},
+            {"Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Version/17.5 Mobile/15E148 Safari/604.1",
+             "Safari on iPhone"},
+            {nil, "Unknown device"}
+          ] do
+        assert Session.device(%Session{user_agent: user_agent}) == name
+      end
+    end
+  end
+
   describe "last admin" do
     test "cannot be deleted or demoted" do
       admin = user("boss", %{role: :admin})

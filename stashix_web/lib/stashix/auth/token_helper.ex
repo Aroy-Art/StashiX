@@ -1,12 +1,27 @@
 defmodule Stashix.Auth.TokenHelper do
+  alias Stashix.Accounts
   alias Stashix.Auth.Guardian
 
-  def generate_tokens(user) do
+  @doc """
+  An access and a refresh token for the user. `session_id` is carried as the
+  "sid" claim, so a refresh can be traced back to the sign-in it belongs to.
+  """
+  def generate_tokens(user, session_id \\ nil) do
+    claims = if session_id, do: %{"sid" => session_id}, else: %{}
+
     with {:ok, access_token, _claims} <-
-           Guardian.encode_and_sign(user, %{}, token_type: "access", ttl: {15, :minutes}),
+           Guardian.encode_and_sign(user, claims, token_type: "access", ttl: {15, :minutes}),
          {:ok, refresh_token, _claims} <-
-           Guardian.encode_and_sign(user, %{}, token_type: "refresh", ttl: {7, :days}) do
+           Guardian.encode_and_sign(user, claims, token_type: "refresh", ttl: {7, :days}) do
       {:ok, access_token, refresh_token}
+    end
+  end
+
+  @doc "Records a sign-in (see `Accounts.create_session/2`) and issues its tokens."
+  def start_session(user, user_agent) do
+    with {:ok, session} <- Accounts.create_session(user, user_agent),
+         {:ok, access_token, refresh_token} <- generate_tokens(user, session.id) do
+      {:ok, access_token, refresh_token, session.id}
     end
   end
 
@@ -46,10 +61,7 @@ defmodule Stashix.Auth.TokenHelper do
   def refresh_tokens(refresh_token) do
     with {:ok, claims} <- Guardian.decode_and_verify(refresh_token, %{"typ" => "refresh"}),
          {:ok, user} <- Guardian.resource_from_claims(claims),
-         {:ok, access_token, _} <-
-           Guardian.encode_and_sign(user, %{}, token_type: "access", ttl: {15, :minutes}),
-         {:ok, new_refresh_token, _} <-
-           Guardian.encode_and_sign(user, %{}, token_type: "refresh", ttl: {7, :days}) do
+         {:ok, access_token, new_refresh_token} <- generate_tokens(user, claims["sid"]) do
       {:ok, user, access_token, new_refresh_token}
     end
   end

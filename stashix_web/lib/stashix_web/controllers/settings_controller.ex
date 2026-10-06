@@ -9,6 +9,7 @@ defmodule StashixWeb.SettingsController do
 
   alias Stashix.Accounts
   alias Stashix.Auth.TokenHelper
+  alias StashixWeb.SessionController
 
   plug :require_user
 
@@ -50,13 +51,9 @@ defmodule StashixWeb.SettingsController do
 
   # Fresh tokens for this browser, since the old ones were just revoked.
   defp renew_session(conn, user) do
-    {:ok, access_token, refresh_token} = TokenHelper.generate_tokens(user)
-
     conn
     |> configure_session(renew: true)
-    |> put_session("guardian_default_token", access_token)
-    |> put_session("guardian_refresh_token", refresh_token)
-    |> put_session(:live_socket_id, Accounts.session_topic(user.id))
+    |> SessionController.sign_in(user)
   end
 
   defp error_message(:invalid_password), do: "The current password is not right."

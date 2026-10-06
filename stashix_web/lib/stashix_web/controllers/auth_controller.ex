@@ -22,8 +22,8 @@ defmodule StashixWeb.AuthController do
 
     case Accounts.authenticate_user(login, password) do
       {:ok, user} ->
-        case TokenHelper.generate_tokens(user) do
-          {:ok, access_token, refresh_token} ->
+        case TokenHelper.start_session(user, conn |> get_req_header("user-agent") |> List.first()) do
+          {:ok, access_token, refresh_token, _session_id} ->
             json(conn, %{
               access_token: access_token,
               refresh_token: refresh_token,
@@ -65,7 +65,9 @@ defmodule StashixWeb.AuthController do
   def refresh(conn, %{"refresh_token" => refresh_token}) do
     with {:ok, claims} <- TokenHelper.verify_refresh_token(refresh_token),
          {:ok, user} <- Guardian.resource_from_claims(claims),
-         {:ok, access_token, new_refresh_token} <- TokenHelper.generate_tokens(user) do
+         {:ok, access_token, new_refresh_token} <- TokenHelper.generate_tokens(user, claims["sid"]) do
+      Accounts.touch_session(claims["sid"], extend: true)
+
       json(conn, %{
         access_token: access_token,
         refresh_token: new_refresh_token,
