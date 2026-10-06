@@ -56,7 +56,6 @@ defmodule StashixWeb.ReaderLive do
        page_layout: page_layout,
        direction: direction,
        fit_mode: fit_mode,
-       layout_menu_open: false,
        overlay_visible: true,
        save_timer: nil
      ), layout: false}
@@ -111,21 +110,13 @@ defmodule StashixWeb.ReaderLive do
 
   def handle_event("set_layout", %{"layout" => layout}, socket)
       when layout in ["single", "double", "cover"] do
-    socket = assign(socket, page_layout: layout, layout_menu_open: false)
+    socket = assign(socket, page_layout: layout)
     save_reader_settings(socket)
     {:noreply, socket}
   end
 
-  def handle_event("toggle_layout_menu", _params, socket) do
-    {:noreply, assign(socket, :layout_menu_open, !socket.assigns.layout_menu_open)}
-  end
-
-  def handle_event("close_layout_menu", _params, socket) do
-    {:noreply, assign(socket, :layout_menu_open, false)}
-  end
-
   def handle_event("toggle_overlay", _params, socket) do
-    {:noreply, assign(socket, overlay_visible: !socket.assigns.overlay_visible, layout_menu_open: false)}
+    {:noreply, assign(socket, overlay_visible: !socket.assigns.overlay_visible)}
   end
 
   def handle_event("set_fit", %{"mode" => mode}, socket)
@@ -258,43 +249,8 @@ defmodule StashixWeb.ReaderLive do
   defp layout_icon("cover"), do: "lucide-layout-panel-top"
   defp layout_icon(_single), do: "lucide-rectangle-vertical"
 
-  # One cell of a .ink-segmented.
-  defp ctl_class(active) do
-    [
-      "flex items-center justify-center h-8 min-w-8 px-2 transition-colors",
-      if(active, do: "bg-violet-600 text-white", else: "text-gray-300 hover:text-white hover:bg-white/10")
-    ]
-  end
-
   defp slider_fill(_page, count) when count <= 1, do: 100
   defp slider_fill(page, count), do: Float.round(page / (count - 1) * 100, 2)
-
-  attr :event, :string, required: true
-  attr :name, :string, required: true
-  attr :value, :string, required: true
-  attr :icon, :string, required: true
-  attr :label, :string, required: true
-  attr :active, :boolean, required: true
-
-  defp menu_option(assigns) do
-    ~H"""
-    <button
-      phx-click={@event}
-      {%{"phx-value-#{@name}" => @value}}
-      class={[
-        "ink-menu-item w-full flex items-center gap-3 px-2 py-2 rounded-sm text-sm text-left transition-colors",
-        if(@active,
-          do: "is-active bg-white/[0.07] text-white",
-          else: "text-gray-300 hover:text-white hover:bg-white/[0.05]"
-        )
-      ]}
-    >
-      <.icon name={@icon} class={"w-4 h-4 flex-shrink-0 #{if @active, do: "text-ink", else: "text-gray-500"}"} />
-      <span class="flex-1 font-display font-bold uppercase tracking-wide">{@label}</span>
-      <.icon :if={@active} name="lucide-check" class="w-3.5 h-3.5 text-ink" />
-    </button>
-    """
-  end
 
   attr :book, :map, required: true
   attr :next_book, :map, default: nil
@@ -460,98 +416,89 @@ defmodule StashixWeb.ReaderLive do
 
         <%!-- Right: controls + page counter --%>
         <div class="flex items-center gap-2 flex-shrink-0">
-          <%!-- View menu: layout, plus fit and direction on small screens --%>
-          <div class="relative">
-            <div class="ink-segmented">
-              <button
-                phx-click="toggle_layout_menu"
-                title="View options"
-                aria-expanded={to_string(@layout_menu_open)}
-                class={[ctl_class(@layout_menu_open), "gap-1.5 px-2.5"]}
+          <%!-- View menu: layout, plus fit and direction on small screens.
+               Modal, so the tap that closes it does not also turn the page. --%>
+          <.ink_menu id="reader-view-menu" modal panel_class="w-60" class="ink-segmented group">
+            <:trigger
+              title="View options"
+              class={[
+                segment_class(false),
+                "gap-1.5 px-2.5 group-data-[open]:bg-violet-600 group-data-[open]:text-white"
+              ]}
+            >
+              <.icon name={layout_icon(@page_layout)} class="w-4 h-4 flex-shrink-0" />
+              <span class="hidden md:inline font-display font-bold uppercase tracking-wide text-sm">View</span>
+              <.icon
+                name="lucide-chevron-down"
+                class="w-3 h-3 flex-shrink-0 transition-transform group-data-[open]:rotate-180"
+              />
+            </:trigger>
+
+            <.menu_label>Layout</.menu_label>
+            <.menu_item
+              :for={
+                {layout, label} <- [
+                  {"single", "Single page"},
+                  {"double", "Facing pages"},
+                  {"cover", "Facing, cover first"}
+                ]
+              }
+              icon={layout_icon(layout)}
+              active={@page_layout == layout}
+              phx-click="set_layout"
+              phx-value-layout={layout}
+            >
+              {label}
+            </.menu_item>
+
+            <div class="sm:hidden">
+              <.menu_label class="mt-2">Fit</.menu_label>
+              <.menu_item
+                :for={{mode, label, icon} <- fit_modes()}
+                icon={icon}
+                active={@fit_mode == mode}
+                phx-click="set_fit"
+                phx-value-mode={mode}
               >
-                <.icon name={layout_icon(@page_layout)} class="w-4 h-4 flex-shrink-0" />
-                <span class="hidden md:inline font-display font-bold uppercase tracking-wide text-sm">View</span>
-                <.icon
-                  name="lucide-chevron-down"
-                  class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"}
-                />
-              </button>
+                {label}
+              </.menu_item>
+
+              <.menu_label class="mt-2">Direction</.menu_label>
+              <.menu_item
+                icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
+                phx-click="toggle_direction"
+              >
+                {if @direction == "ltr", do: "Left to right", else: "Right to left"}
+              </.menu_item>
             </div>
-
-            <%= if @layout_menu_open do %>
-              <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
-              <div class="ink-menu absolute right-0 top-full mt-2 z-30 w-60 p-1.5 rounded-md bg-zinc-950 ring-1 ring-white/15 shadow-2xl">
-                <p class="ink-menu-label">Layout</p>
-                <.menu_option
-                  :for={
-                    {layout, label} <- [
-                      {"single", "Single page"},
-                      {"double", "Facing pages"},
-                      {"cover", "Facing, cover first"}
-                    ]
-                  }
-                  event="set_layout"
-                  name="layout"
-                  value={layout}
-                  icon={layout_icon(layout)}
-                  label={label}
-                  active={@page_layout == layout}
-                />
-
-                <div class="sm:hidden">
-                  <p class="ink-menu-label mt-2">Fit</p>
-                  <.menu_option
-                    :for={{mode, label, icon} <- fit_modes()}
-                    event="set_fit"
-                    name="mode"
-                    value={mode}
-                    icon={icon}
-                    label={label}
-                    active={@fit_mode == mode}
-                  />
-
-                  <p class="ink-menu-label mt-2">Direction</p>
-                  <.menu_option
-                    event="toggle_direction"
-                    name="dir"
-                    value={@direction}
-                    icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
-                    label={if @direction == "ltr", do: "Left to right", else: "Right to left"}
-                    active={false}
-                  />
-                </div>
-              </div>
-            <% end %>
-          </div>
+          </.ink_menu>
 
           <%!-- Fit mode --%>
-          <div class="ink-segmented hidden sm:flex divide-x divide-white/10">
-            <button
+          <.segmented class="hidden sm:flex">
+            <.segment
               :for={{mode, label, icon} <- fit_modes()}
+              icon={icon}
+              title={label}
+              active={@fit_mode == mode}
               phx-click="set_fit"
               phx-value-mode={mode}
-              title={label}
-              aria-pressed={to_string(@fit_mode == mode)}
-              class={ctl_class(@fit_mode == mode)}
-            >
-              <.icon name={icon} class="w-4 h-4" />
-            </button>
-          </div>
+            />
+          </.segmented>
 
           <%!-- Direction toggle --%>
-          <div class="ink-segmented hidden sm:flex">
-            <button
-              phx-click="toggle_direction"
+          <.segmented class="hidden sm:flex">
+            <.segment
               title="Toggle reading direction (LTR/RTL)"
-              class={[ctl_class(false), "gap-1 px-2.5 font-display font-bold tracking-wide text-sm"]}
+              phx-click="toggle_direction"
+              class="gap-1 px-2.5 font-display font-bold tracking-wide text-sm"
             >
               {@direction |> String.upcase()}
               <.icon
                 name={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
                 class="w-3.5 h-3.5 text-ink"
               />
-            </button>
-          </div>
+            </.segment>
+          </.segmented>
 
           <%!-- Page counter --%>
           <p class="min-w-[3.25rem] text-right tabular-nums leading-none whitespace-nowrap">
@@ -606,21 +553,17 @@ defmodule StashixWeb.ReaderLive do
           ]}
           style="top: 64px; right: 16px; z-index: 25;"
         >
-          <div class="ink-segmented reader-ctl-float flex-col divide-y divide-white/10">
-            <button
-              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
+          <.segmented vertical class="reader-ctl-float">
+            <.segment
+              icon="lucide-plus"
               title="Zoom in (+)"
-              class={ctl_class(false)}
-            >
-              <.icon name="lucide-plus" class="w-4 h-4" />
-            </button>
-            <button
-              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
+              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
+            />
+            <.segment
+              icon="lucide-minus"
               title="Zoom out (-)"
-              class={ctl_class(false)}
-            >
-              <.icon name="lucide-minus" class="w-4 h-4" />
-            </button>
+              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
+            />
             <%!-- Zoom readout, filled in and shown by ReaderZoom while zoomed --%>
             <button
               id="reader-zoom-level"
@@ -630,7 +573,7 @@ defmodule StashixWeb.ReaderLive do
               class="items-center justify-center h-7 min-w-8 px-1 font-display font-bold text-xs text-ink tabular-nums hover:bg-white/10 transition-colors"
               style="display: none;"
             ></button>
-          </div>
+          </.segmented>
         </div>
 
         <%!-- Pages --%>

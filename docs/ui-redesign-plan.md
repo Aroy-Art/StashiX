@@ -178,11 +178,11 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 2 — The menu
 
-- [ ] `UI.Menu.ink_menu` + `menu_item` + `menu_separator` per D1 (Popover
+- [x] `UI.Menu.ink_menu` + `menu_item` + `menu_separator` per D1 (Popover
   API + `InkMenu` hook), with the reader look. Keyboard: arrows, Home/End,
   Escape, type-ahead, focus returns to the trigger. Must survive LiveView
   patches while open (the activity menu re-renders during a scan).
-- [ ] Reader uses `<.ink_menu>`; delete `menu_option/1`, `layout_menu_open`,
+- [x] Reader uses `<.ink_menu>`; delete `menu_option/1`, `layout_menu_open`,
   `toggle_layout_menu`, `close_layout_menu`. Update `reader_live_test.exs`.
 - [ ] Replace SaladUI dropdowns:
   - [ ] `app.html.heex` user menu
