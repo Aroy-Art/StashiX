@@ -19,9 +19,11 @@
       class="fixed inset-y-0 left-0 z-40 w-48 max-w-[85vw] lg:w-52 -translate-x-full lg:translate-x-0 lg:relative lg:z-auto flex-shrink-0 bg-gray-950 border-r border-white/10 flex flex-col h-screen h-dvh transition-transform duration-200"
     >
       <%!-- Logo --%>
-      <div class="flex items-center h-16 ps-5 border-b border-white/10">
-        <.link navigate="/" class="flex items-center">
-          <.logo id="sidebar-logo" class="text-[1.75rem]" />
+      <%!-- Centred by eye rather than by box: the trail hangs outside the word,
+           so half its width is added on the right to balance the pair. --%>
+      <div class="flex items-center justify-center h-16 border-b border-white/10">
+        <.link navigate="/" class="flex items-center text-[2.125rem] pr-[1.05em]" aria-label="Stashix home">
+          <.logo id="sidebar-logo" />
         </.link>
       </div>
 
