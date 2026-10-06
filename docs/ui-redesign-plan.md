@@ -157,7 +157,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] Rename shared CSS out of page namespaces: `.reader-menu*` → `.ink-menu*`,
   `.reader-ctl-group` → `.ink-segmented`, `.reader-sticker` → `.sticker`,
   `.filter-rail` → `.ink-rail`. Pure rename, no visual change.
-- [ ] Add a dev-only style guide at `/dev/ui` (inside the existing
+- [x] Add a dev-only style guide at `/dev/ui` (inside the existing
   `dev_routes` block) that renders every component in every variant. Each
   later box that adds a component also adds it here.
 
@@ -348,3 +348,6 @@ Add a dated line when a phase closes or a decision changes.
 - 2026-10-06 — plan written; nothing started.
 - 2026-10-06 — D1–D4 settled: own menu/dialog on native Popover + `<dialog>`,
   SaladUI removed completely, wacky ideas asked one by one.
+- 2026-10-06 — Phase 0 done on branch `ui-redesign`. Style guide at `/dev/ui`
+  (`live/dev/ui_live.ex`) shows today's raw class recipes; Phase 1 swaps each
+  specimen for its component.
