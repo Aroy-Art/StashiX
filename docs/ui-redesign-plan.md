@@ -170,7 +170,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   `shelf`, `empty_state`.
 - [ ] Swap the four already-redesigned pages onto the primitives. Output
   should be pixel-identical; this proves the API before the old pages use it.
-  - [ ] `series_live.ex`
+  - [x] `series_live.ex`
   - [ ] `book_live.ex`
   - [ ] `search_live.ex`
   - [ ] `reader_live.ex`

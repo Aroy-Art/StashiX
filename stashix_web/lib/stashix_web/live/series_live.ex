@@ -492,13 +492,12 @@ defmodule StashixWeb.SeriesLive do
 
       <%!-- Hero: fanned cover stack, giant issue count behind the title --%>
       <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-14 pt-2">
-        <span
+        <.ghost_numeral
           :if={issue_count > 1}
-          class="ghost-numeral hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem] pointer-events-none"
-          aria-hidden="true"
+          class="hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem]"
         >
           {issue_count}
-        </span>
+        </.ghost_numeral>
 
         <.hero_cover
           id={"series-cover-#{@series.id}"}
@@ -515,23 +514,16 @@ defmodule StashixWeb.SeriesLive do
         />
 
         <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
-          <p
-            :if={@series.publishers != []}
-            class="rise text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300 mb-3"
-            style="--i:1"
-          >
+          <.eyebrow :if={@series.publishers != []} class="rise mb-3" style="--i:1">
             <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
               <span :if={idx > 0} class="text-white/25"> / </span>
               <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-white transition-colors">{pub.name}</.link>
             <% end %>
-          </p>
+          </.eyebrow>
 
-          <h1
-            class="rise font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance break-words"
-            style="--i:2"
-          >
+          <.display_heading level={1} size="hero" class="rise" style="--i:2">
             {@series.name}
-          </h1>
+          </.display_heading>
 
           <div
             class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300"
@@ -556,21 +548,18 @@ defmodule StashixWeb.SeriesLive do
           <%= if @continue_book do %>
             <% has_progress = (@progress_map[@continue_book.id] || 0) > 0 %>
             <div class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7" style="--i:4">
-              <.link
-                navigate={~p"/read/#{@continue_book.id}"}
-                class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
-              >
+              <.ink_button navigate={~p"/read/#{@continue_book.id}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {if has_progress, do: "Continue", else: "Start Reading"}
                 <span :if={lbl = issue_label(@continue_book)} class="text-ink">{lbl}</span>
-              </.link>
-              <.link
+              </.ink_button>
+              <.text_link
                 :if={has_progress && first_book && first_book.id != @continue_book.id}
+                tone="subtle"
                 navigate={~p"/read/#{first_book.id}"}
-                class="inline-flex items-center gap-2 text-sm font-medium text-gray-300 hover:text-white underline decoration-white/25 hover:decoration-white underline-offset-4 transition-colors"
               >
                 <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from #1
-              </.link>
+              </.text_link>
             </div>
           <% end %>
         </div>
@@ -579,7 +568,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- The run: solid = read, striped = in progress, dark = unread --%>
       <section :if={issue_count > 1} class="rise" style="--i:5">
         <div class="flex items-baseline justify-between mb-3">
-          <h2 class="text-[10px] font-bold tracking-[0.2em] uppercase text-gray-500">The Run</h2>
+          <.eyebrow tag="h2" size="sm" tone="muted">The Run</.eyebrow>
           <p class="tabular-nums leading-none">
             <span class="font-display font-black text-3xl text-white">{read_count}</span>
             <span class="text-gray-600 text-sm"> / {issue_count} read</span>
@@ -644,11 +633,8 @@ defmodule StashixWeb.SeriesLive do
       />
 
       <%!-- Issues --%>
-      <section>
-        <div class="flex items-end justify-between mb-4">
-          <h2 class="font-display font-black uppercase text-3xl leading-none text-white">
-            Issues <span class="text-gray-600 tabular-nums">{issue_count}</span>
-          </h2>
+      <.section title="Issues" count={issue_count}>
+        <:actions>
           <form id="issue-sort" phx-change="sort">
             <select
               name="value"
@@ -669,8 +655,8 @@ defmodule StashixWeb.SeriesLive do
               <% end %>
             </select>
           </form>
-        </div>
-        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4">
+        </:actions>
+        <.cover_grid cols="narrow">
           <%= for book <- @books do %>
             <.media_card
               navigate={~p"/book/#{book.id}"}
@@ -690,8 +676,8 @@ defmodule StashixWeb.SeriesLive do
               blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
-        </div>
-      </section>
+        </.cover_grid>
+      </.section>
 
       <%!-- Folder path --%>
       <div
