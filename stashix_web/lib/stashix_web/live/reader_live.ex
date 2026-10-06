@@ -258,7 +258,7 @@ defmodule StashixWeb.ReaderLive do
   defp layout_icon("cover"), do: "lucide-layout-panel-top"
   defp layout_icon(_single), do: "lucide-rectangle-vertical"
 
-  # One cell of a .reader-ctl-group.
+  # One cell of a .ink-segmented.
   defp ctl_class(active) do
     [
       "flex items-center justify-center h-8 min-w-8 px-2 transition-colors",
@@ -282,7 +282,7 @@ defmodule StashixWeb.ReaderLive do
       phx-click={@event}
       {%{"phx-value-#{@name}" => @value}}
       class={[
-        "reader-menu-item w-full flex items-center gap-3 px-2 py-2 rounded-sm text-sm text-left transition-colors",
+        "ink-menu-item w-full flex items-center gap-3 px-2 py-2 rounded-sm text-sm text-left transition-colors",
         if(@active,
           do: "is-active bg-white/[0.07] text-white",
           else: "text-gray-300 hover:text-white hover:bg-white/[0.05]"
@@ -476,7 +476,7 @@ defmodule StashixWeb.ReaderLive do
         <div class="flex-1 min-w-0 flex items-center justify-center gap-2.5">
           <span
             :if={lbl = issue_label(@book)}
-            class="reader-sticker flex-shrink-0 px-1.5 bg-ink text-zinc-950 font-display font-black text-base leading-tight rounded-sm tabular-nums"
+            class="sticker flex-shrink-0 px-1.5 bg-ink text-zinc-950 font-display font-black text-base leading-tight rounded-sm tabular-nums"
           >
             {lbl}
           </span>
@@ -489,7 +489,7 @@ defmodule StashixWeb.ReaderLive do
         <div class="flex items-center gap-2 flex-shrink-0">
           <%!-- View menu: layout, plus fit and direction on small screens --%>
           <div class="relative">
-            <div class="reader-ctl-group">
+            <div class="ink-segmented">
               <button
                 phx-click="toggle_layout_menu"
                 title="View options"
@@ -507,8 +507,8 @@ defmodule StashixWeb.ReaderLive do
 
             <%= if @layout_menu_open do %>
               <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
-              <div class="reader-menu absolute right-0 top-full mt-2 z-30 w-60 p-1.5 rounded-md bg-zinc-950 ring-1 ring-white/15 shadow-2xl">
-                <p class="reader-menu-label">Layout</p>
+              <div class="ink-menu absolute right-0 top-full mt-2 z-30 w-60 p-1.5 rounded-md bg-zinc-950 ring-1 ring-white/15 shadow-2xl">
+                <p class="ink-menu-label">Layout</p>
                 <.menu_option
                   :for={
                     {layout, label} <- [
@@ -526,7 +526,7 @@ defmodule StashixWeb.ReaderLive do
                 />
 
                 <div class="sm:hidden">
-                  <p class="reader-menu-label mt-2">Fit</p>
+                  <p class="ink-menu-label mt-2">Fit</p>
                   <.menu_option
                     :for={{mode, label, icon} <- fit_modes()}
                     event="set_fit"
@@ -537,7 +537,7 @@ defmodule StashixWeb.ReaderLive do
                     active={@fit_mode == mode}
                   />
 
-                  <p class="reader-menu-label mt-2">Direction</p>
+                  <p class="ink-menu-label mt-2">Direction</p>
                   <.menu_option
                     event="toggle_direction"
                     name="dir"
@@ -552,7 +552,7 @@ defmodule StashixWeb.ReaderLive do
           </div>
 
           <%!-- Fit mode --%>
-          <div class="reader-ctl-group hidden sm:flex divide-x divide-white/10">
+          <div class="ink-segmented hidden sm:flex divide-x divide-white/10">
             <button
               :for={{mode, label, icon} <- fit_modes()}
               phx-click="set_fit"
@@ -566,7 +566,7 @@ defmodule StashixWeb.ReaderLive do
           </div>
 
           <%!-- Direction toggle --%>
-          <div class="reader-ctl-group hidden sm:flex">
+          <div class="ink-segmented hidden sm:flex">
             <button
               phx-click="toggle_direction"
               title="Toggle reading direction (LTR/RTL)"
@@ -633,7 +633,7 @@ defmodule StashixWeb.ReaderLive do
           ]}
           style="top: 64px; right: 16px; z-index: 25;"
         >
-          <div class="reader-ctl-group reader-ctl-float flex-col divide-y divide-white/10">
+          <div class="ink-segmented reader-ctl-float flex-col divide-y divide-white/10">
             <button
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
               title="Zoom in (+)"

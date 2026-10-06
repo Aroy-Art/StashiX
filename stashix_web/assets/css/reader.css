@@ -19,39 +19,13 @@
 .reader-bar-top::after { bottom: 0; }
 .reader-bar-bottom::after { top: 0; }
 
-.reader-sticker { transform: rotate(-4deg); }
-
-/* Segmented control cluster; cells get their look from ctl_class/1. */
-.reader-ctl-group {
-  display: flex;
-  overflow: hidden;
-  border-radius: 0.375rem;
-  background: rgb(255 255 255 / 0.04);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
-}
-.reader-ctl-group.hidden { display: none; }
-@media (min-width: 40rem) {
-  .reader-ctl-group.hidden.sm\:flex { display: flex; }
-}
-
-/* Floats over the artwork itself, so it needs its own backing to stay legible on a white page. */
+/* Zoom cluster (an .ink-segmented) floats over the artwork itself, so it needs its own backing to stay legible on a white page. */
 .reader-ctl-float {
   background: rgb(9 9 11 / 0.6);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 18px -4px rgb(0 0 0 / 0.7);
 }
-
-.reader-menu { box-shadow: 4px 4px 0 0 var(--color-ink), 0 20px 40px -10px rgb(0 0 0 / 0.9); }
-.reader-menu-label {
-  padding: 0.25rem 0.5rem 0.375rem;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--color-gray-500);
-}
-.reader-menu-item.is-active { box-shadow: inset 3px 0 0 0 var(--color-ink); }
 
 /* Scrubber: violet fill up to --fill, a chunky aqua tab for the thumb. */
 .reader-slider {

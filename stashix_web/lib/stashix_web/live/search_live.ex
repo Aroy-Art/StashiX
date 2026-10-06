@@ -637,7 +637,7 @@ defmodule StashixWeb.SearchLive do
             aria-label="Filters"
             class="filter-drawer lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-start"
           >
-            <div class="filter-rail flex min-h-full lg:min-h-0 lg:rounded-lg">
+            <div class="ink-rail flex min-h-full lg:min-h-0 lg:rounded-lg">
               <div class="relative flex-1 min-w-0 bg-gray-900 lg:rounded-lg lg:ring-1 lg:ring-white/10 divide-y divide-gray-800">
                 <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-gray-900 lg:static lg:bg-transparent">
                   <h2 class="font-display font-black uppercase text-2xl leading-none text-white">

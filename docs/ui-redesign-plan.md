@@ -154,7 +154,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   `PageHTML` and `home.html.heex`.
 - [x] Split `assets/css/app.css` into `tokens.css` (theme, fonts), `ink.css`
   (shared primitives), `reader.css`, `search.css`; `app.css` only imports.
-- [ ] Rename shared CSS out of page namespaces: `.reader-menu*` → `.ink-menu*`,
+- [x] Rename shared CSS out of page namespaces: `.reader-menu*` → `.ink-menu*`,
   `.reader-ctl-group` → `.ink-segmented`, `.reader-sticker` → `.sticker`,
   `.filter-rail` → `.ink-rail`. Pure rename, no visual change.
 - [ ] Add a dev-only style guide at `/dev/ui` (inside the existing
