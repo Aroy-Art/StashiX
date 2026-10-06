@@ -427,7 +427,7 @@ defmodule StashixWeb.UI.Ink do
   end
 
   @doc """
-  Thin progress track. `value` is a fraction from 0 to 1; the fill turns ink
+  Thin progress track. `value` is a fraction from 0 to 1; the fill turns green
   at 1. Height and position come from `class`.
   """
   attr :value, :float, required: true
@@ -455,7 +455,7 @@ defmodule StashixWeb.UI.Ink do
         class={[
           "h-full transition-all",
           @rounded && "rounded-full",
-          if(@value >= 1.0, do: "bg-ink", else: "bg-violet-500")
+          if(@value >= 1.0, do: "bg-green-500", else: "bg-violet-500")
         ]}
         style={"width: #{@pct}%"}
       >

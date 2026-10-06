@@ -24,8 +24,9 @@ import "../vendor/blurhash"
 import * as echarts from "../vendor/echarts.min"
 import InkMenu from "./hooks/ink_menu.js"
 import InkDialog from "./hooks/ink_dialog.js"
+import Shelf from "./hooks/shelf.js"
 
-let Hooks = { InkMenu, InkDialog }
+let Hooks = { InkMenu, InkDialog, Shelf }
 
 Hooks.Sidebar = {
   mounted() {

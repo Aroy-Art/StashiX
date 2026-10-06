@@ -163,8 +163,9 @@ defmodule StashixWeb.UI.Page do
   end
 
   @doc """
-  Titled, horizontally scrolling row of covers with arrow buttons. Children
-  need a fixed width and `flex-shrink-0`.
+  Titled, horizontally scrolling row of covers. Arrow buttons appear when the
+  row overflows (and the screen is wide enough to want them). Children need a
+  fixed width and `flex-shrink-0`.
   """
   attr :id, :string, required: true
   attr :title, :string, required: true
@@ -175,12 +176,12 @@ defmodule StashixWeb.UI.Page do
 
   def shelf(assigns) do
     ~H"""
-    <section class={@class}>
+    <section id={"#{@id}-shelf"} phx-hook="Shelf" class={@class}>
       <div class="flex items-end justify-between gap-4 mb-4">
         <.display_heading count={@count}>{@title}</.display_heading>
         <div class="flex items-center gap-3 flex-shrink-0">
           {render_slot(@actions)}
-          <div class="hidden sm:flex items-center gap-1.5">
+          <div class="shelf-arrows items-center gap-1.5">
             <.icon_button
               icon="lucide-chevron-left"
               label={"Scroll #{@title} back"}
@@ -194,7 +195,7 @@ defmodule StashixWeb.UI.Page do
           </div>
         </div>
       </div>
-      <div id={@id} class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+      <div id={@id} data-shelf-row class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
         {render_slot(@inner_block)}
       </div>
     </section>

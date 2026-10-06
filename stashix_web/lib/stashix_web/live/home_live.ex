@@ -287,13 +287,18 @@ defmodule StashixWeb.HomeLive do
 
   @impl true
   def render(assigns) do
+    picks? =
+      (assigns.next_issue == [] or length(assigns.continue_reading) <= 1) and
+        (assigns.recommendations.books != [] or assigns.recommendations.series != [])
+
     assigns =
       assign(assigns,
         hero: hero(assigns),
         recent_series: Enum.flat_map(assigns.libraries_data, & &1.recent_series),
         recent_books: Enum.flat_map(assigns.libraries_data, & &1.recent_books),
         recent_issues: Enum.flat_map(assigns.libraries_data, & &1.recent_issues),
-        show_picks: assigns.next_issue == [] or length(assigns.continue_reading) <= 1
+        picks?: picks?,
+        queues?: picks? or length(assigns.continue_reading) > 1 or assigns.next_issue != []
       )
 
     ~H"""
@@ -316,66 +321,86 @@ defmodule StashixWeb.HomeLive do
         </.stat_list>
       </.panel>
 
-      <%!-- The hero already shows the first book in progress --%>
-      <.shelf
-        :if={length(@continue_reading) > 1}
-        id="home-also-reading"
-        title="Also reading"
-        count={length(@continue_reading) - 1}
-      >
-        <.book_card
-          :for={%{book: book, current_page: page} <- Enum.drop(@continue_reading, 1)}
-          book={book}
-          read={page}
-          as={if book.issue_number, do: :issue, else: :book}
-          scope="also-reading"
-          class="flex-shrink-0 w-36"
-        />
-      </.shelf>
+      <%!-- Reading queues on the left, libraries down the side (below on small screens) --%>
+      <div class="flex flex-col lg:flex-row lg:items-start gap-8 lg:gap-10">
+        <div :if={@queues?} class="flex-1 min-w-0 space-y-8">
+          <%!-- The hero already shows the first book in progress --%>
+          <.section :if={length(@continue_reading) > 1} title="Also reading" count={length(@continue_reading) - 1}>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <.book_row
+                :for={%{book: book, current_page: page} <- Enum.drop(@continue_reading, 1)}
+                book={book}
+                read={page}
+              />
+            </div>
+          </.section>
 
-      <.shelf :if={@next_issue != []} id="home-up-next" title="Up next" count={length(@next_issue)}>
-        <.book_card :for={book <- @next_issue} book={book} as={:issue} scope="up-next" class="flex-shrink-0 w-36" />
-      </.shelf>
+          <.section :if={@next_issue != []} title="Up next" count={length(@next_issue)}>
+            <:actions :if={length(@next_issue) > 6}>
+              <.text_link navigate={~p"/issues"}>
+                See all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+              </.text_link>
+            </:actions>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <.book_row :for={book <- Enum.take(@next_issue, 6)} book={book} />
+            </div>
+          </.section>
 
-      <.shelf
-        :if={@show_picks and (@recommendations.books != [] or @recommendations.series != [])}
-        id="home-picks"
-        title="Start reading"
-      >
-        <.book_card
-          :for={book <- @recommendations.books}
-          book={book}
-          as={if book.issue_number, do: :issue, else: :book}
-          scope="picks"
-          class="flex-shrink-0 w-36"
-        />
-        <.series_card :for={s <- @recommendations.series} series={s} scope="picks" class="flex-shrink-0 w-36" />
-      </.shelf>
-
-      <.section :if={@libraries_data != []} title="Libraries" count={length(@libraries_data)}>
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-          <.collection_card
-            :for={data <- @libraries_data}
-            navigate={~p"/library/#{data.library.id}"}
-            name={data.library.name}
-            covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
-            stats={[{"series", data.series_count}, {"books", data.book_count}, {"issues", data.issue_count}]}
-            note="Empty — scan it to fill it"
-          >
-            <:menu :if={@current_user.role == :admin}>
-              <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
-            </:menu>
-            <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-500 tabular-nums">
-              {Stashix.Formatters.format_bytes(data.total_size)}
-            </p>
-            <.scan_status
-              :if={@scan_progress[data.library.id]}
-              progress={@scan_progress[data.library.id]}
-              name={data.library.name}
-            />
-          </.collection_card>
+          <.section :if={@picks?} title="Start reading">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <.book_row :for={book <- @recommendations.books} book={book} />
+              <.media_row
+                :for={s <- @recommendations.series}
+                navigate={~p"/series/#{s.id}"}
+                title={s.name}
+                cover_url={~p"/api/series/#{s.id}/cover"}
+                eyebrow="Series"
+                detail={
+                  [s.issue_count && "#{s.issue_count} issues", Stashix.Formatters.series_years(s)]
+                  |> Enum.filter(& &1)
+                  |> Enum.join(" · ")
+                }
+              />
+            </div>
+          </.section>
         </div>
-      </.section>
+
+        <.section
+          :if={@libraries_data != []}
+          title="Libraries"
+          count={length(@libraries_data)}
+          class={if @queues?, do: "w-full lg:w-64 lg:flex-shrink-0", else: "w-full"}
+        >
+          <div class={[
+            "grid gap-4",
+            if(@queues?,
+              do: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1",
+              else: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
+            )
+          ]}>
+            <.collection_card
+              :for={data <- @libraries_data}
+              navigate={~p"/library/#{data.library.id}"}
+              name={data.library.name}
+              covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
+              stats={[{"series", data.series_count}, {"books", data.book_count}, {"issues", data.issue_count}]}
+              note="Empty — scan it to fill it"
+            >
+              <:menu :if={@current_user.role == :admin}>
+                <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
+              </:menu>
+              <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-500 tabular-nums">
+                {Stashix.Formatters.format_bytes(data.total_size)}
+              </p>
+              <.scan_status
+                :if={@scan_progress[data.library.id]}
+                progress={@scan_progress[data.library.id]}
+                name={data.library.name}
+              />
+            </.collection_card>
+          </div>
+        </.section>
+      </div>
 
       <.shelf :if={@recent_series != []} id="home-recent-series" title="Recent series">
         <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />

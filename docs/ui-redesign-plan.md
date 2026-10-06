@@ -450,3 +450,18 @@ Add a dated line when a phase closes or a decision changes.
     overflow; a touch device has no hover, so the cover fan and the long-box
     pull-out never show there; publisher pages were only checked with
     hand-inserted publishers.
+- 2026-10-06 — Review round after Phase 4 (user feedback):
+  - Sidebar: nav labels back to the regular sans, 15px medium in gray-200,
+    larger icons, taller rows, on a gray-900 panel for contrast with the
+    page. Display type stays on the section labels only. Chosen over three
+    wackier options (big type index, long-box dividers, icon rail).
+  - Home went too far from the old layout: restored the two columns —
+    reading queues on the left as compact rows (`media_row/1`, `book_row/1`),
+    libraries down the right side on desktop. Recent shelves stay below.
+  - Read mark on cards: round, green, larger, with a dark ring. The finished
+    progress bar is green again to match (ink was too quiet).
+  - Gaps closed: shelf arrows only show while the row overflows (`Shelf`
+    hook); publisher pages checked with real publishers read from
+    ComicInfo.xml in generated files; home library card and sidebar scan
+    progress watched through a real 64-file scan.
+  - Left: touch devices have no hover (cover fan, long-box pull-out).

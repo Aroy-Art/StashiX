@@ -19,7 +19,7 @@ defmodule StashixWeb.CoreComponents do
 
   import StashixWeb.UI.Icon
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
-  import StashixWeb.UI.Ink, only: [ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
+  import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
@@ -626,7 +626,7 @@ defmodule StashixWeb.CoreComponents do
     * `page_count` — small page tally in the bottom-right corner (books only)
     * `progress` — fraction read; draws a bar along the bottom edge and, at 1.0,
       the read mark
-    * `read_mark` — `check` (a small ink tick) or `stamp` (a tilted READ stamp)
+    * `read_mark` — `check` (a round green tick) or `stamp` (a tilted READ stamp)
     * `type` — `:book` or `:series`, picks the placeholder icon
     * `stack` — more covers of the same series; they slide out from behind on
       hover and are only fetched then
@@ -682,7 +682,7 @@ defmodule StashixWeb.CoreComponents do
               alt={@title}
               blurhash={@blurhash}
               class="w-full h-full object-cover"
-              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+              onerror="this.style.display='none';this.nextElementSibling?.style.setProperty('display','flex')"
             />
             <div class="w-full h-full hidden items-center justify-center text-gray-600">
               <.icon name={@fallback_icon} class="w-8 h-8" />
@@ -719,7 +719,7 @@ defmodule StashixWeb.CoreComponents do
 
           <span
             :if={@read && @read_mark == "check"}
-            class="absolute top-2 left-2 flex items-center justify-center w-5 h-5 rounded-sm bg-ink text-zinc-950 shadow-[2px_2px_0_0_rgb(0_0_0/0.6)]"
+            class="absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-gray-950/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
             title="Read"
           >
             <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
@@ -828,6 +828,86 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc """
+  Compact row for a book or series in a list: small cover, a line naming what
+  it belongs to, the title, then either a progress bar or a line of detail.
+  Takes a fraction of the height of a `media_card/1`.
+  """
+  attr :navigate, :string, required: true
+  attr :title, :string, required: true
+  attr :cover_url, :string, required: true
+  attr :eyebrow, :string, default: nil
+  attr :detail, :string, default: nil
+  attr :progress, :float, default: nil
+  attr :class, :any, default: nil
+
+  def media_row(assigns) do
+    ~H"""
+    <.link
+      navigate={@navigate}
+      class={[
+        "group flex items-center gap-3 min-w-0 p-2.5 rounded-md bg-white/[0.03] ring-1 ring-white/10 hover:bg-white/[0.07] hover:ring-ink/60 transition-colors",
+        @class
+      ]}
+    >
+      <div class="w-12 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-gray-800">
+        <img
+          src={"#{@cover_url}?s=s"}
+          alt=""
+          loading="lazy"
+          class="w-full h-full object-cover"
+          onerror="this.style.display='none'"
+        />
+      </div>
+      <div class="flex-1 min-w-0">
+        <.eyebrow :if={@eyebrow} size="sm" class="truncate mb-0.5">{@eyebrow}</.eyebrow>
+        <p class="text-sm font-semibold leading-snug text-gray-100 group-hover:text-white line-clamp-2">{@title}</p>
+        <div :if={@progress} class="flex items-center gap-2 mt-1.5">
+          <.progress_bar value={@progress} class="flex-1 h-1" />
+          <span class="text-[10px] font-semibold text-gray-400 tabular-nums">{round(min(@progress, 1.0) * 100)}%</span>
+        </div>
+        <p :if={!@progress && @detail} class="mt-0.5 text-xs text-gray-500 tabular-nums">{@detail}</p>
+      </div>
+    </.link>
+    """
+  end
+
+  @doc "`media_row/1` for a book; `read` is the number of pages read so far."
+  attr :book, :map, required: true
+  attr :read, :integer, default: nil
+  attr :class, :any, default: nil
+
+  def book_row(assigns) do
+    book = assigns.book
+    series = if Ecto.assoc_loaded?(book.series), do: book.series
+
+    assigns =
+      assign(assigns,
+        title: if(book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title),
+        eyebrow: series && series.name,
+        detail:
+          [book.year, book.page_count && book.page_count > 0 && "#{book.page_count} pages"]
+          |> Enum.filter(& &1)
+          |> Enum.join(" · "),
+        progress:
+          if(assigns.read && book.page_count && book.page_count > 1,
+            do: min(assigns.read / (book.page_count - 1), 1.0)
+          )
+      )
+
+    ~H"""
+    <.media_row
+      navigate={"/book/#{@book.id}"}
+      title={@title}
+      cover_url={"/api/books/#{@book.id}/cover"}
+      eyebrow={@eyebrow}
+      detail={@detail}
+      progress={@progress}
+      class={@class}
+    />
+    """
+  end
+
   @doc "Admin ⋮ menu for a library: scan, force rescan, settings. Events are handled by `StashixWeb.Live.Hooks`."
   attr :id, :string, required: true
   attr :library_id, :string, required: true
@@ -838,7 +918,7 @@ defmodule StashixWeb.CoreComponents do
     <.ink_menu id={@id} class={@class}>
       <:trigger
         label="Library actions"
-        class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+        class="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
       >
         <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
       </:trigger>
