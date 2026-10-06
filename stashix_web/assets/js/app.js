@@ -1150,6 +1150,11 @@ if (window.__stashixBooted) {
     e.target.scrollBy({ left: e.detail.pages * e.target.clientWidth * 0.8, behavior: "smooth" })
   })
 
+  // Client-side modals (the cover lightbox): a native <dialog> opened and
+  // closed without a server round trip.
+  window.addEventListener("stashix:show-modal", (e) => e.target.showModal())
+  window.addEventListener("stashix:close-modal", (e) => e.target.closest("dialog")?.close())
+
   // Success flashes clear themselves; clicking does the same thing sooner.
   window.addEventListener("stashix:flash-shown", (e) => {
     const el = e.target

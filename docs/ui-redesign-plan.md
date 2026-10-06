@@ -234,7 +234,8 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `pagination/1`: display-type numerals, ink sticker for the current page.
 - [x] `flash/1`: caption-box look (approved 2026-10-06): ink fill, black text,
   hard violet offset shadow, tilted 1°; errors red with white text.
-- [ ] `modal/1`, `confirm_dialog/1` and the cover lightbox use `UI.Data.dialog`.
+- [x] `confirm_dialog/1` uses `UI.Dialog.dialog`; the cover lightbox is a native
+  `<dialog>` opened client-side; `modal/1` was unused and is deleted.
 
 ### Phase 4 — Browse pages
 
@@ -404,3 +405,18 @@ Add a dated line when a phase closes or a decision changes.
     on its own database with generated comics): menus, selects and dialog on
     the style guide, layout, home, series, book, search, reader and admin
     pages. Not yet tried: Firefox, Safari, a real touch device.
+- 2026-10-06 — Phase 3 done: sidebar (`Layouts.nav_item/1`, current page
+  marked via `current_path` from `Live.Hooks`), top bar, `media_card/1`,
+  pagination, caption-box flashes, confirm dialog and lightbox.
+  - Decisions: flashes are caption boxes; cards get both read marks with the
+    ink tick as default (`read_mark` attr), user setting deferred to Phase 7.
+  - Behaviour changes: info flashes clear themselves after 6s (errors stay);
+    Series/Books/Issues/Publishers sidebar links no longer reload the page;
+    a click on the lightbox image closes it too; `progress_bar` fills ink, not
+    green, at 100%.
+  - Known gaps: a flash raised while a modal dialog is open sits under the
+    dialog's backdrop (dialogs are in the top layer). `media_card/1` builds
+    its element id from the link target, so the same book in two shelves on
+    one page gives duplicate ids (pre-existing).
+  - Browse pages still have the old `browse_header` and pill filters above
+    the new cards; that is Phase 4.

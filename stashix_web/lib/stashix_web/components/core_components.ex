@@ -18,80 +18,11 @@ defmodule StashixWeb.CoreComponents do
   use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Icon
-  import StashixWeb.UI.Ink, only: [sticker: 1, progress_bar: 1]
+  import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
+  import StashixWeb.UI.Ink, only: [ink_button: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
-
-  @doc """
-  Renders a modal.
-
-  ## Examples
-
-      <.modal id="confirm-modal">
-        This is a modal.
-      </.modal>
-
-  JS commands may be passed to the `:on_cancel` to configure
-  the closing/cancel event, for example:
-
-      <.modal id="confirm" on_cancel={JS.navigate(~p"/posts")}>
-        This is another modal.
-      </.modal>
-
-  """
-  attr :id, :string, required: true
-  attr :show, :boolean, default: false
-  attr :on_cancel, JS, default: %JS{}
-  slot :inner_block, required: true
-
-  def modal(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      phx-mounted={@show && show_modal(@id)}
-      phx-remove={hide_modal(@id)}
-      data-cancel={JS.exec(@on_cancel, "phx-remove")}
-      class="relative z-50 hidden"
-    >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
-      <div
-        class="fixed inset-0 overflow-y-auto"
-        aria-labelledby={"#{@id}-title"}
-        aria-describedby={"#{@id}-description"}
-        role="dialog"
-        aria-modal="true"
-        tabindex="0"
-      >
-        <div class="flex min-h-full items-center justify-center">
-          <div class="w-full max-w-3xl p-4 sm:p-6 lg:py-8">
-            <.focus_wrap
-              id={"#{@id}-container"}
-              phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
-              phx-key="escape"
-              phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
-            >
-              <div class="absolute top-6 right-5">
-                <button
-                  phx-click={JS.exec("data-cancel", to: "##{@id}")}
-                  type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
-                  aria-label={gettext("close")}
-                >
-                  <.icon name="lucide-x" class="h-5 w-5" />
-                </button>
-              </div>
-              <div id={"#{@id}-content"}>
-                {render_slot(@inner_block)}
-              </div>
-            </.focus_wrap>
-          </div>
-        </div>
-      </div>
-    </div>
-    """
-  end
 
   @doc """
   Renders flash notices.
@@ -589,37 +520,21 @@ defmodule StashixWeb.CoreComponents do
 
   def confirm_dialog(assigns) do
     ~H"""
-    <%= if @confirm do %>
-      <div
-        class="fixed inset-0 z-50 flex items-center justify-center"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div
-          class="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          phx-click="cancel_confirm"
-          aria-hidden="true"
-        />
-        <div class="relative bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-          <h3 class="text-white font-semibold text-base mb-2">{@confirm.title}</h3>
-          <p class="text-gray-400 text-sm mb-6">{@confirm.message}</p>
-          <div class="flex gap-3 justify-end">
-            <button
-              phx-click="cancel_confirm"
-              class="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              phx-click="confirm_action"
-              class="px-4 py-2 bg-red-700 hover:bg-red-600 text-white text-sm rounded-lg font-medium transition-colors"
-            >
-              {@confirm[:confirm_label] || "Confirm"}
-            </button>
-          </div>
-        </div>
-      </div>
-    <% end %>
+    <.dialog
+      :if={@confirm}
+      id="confirm-dialog"
+      size="sm"
+      title={@confirm.title}
+      on_close={JS.push("cancel_confirm")}
+    >
+      <p class="text-sm text-gray-300">{@confirm.message}</p>
+      <.dialog_footer>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_confirm">Cancel</.ink_button>
+        <.ink_button type="button" variant="danger" size="md" phx-click="confirm_action">
+          {@confirm[:confirm_label] || "Confirm"}
+        </.ink_button>
+      </.dialog_footer>
+    </.dialog>
     """
   end
 
@@ -643,31 +558,6 @@ defmodule StashixWeb.CoreComponents do
         {"transition-all transform ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
-  end
-
-  def show_modal(js \\ %JS{}, id) when is_binary(id) do
-    js
-    |> JS.show(to: "##{id}")
-    |> JS.show(
-      to: "##{id}-bg",
-      time: 300,
-      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
-    )
-    |> show("##{id}-container")
-    |> JS.add_class("overflow-hidden", to: "body")
-    |> JS.focus_first(to: "##{id}-content")
-  end
-
-  def hide_modal(js \\ %JS{}, id) do
-    js
-    |> JS.hide(
-      to: "##{id}-bg",
-      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
-    )
-    |> hide("##{id}-container")
-    |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
-    |> JS.remove_class("overflow-hidden", to: "body")
-    |> JS.pop_focus()
   end
 
   @doc """

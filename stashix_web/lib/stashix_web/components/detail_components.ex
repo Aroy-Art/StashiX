@@ -5,7 +5,7 @@ defmodule StashixWeb.DetailComponents do
   alias Phoenix.LiveView.JS
   import StashixWeb.UI.Icon, only: [icon: 1]
   import StashixWeb.CoreComponents, only: [blurhash_image: 1]
-  import StashixWeb.UI.Ink, only: [panel: 1, stat_list: 1, stat: 1]
+  import StashixWeb.UI.Ink, only: [icon_button: 1, panel: 1, stat_list: 1, stat: 1]
 
   @doc """
   Hero cover with a zoom lightbox. `stack` is a list of extra cover URLs fanned
@@ -39,7 +39,7 @@ defmodule StashixWeb.DetailComponents do
         <%= if @src do %>
           <.blurhash_image id={@id} src={@src} alt={@alt} blurhash={@blurhash} />
           <button
-            phx-click={JS.show(to: "##{@id}-lightbox")}
+            phx-click={JS.dispatch("stashix:show-modal", to: "##{@id}-lightbox")}
             class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
             aria-label="View cover full screen"
           >
@@ -56,26 +56,19 @@ defmodule StashixWeb.DetailComponents do
       </div>
     </div>
 
-    <div :if={@src} id={"#{@id}-lightbox"} style="display:none" class="fixed inset-0 z-50">
-      <div phx-click={JS.hide(to: "##{@id}-lightbox")} class="absolute inset-0 bg-black/90 cursor-zoom-out"></div>
-      <div class="absolute inset-0 flex items-center justify-center" style="pointer-events:none">
-        <img
-          src={@full_src || @src}
-          alt={@alt}
-          loading="lazy"
-          class="max-h-[90vh] max-w-[90vw] object-contain rounded-lg shadow-2xl cursor-default"
-          style="pointer-events:auto"
-          onclick="event.stopPropagation()"
-        />
-      </div>
-      <button
-        phx-click={JS.hide(to: "##{@id}-lightbox")}
-        class="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
-        aria-label="Close"
-      >
-        <.icon name="lucide-x" class="w-5 h-5" />
-      </button>
-    </div>
+    <%!-- Native modal: Escape and focus handling come with it. A click
+         anywhere, image included, closes it. --%>
+    <dialog
+      :if={@src}
+      id={"#{@id}-lightbox"}
+      phx-mounted={JS.ignore_attributes(["open"])}
+      phx-click={JS.dispatch("stashix:close-modal")}
+      aria-label={"#{@alt} cover"}
+      class="lightbox"
+    >
+      <img src={@full_src || @src} alt={@alt} loading="lazy" class="max-h-[90vh] max-w-[90vw] object-contain rounded-md" />
+      <.icon_button icon="lucide-x" label="Close" class="fixed top-4 right-4" />
+    </dialog>
     """
   end
 

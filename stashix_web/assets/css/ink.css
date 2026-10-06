@@ -275,3 +275,17 @@
     from { opacity: 0; transform: translateY(14px) rotate(3deg) scale(0.96); }
   }
 }
+
+/* Cover lightbox: a bare image on a near-black backdrop. */
+.lightbox {
+  max-width: none;
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  cursor: zoom-out;
+}
+.lightbox::backdrop { background: rgb(0 0 0 / 0.92); }
+.lightbox > img { box-shadow: 0 30px 80px -20px #000; }
