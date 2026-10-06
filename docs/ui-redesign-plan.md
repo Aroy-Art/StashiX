@@ -289,7 +289,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   simple ones (users, aliases, visibility).
 - [ ] Admin forms use shared classes (`input_class/0`, label class string) but
   not yet `field/1` + `text_input/1`; convert while splitting.
-- [ ] Delete the unused Phoenix default components in `core_components.ex`
+- [x] Delete the unused Phoenix default components in `core_components.ex`
   (`input/1`, `label/1`, `error/1`, `simple_form/1`, `button/1`, `header/1`,
   `table/1`, `list/1`, `back/1`) after checking nothing renders them.
 - [ ] `grep -rn "indigo-\|rounded-xl\|bg-gray-800 border-gray-700" lib/` is
@@ -372,7 +372,9 @@ Decided 2026-10-06 (Phase 4 round):
 - **Variant-cover hover — keep.** Series cards fan two more covers on hover.
 - **Sound-effect empty states — drop.** Empty states use the ghost numeral.
 - **Per-series ink — drop.** One aqua ink everywhere.
-- **Long-box view — open.** Specimen on `/dev/ui` first, decision after.
+- **Long-box view — dropped** (2026-10-06, after seeing the specimen: "an
+  interesting idea", but not wanted). Module, CSS and specimen deleted; the
+  code is in git history at `939d904` if it is ever revisited.
 
 ## 7. Log
 
