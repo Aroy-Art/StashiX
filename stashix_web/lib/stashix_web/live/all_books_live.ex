@@ -121,24 +121,7 @@ defmodule StashixWeb.AllBooksLive do
       <%= if @books != [] do %>
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
         <.cover_grid>
-          <%= for book <- @books do %>
-            <% prog = @progress_map[book.id] %>
-            <% progress =
-              if prog && book.page_count && book.page_count > 1,
-                do: prog / (book.page_count - 1),
-                else: nil %>
-            <.media_card
-              navigate={~p"/book/#{book.id}"}
-              title={book.title}
-              cover_url={~p"/api/books/#{book.id}/cover"}
-              size="m"
-              subtitle={book.year && to_string(book.year)}
-              progress={progress}
-              page_count={book.page_count}
-              type={:book}
-              blurhash={book.cover && book.cover.blurhash}
-            />
-          <% end %>
+          <.book_card :for={book <- @books} book={book} read={@progress_map[book.id]} />
         </.cover_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
       <% end %>

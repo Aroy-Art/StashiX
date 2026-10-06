@@ -1,6 +1,8 @@
 defmodule StashixWeb.PublisherLive do
   use StashixWeb, :live_view
 
+  import StashixWeb.CollectionComponents
+
   alias Stashix.Library
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -171,10 +173,6 @@ defmodule StashixWeb.PublisherLive do
     end
   end
 
-  defp section_label(:series), do: "Series"
-  defp section_label(:books), do: "Books"
-  defp section_label(:issues), do: "Issues"
-
   @impl true
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
@@ -183,275 +181,31 @@ defmodule StashixWeb.PublisherLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <%!-- Breadcrumb --%>
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-3 text-sm">
-        <button
-          onclick="history.back()"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-md border border-white/20 text-gray-300 hover:border-white/40 hover:text-white transition-colors flex-shrink-0"
-        >
-          <.icon name="lucide-chevron-left" class="w-4 h-4" /> Back
-        </button>
-        <div class="flex items-center gap-2 w-full sm:w-auto sm:flex-1 min-w-0 overflow-hidden order-first sm:order-none">
-          <.link navigate="/" class="text-gray-500 hover:text-gray-300 flex-shrink-0">Home</.link>
-          <span class="text-gray-700 flex-shrink-0">/</span>
-          <%= if @live_action != :show do %>
-            <.link
-              navigate={~p"/publisher/#{@publisher.id}"}
-              class="text-gray-500 hover:text-gray-300 flex-shrink-0"
-            >{@publisher.name}</.link>
-            <span class="text-gray-700 flex-shrink-0">/</span>
-            <span class="text-gray-300 truncate min-w-0">{section_label(@live_action)}</span>
-          <% else %>
-            <span class="text-gray-300 truncate min-w-0">{@publisher.name}</span>
-          <% end %>
-        </div>
-      </div>
-
-      <%= if @live_action == :show do %>
-        <%!-- Overview --%>
-        <div>
-          <h1 class="text-2xl md:text-3xl font-bold text-white">{@publisher.name}</h1>
-          <%= if @publisher.aliases != [] do %>
-            <p class="mt-1 text-sm text-gray-500">
-              Also known as:
-              <%= for {a, i} <- Enum.with_index(@publisher.aliases) do %>
-                <span class="text-gray-400">{a.name}
-                <%= if i < length(@publisher.aliases) - 1 do %>
-                  ,
-                <% end %></span>
-              <% end %>
-            </p>
-          <% end %>
-        </div>
-
-        <%!-- Stat / nav tiles --%>
-        <div class="flex flex-wrap gap-2">
-          <%= if @series_count > 0 do %>
-            <.link
-              navigate={~p"/publisher/#{@publisher.id}/series"}
-              class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
-            >
-              <.icon name="lucide-layers" class="w-4 h-4 text-violet-400 flex-shrink-0" />
-              <span class="text-sm font-semibold text-white">{@series_count}</span>
-              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Series</span>
-              <.icon
-                name="lucide-chevron-right"
-                class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
-              />
-            </.link>
-          <% end %>
-          <%= if @books_count > 0 do %>
-            <.link
-              navigate={~p"/publisher/#{@publisher.id}/books"}
-              class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
-            >
-              <.icon name="lucide-book" class="w-4 h-4 text-violet-400 flex-shrink-0" />
-              <span class="text-sm font-semibold text-white">{@books_count}</span>
-              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Books</span>
-              <.icon
-                name="lucide-chevron-right"
-                class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
-              />
-            </.link>
-          <% end %>
-          <%= if @issues_count > 0 do %>
-            <.link
-              navigate={~p"/publisher/#{@publisher.id}/issues"}
-              class="group flex items-center gap-2.5 px-3 py-2 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/60 hover:bg-gray-800/60 transition-all"
-            >
-              <.icon name="lucide-newspaper" class="w-4 h-4 text-violet-400 flex-shrink-0" />
-              <span class="text-sm font-semibold text-white">{@issues_count}</span>
-              <span class="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Issues</span>
-              <.icon
-                name="lucide-chevron-right"
-                class="w-3.5 h-3.5 text-gray-600 group-hover:text-violet-400 transition-colors"
-              />
-            </.link>
-          <% end %>
-        </div>
-
-        <%!-- Recent Series --%>
-        <%= if @recent_series != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Series
-              </h2>
-              <%= if @series_count > 20 do %>
-                <.link
-                  navigate={~p"/publisher/#{@publisher.id}/series"}
-                  class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</.link>
-              <% end %>
-            </div>
-            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for s <- @recent_series do %>
-                <.series_card series={s} class="flex-shrink-0 w-36" />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%!-- Recent Books --%>
-        <%= if @recent_books != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Books
-              </h2>
-              <%= if @books_count > 20 do %>
-                <.link
-                  navigate={~p"/publisher/#{@publisher.id}/books"}
-                  class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</.link>
-              <% end %>
-            </div>
-            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for book <- @recent_books do %>
-                <.media_card
-                  navigate={~p"/book/#{book.id}"}
-                  title={book.title}
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  size="m"
-                  subtitle={book.year && to_string(book.year)}
-                  page_count={book.page_count}
-                  type={:book}
-                  blurhash={book.cover && book.cover.blurhash}
-                  class="flex-shrink-0 w-36"
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%!-- Recent Issues --%>
-        <%= if @recent_issues != [] do %>
-          <section>
-            <div class="flex items-center justify-between mb-4">
-              <h2 class="text-lg font-semibold text-gray-300 flex items-center gap-2">
-                <span class="w-1 h-5 bg-violet-500 rounded-full inline-block"></span> Issues
-              </h2>
-              <%= if @issues_count > 20 do %>
-                <.link
-                  navigate={~p"/publisher/#{@publisher.id}/issues"}
-                  class="text-sm text-violet-400 hover:text-violet-300"
-                >View all →</.link>
-              <% end %>
-            </div>
-            <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
-              <%= for book <- @recent_issues do %>
-                <.media_card
-                  navigate={~p"/book/#{book.id}"}
-                  title={
-                    if book.issue_number,
-                      do: "##{book.issue_number} – #{book.title}",
-                      else: book.title
-                  }
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  size="m"
-                  subtitle={if book.series, do: book.series.name}
-                  badge={
-                    cond do
-                      book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
-                      book.issue_number -> "##{book.issue_number}"
-                      true -> nil
-                    end
-                  }
-                  type={:book}
-                  blurhash={book.cover && book.cover.blurhash}
-                  class="flex-shrink-0 w-36"
-                />
-              <% end %>
-            </div>
-          </section>
-        <% end %>
-
-        <%= if @series_count == 0 && @books_count == 0 && @issues_count == 0 do %>
-          <.browse_empty icon="lucide-building-2" label="No content linked to this publisher." />
-        <% end %>
-      <% else %>
-        <%!-- Sub-page: Series / Books / Issues --%>
-        <.browse_header
-          title={@publisher.name}
-          subtitle={"#{@total} #{section_label(@live_action) |> String.downcase()}"}
-        >
-          <:controls>
-            <.sort_select options={@sort_options} selected={@sort} />
-          </:controls>
-        </.browse_header>
-
-        <%= if @items != [] do %>
-          <.pagination page={@page} total_pages={@total_pages} />
-
-          <%= if @live_action == :series do %>
-            <.media_grid>
-              <%= for s <- @items do %>
-                <.series_card series={s} />
-              <% end %>
-            </.media_grid>
-          <% end %>
-
-          <%= if @live_action == :books do %>
-            <.media_grid>
-              <%= for book <- @items do %>
-                <% prog = @progress_map[book.id] %>
-                <% progress =
-                  if prog && book.page_count && book.page_count > 1,
-                    do: prog / (book.page_count - 1),
-                    else: nil %>
-                <.media_card
-                  navigate={~p"/book/#{book.id}"}
-                  title={book.title}
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  size="m"
-                  subtitle={book.year && to_string(book.year)}
-                  progress={progress}
-                  page_count={book.page_count}
-                  type={:book}
-                  blurhash={book.cover && book.cover.blurhash}
-                />
-              <% end %>
-            </.media_grid>
-          <% end %>
-
-          <%= if @live_action == :issues do %>
-            <.media_grid>
-              <%= for book <- @items do %>
-                <% prog = @progress_map[book.id] %>
-                <% progress =
-                  if prog && book.page_count && book.page_count > 1,
-                    do: prog / (book.page_count - 1),
-                    else: nil %>
-                <.media_card
-                  navigate={~p"/book/#{book.id}"}
-                  title={
-                    if book.issue_number,
-                      do: "##{book.issue_number} – #{book.title}",
-                      else: book.title
-                  }
-                  cover_url={~p"/api/books/#{book.id}/cover"}
-                  size="m"
-                  subtitle={if book.series, do: book.series.name, else: book.year && to_string(book.year)}
-                  progress={progress}
-                  type={:book}
-                  blurhash={book.cover && book.cover.blurhash}
-                />
-              <% end %>
-            </.media_grid>
-          <% end %>
-
-          <.pagination page={@page} total_pages={@total_pages} />
-        <% end %>
-
-        <%= if !@loading && @items == [] do %>
-          <.browse_empty
-            icon={if @live_action == :series, do: "lucide-layers", else: "lucide-book"}
-            label={"No #{section_label(@live_action) |> String.downcase()} found."}
-          />
-        <% end %>
-      <% end %>
-    </div>
+    <.collection_page
+      name={@publisher.name}
+      kind="Publisher"
+      base_path={~p"/publisher/#{@publisher.id}"}
+      live_action={@live_action}
+      series_count={assigns[:series_count] || 0}
+      books_count={assigns[:books_count] || 0}
+      issues_count={assigns[:issues_count] || 0}
+      recent_series={assigns[:recent_series] || []}
+      recent_books={assigns[:recent_books] || []}
+      recent_issues={assigns[:recent_issues] || []}
+      items={assigns[:items] || []}
+      total={assigns[:total] || 0}
+      page={assigns[:page] || 1}
+      total_pages={assigns[:total_pages] || 1}
+      sort_options={assigns[:sort_options] || []}
+      sort={assigns[:sort]}
+      progress_map={assigns[:progress_map] || %{}}
+      loading={assigns[:loading] || false}
+      empty_hint="No series or books are linked to it yet."
+    >
+      <:meta :if={@publisher.aliases != []}>
+        <span>Also known as {Enum.map_join(@publisher.aliases, ", ", & &1.name)}</span>
+      </:meta>
+    </.collection_page>
     """
   end
 end

@@ -244,10 +244,10 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   library filter as `pill`s, sort as `ink_select`, `cover_grid`.
 - [ ] `all_publishers_live.ex`: extract `<.publisher_card>`; cover strip
   stays, name in display type, counts as `stat`s.
-- [ ] `library_live.ex`: `crumbs`, hero with a cover wash from the newest
+- [x] `library_live.ex`: `crumbs`, hero with a cover wash from the newest
   cover, stat tiles as an `indicia` panel, `shelf` ×3, sub-pages share the
   browse layout above.
-- [ ] `publisher_live.ex`: same treatment; it is a near copy of
+- [x] `publisher_live.ex`: same treatment; it is a near copy of
   `library_live.ex`, so extract the shared overview + sub-page layout into one
   component both use.
 - [ ] `home_live.ex`:

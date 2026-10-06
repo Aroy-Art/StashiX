@@ -768,6 +768,57 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc """
+  `media_card/1` for a book. `as={:issue}` puts the issue number in the title
+  and on a sticker and names the series underneath; the default shows the
+  year and the page count. `read` is the number of pages read so far.
+  """
+  attr :book, :map, required: true
+  attr :as, :atom, default: :book, values: [:book, :issue]
+  attr :read, :integer, default: nil
+  attr :size, :string, default: "m"
+  attr :class, :string, default: ""
+
+  def book_card(assigns) do
+    book = assigns.book
+    issue? = assigns.as == :issue
+    series = if issue? and Ecto.assoc_loaded?(book.series), do: book.series
+    year = book.year && to_string(book.year)
+
+    assigns =
+      assign(assigns,
+        title: if(issue? and book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title),
+        subtitle: (series && series.name) || year,
+        badge:
+          cond do
+            !issue? or is_nil(book.issue_number) -> nil
+            book.volume -> "Vol #{book.volume} ##{book.issue_number}"
+            true -> "##{book.issue_number}"
+          end,
+        progress:
+          if(assigns.read && book.page_count && book.page_count > 1,
+            do: assigns.read / (book.page_count - 1)
+          ),
+        blurhash: Ecto.assoc_loaded?(book.cover) && book.cover && book.cover.blurhash
+      )
+
+    ~H"""
+    <.media_card
+      navigate={"/book/#{@book.id}"}
+      title={@title}
+      cover_url={"/api/books/#{@book.id}/cover"}
+      size={@size}
+      subtitle={@subtitle}
+      badge={@badge}
+      progress={@progress}
+      page_count={if @as == :book, do: @book.page_count}
+      type={:book}
+      blurhash={@blurhash || nil}
+      class={@class}
+    />
+    """
+  end
+
   @doc "Admin ⋮ menu for a library: scan, force rescan, settings. Events are handled by `StashixWeb.Live.Hooks`."
   attr :id, :string, required: true
   attr :library_id, :string, required: true
