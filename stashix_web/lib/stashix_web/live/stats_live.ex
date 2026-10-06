@@ -86,7 +86,7 @@ defmodule StashixWeb.StatsLive do
   end
 
   defp default_colors,
-    do: ["#7c3aed", "#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#4f46e5", "#0e7490", "#047857"]
+    do: ["#7c3aed", "#4fe8eb", "#c4b5fd", "#f59e0b", "#f43f5e", "#34d399", "#60a5fa", "#94a3b8"]
 
   defp legend_opts do
     %{"orient" => "horizontal", "bottom" => 0, "textStyle" => %{"color" => "#9ca3af"}}
@@ -110,7 +110,7 @@ defmodule StashixWeb.StatsLive do
       },
       "yAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "series" => [
         %{
@@ -164,13 +164,13 @@ defmodule StashixWeb.StatsLive do
       },
       "yAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "series" => [
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#2563eb", "borderRadius" => [3, 3, 0, 0]}
+          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [3, 3, 0, 0]}
         }
       ]
     }
@@ -190,7 +190,7 @@ defmodule StashixWeb.StatsLive do
     %{
       "tooltip" => %{"trigger" => "item"},
       "legend" => legend_opts(),
-      "series" => [pie_series(data, ["#4b5563", "#7c3aed", "#10b981"])]
+      "series" => [pie_series(data, ["#4b5563", "#7c3aed", "#22c55e"])]
     }
   end
 
@@ -207,7 +207,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "yAxis" => %{
         "type" => "category",
@@ -373,7 +373,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "yAxis" => %{
         "type" => "category",
@@ -384,7 +384,7 @@ defmodule StashixWeb.StatsLive do
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#06b6d4", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -403,7 +403,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "yAxis" => %{
         "type" => "category",
@@ -414,7 +414,7 @@ defmodule StashixWeb.StatsLive do
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#10b981", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "#7c3aed", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -516,7 +516,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "yAxis" => %{
         "type" => "category",
@@ -527,7 +527,7 @@ defmodule StashixWeb.StatsLive do
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#f59e0b", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -546,7 +546,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "#1f2937"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
       },
       "yAxis" => %{
         "type" => "category",
@@ -557,7 +557,7 @@ defmodule StashixWeb.StatsLive do
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#4f46e5", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "#7c3aed", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -573,292 +573,149 @@ defmodule StashixWeb.StatsLive do
     |> Enum.join(" ")
   end
 
+  attr :id, :string, required: true
+  attr :title, :string, required: true
+  attr :option, :map, required: true
+  attr :height, :string, default: "h-56"
+  attr :class, :any, default: nil
+
+  # A chart in a plain panel. The Chart hook owns the element once mounted.
+  defp chart_card(assigns) do
+    ~H"""
+    <.panel class={["p-4 sm:p-5", @class]}>
+      <.eyebrow tag="h2" tone="light" class="mb-3">{@title}</.eyebrow>
+      <div id={@id} phx-hook="Chart" phx-update="ignore" class={["w-full", @height]} data-option={Jason.encode!(@option)}>
+      </div>
+    </.panel>
+    """
+  end
+
+  attr :label, :string, required: true
+  attr :note, :string, default: nil
+  attr :tone, :string, default: "text-white"
+  slot :inner_block, required: true
+
+  defp figure(assigns) do
+    ~H"""
+    <div class="min-w-0">
+      <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1">{@label}</.eyebrow>
+      <dd class={["font-display font-black text-4xl leading-none tabular-nums", @tone]}>{render_slot(@inner_block)}</dd>
+      <p :if={@note} class="mt-1 text-xs text-gray-400 tabular-nums">{@note}</p>
+    </div>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6 pb-8">
-      <%!-- Header --%>
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold text-white flex items-center gap-3">
-          <.icon name="lucide-chart-bar" class="w-7 h-7 text-violet-400" /> Stats
-        </h1>
-      </div>
+    <.page wide>
+      <.page_hero title="Stats" eyebrow="Your stash in numbers" count={@stats.total_books > 0 && @stats.total_books} />
 
-      <%!-- Summary tiles --%>
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total</p>
-          <p class="text-2xl font-bold text-white">{@stats.total_books}</p>
-          <p class="text-xs text-gray-600 mt-0.5">books & issues</p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Unread</p>
-          <p class="text-2xl font-bold text-gray-400">{@stats.unread}</p>
-          <p class="text-xs text-gray-600 mt-0.5">
-            {pct(@stats.unread, @stats.total_books)}
-          </p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">In Progress</p>
-          <p class="text-2xl font-bold text-violet-400">{@stats.in_progress}</p>
-          <p class="text-xs text-gray-600 mt-0.5">
-            {pct(@stats.in_progress, @stats.total_books)}
-          </p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Completed</p>
-          <p class="text-2xl font-bold text-green-400">{@stats.completed}</p>
-          <p class="text-xs text-gray-600 mt-0.5">
-            {pct(@stats.completed, @stats.total_books)}
-          </p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Total Pages</p>
-          <p class="text-2xl font-bold text-cyan-400">{format_number(@stats.total_pages)}</p>
-          <p class="text-xs text-gray-600 mt-0.5">across all files</p>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Library Size</p>
-          <p class="text-2xl font-bold text-indigo-400">
+      <.panel variant="indicia">
+        <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-6 px-6 py-6">
+          <.figure label="Total" note="books & issues">{format_number(@stats.total_books)}</.figure>
+          <.figure label="Unread" note={pct(@stats.unread, @stats.total_books)} tone="text-gray-300">
+            {format_number(@stats.unread)}
+          </.figure>
+          <.figure label="In progress" note={pct(@stats.in_progress, @stats.total_books)} tone="text-violet-300">
+            {format_number(@stats.in_progress)}
+          </.figure>
+          <.figure label="Completed" note={pct(@stats.completed, @stats.total_books)} tone="text-green-400">
+            {format_number(@stats.completed)}
+          </.figure>
+          <.figure label="Pages" note="across all files">{format_number(@stats.total_pages)}</.figure>
+          <.figure label="Size" note="total storage">
             {Stashix.Formatters.format_bytes(Decimal.to_integer(@stats.total_file_size))}
-          </p>
-          <p class="text-xs text-gray-600 mt-0.5">total storage</p>
-        </div>
+          </.figure>
+        </dl>
+      </.panel>
+
+      <%!-- Fun fact, lettered like a narrator's caption --%>
+      <div>
+        <p class="reader-end-caption inline-block max-w-2xl px-4 py-2.5 bg-ink text-zinc-950 text-sm sm:text-base font-semibold leading-snug">
+          Meanwhile, at the printer: your whole library on A4 would take
+          <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
+          sheets weighing <span class="font-display font-black text-xl">{@stats.paper_weight}</span>.
+        </p>
+        <p class="mt-3 text-xs text-gray-500 tabular-nums">
+          {format_number(@stats.total_pages)} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)
+        </p>
       </div>
 
-      <%!-- Fun fact: paper weight --%>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-        <span class="text-2xl">📄</span>
-        <div>
-          <p class="text-xs text-gray-500 uppercase tracking-wider mb-0.5">Fun Fact · Paper Weight</p>
-          <p class="text-white">
-            If you printed your entire library on A4 paper you'd need
-            <span class="font-bold text-violet-400">{format_number(@stats.paper_sheets)}</span>
-            sheets weighing <span class="font-bold text-violet-400">{@stats.paper_weight}</span>.
-          </p>
-          <p class="text-xs text-gray-600 mt-0.5">
-            {@stats.total_pages} pages ÷ 2 sides × 5 g/sheet (A4 80 gsm)
-          </p>
-        </div>
-      </div>
+      <.section title="Metadata coverage">
+        <.panel class="p-5">
+          <dl class="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6">
+            <div
+              :for={
+                {label, count} <- [
+                  {"With summary", @stats.metadata.with_summary},
+                  {"With genres", @stats.metadata.with_genres},
+                  {"With credits", @stats.metadata.with_credits},
+                  {"With external ids", @stats.metadata.with_external_ids}
+                ]
+              }
+              class="min-w-0"
+            >
+              <.eyebrow tag="dt" size="sm" tone="muted" class="mb-1">{label}</.eyebrow>
+              <dd class="font-display font-black text-3xl leading-none text-white tabular-nums">
+                {pct(count, @stats.metadata.total)}
+              </dd>
+              <.progress_bar
+                value={if @stats.metadata.total > 0, do: count / @stats.metadata.total, else: 0.0}
+                class="h-1 mt-2"
+              />
+              <p class="mt-1.5 text-xs text-gray-500 tabular-nums">{count} of {@stats.metadata.total}</p>
+            </div>
+          </dl>
+        </.panel>
+      </.section>
 
-      <%!-- Metadata coverage tiles --%>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 class="text-sm font-semibold text-gray-400 mb-3">Metadata Coverage</h2>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div class="bg-gray-800 rounded-lg p-3">
-            <p class="text-xs text-gray-500 mb-1">With Summary</p>
-            <p class="text-xl font-bold text-white">
-              {pct(@stats.metadata.with_summary, @stats.metadata.total)}
-            </p>
-            <p class="text-xs text-gray-600 mt-0.5">
-              {@stats.metadata.with_summary} / {@stats.metadata.total}
-            </p>
-          </div>
-          <div class="bg-gray-800 rounded-lg p-3">
-            <p class="text-xs text-gray-500 mb-1">With Genres</p>
-            <p class="text-xl font-bold text-white">
-              {pct(@stats.metadata.with_genres, @stats.metadata.total)}
-            </p>
-            <p class="text-xs text-gray-600 mt-0.5">
-              {@stats.metadata.with_genres} / {@stats.metadata.total}
-            </p>
-          </div>
-          <div class="bg-gray-800 rounded-lg p-3">
-            <p class="text-xs text-gray-500 mb-1">With Credits</p>
-            <p class="text-xl font-bold text-white">
-              {pct(@stats.metadata.with_credits, @stats.metadata.total)}
-            </p>
-            <p class="text-xs text-gray-600 mt-0.5">
-              {@stats.metadata.with_credits} / {@stats.metadata.total}
-            </p>
-          </div>
-          <div class="bg-gray-800 rounded-lg p-3">
-            <p class="text-xs text-gray-500 mb-1">With External IDs</p>
-            <p class="text-xl font-bold text-white">
-              {pct(@stats.metadata.with_external_ids, @stats.metadata.total)}
-            </p>
-            <p class="text-xs text-gray-600 mt-0.5">
-              {@stats.metadata.with_external_ids} / {@stats.metadata.total}
-            </p>
-          </div>
+      <.section title="Over time">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <.chart_card id="chart_by_month" title="Added by month" option={@chart_by_month} />
+          <.chart_card id="chart_by_year" title="Publication year" option={@chart_by_year} />
         </div>
-      </div>
+      </.section>
 
-      <%!-- Charts row 1: timeline --%>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Added by Month</h2>
-          <div
-            id="chart_by_month"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_month)}
-          >
-          </div>
+      <.section title="Breakdown">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <.chart_card id="chart_by_type" title="Type" option={@chart_by_type} />
+          <.chart_card id="chart_reading" title="Reading progress" option={@chart_reading} />
+          <.chart_card id="chart_by_format" title="File formats" option={@chart_by_format} />
+          <.chart_card id="chart_by_language" title="Language" option={@chart_by_language} />
+          <.chart_card id="chart_by_age_rating" title="Age rating" option={@chart_by_age_rating} />
+          <.chart_card id="chart_credits_by_role" title="Credits by role" option={@chart_credits_by_role} />
         </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Publication Year</h2>
-          <div
-            id="chart_by_year"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_year)}
-          >
-          </div>
-        </div>
-      </div>
+      </.section>
 
-      <%!-- Pie charts: 2 rows × 3 cols --%>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Type Breakdown</h2>
-          <div
-            id="chart_by_type"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_type)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Reading Progress</h2>
-          <div
-            id="chart_reading"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_reading)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">File Formats</h2>
-          <div
-            id="chart_by_format"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_format)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Language</h2>
-          <div
-            id="chart_by_language"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_language)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Age Rating</h2>
-          <div
-            id="chart_by_age_rating"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_by_age_rating)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Credits by Role</h2>
-          <div
-            id="chart_credits_by_role"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-56"
-            data-option={Jason.encode!(@chart_credits_by_role)}
-          >
-          </div>
-        </div>
-      </div>
-
-      <%!-- Top series --%>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Series by Issue Count</h2>
-        <div
-          id="chart_top_series"
-          phx-hook="Chart"
-          phx-update="ignore"
-          class="w-full h-96"
-          data-option={Jason.encode!(@chart_top_series)}
-        >
-        </div>
-      </div>
-
-      <%!-- Top creators + top genres side by side --%>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Creators by Credits</h2>
-          <div
-            id="chart_top_creators"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-96"
-            data-option={Jason.encode!(@chart_top_creators)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Genres</h2>
-          <div
-            id="chart_top_genres"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-96"
-            data-option={Jason.encode!(@chart_top_genres)}
-          >
-          </div>
-        </div>
-      </div>
-
-      <%!-- Top characters + top publishers side by side --%>
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Characters</h2>
-          <div
-            id="chart_top_characters"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-96"
-            data-option={Jason.encode!(@chart_top_characters)}
-          >
-          </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="text-sm font-semibold text-gray-400 mb-3">Top Publishers by Book Count</h2>
-          <div
+      <.section title="Top of the stash">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <.chart_card
+            id="chart_top_series"
+            title="Series by issue count"
+            option={@chart_top_series}
+            height="h-96"
+            class="lg:col-span-2"
+          />
+          <.chart_card id="chart_top_creators" title="Creators by credits" option={@chart_top_creators} height="h-96" />
+          <.chart_card id="chart_top_genres" title="Genres" option={@chart_top_genres} height="h-96" />
+          <.chart_card id="chart_top_characters" title="Characters" option={@chart_top_characters} height="h-96" />
+          <.chart_card
             id="chart_top_publishers"
-            phx-hook="Chart"
-            phx-update="ignore"
-            class="w-full h-96"
-            data-option={Jason.encode!(@chart_top_publishers)}
-          >
-          </div>
+            title="Publishers by book count"
+            option={@chart_top_publishers}
+            height="h-96"
+          />
+          <.chart_card
+            id="chart_size_by_publisher"
+            title="File size by publisher"
+            option={@chart_size_by_publisher}
+            height="h-[50rem] lg:h-[28rem]"
+            class="lg:col-span-2"
+          />
         </div>
-      </div>
-
-      <%!-- File size treemap by publisher --%>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 class="text-sm font-semibold text-gray-400 mb-3">File Size by Publisher</h2>
-        <div
-          id="chart_size_by_publisher"
-          phx-hook="Chart"
-          phx-update="ignore"
-          class="w-full h-[50rem] lg:h-[28rem]"
-          data-option={Jason.encode!(@chart_size_by_publisher)}
-        >
-        </div>
-      </div>
-    </div>
+      </.section>
+    </.page>
     """
   end
 

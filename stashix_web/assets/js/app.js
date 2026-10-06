@@ -57,10 +57,25 @@ Hooks.Sidebar = {
 
 const echartsLib = echarts.init ? echarts : echarts.default
 
+// Chart chrome in the display face; series colours come with each option.
+const chartFont = { fontFamily: '"Big Shoulders Display", "Arial Narrow", sans-serif', fontWeight: 600, fontSize: 13 }
+echartsLib.registerTheme("ink", {
+  textStyle: { fontFamily: "ui-sans-serif, system-ui, sans-serif" },
+  categoryAxis: { axisLabel: chartFont, axisLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } } },
+  valueAxis: { axisLabel: chartFont },
+  legend: { textStyle: { ...chartFont, color: "#d1d5db" } },
+  tooltip: {
+    backgroundColor: "#09090b",
+    borderColor: "rgba(255,255,255,0.15)",
+    textStyle: { color: "#f3f4f6" },
+    extraCssText: "box-shadow: 4px 4px 0 0 #4fe8eb; border-radius: 6px;",
+  },
+})
+
 Hooks.Chart = {
   mounted() {
     requestAnimationFrame(() => {
-      const chart = echartsLib.init(this.el, null, {renderer: "canvas"})
+      const chart = echartsLib.init(this.el, "ink", {renderer: "canvas"})
       this.chart = chart
 
       const ro = new ResizeObserver(() => chart.resize())

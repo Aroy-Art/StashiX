@@ -260,7 +260,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 5 — Stats, admin, auth
 
-- [ ] `stats_live.ex`: `page_hero`, summary tiles as `stat`s in an indicia
+- [x] `stats_live.ex`: `page_hero`, summary tiles as `stat`s in an indicia
   panel, chart cards as `panel`s with `section` headings, ECharts theme using
   violet/ink and the display font for axis labels (`Hooks.Chart` in `app.js`).
 - [x] `UI.Forms`: `field`, `text_input`, `textarea`, `toggle`, `checkbox`;
