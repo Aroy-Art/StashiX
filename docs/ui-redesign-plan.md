@@ -168,12 +168,12 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `UI.Ink`: `pill`, `chip`, `panel`, `stat`, `progress_bar`.
 - [x] `UI.Page`: `page`, `crumbs`, `page_hero`, `section`, `cover_grid`,
   `shelf`, `empty_state`.
-- [ ] Swap the four already-redesigned pages onto the primitives. Output
+- [x] Swap the four already-redesigned pages onto the primitives. Output
   should be pixel-identical; this proves the API before the old pages use it.
   - [x] `series_live.ex`
   - [x] `book_live.ex`
   - [x] `search_live.ex`
-  - [ ] `reader_live.ex`
+  - [x] `reader_live.ex`
   - [x] `detail_components.ex`, `metadata_components.ex`
 
 ### Phase 2 — The menu
@@ -351,3 +351,19 @@ Add a dated line when a phase closes or a decision changes.
 - 2026-10-06 — Phase 0 done on branch `ui-redesign`. Style guide at `/dev/ui`
   (`live/dev/ui_live.ex`) shows today's raw class recipes; Phase 1 swaps each
   specimen for its component.
+- 2026-10-06 — Phase 1 done. Components in `components/ui/ink.ex` and
+  `components/ui/page.ex`, imported everywhere via `html_helpers/0`.
+  - Small normalisations made while swapping (not pixel-identical): eyebrow
+    tracking unified per size (0.16em → 0.18/0.2em), heading counts and dense
+    labels all gray-500 (were gray-400/600), "Clear all" links gray-200,
+    book issue sticker tilts -4° (was -3°), the search "Show N results" button
+    has 4px more side padding.
+  - Left bespoke on purpose, to revisit: book format pills (white when
+    selected, `pill` is ink), search type tabs and sort select (Phase 2
+    `segmented` / `ink_select`), search `show_more/1`, `picked/1` and the
+    active-filter chips, reader inline `<kbd>` arrows, cover lightbox close.
+  - `media_card/1` does not use `progress_bar` yet; it is restyled as a whole
+    in Phase 3.
+  - Not checked in a browser behind login. `/dev/ui` was screenshotted
+    headless and looks right; series, book, search and reader are verified by
+    compile and tests only.

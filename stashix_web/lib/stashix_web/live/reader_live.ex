@@ -315,12 +315,9 @@ defmodule StashixWeb.ReaderLive do
       aria-label="End of issue"
     >
       <div class="halftone absolute inset-0" aria-hidden="true"></div>
-      <span
-        class="ghost-numeral absolute -right-6 -bottom-12 text-[16rem] md:text-[26rem]"
-        aria-hidden="true"
-      >
+      <.ghost_numeral class="absolute -right-6 -bottom-12 text-[16rem] md:text-[26rem]">
         {if @next_book, do: String.trim_leading(@next_label || "", "#"), else: "END"}
-      </span>
+      </.ghost_numeral>
 
       <div class="relative flex flex-col sm:flex-row items-center gap-7 sm:gap-12 max-w-3xl">
         <%!-- The page that isn't there: next cover, or a hollow one with a ghost in it --%>
@@ -338,9 +335,9 @@ defmodule StashixWeb.ReaderLive do
               onerror="this.style.display='none'"
               draggable="false"
             />
-            <span class="reader-end-sticker absolute -top-3 -left-4 px-2.5 py-0.5 bg-ink text-zinc-950 font-display font-black uppercase text-lg leading-tight rounded-sm">
+            <.sticker size="md" tilt={false} class="reader-end-sticker absolute -top-3 -left-4">
               Next {@next_label}
-            </span>
+            </.sticker>
           </.link>
         <% else %>
           <div class="reader-end-page reader-end-hollow relative flex items-center justify-center w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm">
@@ -349,19 +346,16 @@ defmodule StashixWeb.ReaderLive do
         <% end %>
 
         <div class="min-w-0 text-center sm:text-left">
-          <p class="rise text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300" style="--i:1">
+          <.eyebrow class="rise" style="--i:1">
             End of {if @label, do: "issue #{@label}", else: "the book"}
             <span class="reader-end-stamp ml-2 inline-flex items-center gap-1 px-1.5 py-px border-2 border-ink text-ink rounded-sm">
               <.icon name="lucide-check" class="w-3 h-3" /> Read
             </span>
-          </p>
+          </.eyebrow>
 
-          <h2
-            class="rise mt-3 font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance"
-            style="--i:2"
-          >
+          <.display_heading size="hero" class="rise mt-3" style="--i:2">
             {if @next_book, do: "To be continued", else: "The End"}
-          </h2>
+          </.display_heading>
 
           <%!-- Narration box, as lettered in the gutter of a last panel --%>
           <p
@@ -379,38 +373,22 @@ defmodule StashixWeb.ReaderLive do
           </p>
 
           <div class="rise flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-4 mt-7" style="--i:4">
-            <.link
-              :if={@next_book}
-              navigate={@next_href}
-              replace
-              class="ink-btn pointer-events-auto inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
-            >
+            <.ink_button :if={@next_book} navigate={@next_href} replace class="pointer-events-auto">
               Next issue <span class="text-ink">{@next_label}</span>
               <.icon name="lucide-arrow-right" class="w-4 h-4" />
-            </.link>
-            <button
-              phx-click="exit"
-              phx-value-to="book"
-              class="reader-end-alt pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors"
-            >
+            </.ink_button>
+            <.ink_button variant="ghost" phx-click="exit" phx-value-to="book" class="reader-end-alt pointer-events-auto">
               <.icon name="lucide-book-open" class="w-4 h-4" /> Issue page
-            </button>
-            <button
+            </.ink_button>
+            <.ink_button
               :if={@book.series}
+              variant={if @next_book, do: "ghost", else: "primary"}
               phx-click="exit"
               phx-value-to="series"
-              class={[
-                "pointer-events-auto inline-flex items-center gap-2 rounded-md font-display uppercase tracking-wide",
-                if(@next_book,
-                  do:
-                    "reader-end-alt px-4 py-2.5 ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-bold transition-colors",
-                  else:
-                    "ink-btn order-first px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xl"
-                )
-              ]}
+              class={["pointer-events-auto", if(@next_book, do: "reader-end-alt", else: "order-first")]}
             >
               <.icon name="lucide-library" class="w-4 h-4" /> Back to series
-            </button>
+            </.ink_button>
           </div>
 
           <p
@@ -474,12 +452,7 @@ defmodule StashixWeb.ReaderLive do
 
         <%!-- Center: issue sticker + series (or book) title --%>
         <div class="flex-1 min-w-0 flex items-center justify-center gap-2.5">
-          <span
-            :if={lbl = issue_label(@book)}
-            class="sticker flex-shrink-0 px-1.5 bg-ink text-zinc-950 font-display font-black text-base leading-tight rounded-sm tabular-nums"
-          >
-            {lbl}
-          </span>
+          <.sticker :if={lbl = issue_label(@book)} class="flex-shrink-0">{lbl}</.sticker>
           <span class="truncate font-display font-extrabold uppercase tracking-wide text-lg leading-none text-white">
             {(@book.series && @book.series.name) || @book.title}
           </span>
