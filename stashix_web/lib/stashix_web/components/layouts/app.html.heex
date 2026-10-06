@@ -20,9 +20,10 @@
     >
       <%!-- Logo --%>
       <%!-- Centred by eye rather than by box: the trail hangs outside the word,
-           so half its width is added on the right to balance the pair. --%>
+           so most of its width is added on the right. That balances the pair
+           and keeps the tip of the trail inside the sidebar. --%>
       <div class="flex items-center justify-center h-16 border-b border-white/10">
-        <.link navigate="/" class="flex items-center text-[2.125rem] pr-[1.05em]" aria-label="Stashix home">
+        <.link navigate="/" class="flex items-center text-[2.125rem] pr-[1.45em]" aria-label="Stashix home">
           <.logo id="sidebar-logo" />
         </.link>
       </div>
