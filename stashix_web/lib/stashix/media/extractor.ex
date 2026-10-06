@@ -1,11 +1,24 @@
 defmodule Stashix.Media.Extractor do
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
+  # Known credit/ad pages that don't follow the z-prefix convention (lowercase, no extension).
+  @credit_page_names ["the saint"]
+
   # Exclude scanner/group credit pages — e.g. "zSoU-Nerd.jpg".
   # These are sorted last by prefixing 'z' and contain no page numbers.
-  defp credit_page?(name) do
-    basename = name |> Path.basename() |> Path.rootname()
-    String.match?(basename, ~r/^z[^0-9]/i)
+  defp z_prefixed?(name), do: String.match?(page_basename(name), ~r/^z[^0-9]/i)
+
+  defp known_credit_page?(name), do: String.downcase(page_basename(name)) in @credit_page_names
+
+  defp page_basename(name), do: name |> Path.basename() |> Path.rootname()
+
+  # Credit pages are a few files at the end of a book. When most of the pages are
+  # z-prefixed the book is simply named that way ("Zatanna 001.jpg"), so keep them.
+  defp reject_credit_pages(names) do
+    names = Enum.reject(names, &known_credit_page?/1)
+    {z_pages, rest} = Enum.split_with(names, &z_prefixed?/1)
+
+    if length(z_pages) > length(rest), do: names, else: rest
   end
 
   def list_pages(book_path) do
@@ -60,7 +73,7 @@ defmodule Stashix.Media.Extractor do
           |> Enum.map(fn {:zip_file, name, _info, _comment, _offset, _comp_size} ->
             to_string(name)
           end)
-          |> Enum.reject(&credit_page?/1)
+          |> reject_credit_pages()
           |> Enum.sort()
 
         {:ok, pages}
@@ -80,7 +93,7 @@ defmodule Stashix.Media.Extractor do
             |> Enum.filter(fn name ->
               String.downcase(Path.extname(name)) in @image_exts
             end)
-            |> Enum.reject(&credit_page?/1)
+            |> reject_credit_pages()
             |> Enum.sort()
 
           {:ok, pages}
@@ -105,7 +118,7 @@ defmodule Stashix.Media.Extractor do
             |> Enum.filter(fn name ->
               String.downcase(Path.extname(name)) in @image_exts
             end)
-            |> Enum.reject(&credit_page?/1)
+            |> reject_credit_pages()
             |> Enum.sort()
 
           {:ok, pages}
