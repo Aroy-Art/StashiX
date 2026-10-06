@@ -89,16 +89,10 @@ defmodule StashixWeb do
       # HTML escaping functionality
       import Phoenix.HTML
 
-      # SaladUI components (non-conflicting with CoreComponents)
-      import SaladUI.Alert
-      import SaladUI.DropdownMenu
-      import SaladUI.Progress
-      import SaladUI.Separator
-
       # Icon component (both lucide- and hero- prefixes)
-      import StashixUi.Icon
+      import StashixWeb.UI.Icon
 
-      # Core UI components (overrides any SaladUI conflicts)
+      # Core UI components
       import StashixWeb.CoreComponents
 
       # Shared "ink" design language components

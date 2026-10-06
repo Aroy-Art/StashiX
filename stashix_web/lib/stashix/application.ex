@@ -9,7 +9,6 @@ defmodule Stashix.Application do
     metrics_ip = Application.get_env(:stashix, :metrics_ip, {0, 0, 0, 0})
 
     children = [
-      TwMerge.Cache,
       StashixWeb.Telemetry,
       {TelemetryMetricsPrometheus.Core, metrics: StashixWeb.Telemetry.metrics()},
       Stashix.Repo,

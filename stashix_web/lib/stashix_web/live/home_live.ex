@@ -641,10 +641,15 @@ defmodule StashixWeb.HomeLive do
                           <span>{progress.scanned}/{progress.total}</span>
                         <% end %>
                       </div>
-                      <.progress
-                        value={if collecting, do: 100, else: pct}
-                        indeterminate={false}
-                        class={"h-1 bg-gray-800 #{cond do progress.done -> "[&>div]:bg-green-500"; collecting -> "[&>div]:bg-violet-500 [&>div]:animate-pulse"; true -> "[&>div]:bg-violet-500" end}"}
+                      <.run_bar
+                        value={
+                          cond do
+                            progress.done -> 1.0
+                            collecting -> nil
+                            true -> pct / 100
+                          end
+                        }
+                        label={"#{lib.name} scan progress"}
                       />
                     </div>
                   <% end %>

@@ -1,6 +1,4 @@
 @import "tailwindcss";
-@import "./salad_ui.css";
-@import "../vendor/tw-animate.css";
 
 @import "./tokens.css";
 @import "./ink.css";
@@ -15,5 +13,3 @@
 
 @source "../js";
 @source "../../lib";
-@source "../../deps/salad_ui/lib";
-@source "../../deps/salad_ui/assets/salad_ui";

@@ -3,7 +3,7 @@ defmodule StashixWeb.DetailComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Icon, only: [icon: 1]
   import StashixWeb.CoreComponents, only: [blurhash_image: 1]
   import StashixWeb.UI.Ink, only: [panel: 1, stat_list: 1, stat: 1]
 

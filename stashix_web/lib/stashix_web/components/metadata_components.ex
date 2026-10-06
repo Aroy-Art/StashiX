@@ -4,7 +4,7 @@ defmodule StashixWeb.MetadataComponents do
 
   alias Phoenix.LiveView.JS
   alias Stashix.Metadata.Roles
-  import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Icon, only: [icon: 1]
   import StashixWeb.UI.Ink, only: [eyebrow: 1, chip: 1]
 
   @doc """

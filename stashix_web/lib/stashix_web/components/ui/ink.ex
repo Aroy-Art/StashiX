@@ -8,7 +8,7 @@ defmodule StashixWeb.UI.Ink do
   """
   use Phoenix.Component
 
-  import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Icon, only: [icon: 1]
 
   @link_attrs ~w(navigate patch href replace method download target rel)
   @button_attrs ~w(type disabled form name value)

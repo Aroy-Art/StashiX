@@ -12,12 +12,12 @@ defmodule StashixWeb.CoreComponents do
   See the [Tailwind CSS documentation](https://tailwindcss.com) to learn
   how to customize them or feel free to swap in another framework altogether.
 
-  Icons are provided by `StashixUi.Icon`. See its docs for usage.
+  Icons are provided by `StashixWeb.UI.Icon`. See its docs for usage.
   """
   use Phoenix.Component
   use Gettext, backend: StashixWeb.Gettext
 
-  import StashixUi.Icon
+  import StashixWeb.UI.Icon
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS

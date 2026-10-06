@@ -7,7 +7,7 @@ defmodule StashixWeb.UI.Page do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
-  import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Icon, only: [icon: 1]
   import StashixWeb.UI.Ink
 
   @doc """

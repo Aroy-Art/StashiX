@@ -105,7 +105,7 @@ defmodule StashixWeb.AllIssuesLive do
       <.browse_header title="Issues" subtitle={"#{@total} issues"}>
         <:controls>
           <.library_filter libraries={@sidebar_libraries} selected_id={@library_id} />
-          <.separator orientation="vertical" class="h-5 mx-1" />
+          <span class="w-px h-5 mx-1 bg-white/15" aria-hidden="true"></span>
           <.sort_select options={@sort_options} selected={@sort} />
         </:controls>
       </.browse_header>

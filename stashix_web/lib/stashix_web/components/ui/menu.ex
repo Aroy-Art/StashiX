@@ -9,7 +9,7 @@ defmodule StashixWeb.UI.Menu do
   """
   use Phoenix.Component
 
-  import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Icon, only: [icon: 1]
 
   @link_attrs ~w(navigate patch href replace method download target rel)
 

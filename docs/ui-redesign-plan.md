@@ -212,9 +212,9 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] Navbar search results dropdown takes the menu skin.
 - [x] `UI.Dialog.dialog` (own module, `components/ui/dialog.ex`) on native
   `<dialog>`; the series and book edit dialogs use it (moved up from Phase 3).
-- [ ] `login_live.ex` alert, the three browse-page separators and the
+- [x] `login_live.ex` alert, the three browse-page separators and the
   `home_live.ex` progress → plain markup / `progress_bar`.
-- [ ] **Remove SaladUI entirely** per D2. `grep -ri salad` returns nothing;
+- [x] **Remove SaladUI entirely** per D2. `grep -ri salad` returns nothing;
   `mix deps.unlock --unused` drops it from `mix.lock`.
 
 ### Phase 3 — App shell and cards
@@ -369,3 +369,27 @@ Add a dated line when a phase closes or a decision changes.
   - Not checked in a browser behind login. `/dev/ui` was screenshotted
     headless and looks right; series, book, search and reader are verified by
     compile and tests only.
+- 2026-10-06 — Phase 2 done. SaladUI is gone: dep, `lib/stashix_ui/`,
+  `assets/js/ui/`, `salad_ui.css`, `tw-animate.css`, `tailwind.colors.json`
+  and the `TwMerge.Cache` supervision child. `Icon` moved to
+  `StashixWeb.UI.Icon`. A running dev server needs a restart after pulling
+  this (the supervision tree changed).
+  - Menu and select are manual popovers driven by `hooks/ink_menu.js`; dialog
+    is a native `<dialog>` driven by `hooks/ink_dialog.js`.
+  - Gotcha found on the way: `phx-value-value` on a `<button>` is overwritten
+    by the button's own (empty) `value`. Never name a param `value` there.
+  - Sign out is a `method="delete"` link now; the hidden logout form is gone.
+  - Deviations from the plan: dialog lives in `UI.Dialog`, not `UI.Data`;
+    search type tabs stay bespoke; `run_bar` added to `UI.Ink` (activity menu,
+    home library cards).
+  - Left for later: the shadcn colour tokens in `tokens.css` (`--card`,
+    `--popover`, …) are no longer used by any class, but `--border` still sets
+    the default border colour, so pruning them is a Phase 6 job. `assets/
+    tailwind.config.js` looks unused under Tailwind v4 (nothing `@config`s
+    it); verify and delete in Phase 6. `Icon` reads its SVG from `deps/` on
+    every render, which is slow and will not exist in a release unless deps
+    are shipped; worth embedding at compile time.
+  - Verified in a real browser (Playwright against a throwaway local server
+    on its own database with generated comics): menus, selects and dialog on
+    the style guide, layout, home, series, book, search, reader and admin
+    pages. Not yet tried: Firefox, Safari, a real touch device.

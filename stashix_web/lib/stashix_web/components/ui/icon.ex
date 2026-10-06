@@ -1,4 +1,4 @@
-defmodule StashixUi.Icon do
+defmodule StashixWeb.UI.Icon do
   @moduledoc """
   Renders icons from two supported sets via a unified `icon/1` component.
 
@@ -28,7 +28,7 @@ defmodule StashixUi.Icon do
       <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
   """
 
-  use StashixUi, :component
+  use Phoenix.Component
 
   attr :name, :string, required: true
   attr :class, :string, default: nil
@@ -62,7 +62,7 @@ defmodule StashixUi.Icon do
     """
   end
 
-  @icons_dir Path.expand("../../deps/lucide/icons", __DIR__)
+  @icons_dir Path.expand("../../../../deps/lucide/icons", __DIR__)
 
   defp read_icon(name) do
     path = Path.join(@icons_dir, "#{name}.svg")

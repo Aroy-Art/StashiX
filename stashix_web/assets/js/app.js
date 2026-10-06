@@ -24,12 +24,8 @@ import "../vendor/blurhash"
 import * as echarts from "../vendor/echarts.min"
 import InkMenu from "./hooks/ink_menu.js"
 import InkDialog from "./hooks/ink_dialog.js"
-import SaladUI from "./ui/index.js";
-import { SaladUIHook } from "./ui/core/hook.js";
-import "./ui/components/dialog.js";
-import "./ui/components/dropdown_menu.js";
 
-let Hooks = { SaladUI: SaladUIHook, InkMenu, InkDialog }
+let Hooks = { InkMenu, InkDialog }
 
 Hooks.Sidebar = {
   mounted() {
