@@ -404,13 +404,18 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
-  @doc "Wrapping row of `stat/1`s."
+  @doc """
+  Wrapping row of `stat/1`s. With `inline`, from the `lg` breakpoint up each
+  label sits beside its value instead of above it, for a strip that should
+  stay one line tall where there is width to spare.
+  """
+  attr :inline, :boolean, default: false
   attr :class, :any, default: nil
   slot :inner_block, required: true
 
   def stat_list(assigns) do
     ~H"""
-    <dl class={["flex flex-wrap gap-x-10 gap-y-4", @class]}>
+    <dl data-inline={@inline} class={["group/stats flex flex-wrap gap-x-10 gap-y-4", @class]}>
       {render_slot(@inner_block)}
     </dl>
     """
@@ -427,8 +432,11 @@ defmodule StashixWeb.UI.Ink do
 
   def stat(assigns) do
     ~H"""
-    <div class={["min-w-0", @class]}>
-      <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1">{@label}</.eyebrow>
+    <div class={[
+      "min-w-0 lg:group-data-[inline]/stats:flex lg:group-data-[inline]/stats:items-baseline lg:group-data-[inline]/stats:gap-2.5",
+      @class
+    ]}>
+      <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1 lg:group-data-[inline]/stats:mb-0">{@label}</.eyebrow>
       <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums">
         <.link :if={@navigate} navigate={@navigate} class="hover:text-ink transition-colors">
           {render_slot(@inner_block)}

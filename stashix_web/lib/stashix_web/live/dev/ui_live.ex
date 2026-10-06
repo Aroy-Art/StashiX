@@ -335,6 +335,13 @@ defmodule StashixWeb.Dev.UiLive do
             <.stat label="Series" navigate="/series">42</.stat>
           </.stat_list>
         </.panel>
+        <.panel variant="indicia" class="w-full max-w-2xl">
+          <.stat_list inline class="px-6 py-3.5">
+            <.stat label="Series">350</.stat>
+            <.stat label="Books">395</.stat>
+            <.stat label="Issues" navigate="/issues">2344</.stat>
+          </.stat_list>
+        </.panel>
         <.panel variant="rail" class="w-64 rounded-lg">
           <div class="px-5 py-4 space-y-2.5">
             <.display_heading size="panel" level={3} count={2} count_tone="ink">Filters</.display_heading>

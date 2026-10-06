@@ -314,7 +314,7 @@ defmodule StashixWeb.HomeLive do
       </.empty_state>
 
       <.panel :if={@hero} variant="indicia">
-        <.stat_list class="px-6 py-5">
+        <.stat_list inline class="px-6 py-5 lg:py-3.5">
           <.stat label="Series" navigate={~p"/series"}>{@total_series}</.stat>
           <.stat label="Books" navigate={~p"/books"}>{@total_books}</.stat>
           <.stat label="Issues" navigate={~p"/issues"}>{@total_issues}</.stat>
