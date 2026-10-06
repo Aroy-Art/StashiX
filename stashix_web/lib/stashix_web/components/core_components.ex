@@ -18,6 +18,7 @@ defmodule StashixWeb.CoreComponents do
   use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Icon
+  import StashixWeb.UI.Ink, only: [sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
@@ -726,15 +727,15 @@ defmodule StashixWeb.CoreComponents do
   end
 
   @doc """
-  A unified card component for books and series.
+  Cover card for a book or a series: the cover with its marks, title and
+  subtitle underneath.
 
-  Attrs:
-    - href: link target
-    - title: display title
-    - cover_url: image src (nil shows fallback)
-    - subtitle: small text below title (year, date range, etc.)
-    - badge: overlaid bottom-left badge text (issue number, issue count)
-    - type: :book | :series — controls fallback icon
+    * `badge` — ink sticker in the bottom-left corner (issue number, issue count)
+    * `page_count` — small page tally in the bottom-right corner (books only)
+    * `progress` — fraction read; draws a bar along the bottom edge and, at 1.0,
+      the read mark
+    * `read_mark` — `check` (a small ink tick) or `stamp` (a tilted READ stamp)
+    * `type` — `:book` or `:series`, picks the placeholder icon
   """
   attr :navigate, :any, required: true
   attr :title, :string, required: true
@@ -743,6 +744,7 @@ defmodule StashixWeb.CoreComponents do
   attr :subtitle, :string, default: nil
   attr :badge, :string, default: nil
   attr :progress, :float, default: nil
+  attr :read_mark, :string, default: "check", values: ~w(check stamp)
   attr :type, :atom, default: :book
   attr :page_count, :integer, default: nil
   attr :blurhash, :string, default: nil
@@ -759,16 +761,12 @@ defmodule StashixWeb.CoreComponents do
         )
       )
       |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.navigate)}")
+      |> assign(:read, is_number(assigns.progress) and assigns.progress >= 1.0)
+      |> assign(:fallback_icon, if(assigns.type == :series, do: "lucide-book-copy", else: "lucide-book-open"))
 
     ~H"""
-    <.link
-      navigate={@navigate}
-      class={[
-        "group rounded-xl overflow-hidden bg-gray-900 shadow-[0_0_12px_rgba(0,0,0,0.5)] hover:shadow-[0_0_18px_rgba(109,40,217,0.35)] hover:-translate-y-0.5 transition-all duration-200",
-        @class
-      ]}
-    >
-      <div class="aspect-[2/3] bg-gray-800 relative overflow-hidden">
+    <.link navigate={@navigate} class={["media-card group block min-w-0", @class]}>
+      <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10">
         <%= if @img_src do %>
           <.blurhash_image
             id={@cover_id}
@@ -779,84 +777,68 @@ defmodule StashixWeb.CoreComponents do
             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
           />
           <div class="w-full h-full hidden items-center justify-center text-gray-600">
-            <.media_card_fallback type={@type} />
+            <.icon name={@fallback_icon} class="w-8 h-8" />
           </div>
         <% else %>
           <div class="w-full h-full flex items-center justify-center text-gray-600">
-            <.media_card_fallback type={@type} />
+            <.icon name={@fallback_icon} class="w-8 h-8" />
           </div>
         <% end %>
-        <%= if @badge do %>
-          <span class="absolute bottom-2 left-2 text-xs bg-gray-800/40 text-gray-300 border-1 border-gray-400/80 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
-            {@badge}
-          </span>
-        <% end %>
-        <%= if @type == :book && @page_count && @page_count > 0 do %>
-          <span class="absolute bottom-2 left-2 flex items-center gap-0.5 text-xs bg-gray-800/40 text-gray-300 border border-gray-400/80 px-2 py-0.5 rounded-full backdrop-blur-sm font-medium">
-            <.icon name="lucide-sticky-note" class="w-3 h-3 shrink-0" />
-            {@page_count}
-          </span>
-        <% end %>
-        <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-gray-900/80 to-transparent"></div>
-        <%= if @progress do %>
-          <%= if @progress >= 1.0 do %>
-            <div class="absolute top-2 left-2 z-10 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow-lg">
-              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-          <% end %>
-          <div class="absolute bottom-0 inset-x-0 h-1 bg-gray-700/60 z-10">
-            <div
-              class={"h-full transition-all #{if @progress >= 1.0, do: "bg-green-500", else: "bg-violet-500"}"}
-              style={"width: #{round(min(@progress, 1.0) * 100)}%"}
-            >
-            </div>
-          </div>
-        <% end %>
+
+        <div
+          :if={@read && @read_mark == "stamp"}
+          class="absolute inset-0 bg-gray-950/45 pointer-events-none"
+          aria-hidden="true"
+        >
+        </div>
+        <div class="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-950/85 to-transparent pointer-events-none">
+        </div>
+
+        <.sticker :if={@badge} size="xs" tilt={false} class="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate">
+          {@badge}
+        </.sticker>
+        <span
+          :if={@type == :book && @page_count && @page_count > 0}
+          class={[
+            "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-gray-950/70 text-[10px] font-semibold text-gray-200 tabular-nums",
+            if(@badge, do: "top-2", else: "bottom-2")
+          ]}
+          title={"#{@page_count} pages"}
+        >
+          <.icon name="lucide-sticky-note" class="w-2.5 h-2.5 shrink-0" />
+          {@page_count}
+        </span>
+
+        <span
+          :if={@read && @read_mark == "check"}
+          class="absolute top-2 left-2 flex items-center justify-center w-5 h-5 rounded-sm bg-ink text-zinc-950 shadow-[2px_2px_0_0_rgb(0_0_0/0.6)]"
+          title="Read"
+        >
+          <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
+          <span class="sr-only">Read</span>
+        </span>
+        <span
+          :if={@read && @read_mark == "stamp"}
+          class="read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
+        >
+          Read
+        </span>
+
+        <.progress_bar
+          :if={@progress}
+          value={@progress}
+          rounded={false}
+          track="bg-gray-950/70"
+          class="absolute bottom-0 inset-x-0 h-1"
+        />
       </div>
-      <div class="px-2.5 py-2 bg-gray-900">
-        <p class="text-xs font-medium text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+      <div class="pt-2 px-0.5">
+        <p class="text-[13px] leading-snug font-semibold text-gray-200 group-hover:text-white transition-colors line-clamp-2">
           {@title}
         </p>
-        <%= if @subtitle do %>
-          <p class="text-xs text-gray-500 mt-0.5">{@subtitle}</p>
-        <% end %>
+        <p :if={@subtitle} class="mt-0.5 text-xs text-gray-500 tabular-nums">{@subtitle}</p>
       </div>
     </.link>
-    """
-  end
-
-  attr :type, :atom, default: :book
-
-  defp media_card_fallback(%{type: :series} = assigns) do
-    ~H"""
-    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-      />
-    </svg>
-    """
-  end
-
-  defp media_card_fallback(assigns) do
-    ~H"""
-    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="1.5"
-        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-      />
-    </svg>
     """
   end
 

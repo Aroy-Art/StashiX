@@ -236,3 +236,26 @@
   -webkit-appearance: none;
   appearance: none;
 }
+
+/* ── Media card ─────────────────────────────────────────────────────────── */
+
+/* The cover lifts off an ink shadow on hover, like .ink-btn. */
+.media-card-cover {
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+.media-card:hover .media-card-cover,
+.media-card:focus-visible .media-card-cover {
+  transform: translate(-2px, -2px);
+  box-shadow: 5px 5px 0 0 var(--color-ink), 0 0 0 1px color-mix(in oklch, var(--color-ink) 70%, transparent);
+}
+.media-card:focus-visible { outline: none; }
+
+/* READ stamp across the cover (read_mark="stamp"). */
+.read-stamp {
+  transform: translateX(-50%) rotate(-12deg);
+  letter-spacing: 0.16em;
+  box-shadow: 2px 2px 0 0 rgb(0 0 0 / 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .media-card-cover { transition: none; }
+}

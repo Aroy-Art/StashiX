@@ -306,7 +306,25 @@ defmodule StashixWeb.Dev.UiLive do
           <.hero_cover id="ui-hero-cover" />
         </div>
         <.media_card navigate="/dev/ui" title="Media card" subtitle="2024" badge="#1" progress={0.4} class="w-36" />
-        <.media_card navigate="/dev/ui#read" title="Read card" subtitle="2024" progress={1.0} class="w-36" />
+        <.media_card
+          navigate="/dev/ui#read"
+          title="Read, check mark"
+          subtitle="2024"
+          badge="#2"
+          progress={1.0}
+          class="w-36"
+        />
+        <.media_card
+          navigate="/dev/ui#stamp"
+          title="Read, stamp mark"
+          subtitle="2024"
+          badge="#3"
+          progress={1.0}
+          read_mark="stamp"
+          class="w-36"
+        />
+        <.media_card navigate="/dev/ui#pages" title="Book with page count" page_count={128} class="w-36" />
+        <.media_card navigate="/dev/ui#series" title="Series" badge="6 issues" type={:series} class="w-36" />
       </.specimen>
 
       <.section title="Section" count={6}>

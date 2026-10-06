@@ -226,7 +226,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] Sidebar actually marks the current page (today only admin nav does).
 - [x] Top bar: search box in the `search-headline` family (heavy bottom rule,
   ink caret), `kbd` component, violet→ink rule under the bar like `.reader-bar`.
-- [ ] `media_card/1`: `rounded-md`, ring instead of glow, issue number as a
+- [x] `media_card/1`: `rounded-md`, ring instead of glow, issue number as a
   sticker, `progress_bar`, lucide icons in place of the inline SVGs, "read"
   mark in ink instead of green. Decided 2026-10-06: build both read marks —
   `read_mark="check"` (small ink tick, the default) and `"stamp"` (rotated
