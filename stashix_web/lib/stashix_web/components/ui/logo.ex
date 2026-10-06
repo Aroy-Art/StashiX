@@ -5,7 +5,8 @@ defmodule StashixWeb.UI.Logo do
   @doc """
   "Stash" in white, "iX" in violet with an aqua dot on the i, and the trail
   sweeping off the X, set in the display face. It scales with the font size,
-  so size it with a text class. `glow` is the soft violet halo on the "iX".
+  so size it with a text class. The whole word sits on a hard violet drop
+  shadow; `glow` adds the soft violet halo on the "iX".
 
   The aqua dot is a second "i" laid over the first and clipped to its top,
   so it follows the typeface instead of being drawn by hand.
