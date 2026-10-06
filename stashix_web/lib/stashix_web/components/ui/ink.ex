@@ -406,7 +406,7 @@ defmodule StashixWeb.UI.Ink do
 
   @doc """
   Wrapping row of `stat/1`s. With `inline`, from the `lg` breakpoint up each
-  label sits beside its value instead of above it, for a strip that should
+  label sits after its value ("350 SERIES") instead of above it, for a strip that should
   stay one line tall where there is width to spare.
   """
   attr :inline, :boolean, default: false
@@ -433,7 +433,7 @@ defmodule StashixWeb.UI.Ink do
   def stat(assigns) do
     ~H"""
     <div class={[
-      "min-w-0 lg:group-data-[inline]/stats:flex lg:group-data-[inline]/stats:items-baseline lg:group-data-[inline]/stats:gap-2.5",
+      "min-w-0 lg:group-data-[inline]/stats:flex lg:group-data-[inline]/stats:flex-row-reverse lg:group-data-[inline]/stats:justify-end lg:group-data-[inline]/stats:items-baseline lg:group-data-[inline]/stats:gap-2",
       @class
     ]}>
       <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1 lg:group-data-[inline]/stats:mb-0">{@label}</.eyebrow>
