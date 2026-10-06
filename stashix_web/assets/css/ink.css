@@ -12,12 +12,7 @@
 
 /* Blurred cover wash behind the hero, fading into the page background. */
 .detail-backdrop {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    #000 0%,
-    #000 35%,
-    transparent 100%
-  );
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%);
 }
 .detail-backdrop > img {
@@ -38,22 +33,10 @@
 
 /* Print-dot texture, densest in the top-right corner. */
 .halftone {
-  background-image: radial-gradient(
-    circle,
-    rgb(255 255 255 / 0.16) 1.1px,
-    transparent 1.7px
-  );
+  background-image: radial-gradient(circle, rgb(255 255 255 / 0.16) 1.1px, transparent 1.7px);
   background-size: 10px 10px;
-  -webkit-mask-image: radial-gradient(
-    ellipse 70% 90% at 100% 0%,
-    #000 0%,
-    transparent 70%
-  );
-  mask-image: radial-gradient(
-    ellipse 70% 90% at 100% 0%,
-    #000 0%,
-    transparent 70%
-  );
+  -webkit-mask-image: radial-gradient(ellipse 70% 90% at 100% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse 70% 90% at 100% 0%, #000 0%, transparent 70%);
 }
 
 /* Oversized outlined numeral sitting behind the hero text. */
@@ -220,11 +203,7 @@
    down the right side of the panel sitting on top of it. */
 .ink-rail {
   padding-right: 4px;
-  background: linear-gradient(
-    to bottom,
-    var(--color-ink),
-    var(--color-violet-500)
-  );
+  background: linear-gradient(to bottom, var(--color-ink), var(--color-violet-500));
 }
 
 /* Staggered entrance; --i sets the order. */
@@ -293,12 +272,7 @@
   right: 0;
   bottom: 0;
   height: 2px;
-  background: linear-gradient(
-    to right,
-    var(--color-violet-500),
-    var(--color-ink) 55%,
-    rgb(255 255 255 / 0.1)
-  );
+  background: linear-gradient(to right, var(--color-violet-500), var(--color-ink) 55%, rgb(255 255 255 / 0.1));
   pointer-events: none;
 }
 
@@ -540,39 +514,21 @@
 /* Violet-to-ink wash behind the cover. */
 .cover-wash {
   background:
-    radial-gradient(
-      ellipse 60% 50% at 15% 10%,
-      rgb(139 92 246 / 0.28),
-      transparent 70%
-    ),
-    radial-gradient(
-      ellipse 55% 45% at 90% 95%,
-      color-mix(in oklch, var(--color-ink) 22%, transparent),
-      transparent 70%
-    );
+    radial-gradient(ellipse 60% 50% at 15% 10%, rgb(139 92 246 / 0.28), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 90% 95%, color-mix(in oklch, var(--color-ink) 22%, transparent), transparent 70%);
 }
 /* The cover itself: a printed sheet with a thick ink trim. */
 .cover-page {
   overflow: hidden;
-  background:
-    linear-gradient(160deg, rgb(139 92 246 / 0.16), transparent 45%),
-    var(--color-gray-950);
+  background: linear-gradient(160deg, rgb(139 92 246 / 0.16), transparent 45%), var(--color-gray-950);
   box-shadow:
     0 0 0 1px rgb(255 255 255 / 0.14),
     8px 8px 0 0 var(--color-ink),
     0 40px 80px -30px #000;
 }
 .cover-page > .halftone {
-  -webkit-mask-image: radial-gradient(
-    ellipse 90% 70% at 100% 100%,
-    #000 0%,
-    transparent 75%
-  );
-  mask-image: radial-gradient(
-    ellipse 90% 70% at 100% 100%,
-    #000 0%,
-    transparent 75%
-  );
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 100% 100%, #000 0%, transparent 75%);
+  mask-image: radial-gradient(ellipse 90% 70% at 100% 100%, #000 0%, transparent 75%);
 }
 .cover-masthead {
   font-size: clamp(3.25rem, 17vw, 5.75rem);
@@ -611,14 +567,7 @@
 
 /* One visible focus ring for keyboard users, in ink. Components that show
    focus another way (menu rows, inputs, cards) opt out with outline-none. */
-:where(
-  a,
-  button,
-  summary,
-  [role="button"],
-  [role="switch"],
-  [tabindex]:not([tabindex="-1"])
-):focus-visible {
+:where(a, button, summary, [role="button"], [role="switch"], [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--color-ink);
   outline-offset: 2px;
 }

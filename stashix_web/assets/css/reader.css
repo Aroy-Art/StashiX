@@ -16,15 +16,21 @@
   background: linear-gradient(to right, var(--color-violet-500), var(--color-ink) 55%, transparent);
   pointer-events: none;
 }
-.reader-bar-top::after { bottom: 0; }
-.reader-bar-bottom::after { top: 0; }
+.reader-bar-top::after {
+  bottom: 0;
+}
+.reader-bar-bottom::after {
+  top: 0;
+}
 
 /* Zoom cluster (an .ink-segmented) floats over the artwork itself, so it needs its own backing to stay legible on a white page. */
 .reader-ctl-float {
   background: rgb(9 9 11 / 0.6);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 18px -4px rgb(0 0 0 / 0.7);
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.18),
+    0 6px 18px -4px rgb(0 0 0 / 0.7);
 }
 
 /* Scrubber: violet fill up to --fill, a chunky aqua tab for the thumb. */
@@ -60,7 +66,9 @@
   box-shadow: 2px 2px 0 0 var(--color-violet-600);
   cursor: grab;
 }
-.reader-slider:focus-visible { box-shadow: 0 0 0 2px var(--color-ink); }
+.reader-slider:focus-visible {
+  box-shadow: 0 0 0 2px var(--color-ink);
+}
 
 /* ── Reader end card ────────────────────────────────────────────────────── */
 
@@ -72,12 +80,18 @@
 /* The "page that isn't there": dropped on the desk at an angle, inked shadow. */
 .reader-end-page {
   transform: rotate(-4deg);
-  box-shadow: 6px 6px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
-  transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease;
+  box-shadow:
+    6px 6px 0 0 var(--color-ink),
+    0 30px 60px -20px rgb(0 0 0 / 0.9);
+  transition:
+    transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 200ms ease;
 }
 a.reader-end-page:hover {
   transform: rotate(-1deg) translateY(-4px) scale(1.03);
-  box-shadow: 9px 9px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
+  box-shadow:
+    9px 9px 0 0 var(--color-ink),
+    0 30px 60px -20px rgb(0 0 0 / 0.9);
 }
 .reader-end-hollow {
   box-shadow: none;
@@ -97,20 +111,38 @@ a.reader-end-page:hover {
   box-shadow: 3px 3px 0 0 var(--color-violet-600);
 }
 @media (prefers-reduced-motion: no-preference) {
-  .reader-end { animation: reader-end-in 220ms ease-out backwards; }
-  .reader-end-page { animation: reader-end-drop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
-  .reader-end-stamp { animation: reader-end-stamp 320ms cubic-bezier(0.2, 1.6, 0.4, 1) 420ms backwards; }
-  .reader-end-ghost { animation: reader-end-float 3.2s ease-in-out infinite; }
+  .reader-end {
+    animation: reader-end-in 220ms ease-out backwards;
+  }
+  .reader-end-page {
+    animation: reader-end-drop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+  }
+  .reader-end-stamp {
+    animation: reader-end-stamp 320ms cubic-bezier(0.2, 1.6, 0.4, 1) 420ms backwards;
+  }
+  .reader-end-ghost {
+    animation: reader-end-float 3.2s ease-in-out infinite;
+  }
   @keyframes reader-end-in {
-    from { opacity: 0; }
+    from {
+      opacity: 0;
+    }
   }
   @keyframes reader-end-drop {
-    from { opacity: 0; transform: translateY(-40px) rotate(9deg) scale(1.15); }
+    from {
+      opacity: 0;
+      transform: translateY(-40px) rotate(9deg) scale(1.15);
+    }
   }
   @keyframes reader-end-stamp {
-    from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
+    from {
+      opacity: 0;
+      transform: rotate(-14deg) scale(2.2);
+    }
   }
   @keyframes reader-end-float {
-    50% { transform: translateY(-10px) rotate(4deg); }
+    50% {
+      transform: translateY(-10px) rotate(4deg);
+    }
   }
 }
