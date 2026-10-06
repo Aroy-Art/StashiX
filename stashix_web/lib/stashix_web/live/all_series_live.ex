@@ -82,12 +82,6 @@ defmodule StashixWeb.AllSeriesLive do
     assign(socket, series: series, total: total, total_pages: total_pages, loading: false)
   end
 
-  defp series_date_range(%{start_year: nil}), do: nil
-  defp series_date_range(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
-  defp series_date_range(%{start_year: y, end_year: nil}), do: to_string(y)
-  defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
-  defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
-
   @impl true
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
@@ -109,16 +103,7 @@ defmodule StashixWeb.AllSeriesLive do
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
         <.media_grid>
           <%= for s <- @series do %>
-            <.media_card
-              navigate={~p"/series/#{s.id}"}
-              title={s.name}
-              cover_url={~p"/api/series/#{s.id}/cover"}
-              size="m"
-              subtitle={series_date_range(s)}
-              badge={"#{s.issue_count} issues"}
-              type={:series}
-              blurhash={s.cover_blurhash}
-            />
+            <.series_card series={s} />
           <% end %>
         </.media_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />

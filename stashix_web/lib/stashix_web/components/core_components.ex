@@ -628,6 +628,8 @@ defmodule StashixWeb.CoreComponents do
       the read mark
     * `read_mark` — `check` (a small ink tick) or `stamp` (a tilted READ stamp)
     * `type` — `:book` or `:series`, picks the placeholder icon
+    * `stack` — more covers of the same series; they slide out from behind on
+      hover and are only fetched then
   """
   attr :navigate, :any, required: true
   attr :title, :string, required: true
@@ -640,6 +642,7 @@ defmodule StashixWeb.CoreComponents do
   attr :type, :atom, default: :book
   attr :page_count, :integer, default: nil
   attr :blurhash, :string, default: nil
+  attr :stack, :list, default: [], doc: "up to two more cover URLs, fanned out behind the cover on hover"
   attr :class, :string, default: ""
 
   def media_card(assigns) do
@@ -657,72 +660,81 @@ defmodule StashixWeb.CoreComponents do
       |> assign(:fallback_icon, if(assigns.type == :series, do: "lucide-book-copy", else: "lucide-book-open"))
 
     ~H"""
-    <.link navigate={@navigate} class={["media-card group block min-w-0", @class]}>
-      <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10">
-        <%= if @img_src do %>
-          <.blurhash_image
-            id={@cover_id}
-            src={@img_src}
-            alt={@title}
-            blurhash={@blurhash}
-            class="w-full h-full object-cover"
-            onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
-          />
-          <div class="w-full h-full hidden items-center justify-center text-gray-600">
-            <.icon name={@fallback_icon} class="w-8 h-8" />
-          </div>
-        <% else %>
-          <div class="w-full h-full flex items-center justify-center text-gray-600">
-            <.icon name={@fallback_icon} class="w-8 h-8" />
-          </div>
-        <% end %>
-
-        <div
-          :if={@read && @read_mark == "stamp"}
-          class="absolute inset-0 bg-gray-950/45 pointer-events-none"
+    <.link navigate={@navigate} class={["media-card group relative block min-w-0", @class]}>
+      <div class="relative">
+        <span
+          :for={{url, depth} <- @stack |> Enum.take(2) |> Enum.with_index(1) |> Enum.reverse()}
+          class="media-card-fan"
+          data-depth={depth}
+          style={"--src: url('#{url}')"}
           aria-hidden="true"
-        >
+        ></span>
+        <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10">
+          <%= if @img_src do %>
+            <.blurhash_image
+              id={@cover_id}
+              src={@img_src}
+              alt={@title}
+              blurhash={@blurhash}
+              class="w-full h-full object-cover"
+              onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+            />
+            <div class="w-full h-full hidden items-center justify-center text-gray-600">
+              <.icon name={@fallback_icon} class="w-8 h-8" />
+            </div>
+          <% else %>
+            <div class="w-full h-full flex items-center justify-center text-gray-600">
+              <.icon name={@fallback_icon} class="w-8 h-8" />
+            </div>
+          <% end %>
+
+          <div
+            :if={@read && @read_mark == "stamp"}
+            class="absolute inset-0 bg-gray-950/45 pointer-events-none"
+            aria-hidden="true"
+          >
+          </div>
+          <div class="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-950/85 to-transparent pointer-events-none">
+          </div>
+
+          <.sticker :if={@badge} size="xs" tilt={false} class="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate">
+            {@badge}
+          </.sticker>
+          <span
+            :if={@type == :book && @page_count && @page_count > 0}
+            class={[
+              "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-gray-950/70 text-[10px] font-semibold text-gray-200 tabular-nums",
+              if(@badge, do: "top-2", else: "bottom-2")
+            ]}
+            title={"#{@page_count} pages"}
+          >
+            <.icon name="lucide-sticky-note" class="w-2.5 h-2.5 shrink-0" />
+            {@page_count}
+          </span>
+
+          <span
+            :if={@read && @read_mark == "check"}
+            class="absolute top-2 left-2 flex items-center justify-center w-5 h-5 rounded-sm bg-ink text-zinc-950 shadow-[2px_2px_0_0_rgb(0_0_0/0.6)]"
+            title="Read"
+          >
+            <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
+            <span class="sr-only">Read</span>
+          </span>
+          <span
+            :if={@read && @read_mark == "stamp"}
+            class="read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
+          >
+            Read
+          </span>
+
+          <.progress_bar
+            :if={@progress}
+            value={@progress}
+            rounded={false}
+            track="bg-gray-950/70"
+            class="absolute bottom-0 inset-x-0 h-1"
+          />
         </div>
-        <div class="absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-gray-950/85 to-transparent pointer-events-none">
-        </div>
-
-        <.sticker :if={@badge} size="xs" tilt={false} class="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate">
-          {@badge}
-        </.sticker>
-        <span
-          :if={@type == :book && @page_count && @page_count > 0}
-          class={[
-            "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-gray-950/70 text-[10px] font-semibold text-gray-200 tabular-nums",
-            if(@badge, do: "top-2", else: "bottom-2")
-          ]}
-          title={"#{@page_count} pages"}
-        >
-          <.icon name="lucide-sticky-note" class="w-2.5 h-2.5 shrink-0" />
-          {@page_count}
-        </span>
-
-        <span
-          :if={@read && @read_mark == "check"}
-          class="absolute top-2 left-2 flex items-center justify-center w-5 h-5 rounded-sm bg-ink text-zinc-950 shadow-[2px_2px_0_0_rgb(0_0_0/0.6)]"
-          title="Read"
-        >
-          <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
-          <span class="sr-only">Read</span>
-        </span>
-        <span
-          :if={@read && @read_mark == "stamp"}
-          class="read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
-        >
-          Read
-        </span>
-
-        <.progress_bar
-          :if={@progress}
-          value={@progress}
-          rounded={false}
-          track="bg-gray-950/70"
-          class="absolute bottom-0 inset-x-0 h-1"
-        />
       </div>
       <div class="pt-2 px-0.5">
         <p class="text-[13px] leading-snug font-semibold text-gray-200 group-hover:text-white transition-colors line-clamp-2">
@@ -731,6 +743,28 @@ defmodule StashixWeb.CoreComponents do
         <p :if={@subtitle} class="mt-0.5 text-xs text-gray-500 tabular-nums">{@subtitle}</p>
       </div>
     </.link>
+    """
+  end
+
+  @doc "`media_card/1` for a series: years, issue count and the fanned stack of its next covers."
+  attr :series, :map, required: true
+  attr :size, :string, default: "m"
+  attr :class, :string, default: ""
+
+  def series_card(assigns) do
+    ~H"""
+    <.media_card
+      navigate={"/series/#{@series.id}"}
+      title={@series.name}
+      cover_url={"/api/series/#{@series.id}/cover"}
+      size={@size}
+      subtitle={Stashix.Formatters.series_years(@series)}
+      badge={@series.issue_count && "#{@series.issue_count} #{if @series.issue_count == 1, do: "issue", else: "issues"}"}
+      type={:series}
+      blurhash={@series.cover_blurhash}
+      stack={Enum.map(Map.get(@series, :stack_book_ids) || [], &"/api/books/#{&1}/cover?s=s")}
+      class={@class}
+    />
     """
   end
 

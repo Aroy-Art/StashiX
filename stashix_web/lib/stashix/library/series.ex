@@ -35,6 +35,8 @@ defmodule Stashix.Library.Series do
     field :path, :string
     field :deleted_at, :naive_datetime
     field :cover_blurhash, :string, virtual: true
+    # Ids of the second and third issues with a cover, for the fanned stack on cards.
+    field :stack_book_ids, {:array, :string}, virtual: true, default: []
     field :metadata_locked, :boolean, default: false
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string

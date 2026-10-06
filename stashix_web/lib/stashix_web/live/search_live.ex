@@ -838,17 +838,10 @@ defmodule StashixWeb.SearchLive do
               show_all={@params["type"] == "all" and @series_total > 12 and "series"}
             />
             <.cover_grid id={if @params["type"] == "series", do: "page-top"}>
-              <.media_card
+              <.series_card
                 :for={{s, i} <- Enum.with_index(@series)}
+                series={s}
                 class={if @params["type"] == "all", do: preview_class(i)}
-                navigate={~p"/series/#{s.id}"}
-                title={s.name}
-                cover_url={~p"/api/series/#{s.id}/cover"}
-                size="m"
-                subtitle={s.start_year && to_string(s.start_year)}
-                badge={"#{s.issue_count} issues"}
-                type={:series}
-                blurhash={s.cover_blurhash}
               />
             </.cover_grid>
             <.show_more :if={@params["type"] == "all"} total={@series_total} type="series" one="series" many="series" />

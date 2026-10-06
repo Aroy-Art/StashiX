@@ -175,12 +175,6 @@ defmodule StashixWeb.PublisherLive do
   defp section_label(:books), do: "Books"
   defp section_label(:issues), do: "Issues"
 
-  defp series_date_range(%{start_year: nil}), do: nil
-  defp series_date_range(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
-  defp series_date_range(%{start_year: y, end_year: nil}), do: to_string(y)
-  defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
-  defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
-
   @impl true
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
@@ -293,17 +287,7 @@ defmodule StashixWeb.PublisherLive do
             </div>
             <div class="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
               <%= for s <- @recent_series do %>
-                <.media_card
-                  navigate={~p"/series/#{s.id}"}
-                  title={s.name}
-                  cover_url={~p"/api/series/#{s.id}/cover"}
-                  size="m"
-                  subtitle={series_date_range(s)}
-                  badge={"#{s.issue_count} issues"}
-                  type={:series}
-                  blurhash={s.cover_blurhash}
-                  class="flex-shrink-0 w-36"
-                />
+                <.series_card series={s} class="flex-shrink-0 w-36" />
               <% end %>
             </div>
           </section>
@@ -403,16 +387,7 @@ defmodule StashixWeb.PublisherLive do
           <%= if @live_action == :series do %>
             <.media_grid>
               <%= for s <- @items do %>
-                <.media_card
-                  navigate={~p"/series/#{s.id}"}
-                  title={s.name}
-                  cover_url={~p"/api/series/#{s.id}/cover"}
-                  size="m"
-                  subtitle={series_date_range(s)}
-                  badge={"#{s.issue_count} issues"}
-                  type={:series}
-                  blurhash={s.cover_blurhash}
-                />
+                <.series_card series={s} />
               <% end %>
             </.media_grid>
           <% end %>

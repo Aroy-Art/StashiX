@@ -73,12 +73,6 @@ defmodule StashixWeb.HomeLive do
     %{books: books, series: series}
   end
 
-  defp series_date_range(%{start_year: nil}), do: nil
-  defp series_date_range(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
-  defp series_date_range(%{start_year: y, end_year: nil}), do: to_string(y)
-  defp series_date_range(%{start_year: y, end_year: y}), do: to_string(y)
-  defp series_date_range(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
-
   defp load_library_data(access, lib) do
     recent_standalone = Library.recent_books(access, lib.id, 20, "standalone")
     recent_issues = Library.recent_issues(access, lib.id, 20)
@@ -252,7 +246,7 @@ defmodule StashixWeb.HomeLive do
               <p class="text-xs sm:text-sm text-gray-400">
                 {[
                   "#{spotlight_item.issue_count} issues",
-                  series_date_range(spotlight_item)
+                  Stashix.Formatters.series_years(spotlight_item)
                 ]
                 |> Enum.reject(&is_nil/1)
                 |> Enum.join(" · ")}
@@ -563,7 +557,7 @@ defmodule StashixWeb.HomeLive do
                         <p class="text-xs text-gray-500">
                           {[
                             "#{s.issue_count} issues",
-                            series_date_range(s)
+                            Stashix.Formatters.series_years(s)
                           ]
                           |> Enum.reject(&is_nil/1)
                           |> Enum.join(" · ")}
@@ -731,17 +725,7 @@ defmodule StashixWeb.HomeLive do
           </div>
           <div id="home-recent-series" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             <%= for s <- recent_series do %>
-              <.media_card
-                navigate={~p"/series/#{s.id}"}
-                title={s.name}
-                cover_url={~p"/api/series/#{s.id}/cover"}
-                size="m"
-                subtitle={series_date_range(s)}
-                badge={"#{s.issue_count} issues"}
-                type={:series}
-                blurhash={s.cover_blurhash}
-                class="flex-shrink-0 w-32"
-              />
+              <.series_card series={s} class="flex-shrink-0 w-32" />
             <% end %>
           </div>
         </section>

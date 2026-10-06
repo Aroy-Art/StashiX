@@ -1589,7 +1589,42 @@ defmodule Stashix.Library do
   defp attach_series_blurhashes(series, access) do
     ids = Enum.map(series, & &1.id)
     bh_map = series_cover_blurhash_map(access, ids)
-    Enum.map(series, fn s -> %{s | cover_blurhash: Map.get(bh_map, s.id)} end)
+    stack_map = series_stack_map(access, ids)
+
+    Enum.map(series, fn s ->
+      %{s | cover_blurhash: Map.get(bh_map, s.id), stack_book_ids: Map.get(stack_map, s.id, [])}
+    end)
+  end
+
+  @doc """
+  For each series, the ids of its second and third issues that have a cover
+  (the first is the series cover itself), in reading order.
+  """
+  def series_stack_map(_access, []), do: %{}
+
+  def series_stack_map(access, series_ids) do
+    ranked =
+      from bc in BookCover,
+        join: b in ^Access.books(access),
+        on: b.id == bc.book_id and is_nil(b.deleted_at),
+        where: b.series_id in ^series_ids and not is_nil(bc.path),
+        select: %{
+          book_id: b.id,
+          series_id: b.series_id,
+          rank:
+            over(row_number(),
+              partition_by: b.series_id,
+              order_by: [asc_nulls_last: b.issue_number, asc: b.inserted_at]
+            )
+        }
+
+    from(r in subquery(ranked),
+      where: r.rank in [2, 3],
+      order_by: [asc: r.rank],
+      select: {r.series_id, r.book_id}
+    )
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
   end
 
   def list_user_permissions(user_id) do

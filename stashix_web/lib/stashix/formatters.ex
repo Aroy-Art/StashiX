@@ -161,4 +161,11 @@ defmodule Stashix.Formatters do
 
     "#{formatted} #{suffix}"
   end
+
+  @doc "Years a series ran: \"2019\", \"2019–2021\", \"2019–\" while ongoing, nil when unknown."
+  def series_years(%{start_year: nil}), do: nil
+  def series_years(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
+  def series_years(%{start_year: y, end_year: nil}), do: to_string(y)
+  def series_years(%{start_year: y, end_year: y}), do: to_string(y)
+  def series_years(%{start_year: s, end_year: e}), do: "#{s}–#{e}"
 end
