@@ -696,27 +696,40 @@ defmodule StashixWeb.SearchLive do
                   query={@creator_query}
                   suggestions={@creator_suggestions}
                 />
-                <.filter_select name="role" selected={@params["role"]} prompt="Any role">
-                  <option :for={r <- @credit_roles} value={r} selected={@params["role"] == r}>
-                    {r}
-                  </option>
-                </.filter_select>
+                <.ink_select
+                  id="filter-role"
+                  name="role"
+                  label="Role"
+                  variant="field"
+                  prompt="Any role"
+                  value={@params["role"]}
+                  options={Enum.map(@credit_roles, &{&1, &1})}
+                />
               </.filter_section>
 
               <.filter_section :if={length(@sidebar_libraries) > 1} title="Library">
-                <.filter_select name="library" selected={@params["library"]} prompt="All libraries">
-                  <option :for={lib <- @sidebar_libraries} value={lib.id} selected={@params["library"] == lib.id}>
-                    {lib.name}
-                  </option>
-                </.filter_select>
+                <.ink_select
+                  id="filter-library"
+                  name="library"
+                  label="Library"
+                  variant="field"
+                  prompt="All libraries"
+                  value={@params["library"]}
+                  options={Enum.map(@sidebar_libraries, &{&1.name, &1.id})}
+                />
               </.filter_section>
 
               <.filter_section :if={@publishers != []} title="Publisher">
-                <.filter_select name="publisher" selected={@params["publisher"]} prompt="All publishers">
-                  <option :for={p <- @publishers} value={p.id} selected={@params["publisher"] == p.id}>
-                    {p.name}
-                  </option>
-                </.filter_select>
+                <.ink_select
+                  id="filter-publisher"
+                  name="publisher"
+                  label="Publisher"
+                  variant="field"
+                  prompt="All publishers"
+                  searchable
+                  value={@params["publisher"]}
+                  options={Enum.map(@publishers, &{&1.name, &1.id})}
+                />
               </.filter_section>
 
               <.filter_section
@@ -789,21 +802,13 @@ defmodule StashixWeb.SearchLive do
               </span>
             </button>
             <form id="search-sort" phx-change="sort" class="ml-auto">
-              <select
+              <.ink_select
+                id="search-sort-input"
                 name="value"
-                aria-label="Sort results"
-                class="h-9 px-4 text-sm font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 focus:outline-none focus:border-ink cursor-pointer transition-colors"
-              >
-                <option
-                  :for={{label, value} <- @sort_options}
-                  :if={value != "relevance" or @params["q"] != ""}
-                  value={value}
-                  selected={@params["sort"] == value}
-                  class="bg-gray-900"
-                >
-                  {label}
-                </option>
-              </select>
+                label="Sort results"
+                value={@params["sort"]}
+                options={Enum.filter(@sort_options, fn {_, value} -> value != "relevance" or @params["q"] != "" end)}
+              />
             </form>
           </div>
         </div>
@@ -1272,24 +1277,4 @@ defmodule StashixWeb.SearchLive do
   defp option_class,
     do:
       "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-ink data-[active]:text-gray-950"
-
-  attr :name, :string, required: true
-  attr :selected, :string, default: nil
-  attr :prompt, :string, required: true
-  slot :inner_block, required: true
-
-  defp filter_select(assigns) do
-    ~H"""
-    <select
-      name={@name}
-      class={[
-        "w-full bg-gray-800 border rounded-md px-2.5 py-1.5 text-sm hover:border-gray-400 focus:outline-none focus:border-ink cursor-pointer transition-colors",
-        if(@selected, do: "border-ink text-white", else: "border-gray-600 text-gray-200")
-      ]}
-    >
-      <option value="" selected={is_nil(@selected)}>{@prompt}</option>
-      {render_slot(@inner_block)}
-    </select>
-    """
-  end
 end

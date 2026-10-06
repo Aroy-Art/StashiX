@@ -18,7 +18,7 @@ defmodule StashixWeb.CoreComponents do
   use Gettext, backend: StashixWeb.Gettext
 
   import StashixUi.Icon
-  import StashixWeb.UI.Menu, only: [ink_menu: 1, menu_item: 1, menu_separator: 1]
+  import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
 
@@ -952,22 +952,11 @@ defmodule StashixWeb.CoreComponents do
   attr :selected, :string, required: true
   attr :event, :string, default: "sort"
   attr :class, :string, default: nil
-  attr :select_class, :string, default: nil
 
   def sort_select(assigns) do
     ~H"""
     <form id={@id} phx-change={@event} class={@class}>
-      <select
-        name="value"
-        class={[
-          "px-3 py-1 text-sm rounded-lg border bg-gray-800 border-gray-700 text-gray-400 hover:text-white focus:outline-none focus:border-violet-500 cursor-pointer",
-          @select_class
-        ]}
-      >
-        <%= for {label, value} <- @options do %>
-          <option value={value} selected={@selected == value}>{label}</option>
-        <% end %>
-      </select>
+      <.ink_select id={"#{@id}-input"} name="value" label="Sort" value={@selected} options={@options} />
     </form>
     """
   end

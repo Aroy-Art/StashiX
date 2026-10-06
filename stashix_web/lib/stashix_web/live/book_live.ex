@@ -652,16 +652,22 @@ defmodule StashixWeb.BookLive do
 
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
-                <select
+                <.ink_select
+                  id="edit-book-age-rating"
                   name="book[age_rating]"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                >
-                  <%= for {label, val} <- [{"Unknown", "unknown"}, {"Everyone", "everyone"}, {"Teen", "teen"}, {"Teen+", "teen_plus"}, {"Mature", "mature"}, {"Adult", "adult"}, {"Explicit", "explicit"}] do %>
-                    <option value={val} selected={to_string(@edit_form[:age_rating].value) == val}>
-                      {label}
-                    </option>
-                  <% end %>
-                </select>
+                  label="Age rating"
+                  variant="field"
+                  value={@edit_form[:age_rating].value}
+                  options={[
+                    {"Unknown", "unknown"},
+                    {"Everyone", "everyone"},
+                    {"Teen", "teen"},
+                    {"Teen+", "teen_plus"},
+                    {"Mature", "mature"},
+                    {"Adult", "adult"},
+                    {"Explicit", "explicit"}
+                  ]}
+                />
               </div>
 
               <div class="col-span-2">

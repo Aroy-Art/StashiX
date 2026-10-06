@@ -608,12 +608,13 @@ defmodule StashixWeb.SeriesLive do
       <.section title="Issues" count={issue_count}>
         <:actions>
           <form id="issue-sort" phx-change="sort">
-            <select
+            <.ink_select
+              id="issue-sort-input"
               name="value"
-              aria-label="Sort issues"
-              class="px-3 py-1.5 text-xs font-medium rounded-full border bg-white/5 border-white/10 text-gray-300 hover:text-white hover:border-white/25 focus:outline-none focus:border-violet-500 cursor-pointer transition-colors"
-            >
-              <%= for {label, value} <- [
+              label="Sort issues"
+              size="sm"
+              value={@sort}
+              options={[
                 {"Issue # ↑", "issue_asc"},
                 {"Issue # ↓", "issue_desc"},
                 {"A → Z", "title_asc"},
@@ -622,10 +623,8 @@ defmodule StashixWeb.SeriesLive do
                 {"Year ↓", "year_desc"},
                 {"Date Added ↓", "added_desc"},
                 {"Date Added ↑", "added_asc"}
-              ] do %>
-                <option value={value} selected={@sort == value} class="bg-gray-900">{label}</option>
-              <% end %>
-            </select>
+              ]}
+            />
           </form>
         </:actions>
         <.cover_grid cols="narrow">
@@ -748,17 +747,23 @@ defmodule StashixWeb.SeriesLive do
               <div class="col-span-2">
                 <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
                 <% current_rating = common_age_rating(@series.books) %>
-                <select
+                <.ink_select
+                  id="edit-series-age-rating"
                   name="age_rating"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                >
-                  <option value="" selected={is_nil(current_rating)}>
-                    {if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
-                  </option>
-                  <%= for {label, val} <- [{"Unknown", "unknown"}, {"Everyone", "everyone"}, {"Teen", "teen"}, {"Teen+", "teen_plus"}, {"Mature", "mature"}, {"Adult", "adult"}, {"Explicit", "explicit"}] do %>
-                    <option value={val} selected={to_string(current_rating) == val}>{label}</option>
-                  <% end %>
-                </select>
+                  label="Age rating"
+                  variant="field"
+                  value={current_rating}
+                  prompt={if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
+                  options={[
+                    {"Unknown", "unknown"},
+                    {"Everyone", "everyone"},
+                    {"Teen", "teen"},
+                    {"Teen+", "teen_plus"},
+                    {"Mature", "mature"},
+                    {"Adult", "adult"},
+                    {"Explicit", "explicit"}
+                  ]}
+                />
                 <% mixed = is_nil(current_rating) && @series.books != [] %>
                 <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
                 <div :if={mixed} class="flex items-center gap-2 mt-2">

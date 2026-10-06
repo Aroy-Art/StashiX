@@ -623,13 +623,14 @@ defmodule StashixWeb.AdminLive do
                 </div>
                 <div>
                   <label class="block text-xs text-gray-400 mb-1">Role</label>
-                  <select
+                  <.ink_select
+                    id="new-user-role"
                     name="role"
-                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-white text-sm focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                    label="Role"
+                    variant="field"
+                    value="user"
+                    options={[{"User", "user"}, {"Admin", "admin"}]}
+                  />
                 </div>
                 <div class="col-span-2 flex gap-2 justify-end">
                   <button
@@ -748,13 +749,17 @@ defmodule StashixWeb.AdminLive do
                                       class="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-0 focus:ring-offset-0 cursor-pointer"
                                     /> Can read
                                   </label>
-                                  <select
-                                    id={"rating-#{user.id}-#{lib.id}-#{current_rating}"}
-                                    name="max_age_rating"
-                                    class="bg-gray-800 border border-gray-700 rounded px-2 py-1 text-xs text-gray-300 focus:outline-none focus:border-indigo-500"
-                                  >
-                                    {Phoenix.HTML.Form.options_for_select(rating_opts, current_rating)}
-                                  </select>
+                                  <div class="w-40">
+                                    <.ink_select
+                                      id={"rating-#{user.id}-#{lib.id}"}
+                                      name="max_age_rating"
+                                      label="Maximum age rating"
+                                      variant="field"
+                                      size="sm"
+                                      value={current_rating}
+                                      options={rating_opts}
+                                    />
+                                  </div>
                                   <label
                                     class={[
                                       "flex items-center gap-2 text-xs",

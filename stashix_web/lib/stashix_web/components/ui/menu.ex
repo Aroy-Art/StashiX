@@ -203,6 +203,7 @@ defmodule StashixWeb.UI.Menu do
   attr :prompt, :string, default: nil
   attr :label, :string, default: nil, doc: "accessible name"
   attr :variant, :string, default: "pill", values: ~w(pill field)
+  attr :size, :string, default: "md", values: ~w(sm md)
   attr :searchable, :boolean, default: false
   attr :align, :string, default: "end", values: ~w(start end)
   attr :form, :string, default: nil, doc: "id of the form, when the select sits outside it"
@@ -241,7 +242,7 @@ defmodule StashixWeb.UI.Menu do
         aria-expanded="false"
         aria-controls={"#{@id}-panel"}
         aria-label={@label}
-        class={select_trigger_class(@variant)}
+        class={select_trigger_class(@variant, @size)}
       >
         <span data-select-label class="flex-1 min-w-0 truncate text-left">{@current}</span>
         <.icon name="lucide-chevron-down" class="ink-select-chevron w-3.5 h-3.5 flex-shrink-0 transition-transform" />
@@ -292,13 +293,17 @@ defmodule StashixWeb.UI.Menu do
     """
   end
 
-  defp select_trigger_class("pill"),
-    do:
-      "inline-flex items-center gap-2 h-9 pl-4 pr-3 max-w-full text-sm font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors"
+  defp select_trigger_class("pill", size),
+    do: [
+      "inline-flex items-center max-w-full font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
+      if(size == "sm", do: "gap-1.5 h-8 pl-3 pr-2.5 text-xs", else: "gap-2 h-9 pl-4 pr-3 text-sm")
+    ]
 
-  defp select_trigger_class("field"),
-    do:
-      "flex items-center gap-2 w-full bg-gray-800 border border-gray-600 rounded-md pl-2.5 pr-2 py-1.5 text-sm text-gray-200 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors"
+  defp select_trigger_class("field", size),
+    do: [
+      "flex items-center w-full bg-gray-800 border border-gray-600 rounded-md text-gray-200 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
+      if(size == "sm", do: "gap-1.5 pl-2 pr-1.5 py-1 text-xs", else: "gap-2 pl-2.5 pr-2 py-1.5 text-sm")
+    ]
 
   @doc """
   Row (or column, with `vertical`) of joined `segment/1` cells.

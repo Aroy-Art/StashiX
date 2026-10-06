@@ -193,20 +193,22 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   - [x] `book_live.ex` admin menu
   - [x] `book_live.ex` read-options menu inside `split_button`; drop the
     `salad_ui:command` close dispatches and the unused `read_menu_open` assign
-- [ ] `UI.Menu.ink_select` + hook, including `searchable`.
-- [ ] Replace native selects:
-  - [ ] `sort_select/1` in `core_components.ex` (covers all_series, all_books,
+- [x] `UI.Menu.ink_select` + hook, including `searchable`.
+- [x] Replace native selects:
+  - [x] `sort_select/1` in `core_components.ex` (covers all_series, all_books,
     all_issues, library, publisher)
-  - [ ] `series_live.ex` issue sort (`:653`) and edit form (`:793`)
-  - [ ] `book_live.ex:733`
-  - [ ] `search_live.ex` sort (`:811`) and `filter_select/1` (role, library,
+  - [x] `series_live.ex` issue sort (`:653`) and edit form (`:793`)
+  - [x] `book_live.ex:733`
+  - [x] `search_live.ex` sort (`:811`) and `filter_select/1` (role, library,
     publisher — publisher uses `searchable`)
-  - [ ] `identify_component.ex:703`
-  - [ ] `admin_metadata_live.ex:492,652`
-  - [ ] `admin_live.ex:626,751`
-  - [ ] `core_components.ex` `input type="select"`
-- [ ] `UI.Menu.segmented`; reader fit/direction clusters and search type tabs
-  use it.
+  - [x] `identify_component.ex:703`
+  - [x] `admin_metadata_live.ex:492,652`
+  - [x] `admin_live.ex:626,751`
+  - [-] `core_components.ex` `input type="select"` — `input/1` is not rendered
+    anywhere; it goes away with `UI.Forms` in Phase 5.
+- [x] `UI.Menu.segmented` + `segment`; reader fit, direction and zoom clusters
+  use it. Search type tabs stay bespoke (big display-type tabs with a tilted
+  ink marker are their own look, not a segmented control).
 - [ ] Navbar search results dropdown takes the menu skin.
 - [ ] `UI.Data.dialog` on native `<dialog>`; the series and book edit dialogs
   use it (moved up from Phase 3).

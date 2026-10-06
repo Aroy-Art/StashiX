@@ -700,11 +700,14 @@ defmodule StashixWeb.IdentifyComponent do
             >
               <div class="col-span-2 sm:col-span-2">
                 <label class="block text-xs font-medium text-gray-400 mb-1.5">Source</label>
-                <select name="source" class={input_class()}>
-                  <%= for {key, name} <- @sources do %>
-                    <option value={key} selected={key == @source_key}>{name}</option>
-                  <% end %>
-                </select>
+                <.ink_select
+                  id={"#{@id}-source"}
+                  name="source"
+                  label="Source"
+                  variant="field"
+                  value={@source_key}
+                  options={Enum.map(@sources, fn {key, name} -> {name, key} end)}
+                />
               </div>
               <div class={if @kind == :series, do: "col-span-2 sm:col-span-3", else: "col-span-2 sm:col-span-2"}>
                 <label class="block text-xs font-medium text-gray-400 mb-1.5">Series</label>

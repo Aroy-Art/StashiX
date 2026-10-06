@@ -489,10 +489,14 @@ defmodule StashixWeb.AdminMetadataLive do
                       class={[input_class(), "font-mono text-xs"]}
                     ></textarea>
                   <% :boolean -> %>
-                    <select name={"config[#{field.key}]"} class={input_class()}>
-                      <option value="true" selected={value == true}>Yes</option>
-                      <option value="false" selected={value != true}>No</option>
-                    </select>
+                    <.ink_select
+                      id={"config-#{mod.key()}-#{field.key}"}
+                      name={"config[#{field.key}]"}
+                      label={field.label}
+                      variant="field"
+                      value={to_string(value == true)}
+                      options={[{"Yes", "true"}, {"No", "false"}]}
+                    />
                   <% _ -> %>
                     <input
                       type={if field.type == :integer, do: "number", else: "text"}
@@ -649,14 +653,14 @@ defmodule StashixWeb.AdminMetadataLive do
 
       <div>
         <label class="block text-xs font-medium text-gray-400 mb-1.5">When applying a match automatically</label>
-        <select name="settings[overwrite_mode]" class={input_class()}>
-          <option value="fill" selected={@settings["overwrite_mode"] == "fill"}>
-            Only fill empty fields
-          </option>
-          <option value="replace" selected={@settings["overwrite_mode"] == "replace"}>
-            Replace fields the source provides
-          </option>
-        </select>
+        <.ink_select
+          id="settings-overwrite-mode"
+          name="settings[overwrite_mode]"
+          label="When applying a match automatically"
+          variant="field"
+          value={@settings["overwrite_mode"]}
+          options={[{"Only fill empty fields", "fill"}, {"Replace fields the source provides", "replace"}]}
+        />
         <p class="text-xs text-gray-600 mt-1">
           In the Identify dialog you can pick exactly which fields to overwrite.
         </p>
