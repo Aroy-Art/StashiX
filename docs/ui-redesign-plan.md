@@ -231,8 +231,8 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   mark in ink instead of green. Decided 2026-10-06: build both read marks —
   `read_mark="check"` (small ink tick, the default) and `"stamp"` (rotated
   READ stamp); the choice becomes a user setting in Phase 7.
-- [ ] `pagination/1`: display-type numerals, ink sticker for the current page.
-- [ ] `flash/1`: caption-box look (approved 2026-10-06): ink fill, black text,
+- [x] `pagination/1`: display-type numerals, ink sticker for the current page.
+- [x] `flash/1`: caption-box look (approved 2026-10-06): ink fill, black text,
   hard violet offset shadow, tilted 1°; errors red with white text.
 - [ ] `modal/1`, `confirm_dialog/1` and the cover lightbox use `UI.Data.dialog`.
 

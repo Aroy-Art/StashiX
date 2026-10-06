@@ -105,6 +105,7 @@ defmodule StashixWeb.CoreComponents do
   attr :flash, :map, default: %{}, doc: "the map of flash messages to display"
   attr :title, :string, default: nil
   attr :kind, :atom, values: [:info, :error], doc: "used for styling and flash lookup"
+  attr :auto_dismiss, :boolean, default: false, doc: "clear itself after a few seconds"
   attr :rest, :global, doc: "the arbitrary HTML attributes to add to the flash container"
 
   slot :inner_block, doc: "the optional inner block that renders the flash message"
@@ -117,22 +118,23 @@ defmodule StashixWeb.CoreComponents do
       :if={msg = render_slot(@inner_block) || Phoenix.Flash.get(@flash, @kind)}
       id={@id}
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
+      phx-mounted={@auto_dismiss && JS.dispatch("stashix:flash-shown")}
       role="alert"
       class={[
-        "fixed bottom-4 right-4 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        "flash-caption relative w-80 sm:w-96 max-w-full pl-4 pr-10 py-3 cursor-pointer pointer-events-auto",
+        @kind == :info && "flash-caption-info bg-ink text-zinc-950",
+        @kind == :error && "flash-caption-error bg-red-600 text-white"
       ]}
       {@rest}
     >
-      <p :if={@title} class="flex items-center gap-1.5 text-sm font-semibold leading-6">
-        <.icon :if={@kind == :info} name="lucide-info" class="h-4 w-4" />
-        <.icon :if={@kind == :error} name="lucide-circle-alert" class="h-4 w-4" />
-        {@title}
-      </p>
-      <p class="mt-2 text-sm leading-5">{msg}</p>
-      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
-        <.icon name="lucide-x" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
+      <p :if={@title} class="font-display font-black uppercase text-xl leading-none tracking-wide">{@title}</p>
+      <p class="mt-1 text-sm font-semibold leading-5">{msg}</p>
+      <button
+        type="button"
+        class="absolute top-1.5 right-1.5 p-1.5 rounded-sm opacity-60 hover:opacity-100 hover:bg-black/15 transition"
+        aria-label={gettext("close")}
+      >
+        <.icon name="lucide-x" class="h-4 w-4" />
       </button>
     </div>
     """
@@ -150,8 +152,8 @@ defmodule StashixWeb.CoreComponents do
 
   def flash_group(assigns) do
     ~H"""
-    <div id={@id}>
-      <.flash kind={:info} title={gettext("Success!")} flash={@flash} />
+    <div id={@id} class="fixed bottom-5 right-5 left-5 sm:left-auto z-50 flex flex-col items-end gap-5 pointer-events-none">
+      <.flash kind={:info} title={gettext("Success!")} flash={@flash} auto_dismiss />
       <.flash kind={:error} title={gettext("Error!")} flash={@flash} />
       <.flash
         id="client-error"
@@ -981,55 +983,70 @@ defmodule StashixWeb.CoreComponents do
     assigns = assign(assigns, :pages, pagination_pages(assigns.page, assigns.total_pages))
 
     ~H"""
-    <%= if @total_pages > 1 do %>
-      <div id={@id} class="flex items-center justify-center gap-1">
-        <button
-          phx-click={page_click(@on_page, 1, @scroll_to)}
-          disabled={@page == 1}
-          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <.icon name="lucide-chevron-first" class="w-4 h-4" />
-        </button>
-        <button
-          phx-click={page_click(@on_page, @page - 1, @scroll_to)}
-          disabled={@page == 1}
-          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <.icon name="lucide-chevron-left" class="w-4 h-4" />
-        </button>
+    <nav :if={@total_pages > 1} id={@id} aria-label="Pages" class="flex items-center justify-center gap-1">
+      <.page_step
+        icon="lucide-chevron-first"
+        label="First page"
+        disabled={@page == 1}
+        click={page_click(@on_page, 1, @scroll_to)}
+      />
+      <.page_step
+        icon="lucide-chevron-left"
+        label="Previous page"
+        disabled={@page == 1}
+        click={page_click(@on_page, @page - 1, @scroll_to)}
+      />
 
-        <%= for {p, i} <- Enum.with_index(@pages, 1) do %>
-          <button
-            phx-click={page_click(@on_page, p, @scroll_to)}
-            class={[
-              "w-9 h-9 flex items-center justify-center text-sm rounded-lg border transition-colors",
-              if(i > 5, do: "hidden sm:flex", else: "flex"),
-              if(p == @page,
-                do: "bg-gray-100 border-gray-200 text-gray-900 font-semibold",
-                else: "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white"
-              )
-            ]}
-          >
-            {p}
-          </button>
-        <% end %>
+      <button
+        :for={{p, i} <- Enum.with_index(@pages, 1)}
+        type="button"
+        phx-click={page_click(@on_page, p, @scroll_to)}
+        aria-label={"Page #{p}"}
+        aria-current={p == @page && "page"}
+        class={[
+          "h-9 min-w-9 px-1.5 items-center justify-center rounded-sm font-display font-black text-xl leading-none tabular-nums transition-colors",
+          if(i > 5 and p != @page, do: "hidden sm:flex", else: "flex"),
+          if(p == @page,
+            do: "sticker bg-ink text-zinc-950",
+            else: "text-gray-400 hover:text-white hover:bg-white/10"
+          )
+        ]}
+      >
+        {p}
+      </button>
 
-        <button
-          phx-click={page_click(@on_page, @page + 1, @scroll_to)}
-          disabled={@page == @total_pages}
-          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <.icon name="lucide-chevron-right" class="w-4 h-4" />
-        </button>
-        <button
-          phx-click={page_click(@on_page, @total_pages, @scroll_to)}
-          disabled={@page == @total_pages}
-          class="w-9 h-9 flex items-center justify-center text-sm rounded-lg border bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-        >
-          <.icon name="lucide-chevron-last" class="w-4 h-4" />
-        </button>
-      </div>
-    <% end %>
+      <.page_step
+        icon="lucide-chevron-right"
+        label="Next page"
+        disabled={@page == @total_pages}
+        click={page_click(@on_page, @page + 1, @scroll_to)}
+      />
+      <.page_step
+        icon="lucide-chevron-last"
+        label="Last page"
+        disabled={@page == @total_pages}
+        click={page_click(@on_page, @total_pages, @scroll_to)}
+      />
+    </nav>
+    """
+  end
+
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :disabled, :boolean, required: true
+  attr :click, JS, required: true
+
+  defp page_step(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click={@click}
+      disabled={@disabled}
+      aria-label={@label}
+      class="flex items-center justify-center w-9 h-9 rounded-sm text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none transition-colors"
+    >
+      <.icon name={@icon} class="w-4 h-4" />
+    </button>
     """
   end
 

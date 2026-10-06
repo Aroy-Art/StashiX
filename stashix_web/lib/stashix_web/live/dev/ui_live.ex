@@ -26,6 +26,7 @@ defmodule StashixWeb.Dev.UiLive do
        segment: "page",
        menu_value: "single",
        dialog: false,
+       page: 3,
        select: %{"sort" => "title_asc", "publisher" => "", "role" => "user"}
      )}
   end
@@ -34,6 +35,14 @@ defmodule StashixWeb.Dev.UiLive do
   def handle_event("set_segment", %{"v" => value}, socket), do: {:noreply, assign(socket, segment: value)}
   def handle_event("set_menu", %{"v" => value}, socket), do: {:noreply, assign(socket, menu_value: value)}
   def handle_event("noop", _params, socket), do: {:noreply, socket}
+
+  def handle_event("flash", %{"kind" => "info"}, socket),
+    do: {:noreply, put_flash(socket, :info, "Metadata updated for 12 issues.")}
+
+  def handle_event("flash", %{"kind" => "error"}, socket),
+    do: {:noreply, put_flash(socket, :error, "Could not reach the metadata source.")}
+
+  def handle_event("set_page", %{"page" => page}, socket), do: {:noreply, assign(socket, page: String.to_integer(page))}
   def handle_event("toggle_dialog", _params, socket), do: {:noreply, assign(socket, dialog: !socket.assigns.dialog)}
 
   def handle_event("select_changed", params, socket),
@@ -344,6 +353,15 @@ defmodule StashixWeb.Dev.UiLive do
           class="flex-shrink-0 w-36"
         />
       </.shelf>
+
+      <.specimen title="Flash" note="flash — put_flash/3 shows these bottom right; info clears itself after 6s">
+        <.ink_button variant="ghost" size="md" phx-click="flash" phx-value-kind="info">Show info flash</.ink_button>
+        <.ink_button variant="ghost" size="md" phx-click="flash" phx-value-kind="error">Show error flash</.ink_button>
+      </.specimen>
+
+      <.specimen title="Pagination" note="pagination">
+        <.pagination page={@page} total_pages={24} on_page="set_page" />
+      </.specimen>
 
       <.specimen title="Empty states" note="empty_state">
         <.empty_state title="Nothing in the long box" ghost="0" class="flex-1">

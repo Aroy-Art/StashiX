@@ -1150,6 +1150,12 @@ if (window.__stashixBooted) {
     e.target.scrollBy({ left: e.detail.pages * e.target.clientWidth * 0.8, behavior: "smooth" })
   })
 
+  // Success flashes clear themselves; clicking does the same thing sooner.
+  window.addEventListener("stashix:flash-shown", (e) => {
+    const el = e.target
+    setTimeout(() => el.isConnected && el.offsetParent !== null && el.click(), 6000)
+  })
+
   window.addEventListener("stashix:scroll-to", (e) => {
     const el = document.getElementById(e.detail.id)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
