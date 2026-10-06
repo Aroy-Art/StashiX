@@ -90,30 +90,11 @@ defmodule StashixWeb do
       import Phoenix.HTML
 
       # SaladUI components (non-conflicting with CoreComponents)
-      import SaladUI.Accordion
       import SaladUI.Alert
-      import SaladUI.AlertDialog
-      import SaladUI.Avatar
-      import SaladUI.Badge
-      import SaladUI.Card
-      import SaladUI.Checkbox
-      import SaladUI.Collapsible
       import SaladUI.Dialog
       import SaladUI.DropdownMenu
-      import SaladUI.HoverCard
-      import SaladUI.Popover
       import SaladUI.Progress
-      import SaladUI.RadioGroup
-      import SaladUI.ScrollArea
       import SaladUI.Separator
-      import SaladUI.Sheet
-      import SaladUI.Skeleton
-      import SaladUI.Slider
-      import SaladUI.Switch
-      import SaladUI.Tabs
-      import SaladUI.Toggle
-      import SaladUI.ToggleGroup
-      import SaladUI.Tooltip
 
       # Icon component (both lucide- and hero- prefixes)
       import StashixUi.Icon
