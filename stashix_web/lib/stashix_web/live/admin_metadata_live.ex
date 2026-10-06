@@ -298,37 +298,17 @@ defmodule StashixWeb.AdminMetadataLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-white">Metadata</h1>
-      </div>
+    <.page wide>
+      <.display_heading level={1} class="text-4xl!">Metadata</.display_heading>
 
-      <div class="flex gap-2 border-b border-gray-800 overflow-x-auto">
-        <%= for {label, action, path} <- [
-              {"Sources", :metadata_sources, ~p"/admin/metadata"},
-              {"Settings", :metadata_settings, ~p"/admin/metadata/settings"},
-              {"Review", :metadata_review, ~p"/admin/metadata/review"},
-              {"Jobs", :metadata_jobs, ~p"/admin/metadata/jobs"}
-            ] do %>
-          <.link
-            patch={path}
-            class={[
-              "px-4 py-2 text-sm font-medium -mb-px border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap",
-              if(@live_action == action,
-                do: "border-violet-500 text-violet-400",
-                else: "border-transparent text-gray-500 hover:text-gray-300"
-              )
-            ]}
-          >
-            {label}
-            <%= if action == :metadata_review and @review_count > 0 do %>
-              <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-600/30 text-amber-300">
-                {@review_count}
-              </span>
-            <% end %>
-          </.link>
-        <% end %>
-      </div>
+      <.tabs label="Metadata sections">
+        <:tab patch={~p"/admin/metadata"} active={@live_action == :metadata_sources}>Sources</:tab>
+        <:tab patch={~p"/admin/metadata/settings"} active={@live_action == :metadata_settings}>Settings</:tab>
+        <:tab patch={~p"/admin/metadata/review"} active={@live_action == :metadata_review} count={@review_count}>
+          Review
+        </:tab>
+        <:tab patch={~p"/admin/metadata/jobs"} active={@live_action == :metadata_jobs}>Jobs</:tab>
+      </.tabs>
 
       <%= if @live_action == :metadata_sources do %>
         <.sources_tab sources={@sources} testing={@testing} saved={@saved} />
@@ -359,7 +339,7 @@ defmodule StashixWeb.AdminMetadataLive do
           write_to_files={@settings["write_to_files"]}
         />
       <% end %>
-    </div>
+    </.page>
     """
   end
 
@@ -380,8 +360,8 @@ defmodule StashixWeb.AdminMetadataLive do
         values = row.config || %{}
         {default_n, default_ms} = mod.default_rate_limit() %>
         <div class={[
-          "rounded-xl border p-5 space-y-4",
-          if(row.enabled, do: "border-violet-700/50 bg-gray-900", else: "border-gray-800 bg-gray-900/60")
+          "rounded-lg border p-5 space-y-4",
+          if(row.enabled, do: "border-violet-700/50 bg-gray-900", else: "border-white/10 bg-gray-900/60")
         ]}>
           <div class="flex items-start gap-3">
             <div class="flex flex-col gap-1 pt-0.5">
@@ -408,7 +388,7 @@ defmodule StashixWeb.AdminMetadataLive do
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <h2 class="text-base font-semibold text-white">{mod.name()}</h2>
+                <h2 class="font-display font-black uppercase text-2xl leading-none text-white">{mod.name()}</h2>
                 <a
                   href={mod.homepage()}
                   target="_blank"
@@ -466,7 +446,7 @@ defmodule StashixWeb.AdminMetadataLive do
               <% value = Map.get(values, field.key)
               has_value = value not in [nil, ""] %>
               <div class={if field.type == :cookies, do: "sm:col-span-2", else: ""}>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">
                   {field.label}<span :if={Map.get(field, :required)} class="text-violet-400">*</span>
                 </label>
                 <%= case field.type do %>
@@ -506,11 +486,11 @@ defmodule StashixWeb.AdminMetadataLive do
                       class={input_class()}
                     />
                 <% end %>
-                <p :if={Map.get(field, :help)} class="text-xs text-gray-600 mt-1">{field.help}</p>
+                <p :if={Map.get(field, :help)} class="text-xs text-gray-500 mt-1">{field.help}</p>
               </div>
             <% end %>
             <div :if={Sources.spaced?(mod)}>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Min. seconds between requests</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Min. seconds between requests</label>
               <input
                 type="number"
                 min="0.1"
@@ -521,10 +501,10 @@ defmodule StashixWeb.AdminMetadataLive do
                 placeholder={"Default: #{default_ms / 1000}"}
                 class={input_class()}
               />
-              <p class="text-xs text-gray-600 mt-1">Requests closer together than this risk a temporary block.</p>
+              <p class="text-xs text-gray-500 mt-1">Requests closer together than this risk a temporary block.</p>
             </div>
             <div :if={not Sources.spaced?(mod)}>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Rate limit (requests / minute)</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Rate limit (requests / minute)</label>
               <input
                 type="number"
                 min="1"
@@ -536,7 +516,7 @@ defmodule StashixWeb.AdminMetadataLive do
               />
             </div>
             <div :if={Sources.endpoint_limits?(mod)}>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Requests per hour, per endpoint</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Requests per hour, per endpoint</label>
               <input
                 type="number"
                 min="1"
@@ -546,7 +526,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 placeholder={"Default: #{mod.default_endpoint_limit_per_hour()}"}
                 class={input_class()}
               />
-              <p class="text-xs text-gray-600 mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
+              <p class="text-xs text-gray-500 mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
             </div>
             <div class="sm:col-span-2 flex items-center justify-end gap-3">
               <span
@@ -558,19 +538,20 @@ defmodule StashixWeb.AdminMetadataLive do
               <span :if={not row.enabled and row.last_test_status != "ok"} class="text-xs text-gray-500">
                 Test the connection to enable
               </span>
-              <button
+              <.ink_button
+                variant="ghost"
+                size="md"
                 type="button"
                 phx-click="test_source"
                 phx-value-key={row.source_key}
                 disabled={MapSet.member?(@testing, row.source_key)}
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300 disabled:opacity-60"
               >
                 <%= if MapSet.member?(@testing, row.source_key) do %>
                   <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" /> Testing…
                 <% else %>
                   <.icon name="lucide-plug" class="w-3.5 h-3.5" /> Test connection
                 <% end %>
-              </button>
+              </.ink_button>
             </div>
           </form>
         </div>
@@ -588,26 +569,16 @@ defmodule StashixWeb.AdminMetadataLive do
 
   defp source_toggle(assigns) do
     ~H"""
-    <button
-      type="button"
+    <.toggle
+      on={@on}
       phx-click="toggle_source"
       phx-value-key={@key}
       phx-value-field={@field}
       disabled={@disabled}
       title={@title}
-      class="flex items-center gap-2 text-xs text-gray-400 disabled:opacity-40 disabled:cursor-not-allowed"
     >
       {@label}
-      <span class={[
-        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
-        if(@on, do: "bg-violet-600", else: "bg-gray-700")
-      ]}>
-        <span class={[
-          "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-          if(@on, do: "translate-x-4", else: "translate-x-0.5")
-        ]} />
-      </span>
-    </button>
+    </.toggle>
     """
   end
 
@@ -624,7 +595,7 @@ defmodule StashixWeb.AdminMetadataLive do
     >
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1.5">Auto-match threshold (%)</label>
+          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Auto-match threshold (%)</label>
           <input
             type="number"
             min="0"
@@ -634,10 +605,10 @@ defmodule StashixWeb.AdminMetadataLive do
             value={round(@settings["auto_match_threshold"] * 100)}
             class={input_class()}
           />
-          <p class="text-xs text-gray-600 mt-1">Minimum score to apply a match without review.</p>
+          <p class="text-xs text-gray-500 mt-1">Minimum score to apply a match without review.</p>
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1.5">Required lead (%)</label>
+          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Required lead (%)</label>
           <input
             type="number"
             min="0"
@@ -647,12 +618,12 @@ defmodule StashixWeb.AdminMetadataLive do
             value={round(@settings["auto_match_margin"] * 100)}
             class={input_class()}
           />
-          <p class="text-xs text-gray-600 mt-1">How far ahead of the runner-up the best match must be.</p>
+          <p class="text-xs text-gray-500 mt-1">How far ahead of the runner-up the best match must be.</p>
         </div>
       </div>
 
       <div>
-        <label class="block text-xs font-medium text-gray-400 mb-1.5">When applying a match automatically</label>
+        <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">When applying a match automatically</label>
         <.ink_select
           id="settings-overwrite-mode"
           name="settings[overwrite_mode]"
@@ -661,14 +632,14 @@ defmodule StashixWeb.AdminMetadataLive do
           value={@settings["overwrite_mode"]}
           options={[{"Only fill empty fields", "fill"}, {"Replace fields the source provides", "replace"}]}
         />
-        <p class="text-xs text-gray-600 mt-1">
+        <p class="text-xs text-gray-500 mt-1">
           In the Identify dialog you can pick exactly which fields to overwrite.
         </p>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1.5">Cache searches (hours)</label>
+          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Cache searches (hours)</label>
           <input
             type="number"
             min="0"
@@ -679,7 +650,7 @@ defmodule StashixWeb.AdminMetadataLive do
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-gray-400 mb-1.5">Cache issue/series details (days)</label>
+          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Cache issue/series details (days)</label>
           <input
             type="number"
             min="0"
@@ -689,7 +660,7 @@ defmodule StashixWeb.AdminMetadataLive do
             class={input_class()}
           />
         </div>
-        <p class="col-span-2 text-xs text-gray-600 -mt-2">
+        <p class="col-span-2 text-xs text-gray-500 -mt-2">
           Source responses are cached to save API requests. 0 disables caching.
         </p>
       </div>
@@ -702,7 +673,7 @@ defmodule StashixWeb.AdminMetadataLive do
             name="settings[write_to_files]"
             value="true"
             checked={@settings["write_to_files"]}
-            class="mt-0.5 rounded border-gray-600 bg-gray-800 text-violet-600"
+            class="ink-check"
           />
           <span>
             Write metadata to files
@@ -718,7 +689,7 @@ defmodule StashixWeb.AdminMetadataLive do
             name="settings[write_comicinfo]"
             value="true"
             checked={@settings["write_comicinfo"]}
-            class="mt-0.5 rounded border-gray-600 bg-gray-800 text-violet-600"
+            class="ink-check"
           />
           <span>
             Also write ComicInfo.xml into CBZ files
@@ -746,7 +717,7 @@ defmodule StashixWeb.AdminMetadataLive do
       <% end %>
       <%= for review <- @reviews do %>
         <% top = List.first(review.candidates) %>
-        <div class="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">
+        <div class="flex items-center gap-4 rounded-lg border border-white/10 bg-gray-900 px-4 py-3">
           <div class="w-10 aspect-[2/3] rounded bg-gray-800 overflow-hidden flex-shrink-0">
             <%= if review.book && review.book.cover do %>
               <img src={~p"/api/books/#{review.book.id}/cover?s=s"} alt="" class="w-full h-full object-cover" />
@@ -777,7 +748,7 @@ defmodule StashixWeb.AdminMetadataLive do
               <% end %>
             </p>
             <%= if review.book && review.book.files != [] do %>
-              <p class="text-[11px] text-gray-600 font-mono truncate mt-0.5">
+              <p class="text-[11px] text-gray-500 font-mono truncate mt-0.5">
                 {review.book.library.name <>
                   "/" <> Path.relative_to(List.first(review.book.files).path, review.book.library.root_path)}
               </p>
@@ -790,20 +761,12 @@ defmodule StashixWeb.AdminMetadataLive do
             >
               Identify
             </.link>
-            <button
-              phx-click="retry_review"
-              phx-value-id={review.id}
-              class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-            >
+            <.ink_button variant="ghost" size="md" phx-click="retry_review" phx-value-id={review.id}>
               Retry
-            </button>
-            <button
-              phx-click="skip_review"
-              phx-value-id={review.id}
-              class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-400"
-            >
+            </.ink_button>
+            <.ink_button variant="ghost" size="md" phx-click="skip_review" phx-value-id={review.id}>
               Skip
-            </button>
+            </.ink_button>
           </div>
         </div>
       <% end %>
@@ -823,7 +786,7 @@ defmodule StashixWeb.AdminMetadataLive do
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <%= for {queue, label} <- [{"metadata", "Matching"}, {"metadata_write", "File writes"}] do %>
           <% counts = Map.get(@job_counts, queue, %{}) %>
-          <div class="rounded-xl border border-gray-800 bg-gray-900 p-4">
+          <div class="rounded-lg border border-white/10 bg-gray-900 p-4">
             <h3 class="text-sm font-semibold text-white mb-3">{label}</h3>
             <dl class="grid grid-cols-3 gap-2 text-center">
               <%= for {state, name, color} <- [
@@ -845,60 +808,45 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <div class="flex gap-2">
-        <button
-          phx-click="retry_failed"
-          class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-        >
+        <.ink_button variant="ghost" size="md" phx-click="retry_failed">
           Retry failed
-        </button>
-        <button
-          phx-click="cancel_pending"
-          class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-red-400"
-        >
+        </.ink_button>
+        <.ink_button variant="danger" size="md" phx-click="cancel_pending">
           Cancel queued
-        </button>
-        <button
-          phx-click="clear_cache"
-          class="ml-auto px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-          title="Delete cached source responses and images"
-        >
+        </.ink_button>
+        <.ink_button variant="ghost" size="md" phx-click="clear_cache" title="Delete cached source responses and images">
           Clear cache ({@cache_count})
-        </button>
+        </.ink_button>
       </div>
 
       <div class="space-y-3">
-        <h2 class="text-base font-semibold text-white">Match a library</h2>
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-white">Match a library</h2>
         <%= for lib <- @libraries do %>
-          <div class="flex items-center justify-between rounded-xl border border-gray-800 bg-gray-900 px-4 py-3">
+          <div class="flex items-center justify-between rounded-lg border border-white/10 bg-gray-900 px-4 py-3">
             <div>
               <p class="text-white text-sm font-medium">{lib.name}</p>
               <p class="text-gray-500 text-xs">{lib.root_path}</p>
             </div>
             <div class="flex gap-2">
-              <button
+              <.ink_button
+                size="md"
                 phx-click="match_library"
                 phx-value-id={lib.id}
                 phx-value-all="false"
-                class="px-3 py-1.5 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
               >
                 Match unmatched
-              </button>
-              <button
-                phx-click="match_library"
-                phx-value-id={lib.id}
-                phx-value-all="true"
-                class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-amber-400"
-              >
+              </.ink_button>
+              <.ink_button variant="ghost" size="md" phx-click="match_library" phx-value-id={lib.id} phx-value-all="true">
                 Re-match all
-              </button>
+              </.ink_button>
             </div>
           </div>
         <% end %>
       </div>
 
       <div class="space-y-3">
-        <h2 class="text-base font-semibold text-white">Maintenance</h2>
-        <div class="rounded-xl border border-gray-800 bg-gray-900 px-4 py-3 space-y-3">
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-white">Maintenance</h2>
+        <div class="rounded-lg border border-white/10 bg-gray-900 px-4 py-3 space-y-3">
           <div class="flex items-center justify-between gap-4">
             <div>
               <p class="text-white text-sm font-medium">Clean up summaries</p>
@@ -906,24 +854,17 @@ defmodule StashixWeb.AdminMetadataLive do
                 Remove the "List of covers and their creators" table that older Comic Vine imports left at the end of summaries.
               </p>
             </div>
-            <button
-              :if={!@summary_cleanup}
-              phx-click="preview_summary_cleanup"
-              class="shrink-0 px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-            >
+            <.ink_button :if={!@summary_cleanup} variant="ghost" size="md" phx-click="preview_summary_cleanup">
               Preview cleanup
-            </button>
+            </.ink_button>
           </div>
 
-          <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-gray-800 pt-3">
+          <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-white/10 pt-3">
             <%= if @summary_cleanup.books + @summary_cleanup.series == 0 do %>
               <p class="text-sm text-gray-400">Nothing to clean up. No summaries contain a cover table.</p>
-              <button
-                phx-click="cancel_summary_cleanup"
-                class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-              >
+              <.ink_button variant="ghost" size="md" phx-click="cancel_summary_cleanup">
                 Close
-              </button>
+              </.ink_button>
             <% else %>
               <p class="text-sm text-gray-300">
                 This will rewrite the summary of <span class="font-semibold text-white">{@summary_cleanup.books}</span>
@@ -958,18 +899,15 @@ defmodule StashixWeb.AdminMetadataLive do
               </div>
 
               <div class="flex gap-2">
-                <button
+                <.ink_button
+                  size="md"
                   phx-click="run_summary_cleanup"
-                  class="px-3 py-1.5 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
                 >
                   Clean {@summary_cleanup.books + @summary_cleanup.series} summaries
-                </button>
-                <button
-                  phx-click="cancel_summary_cleanup"
-                  class="px-3 py-1.5 text-sm rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-300"
-                >
+                </.ink_button>
+                <.ink_button variant="ghost" size="md" phx-click="cancel_summary_cleanup">
                   Cancel
-                </button>
+                </.ink_button>
               </div>
             <% end %>
           </div>

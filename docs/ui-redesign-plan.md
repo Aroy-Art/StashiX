@@ -266,14 +266,15 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `UI.Forms`: `field`, `text_input`, `textarea`, `toggle`, `checkbox`;
   delete both `input_class/0` helpers and `field_class/0`.
 - [x] `UI.Data`: `data_table`, `tabs`.
-- [ ] `admin_live.ex` (1,617 lines), one tab per commit, each moved to its own
-  function component or module while it is being restyled:
-  - [ ] users
-  - [ ] libraries
-  - [ ] cleanup
-  - [ ] publishers (aliases + visibility)
-- [ ] `admin_metadata_live.ex`: sources, settings, review, jobs.
-- [ ] `identify_component.ex`: dialog shell, form fields, result rows.
+- [x] `admin_live.ex` restyled in place (all four tabs in one pass with a
+  scripted class migration plus hand fixes). **Not done:** splitting the
+  1,600-line module into one component per tab — moved to Phase 6.
+  - [x] users
+  - [x] libraries
+  - [x] cleanup
+  - [x] publishers (aliases + visibility)
+- [x] `admin_metadata_live.ex`: sources, settings, review, jobs.
+- [x] `identify_component.ex`: dialog shell, form fields, result rows.
 - [ ] `login_live.ex`, `setup_live.ex`: comic-cover layout (approved
   2026-10-06): masthead, issue box with the app version, halftone field, form
   where the art would be, barcode strip.
@@ -282,6 +283,15 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 6 — Cleanup
 
+- [ ] Split `admin_live.ex` into one function component (or module) per tab.
+- [ ] `data_table/1` exists but the admin tables are still hand-written
+  `<table>`s with shared classes (rows expand, forms sit inside); convert the
+  simple ones (users, aliases, visibility).
+- [ ] Admin forms use shared classes (`input_class/0`, label class string) but
+  not yet `field/1` + `text_input/1`; convert while splitting.
+- [ ] Delete the unused Phoenix default components in `core_components.ex`
+  (`input/1`, `label/1`, `error/1`, `simple_form/1`, `button/1`, `header/1`,
+  `table/1`, `list/1`, `back/1`) after checking nothing renders them.
 - [ ] `grep -rn "indigo-\|rounded-xl\|bg-gray-800 border-gray-700" lib/` is
   empty or every hit is justified.
 - [ ] Remove unused CSS and the `detail_page` alias.

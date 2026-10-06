@@ -629,42 +629,20 @@ defmodule StashixWeb.IdentifyComponent do
   @impl true
   def render(assigns) do
     ~H"""
-    <div
-      id={@id}
-      class="fixed inset-0 z-50 overflow-y-auto"
-      phx-window-keydown="close_identify_dialog"
-      phx-key="Escape"
-    >
-      <div class="fixed inset-0 bg-black/80" phx-click="close_identify_dialog" aria-hidden="true"></div>
-      <div class="relative min-h-full flex items-start sm:items-center justify-center p-4 pointer-events-none">
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={"#{@id}-title"}
-          phx-mounted={JS.transition({"ease-out duration-150", "opacity-0 scale-95", "opacity-100 scale-100"}, time: 150)}
-          class="pointer-events-auto relative w-full max-w-3xl rounded-lg border border-gray-700 bg-gray-900 p-6 text-white shadow-xl"
-        >
-          <button
-            type="button"
-            phx-click="close_identify_dialog"
-            class="absolute right-4 top-4 text-gray-500 hover:text-white"
-            aria-label="Close"
-          >
-            <.icon name="lucide-x" class="w-4 h-4" />
-          </button>
-
-          <h2 id={"#{@id}-title"} class="text-lg font-semibold">
-            {if @kind == :series, do: "Identify Series", else: "Identify Issue"}
-          </h2>
-          <p class="text-sm text-gray-400">Search a metadata source and pick the matching entry.</p>
-          <%= if @kind == :issue && @target.files != [] do %>
-            <p class="text-[11px] text-gray-600 font-mono truncate mb-4 mt-0.5">
-              {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
-            </p>
-          <% else %>
-            <div class="mb-4" />
-          <% end %>
-
+    <div id={@id}>
+      <.dialog
+        id={"#{@id}-dialog"}
+        size="lg"
+        title={if @kind == :series, do: "Identify series", else: "Identify issue"}
+        on_close={JS.push("close_identify_dialog")}
+      >
+        <:description>
+          Search a metadata source and pick the matching entry.
+          <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-gray-500 font-mono truncate">
+            {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
+          </p>
+        </:description>
+        <div class="relative">
           <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
             <span class="text-gray-500">Linked IDs:</span>
             <button
@@ -674,7 +652,7 @@ defmodule StashixWeb.IdentifyComponent do
               phx-value-source={key}
               phx-target={@myself}
               title="Look up this entry directly"
-              class="inline-flex items-center gap-1.5 rounded-md border border-gray-700 bg-gray-800/60 px-2 py-1 text-gray-300 hover:border-violet-500 hover:text-white transition-colors"
+              class="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-gray-800/60 px-2 py-1 text-gray-300 hover:border-violet-500 hover:text-white transition-colors"
             >
               <.icon name="lucide-link" class="w-3 h-3" />
               {source_name(@sources, key)} <span class="font-mono text-gray-500">{"##{id}"}</span>
@@ -699,7 +677,7 @@ defmodule StashixWeb.IdentifyComponent do
               class="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end"
             >
               <div class="col-span-2 sm:col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Source</label>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Source</label>
                 <.ink_select
                   id={"#{@id}-source"}
                   name="source"
@@ -710,17 +688,17 @@ defmodule StashixWeb.IdentifyComponent do
                 />
               </div>
               <div class={if @kind == :series, do: "col-span-2 sm:col-span-3", else: "col-span-2 sm:col-span-2"}>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Series</label>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Series</label>
                 <input type="text" name="q[series_name]" value={@form[:series_name].value} class={input_class()} />
               </div>
               <%= if @kind == :issue do %>
                 <div>
-                  <label class="block text-xs font-medium text-gray-400 mb-1.5">Number</label>
+                  <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Number</label>
                   <input type="text" name="q[number]" value={@form[:number].value} class={input_class()} />
                 </div>
               <% end %>
               <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Year</label>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Year</label>
                 <input type="text" name="q[year]" value={@form[:year].value} class={input_class()} />
               </div>
               <div class="col-span-2 sm:col-span-6 flex items-center justify-end gap-4">
@@ -731,19 +709,19 @@ defmodule StashixWeb.IdentifyComponent do
                     name="refresh"
                     value="true"
                     checked={@refresh}
-                    class="rounded border-gray-600 bg-gray-800 text-violet-600"
+                    class="ink-check"
                   /> Skip cache
                 </label>
-                <button
+                <.ink_button
+                  size="md"
                   type="submit"
                   disabled={@searching}
-                  class="inline-flex items-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium bg-violet-600 hover:bg-violet-500 disabled:opacity-60 text-white"
                 >
                   <.icon
                     name={if @searching, do: "lucide-loader-circle", else: "lucide-search"}
                     class={if @searching, do: "w-4 h-4 animate-spin", else: "w-4 h-4"}
                   /> {if @searching, do: "Searching…", else: "Search"}
-                </button>
+                </.ink_button>
               </div>
             </.form>
 
@@ -804,7 +782,7 @@ defmodule StashixWeb.IdentifyComponent do
                     "w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
                     if(@selected && @selected.id == c.id && @selected.source_key == c.source_key,
                       do: "border-violet-500 bg-violet-900/20",
-                      else: "border-gray-800 bg-gray-800/40 hover:border-gray-600"
+                      else: "border-white/10 bg-gray-800/40 hover:border-gray-600"
                     )
                   ]}
                 >
@@ -879,7 +857,7 @@ defmodule StashixWeb.IdentifyComponent do
                 limit={@wait_limit}
               />
 
-              <div :if={@preview} class="rounded-lg border border-gray-800 overflow-x-auto">
+              <div :if={@preview} class="rounded-lg border border-white/10 overflow-x-auto">
                 <table class="w-full text-sm">
                   <thead class="bg-gray-800/60 text-xs text-gray-400">
                     <tr>
@@ -893,7 +871,7 @@ defmodule StashixWeb.IdentifyComponent do
                               MapSet.subset?(selectable_fields(@rows), @selected_fields)
                           }
                           title="Select all"
-                          class="rounded border-gray-600 bg-gray-800 text-violet-600"
+                          class="ink-check"
                         />
                       </th>
                       <th class="text-left font-medium px-3 py-2 w-32">Field</th>
@@ -901,7 +879,7 @@ defmodule StashixWeb.IdentifyComponent do
                       <th class="text-left font-medium px-3 py-2">New</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-gray-800">
+                  <tbody class="divide-y divide-white/10">
                     <%= for row <- @rows do %>
                       <% checked = row.key != nil and MapSet.member?(@selected_fields, row.key) %>
                       <tr id={"#{@id}-row-#{row.key || row.label}"}>
@@ -913,13 +891,13 @@ defmodule StashixWeb.IdentifyComponent do
                             phx-value-field={row.key}
                             phx-target={@myself}
                             checked={checked}
-                            class="rounded border-gray-600 bg-gray-800 text-violet-600"
+                            class="ink-check"
                           />
                         </td>
                         <td class="px-3 py-1.5 text-gray-500 align-top">{row.label}</td>
                         <td class={[
                           "px-3 py-1.5 align-top",
-                          if(checked && row.current, do: "text-gray-600 line-through", else: "text-gray-400")
+                          if(checked && row.current, do: "text-gray-500 line-through", else: "text-gray-400")
                         ]}>
                           {row.current || "—"}
                         </td>
@@ -928,7 +906,7 @@ defmodule StashixWeb.IdentifyComponent do
                           cond do
                             checked -> "text-emerald-300"
                             row.selectable -> "text-gray-500"
-                            true -> "text-gray-600"
+                            true -> "text-gray-500"
                           end
                         ]}>
                           {row.new || "—"}
@@ -951,22 +929,18 @@ defmodule StashixWeb.IdentifyComponent do
                 checked={@queue_issues}
                 phx-click="toggle_queue_issues"
                 phx-target={@myself}
-                class="rounded border-gray-600 bg-gray-800 text-violet-600"
+                class="ink-check"
               /> Then match all issues
             </label>
-            <button
-              type="button"
-              phx-click="close_identify_dialog"
-              class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-gray-700 text-gray-300 hover:bg-gray-800"
-            >
+            <.ink_button variant="ghost" size="md" type="button" phx-click="close_identify_dialog">
               Cancel
-            </button>
-            <button
+            </.ink_button>
+            <.ink_button
+              size="md"
               type="button"
               phx-click="apply"
               phx-target={@myself}
               disabled={is_nil(@preview) or @applying}
-              class="inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white"
             >
               <.icon :if={@applying} name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
               <%= if @applying do %>
@@ -974,23 +948,23 @@ defmodule StashixWeb.IdentifyComponent do
               <% else %>
                 Apply {if @preview, do: "(#{MapSet.size(@selected_fields)})"}
               <% end %>
-            </button>
+            </.ink_button>
           </div>
 
           <div
             :if={@applying}
             id={"#{@id}-applying"}
             role="status"
-            class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 rounded-lg bg-gray-900/80 text-sm text-gray-200"
+            class="absolute -inset-2 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-gray-900/85 text-sm text-gray-200"
           >
-            <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-emerald-400" />
+            <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-ink" />
             <p>Applying metadata…</p>
             <p :if={@kind == :series and @queue_issues} class="text-xs text-gray-500">
               Issues are queued for matching afterwards.
             </p>
           </div>
         </div>
-      </div>
+      </.dialog>
     </div>
     """
   end

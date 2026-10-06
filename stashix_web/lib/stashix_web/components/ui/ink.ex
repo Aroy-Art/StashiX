@@ -22,10 +22,10 @@ defmodule StashixWeb.UI.Ink do
   or `href`, a `<button>` otherwise.
 
   `primary` carries the hard ink offset shadow and is meant to appear once per
-  view; `ghost` is the quiet companion next to it; `danger` is for destructive
-  actions.
+  view; `ghost` is the quiet companion next to it; `warning` is for actions
+  that are safe but heavy (a forced rescan); `danger` is for destructive ones.
   """
-  attr :variant, :string, default: "primary", values: ~w(primary ghost danger)
+  attr :variant, :string, default: "primary", values: ~w(primary ghost warning danger)
   attr :size, :string, default: "lg", values: ~w(md lg)
   attr :class, :any, default: nil
   attr :rest, :global, include: @link_attrs ++ @button_attrs
@@ -33,7 +33,14 @@ defmodule StashixWeb.UI.Ink do
 
   def ink_button(assigns) do
     ~H"""
-    <.clickable class={[button_class(@variant, @size), @class]} {@rest}>
+    <.clickable
+      class={[
+        button_class(@variant, @size),
+        "whitespace-nowrap disabled:opacity-40 disabled:pointer-events-none",
+        @class
+      ]}
+      {@rest}
+    >
       {render_slot(@inner_block)}
     </.clickable>
     """
@@ -48,6 +55,12 @@ defmodule StashixWeb.UI.Ink do
   defp button_class("ghost", size),
     do: [
       "inline-flex items-center justify-center rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors",
+      quiet_size(size)
+    ]
+
+  defp button_class("warning", size),
+    do: [
+      "inline-flex items-center justify-center rounded-md ring-1 ring-amber-400/40 bg-amber-400/[0.06] hover:bg-amber-400/15 hover:ring-amber-300 text-amber-300 hover:text-amber-100 font-display font-bold uppercase tracking-wide transition-colors",
       quiet_size(size)
     ]
 

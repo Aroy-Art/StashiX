@@ -770,7 +770,7 @@ defmodule StashixWeb.SeriesLive do
                   name="age_rating_only_unknown"
                   value="true"
                   checked
-                  class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                  class="ink-check"
                 />
                 <label for="age_rating_only_unknown" class="text-sm text-gray-300 cursor-pointer">
                   Only update issues rated Unknown ({unknown_count})
@@ -800,7 +800,7 @@ defmodule StashixWeb.SeriesLive do
                 name="series[ongoing]"
                 value="true"
                 checked={@edit_form[:ongoing].value}
-                class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                class="ink-check"
               />
               <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
             </div>
