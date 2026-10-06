@@ -5,6 +5,7 @@ defmodule StashixWeb.DetailComponents do
   alias Phoenix.LiveView.JS
   import StashixUi.Icon, only: [icon: 1]
   import StashixWeb.CoreComponents, only: [blurhash_image: 1]
+  import StashixWeb.UI.Ink, only: [panel: 1, stat_list: 1, stat: 1]
 
   @doc """
   Hero cover with a zoom lightbox. `stack` is a list of extra cover URLs fanned
@@ -88,20 +89,11 @@ defmodule StashixWeb.DetailComponents do
     assigns = assign(assigns, item: Enum.filter(assigns.item, &Map.get(&1, :show, true)))
 
     ~H"""
-    <div
-      :if={@item != []}
-      class="indicia relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10"
-    >
-      <div class="halftone absolute inset-0" aria-hidden="true"></div>
-      <dl class="relative flex flex-wrap gap-x-10 gap-y-4 px-6 py-5">
-        <div :for={item <- @item} class="min-w-0">
-          <dt class="text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80 mb-1">{item.label}</dt>
-          <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums">
-            {render_slot(item)}
-          </dd>
-        </div>
-      </dl>
-    </div>
+    <.panel :if={@item != []} variant="indicia">
+      <.stat_list class="px-6 py-5">
+        <.stat :for={item <- @item} label={item.label}>{render_slot(item)}</.stat>
+      </.stat_list>
+    </.panel>
     """
   end
 end

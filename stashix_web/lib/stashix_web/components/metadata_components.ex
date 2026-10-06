@@ -5,6 +5,7 @@ defmodule StashixWeb.MetadataComponents do
   alias Phoenix.LiveView.JS
   alias Stashix.Metadata.Roles
   import StashixUi.Icon, only: [icon: 1]
+  import StashixWeb.UI.Ink, only: [eyebrow: 1, chip: 1]
 
   @doc """
   Headline credits plus a "More info" expander holding everything else.
@@ -87,21 +88,10 @@ defmodule StashixWeb.MetadataComponents do
         <.detail_section label="Links" show={@links != []}>
           <div class="flex flex-wrap gap-1.5">
             <%= for {label, href} <- @links do %>
-              <a
-                :if={href}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors"
-              >
+              <.chip :if={href} href={href} target="_blank" rel="noopener noreferrer">
                 {label} <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
-              </a>
-              <span
-                :if={!href}
-                class="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300"
-              >
-                {label}
-              </span>
+              </.chip>
+              <.chip :if={!href}>{label}</.chip>
             <% end %>
           </div>
         </.detail_section>
@@ -125,7 +115,7 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <dl :if={@groups != []} class="grid grid-cols-3 gap-x-4 gap-y-5 sm:gap-x-10">
       <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-white/10 pl-3 sm:pl-4">
-        <dt class="text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80 mb-1.5">{label}</dt>
+        <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1.5">{label}</.eyebrow>
         <dd class="text-sm text-gray-200 leading-6">
           <.link
             :for={n <- Enum.take(names, @limit)}
@@ -232,7 +222,7 @@ defmodule StashixWeb.MetadataComponents do
   def detail_section(assigns) do
     ~H"""
     <section :if={@show}>
-      <h3 class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-500 mb-3">{@label}</h3>
+      <.eyebrow tag="h3" size="xs" tone="muted" class="mb-3">{@label}</.eyebrow>
       {render_slot(@inner_block)}
     </section>
     """
@@ -247,7 +237,7 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <dl :if={@entries != []} class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-sm">
       <div :for={{label, value} <- @entries} class="min-w-0">
-        <dt class="text-[9px] font-bold tracking-[0.14em] uppercase text-gray-600 mb-0.5">{label}</dt>
+        <.eyebrow tag="dt" size="xs" tone="muted" class="mb-0.5">{label}</.eyebrow>
         <dd class="text-gray-300 break-words">{value}</dd>
       </div>
     </dl>
@@ -269,21 +259,14 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <div class="flex flex-wrap gap-1.5">
       <%= for item <- @shown do %>
-        <.link
+        <.chip
           :if={@search_param}
           navigate={"/search?" <> URI.encode_query(%{@search_param => entry_name(item)})}
-          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors"
+          count={entry_count(item)}
         >
           {entry_name(item)}
-          <span :if={entry_count(item)} class="text-gray-500">{entry_count(item)}</span>
-        </.link>
-        <span
-          :if={!@search_param}
-          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300"
-        >
-          {entry_name(item)}
-          <span :if={entry_count(item)} class="text-gray-600">{entry_count(item)}</span>
-        </span>
+        </.chip>
+        <.chip :if={!@search_param} count={entry_count(item)}>{entry_name(item)}</.chip>
       <% end %>
       <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-gray-600">+{@rest} more</span>
     </div>

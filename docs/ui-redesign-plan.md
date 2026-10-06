@@ -174,7 +174,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   - [ ] `book_live.ex`
   - [ ] `search_live.ex`
   - [ ] `reader_live.ex`
-  - [ ] `detail_components.ex`, `metadata_components.ex`
+  - [x] `detail_components.ex`, `metadata_components.ex`
 
 ### Phase 2 — The menu
 
