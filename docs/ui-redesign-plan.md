@@ -355,6 +355,13 @@ next to each idea when it is decided.
 
 ---
 
+Decided 2026-10-06 (Phase 4 round):
+
+- **Variant-cover hover — keep.** Series cards fan two more covers on hover.
+- **Sound-effect empty states — drop.** Empty states use the ghost numeral.
+- **Per-series ink — drop.** One aqua ink everywhere.
+- **Long-box view — open.** Specimen on `/dev/ui` first, decision after.
+
 ## 7. Log
 
 Add a dated line when a phase closes or a decision changes.

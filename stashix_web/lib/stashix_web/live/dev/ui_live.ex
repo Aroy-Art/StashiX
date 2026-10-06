@@ -7,6 +7,10 @@ defmodule StashixWeb.Dev.UiLive do
   use StashixWeb, :live_view
 
   import StashixWeb.DetailComponents
+  import StashixWeb.UI.LongBox
+
+  alias Stashix.Library
+  alias Stashix.Library.Access
 
   @colors [
     {"background", "bg-gray-950", "gray-950 — page"},
@@ -18,7 +22,9 @@ defmodule StashixWeb.Dev.UiLive do
   ]
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
+    {box_series, box_real} = box_series(Map.has_key?(params, "fake"))
+
     {:ok,
      assign(socket,
        page_title: "UI",
@@ -26,6 +32,9 @@ defmodule StashixWeb.Dev.UiLive do
        segment: "page",
        menu_value: "single",
        dialog: false,
+       box_view: "box",
+       box_series: box_series,
+       box_real: box_real,
        page: 3,
        select: %{"sort" => "title_asc", "publisher" => "", "role" => "user"}
      )}
@@ -35,6 +44,7 @@ defmodule StashixWeb.Dev.UiLive do
   def handle_event("set_segment", %{"v" => value}, socket), do: {:noreply, assign(socket, segment: value)}
   def handle_event("set_menu", %{"v" => value}, socket), do: {:noreply, assign(socket, menu_value: value)}
   def handle_event("noop", _params, socket), do: {:noreply, socket}
+  def handle_event("box_view", %{"v" => view}, socket), do: {:noreply, assign(socket, box_view: view)}
 
   def handle_event("flash", %{"kind" => "info"}, socket),
     do: {:noreply, put_flash(socket, :info, "Metadata updated for 12 issues.")}
@@ -47,6 +57,48 @@ defmodule StashixWeb.Dev.UiLive do
 
   def handle_event("select_changed", params, socket),
     do: {:noreply, assign(socket, select: Map.take(params, ~w(sort publisher role)))}
+
+  # Real series when the database has some (covers need a logged-in browser),
+  # otherwise a made-up shelf so the specimen never renders empty. `?fake` forces it.
+  defp box_series(fake?) do
+    case if(fake?, do: [], else: Library.list_all_series(access: Access.all(), limit: 60)) do
+      [] ->
+        fake =
+          for {name, count} <- [
+                {"Ink Patrol", 6},
+                {"Halftone Hero", 3},
+                {"The Long Box", 1},
+                {"Saga of the Swamp Thing", 48},
+                {"Black Hammer", 13},
+                {"X-Men", 60},
+                {"Watchmen", 12},
+                {"Akira", 6},
+                {"Dune", 3},
+                {"Monstress", 42},
+                {"Nova", 9},
+                {"East of West", 45},
+                {"Paper Girls", 30},
+                {"Y: The Last Man", 60},
+                {"Descender", 32},
+                {"Low", 26}
+              ] do
+            %{name: name, count: count, navigate: "/dev/ui", cover_url: nil, blurhash: nil}
+          end
+
+        {fake, false}
+
+      series ->
+        {for s <- series do
+           %{
+             name: s.name,
+             count: s.issue_count,
+             navigate: "/series/#{s.id}",
+             cover_url: "/api/series/#{s.id}/cover?s=m",
+             blurhash: s.cover_blurhash
+           }
+         end, true}
+    end
+  end
 
   attr :title, :string, required: true
   attr :note, :string, default: nil
@@ -353,6 +405,61 @@ defmodule StashixWeb.Dev.UiLive do
           class="flex-shrink-0 w-36"
         />
       </.shelf>
+
+      <section class="space-y-4">
+        <div class="flex flex-wrap items-baseline gap-4 border-b border-white/10 pb-2">
+          <.display_heading>Long box</.display_heading>
+          <p class="text-xs text-gray-500">
+            EXPERIMENT — long_box, spine. Would be a second view on Series / Books / Issues, toggled next to sort.
+          </p>
+        </div>
+        <p class="max-w-2xl text-sm text-gray-400">
+          {length(@box_series)} {if @box_real,
+            do: "series from this database",
+            else: "made-up series"}.
+          Spine colour comes from the cover, thickness from the issue count. Hover or tab onto a spine to pull it out.
+        </p>
+        <div class="flex items-center justify-between gap-4">
+          <.display_heading size="panel" level={3} count={length(@box_series)}>Series</.display_heading>
+          <.segmented>
+            <.segment
+              icon="lucide-layout-grid"
+              title="Cover grid"
+              active={@box_view == "grid"}
+              phx-click="box_view"
+              phx-value-v="grid"
+            />
+            <.segment
+              icon="lucide-library"
+              title="Long box"
+              active={@box_view == "box"}
+              phx-click="box_view"
+              phx-value-v="box"
+            />
+          </.segmented>
+        </div>
+        <.long_box :if={@box_view == "box"} id="ui-long-box">
+          <.spine
+            :for={s <- @box_series}
+            navigate={s.navigate}
+            title={s.name}
+            cover_url={s.cover_url}
+            blurhash={s.blurhash}
+            count={s.count}
+          />
+        </.long_box>
+        <.cover_grid :if={@box_view == "grid"}>
+          <.media_card
+            :for={s <- @box_series}
+            navigate={s.navigate}
+            title={s.name}
+            cover_url={s.cover_url}
+            blurhash={s.blurhash}
+            badge={"#{s.count} issues"}
+            type={:series}
+          />
+        </.cover_grid>
+      </section>
 
       <.specimen title="Flash" note="flash — put_flash/3 shows these bottom right; info clears itself after 6s">
         <.ink_button variant="ghost" size="md" phx-click="flash" phx-value-kind="info">Show info flash</.ink_button>
