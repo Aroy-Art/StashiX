@@ -100,6 +100,7 @@ defmodule StashixWeb do
       import StashixWeb.UI.Dialog
       import StashixWeb.UI.Forms
       import StashixWeb.UI.Ink
+      import StashixWeb.UI.Logo
       import StashixWeb.UI.Menu
       import StashixWeb.UI.Page
 

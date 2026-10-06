@@ -276,6 +276,24 @@
   pointer-events: none;
 }
 
+/* Logo: a soft violet halo on the "iX", and the trail hung off the end of the
+   word. Everything is in em, so the logo scales with its font size. */
+.logo-glow {
+  text-shadow:
+    3px 0 18px rgb(167 139 250 / 0.9),
+    6px 0 28px rgb(139 92 246 / 0.5),
+    0 0 6px rgb(167 139 250 / 0.7);
+}
+.logo-tail {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  width: 2.1em;
+  height: 0.75em;
+  transform: translate(0.06em, -38%);
+  pointer-events: none;
+}
+
 /* Sidebar: the current page keeps the ink bar of a menu item but its icon is
    violet. Declared after the menu rule of equal weight, so it wins. */
 .nav-item.is-active .ink-menu-icon {
@@ -531,8 +549,7 @@
   mask-image: radial-gradient(ellipse 90% 70% at 100% 100%, #000 0%, transparent 75%);
 }
 .cover-masthead {
-  font-size: clamp(3.25rem, 17vw, 5.75rem);
-  letter-spacing: -0.01em;
+  font-size: clamp(3rem, 15vw, 4.75rem);
   text-shadow: 4px 4px 0 var(--color-violet-700);
 }
 .cover-issue-box {

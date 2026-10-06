@@ -7,6 +7,7 @@ defmodule StashixWeb.AuthComponents do
   use Phoenix.Component
 
   import StashixWeb.UI.Ink, only: [eyebrow: 1, display_heading: 1]
+  import StashixWeb.UI.Logo, only: [logo: 1]
 
   @version Mix.Project.config()[:version]
 
@@ -38,9 +39,7 @@ defmodule StashixWeb.AuthComponents do
             </span>
           </div>
           <div class="min-w-0 flex-1">
-            <p class="cover-masthead font-display font-black uppercase leading-[0.8] text-white">
-              Stash<span class="text-violet-400">iX</span>
-            </p>
+            <.logo id="cover-logo" glow={false} class="cover-masthead" />
             <div class="mt-2 h-1.5 bg-gradient-to-r from-violet-500 via-ink to-ink"></div>
             <.eyebrow tone="light" class="mt-2 truncate">{@tagline}</.eyebrow>
           </div>

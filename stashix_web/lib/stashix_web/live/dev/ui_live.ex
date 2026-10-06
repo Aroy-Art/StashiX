@@ -81,6 +81,12 @@ defmodule StashixWeb.Dev.UiLive do
         </:meta>
       </.page_hero>
 
+      <.specimen title="Logo" note="logo — scales with the text size; glow={false} where it has its own shadow">
+        <.logo id="ui-logo-sm" class="text-[1.75rem] mr-16" />
+        <.logo id="ui-logo-lg" class="text-6xl mr-32" />
+        <.logo id="ui-logo-cover" glow={false} class="cover-masthead mr-40" />
+      </.specimen>
+
       <.specimen title="Colour">
         <div :for={{name, class, note} <- @colors} class="w-40">
           <div class={["h-14 rounded-md ring-1 ring-white/15", class]}></div>

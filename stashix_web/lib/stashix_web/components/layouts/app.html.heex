@@ -21,50 +21,7 @@
       <%!-- Logo --%>
       <div class="flex items-center h-16 ps-5 border-b border-white/10">
         <.link navigate="/" class="flex items-center">
-          <span class="font-bold text-2xl relative">
-            <span class="text-white">Stash</span><span class="text-violet-500 [text-shadow:3px_0_18px_rgba(167,139,250,0.9),6px_0_28px_rgba(139,92,246,0.5),0_0_6px_rgba(167,139,250,0.7)]">iX</span>
-            <svg
-              class="absolute left-full translate-x-0.5 top-1/2 -translate-y-[38%] pointer-events-none"
-              width="50"
-              height="18"
-              viewBox="0 0 50 18"
-              fill="none"
-              aria-hidden="true"
-            >
-              <defs>
-                <linearGradient
-                  id="ix-trail"
-                  x1="0"
-                  y1="0"
-                  x2="50"
-                  y2="0"
-                  gradientUnits="userSpaceOnUse"
-                >
-                  <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85" />
-                  <stop offset="60%" stop-color="#a78bfa" stop-opacity="0.3" />
-                  <stop offset="100%" stop-color="#a78bfa" stop-opacity="0" />
-                </linearGradient>
-                <filter id="ix-glow" x="-30%" y="-150%" width="200%" height="400%">
-                  <feGaussianBlur stdDeviation="2.5" result="blur" />
-                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-                </filter>
-              </defs>
-              <path
-                d="M1 13 C16 13, 36 11, 49 2"
-                stroke="url(#ix-trail)"
-                stroke-width="3"
-                stroke-linecap="round"
-                filter="url(#ix-glow)"
-              />
-              <path
-                d="M1 13 C14 13, 30 11, 44 5"
-                stroke="url(#ix-trail)"
-                stroke-width="1.2"
-                stroke-linecap="round"
-                opacity="0.8"
-              />
-            </svg>
-          </span>
+          <.logo id="sidebar-logo" class="text-[1.75rem]" />
         </.link>
       </div>
 
