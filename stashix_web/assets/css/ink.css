@@ -201,3 +201,38 @@
     from { opacity: 0; transform: translateY(10px) scale(0.98); }
   }
 }
+
+/* ── App shell ──────────────────────────────────────────────────────────── */
+
+/* Top bar: the same violet-to-ink rule as the reader bars. */
+.app-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--color-violet-500), var(--color-ink) 55%, rgb(255 255 255 / 0.1));
+  pointer-events: none;
+}
+
+/* Navbar search: the small sibling of .search-headline, a field on a heavy rule. */
+.nav-search {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid rgb(255 255 255 / 0.2);
+  border-radius: 0;
+  box-shadow: none;
+  caret-color: var(--color-ink);
+  transition: border-color 160ms ease;
+}
+.nav-search:hover { border-bottom-color: rgb(255 255 255 / 0.4); }
+.nav-search:focus {
+  outline: none;
+  box-shadow: none;
+  border-bottom-color: var(--color-ink);
+}
+.nav-search::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}

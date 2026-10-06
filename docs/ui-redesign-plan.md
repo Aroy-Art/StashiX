@@ -219,18 +219,21 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 3 — App shell and cards
 
-- [ ] Sidebar: extract `<.nav_item>` (9 copies of the same link), display-type
+- [x] Sidebar: extract `<.nav_item>` (9 copies of the same link), display-type
   labels, ink left bar on the active item (same mark as an active menu item),
   eyebrow section labels. Fix the four plain `<a href>` nav links
   (Series/Books/Issues/Publishers) to `<.link navigate>`.
-- [ ] Sidebar actually marks the current page (today only admin nav does).
-- [ ] Top bar: search box in the `search-headline` family (heavy bottom rule,
+- [x] Sidebar actually marks the current page (today only admin nav does).
+- [x] Top bar: search box in the `search-headline` family (heavy bottom rule,
   ink caret), `kbd` component, violet→ink rule under the bar like `.reader-bar`.
 - [ ] `media_card/1`: `rounded-md`, ring instead of glow, issue number as a
   sticker, `progress_bar`, lucide icons in place of the inline SVGs, "read"
-  mark in ink instead of green ("READ" stamp: **ask first**).
+  mark in ink instead of green. Decided 2026-10-06: build both read marks —
+  `read_mark="check"` (small ink tick, the default) and `"stamp"` (rotated
+  READ stamp); the choice becomes a user setting in Phase 7.
 - [ ] `pagination/1`: display-type numerals, ink sticker for the current page.
-- [ ] `flash/1`: restyle with `panel` + ink border (caption-box look: **ask first**).
+- [ ] `flash/1`: caption-box look (approved 2026-10-06): ink fill, black text,
+  hard violet offset shadow, tilted 1°; errors red with white text.
 - [ ] `modal/1`, `confirm_dialog/1` and the cover lightbox use `UI.Data.dialog`.
 
 ### Phase 4 — Browse pages
@@ -285,6 +288,14 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   gray-950.
 - [ ] `prefers-reduced-motion` covers every new animation.
 - [ ] Refresh `priv/static/screenshots` and the README images.
+
+### Phase 7 — User settings (after everything else)
+
+- [ ] Per-user appearance settings, stored next to `reader_settings` on the
+  user. First setting: read mark on covers, `check` (default) or `stamp`.
+  Needs a settings page (or a section in the user menu), the assign made
+  available to every LiveView through `Live.Hooks`, and `media_card/1` reading
+  it instead of its default.
 
 ---
 

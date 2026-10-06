@@ -13,7 +13,7 @@ defmodule StashixWeb.UI.Menu do
 
   @link_attrs ~w(navigate patch href replace method download target rel)
 
-  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-zinc-950 text-gray-100 ring-1 ring-white/15 overflow-y-auto overscroll-contain"
+  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-gray-900 text-gray-100 ring-1 ring-white/15 overflow-y-auto overscroll-contain"
 
   @doc """
   Dropdown menu. The `:trigger` slot is the content of the button that opens

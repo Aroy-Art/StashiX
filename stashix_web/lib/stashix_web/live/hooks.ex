@@ -32,8 +32,14 @@ defmodule StashixWeb.Live.Hooks do
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
-          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, _uri, sock ->
-            {:cont, assign(sock, navbar_search_query: "", navbar_search_results: [])}
+          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
+            # current_path lets the sidebar mark the page we are on.
+            {:cont,
+             assign(sock,
+               navbar_search_query: "",
+               navbar_search_results: [],
+               current_path: URI.parse(uri).path
+             )}
           end)
 
         {:cont, socket}
@@ -69,8 +75,14 @@ defmodule StashixWeb.Live.Hooks do
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
-          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, _uri, sock ->
-            {:cont, assign(sock, navbar_search_query: "", navbar_search_results: [])}
+          |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
+            # current_path lets the sidebar mark the page we are on.
+            {:cont,
+             assign(sock,
+               navbar_search_query: "",
+               navbar_search_results: [],
+               current_path: URI.parse(uri).path
+             )}
           end)
 
         {:cont, socket}
