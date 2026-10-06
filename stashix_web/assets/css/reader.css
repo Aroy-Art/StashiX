@@ -1,0 +1,142 @@
+/* ── Reader chrome ──────────────────────────────────────────────────────── */
+
+/* Top and bottom bars: near-black glass with a violet-to-aqua rule on the inner edge.
+   The rule sits inside the bar so it slides off screen with it. */
+.reader-bar {
+  background: rgb(9 9 11 / 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.reader-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to right, var(--color-violet-500), var(--color-ink) 55%, transparent);
+  pointer-events: none;
+}
+.reader-bar-top::after { bottom: 0; }
+.reader-bar-bottom::after { top: 0; }
+
+.reader-sticker { transform: rotate(-4deg); }
+
+/* Segmented control cluster; cells get their look from ctl_class/1. */
+.reader-ctl-group {
+  display: flex;
+  overflow: hidden;
+  border-radius: 0.375rem;
+  background: rgb(255 255 255 / 0.04);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+}
+.reader-ctl-group.hidden { display: none; }
+@media (min-width: 40rem) {
+  .reader-ctl-group.hidden.sm\:flex { display: flex; }
+}
+
+/* Floats over the artwork itself, so it needs its own backing to stay legible on a white page. */
+.reader-ctl-float {
+  background: rgb(9 9 11 / 0.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18), 0 6px 18px -4px rgb(0 0 0 / 0.7);
+}
+
+.reader-menu { box-shadow: 4px 4px 0 0 var(--color-ink), 0 20px 40px -10px rgb(0 0 0 / 0.9); }
+.reader-menu-label {
+  padding: 0.25rem 0.5rem 0.375rem;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-gray-500);
+}
+.reader-menu-item.is-active { box-shadow: inset 3px 0 0 0 var(--color-ink); }
+
+/* Scrubber: violet fill up to --fill, a chunky aqua tab for the thumb. */
+.reader-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--color-violet-500) var(--fill, 0%),
+    rgb(255 255 255 / 0.1) var(--fill, 0%)
+  );
+}
+.reader-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 22px;
+  border-radius: 2px;
+  background: var(--color-ink);
+  box-shadow: 2px 2px 0 0 var(--color-violet-600);
+  cursor: grab;
+}
+.reader-slider::-moz-range-thumb {
+  width: 10px;
+  height: 22px;
+  border: none;
+  border-radius: 2px;
+  background: var(--color-ink);
+  box-shadow: 2px 2px 0 0 var(--color-violet-600);
+  cursor: grab;
+}
+.reader-slider:focus-visible { box-shadow: 0 0 0 2px var(--color-ink); }
+
+/* ── Reader end card ────────────────────────────────────────────────────── */
+
+/* Halftone over the whole card rather than fading out of one corner. */
+.reader-end > .halftone {
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, #000 100%);
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, #000 100%);
+}
+/* The "page that isn't there": dropped on the desk at an angle, inked shadow. */
+.reader-end-page {
+  transform: rotate(-4deg);
+  box-shadow: 6px 6px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
+  transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease;
+}
+a.reader-end-page:hover {
+  transform: rotate(-1deg) translateY(-4px) scale(1.03);
+  box-shadow: 9px 9px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
+}
+.reader-end-hollow {
+  box-shadow: none;
+  border: 2px dashed color-mix(in oklch, var(--color-ink) 55%, transparent);
+  background: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.04) 0 6px, transparent 6px 12px);
+}
+.reader-end-sticker {
+  transform: rotate(-7deg);
+  box-shadow: 2px 2px 0 0 rgb(0 0 0 / 0.6);
+}
+.reader-end-stamp {
+  transform: rotate(-3deg);
+  letter-spacing: 0.16em;
+}
+.reader-end-caption {
+  transform: rotate(-1deg);
+  box-shadow: 3px 3px 0 0 var(--color-violet-600);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reader-end { animation: reader-end-in 220ms ease-out backwards; }
+  .reader-end-page { animation: reader-end-drop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+  .reader-end-stamp { animation: reader-end-stamp 320ms cubic-bezier(0.2, 1.6, 0.4, 1) 420ms backwards; }
+  .reader-end-ghost { animation: reader-end-float 3.2s ease-in-out infinite; }
+  @keyframes reader-end-in {
+    from { opacity: 0; }
+  }
+  @keyframes reader-end-drop {
+    from { opacity: 0; transform: translateY(-40px) rotate(9deg) scale(1.15); }
+  }
+  @keyframes reader-end-stamp {
+    from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
+  }
+  @keyframes reader-end-float {
+    50% { transform: translateY(-10px) rotate(4deg); }
+  }
+}

@@ -152,7 +152,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   and their JS imports in `app.js` (keep dropdown_menu, dialog, alert,
   separator, progress until Phase 2). Removed the unrouted `PageController`,
   `PageHTML` and `home.html.heex`.
-- [ ] Split `assets/css/app.css` into `tokens.css` (theme, fonts), `ink.css`
+- [x] Split `assets/css/app.css` into `tokens.css` (theme, fonts), `ink.css`
   (shared primitives), `reader.css`, `search.css`; `app.css` only imports.
 - [ ] Rename shared CSS out of page namespaces: `.reader-menu*` → `.ink-menu*`,
   `.reader-ctl-group` → `.ink-segmented`, `.reader-sticker` → `.sticker`,
