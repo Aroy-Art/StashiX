@@ -91,7 +91,6 @@ defmodule StashixWeb do
 
       # SaladUI components (non-conflicting with CoreComponents)
       import SaladUI.Alert
-      import SaladUI.Dialog
       import SaladUI.DropdownMenu
       import SaladUI.Progress
       import SaladUI.Separator
@@ -103,6 +102,7 @@ defmodule StashixWeb do
       import StashixWeb.CoreComponents
 
       # Shared "ink" design language components
+      import StashixWeb.UI.Dialog
       import StashixWeb.UI.Ink
       import StashixWeb.UI.Menu
       import StashixWeb.UI.Page

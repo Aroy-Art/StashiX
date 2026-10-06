@@ -210,8 +210,8 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   use it. Search type tabs stay bespoke (big display-type tabs with a tilted
   ink marker are their own look, not a segmented control).
 - [x] Navbar search results dropdown takes the menu skin.
-- [ ] `UI.Data.dialog` on native `<dialog>`; the series and book edit dialogs
-  use it (moved up from Phase 3).
+- [x] `UI.Dialog.dialog` (own module, `components/ui/dialog.ex`) on native
+  `<dialog>`; the series and book edit dialogs use it (moved up from Phase 3).
 - [ ] `login_live.ex` alert, the three browse-page separators and the
   `home_live.ex` progress → plain markup / `progress_bar`.
 - [ ] **Remove SaladUI entirely** per D2. `grep -ri salad` returns nothing;

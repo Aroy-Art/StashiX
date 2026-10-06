@@ -667,186 +667,170 @@ defmodule StashixWeb.SeriesLive do
 
     <%!-- Edit Metadata Dialog --%>
     <%= if @current_user.role == :admin && @show_edit_dialog do %>
-      <.dialog id="edit-series-dialog" open={true} on-close={JS.push("close_edit_dialog")}>
-        <.dialog_content class="sm:max-w-xl !bg-gray-900 !border-gray-700 text-white">
-          <.dialog_header>
-            <.dialog_title class="text-white">Edit Series Metadata</.dialog_title>
-            <.dialog_description class="text-gray-400">
-              Override metadata for this series. Changes persist until the next rescan.
-            </.dialog_description>
-            <%= if @series.path do %>
-              <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
-                <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
-                {relative_folder(@series, @library)}
-              </p>
-            <% end %>
-          </.dialog_header>
+      <.dialog id="edit-series-dialog" title="Edit series metadata" on_close={JS.push("close_edit_dialog")}>
+        <:description>
+          Override metadata for this series. Changes persist until the next rescan.
+          <%= if @series.path do %>
+            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+              <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
+              {relative_folder(@series, @library)}
+            </p>
+          <% end %>
+        </:description>
 
-          <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
-            <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
-                <input
-                  type="text"
-                  name="series[name]"
-                  value={@edit_form[:name].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
-                <textarea
-                  name="series[summary]"
-                  rows="4"
-                  placeholder="Leave blank to inherit from first issue with a summary…"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-                >{@edit_form[:summary].value}</textarea>
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
-                <input
-                  type="number"
-                  name="series[volume]"
-                  value={@edit_form[:volume].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
-                <input
-                  type="text"
-                  name="series[language]"
-                  value={@edit_form[:language].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Year</label>
-                <input
-                  type="number"
-                  name="series[start_year]"
-                  value={@edit_form[:start_year].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">End Year</label>
-                <input
-                  type="number"
-                  name="series[end_year]"
-                  value={@edit_form[:end_year].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
-                <% current_rating = common_age_rating(@series.books) %>
-                <.ink_select
-                  id="edit-series-age-rating"
-                  name="age_rating"
-                  label="Age rating"
-                  variant="field"
-                  value={current_rating}
-                  prompt={if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
-                  options={[
-                    {"Unknown", "unknown"},
-                    {"Everyone", "everyone"},
-                    {"Teen", "teen"},
-                    {"Teen+", "teen_plus"},
-                    {"Mature", "mature"},
-                    {"Adult", "adult"},
-                    {"Explicit", "explicit"}
-                  ]}
-                />
-                <% mixed = is_nil(current_rating) && @series.books != [] %>
-                <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
-                <div :if={mixed} class="flex items-center gap-2 mt-2">
-                  <input type="hidden" name="age_rating_only_unknown" value="false" />
-                  <input
-                    type="checkbox"
-                    id="age_rating_only_unknown"
-                    name="age_rating_only_unknown"
-                    value="true"
-                    checked
-                    class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
-                  />
-                  <label for="age_rating_only_unknown" class="text-sm text-gray-300 cursor-pointer">
-                    Only update issues rated Unknown ({unknown_count})
-                  </label>
-                </div>
-                <p class="flex items-start gap-1.5 text-xs text-amber-400/80 mt-1.5">
-                  <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
-                  <%= if mixed do %>
-                    Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
-                      @series.books
-                    )} issues.
-                  <% else %>
-                    Changing this overwrites the age rating of all {length(@series.books)} issues in this series.
-                  <% end %>
-                </p>
-              </div>
-
-              <div class="col-span-2 flex items-center gap-3">
-                <input
-                  type="hidden"
-                  name="series[ongoing]"
-                  value="false"
-                />
-                <input
-                  type="checkbox"
-                  id="series_ongoing"
-                  name="series[ongoing]"
-                  value="true"
-                  checked={@edit_form[:ongoing].value}
-                  class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
-                />
-                <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
-                <div
-                  id={"pub-picker-series-#{@series.id}"}
-                  phx-hook="PublisherSearch"
-                  class="relative"
-                  data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
-                  data-selected-ids={Jason.encode!(Enum.map(@series.publishers, & &1.id))}
-                  data-input-name="series[publisher_ids][]"
-                >
-                  <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
-                  <input
-                    type="text"
-                    placeholder="Search publishers…"
-                    autocomplete="off"
-                    class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                  />
-                </div>
-              </div>
+        <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
+          <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
+              <input
+                type="text"
+                name="series[name]"
+                value={@edit_form[:name].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
             </div>
 
-            <.dialog_footer class="pt-2">
-              <button
-                type="button"
-                phx-click="close_edit_dialog"
-                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors"
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
+              <textarea
+                name="series[summary]"
+                rows="4"
+                placeholder="Leave blank to inherit from first issue with a summary…"
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+              >{@edit_form[:summary].value}</textarea>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
+              <input
+                type="number"
+                name="series[volume]"
+                value={@edit_form[:volume].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
+              <input
+                type="text"
+                name="series[language]"
+                value={@edit_form[:language].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Year</label>
+              <input
+                type="number"
+                name="series[start_year]"
+                value={@edit_form[:start_year].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">End Year</label>
+              <input
+                type="number"
+                name="series[end_year]"
+                value={@edit_form[:end_year].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+              <% current_rating = common_age_rating(@series.books) %>
+              <.ink_select
+                id="edit-series-age-rating"
+                name="age_rating"
+                label="Age rating"
+                variant="field"
+                value={current_rating}
+                prompt={if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
+                options={[
+                  {"Unknown", "unknown"},
+                  {"Everyone", "everyone"},
+                  {"Teen", "teen"},
+                  {"Teen+", "teen_plus"},
+                  {"Mature", "mature"},
+                  {"Adult", "adult"},
+                  {"Explicit", "explicit"}
+                ]}
+              />
+              <% mixed = is_nil(current_rating) && @series.books != [] %>
+              <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
+              <div :if={mixed} class="flex items-center gap-2 mt-2">
+                <input type="hidden" name="age_rating_only_unknown" value="false" />
+                <input
+                  type="checkbox"
+                  id="age_rating_only_unknown"
+                  name="age_rating_only_unknown"
+                  value="true"
+                  checked
+                  class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+                />
+                <label for="age_rating_only_unknown" class="text-sm text-gray-300 cursor-pointer">
+                  Only update issues rated Unknown ({unknown_count})
+                </label>
+              </div>
+              <p class="flex items-start gap-1.5 text-xs text-amber-400/80 mt-1.5">
+                <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
+                <%= if mixed do %>
+                  Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
+                    @series.books
+                  )} issues.
+                <% else %>
+                  Changing this overwrites the age rating of all {length(@series.books)} issues in this series.
+                <% end %>
+              </p>
+            </div>
+
+            <div class="col-span-2 flex items-center gap-3">
+              <input
+                type="hidden"
+                name="series[ongoing]"
+                value="false"
+              />
+              <input
+                type="checkbox"
+                id="series_ongoing"
+                name="series[ongoing]"
+                value="true"
+                checked={@edit_form[:ongoing].value}
+                class="rounded border-gray-600 bg-gray-800 text-violet-500 focus:ring-violet-500"
+              />
+              <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
+              <div
+                id={"pub-picker-series-#{@series.id}"}
+                phx-hook="PublisherSearch"
+                class="relative"
+                data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
+                data-selected-ids={Jason.encode!(Enum.map(@series.publishers, & &1.id))}
+                data-input-name="series[publisher_ids][]"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
-              >
-                Save Changes
-              </button>
-            </.dialog_footer>
-          </.form>
-        </.dialog_content>
+                <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
+                <input
+                  type="text"
+                  placeholder="Search publishers…"
+                  autocomplete="off"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <.dialog_footer>
+            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
+            <.ink_button type="submit" size="md">Save changes</.ink_button>
+          </.dialog_footer>
+        </.form>
       </.dialog>
     <% end %>
     """

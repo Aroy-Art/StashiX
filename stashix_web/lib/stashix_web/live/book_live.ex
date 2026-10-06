@@ -583,149 +583,133 @@ defmodule StashixWeb.BookLive do
 
     <%!-- Edit Metadata Dialog --%>
     <%= if @current_user.role == :admin && @show_edit_dialog do %>
-      <.dialog id="edit-metadata-dialog" open={true} on-close={JS.push("close_edit_dialog")}>
-        <.dialog_content class="sm:max-w-xl !bg-gray-900 !border-gray-700 text-white">
-          <.dialog_header>
-            <.dialog_title class="text-white">Edit Metadata</.dialog_title>
-            <.dialog_description class="text-gray-400">
-              Override metadata for this book. Changes persist until the next rescan.
-            </.dialog_description>
-            <%= if @selected_file do %>
-              <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
-                <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
-                {relative_path(@selected_file.path, @library)}
-              </p>
-            <% end %>
-          </.dialog_header>
+      <.dialog id="edit-metadata-dialog" title="Edit metadata" on_close={JS.push("close_edit_dialog")}>
+        <:description>
+          Override metadata for this book. Changes persist until the next rescan.
+          <%= if @selected_file do %>
+            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+              <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
+              {relative_path(@selected_file.path, @library)}
+            </p>
+          <% end %>
+        </:description>
 
-          <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
-            <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
-                <input
-                  type="text"
-                  name="book[title]"
-                  value={@edit_form[:title].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Issue #</label>
-                <input
-                  type="text"
-                  name="book[issue_number]"
-                  value={@edit_form[:issue_number].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
-                <input
-                  type="number"
-                  name="book[volume]"
-                  value={@edit_form[:volume].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Year</label>
-                <input
-                  type="number"
-                  name="book[year]"
-                  value={@edit_form[:year].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div>
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
-                <input
-                  type="text"
-                  name="book[language]"
-                  value={@edit_form[:language].value}
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
-                <.ink_select
-                  id="edit-book-age-rating"
-                  name="book[age_rating]"
-                  label="Age rating"
-                  variant="field"
-                  value={@edit_form[:age_rating].value}
-                  options={[
-                    {"Unknown", "unknown"},
-                    {"Everyone", "everyone"},
-                    {"Teen", "teen"},
-                    {"Teen+", "teen_plus"},
-                    {"Mature", "mature"},
-                    {"Adult", "adult"},
-                    {"Explicit", "explicit"}
-                  ]}
-                />
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
-                <textarea
-                  name="book[summary]"
-                  rows="4"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-                >{@edit_form[:summary].value}</textarea>
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
-                <textarea
-                  name="book[notes]"
-                  rows="3"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-                >{@edit_form[:notes].value}</textarea>
-              </div>
-
-              <div class="col-span-2">
-                <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
-                <div
-                  id={"pub-picker-book-#{@book.id}"}
-                  phx-hook="PublisherSearch"
-                  class="relative"
-                  data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
-                  data-selected-ids={Jason.encode!(Enum.map(@book.publishers, & &1.id))}
-                  data-input-name="book[publisher_ids][]"
-                >
-                  <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
-                  <input
-                    type="text"
-                    placeholder="Search publishers…"
-                    autocomplete="off"
-                    class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                  />
-                </div>
-              </div>
+        <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
+          <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
+              <input
+                type="text"
+                name="book[title]"
+                value={@edit_form[:title].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
             </div>
 
-            <.dialog_footer class="pt-2">
-              <button
-                type="button"
-                phx-click="close_edit_dialog"
-                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium border border-red-700 text-red-400 bg-transparent hover:bg-red-900/30 hover:text-red-300 transition-colors"
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Issue #</label>
+              <input
+                type="text"
+                name="book[issue_number]"
+                value={@edit_form[:issue_number].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
+              <input
+                type="number"
+                name="book[volume]"
+                value={@edit_form[:volume].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Year</label>
+              <input
+                type="number"
+                name="book[year]"
+                value={@edit_form[:year].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
+              <input
+                type="text"
+                name="book[language]"
+                value={@edit_form[:language].value}
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+              />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+              <.ink_select
+                id="edit-book-age-rating"
+                name="book[age_rating]"
+                label="Age rating"
+                variant="field"
+                value={@edit_form[:age_rating].value}
+                options={[
+                  {"Unknown", "unknown"},
+                  {"Everyone", "everyone"},
+                  {"Teen", "teen"},
+                  {"Teen+", "teen_plus"},
+                  {"Mature", "mature"},
+                  {"Adult", "adult"},
+                  {"Explicit", "explicit"}
+                ]}
+              />
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
+              <textarea
+                name="book[summary]"
+                rows="4"
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+              >{@edit_form[:summary].value}</textarea>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
+              <textarea
+                name="book[notes]"
+                rows="3"
+                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
+              >{@edit_form[:notes].value}</textarea>
+            </div>
+
+            <div class="col-span-2">
+              <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
+              <div
+                id={"pub-picker-book-#{@book.id}"}
+                phx-hook="PublisherSearch"
+                class="relative"
+                data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
+                data-selected-ids={Jason.encode!(Enum.map(@book.publishers, & &1.id))}
+                data-input-name="book[publisher_ids][]"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                class="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-500 text-white transition-colors"
-              >
-                Save Changes
-              </button>
-            </.dialog_footer>
-          </.form>
-        </.dialog_content>
+                <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
+                <input
+                  type="text"
+                  placeholder="Search publishers…"
+                  autocomplete="off"
+                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          <.dialog_footer>
+            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
+            <.ink_button type="submit" size="md">Save changes</.ink_button>
+          </.dialog_footer>
+        </.form>
       </.dialog>
     <% end %>
     """

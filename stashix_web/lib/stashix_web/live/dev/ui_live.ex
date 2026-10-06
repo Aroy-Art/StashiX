@@ -25,6 +25,7 @@ defmodule StashixWeb.Dev.UiLive do
        colors: @colors,
        segment: "page",
        menu_value: "single",
+       dialog: false,
        select: %{"sort" => "title_asc", "publisher" => "", "role" => "user"}
      )}
   end
@@ -33,6 +34,7 @@ defmodule StashixWeb.Dev.UiLive do
   def handle_event("set_segment", %{"v" => value}, socket), do: {:noreply, assign(socket, segment: value)}
   def handle_event("set_menu", %{"v" => value}, socket), do: {:noreply, assign(socket, menu_value: value)}
   def handle_event("noop", _params, socket), do: {:noreply, socket}
+  def handle_event("toggle_dialog", _params, socket), do: {:noreply, assign(socket, dialog: !socket.assigns.dialog)}
 
   def handle_event("select_changed", params, socket),
     do: {:noreply, assign(socket, select: Map.take(params, ~w(sort publisher role)))}
@@ -255,7 +257,28 @@ defmodule StashixWeb.Dev.UiLive do
         </form>
       </.specimen>
 
-      <.specimen title="Panels and figures" note="panel, stat_list, stat, progress_bar">
+      <.specimen title="Dialog" note="dialog, dialog_footer — rendered to open, removed to close">
+        <.ink_button variant="ghost" size="md" phx-click="toggle_dialog">Open dialog</.ink_button>
+        <.dialog :if={@dialog} id="ui-dialog" title="Edit something" on_close={JS.push("toggle_dialog")}>
+          <:description>Escape, the ✕ and a click on the backdrop all ask the server to close it.</:description>
+          <form phx-submit="toggle_dialog" class="space-y-4">
+            <.ink_select
+              id="ui-dialog-select"
+              name="rating"
+              label="Rating"
+              variant="field"
+              value="teen"
+              options={[{"Everyone", "everyone"}, {"Teen", "teen"}, {"Mature", "mature"}]}
+            />
+            <.dialog_footer>
+              <.ink_button type="button" variant="ghost" size="md" phx-click="toggle_dialog">Cancel</.ink_button>
+              <.ink_button type="submit" size="md">Save changes</.ink_button>
+            </.dialog_footer>
+          </form>
+        </.dialog>
+      </.specimen>
+
+      <.specimen title="Panels and figures" note="panel, stat_list, stat, progress_bar, run_bar">
         <.panel variant="indicia" class="w-full max-w-2xl">
           <.stat_list class="px-6 py-5">
             <.stat label="Pages">1,284</.stat>
@@ -273,6 +296,8 @@ defmodule StashixWeb.Dev.UiLive do
           <.eyebrow size="sm" tone="muted">Plain panel</.eyebrow>
           <.progress_bar value={0.4} label="Reading progress" class="h-1.5" />
           <.progress_bar value={1.0} label="Finished" class="h-1.5" />
+          <.run_bar value={0.62} label="Scan progress" />
+          <.run_bar value={nil} label="Working" />
         </.panel>
       </.specimen>
 
