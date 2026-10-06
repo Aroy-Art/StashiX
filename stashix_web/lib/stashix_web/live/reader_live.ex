@@ -239,6 +239,56 @@ defmodule StashixWeb.ReaderLive do
 
   defp img_fit_style(_page), do: "max-height: 100%; max-width: 100%; width: auto; height: auto;"
 
+  defp fit_modes do
+    [
+      {"page", "Fit page", "lucide-scan"},
+      {"width", "Fit width", "lucide-move-horizontal"},
+      {"height", "Fit height", "lucide-move-vertical"}
+    ]
+  end
+
+  defp layout_icon("double"), do: "lucide-columns-2"
+  defp layout_icon("cover"), do: "lucide-layout-panel-top"
+  defp layout_icon(_single), do: "lucide-rectangle-vertical"
+
+  # One cell of a .reader-ctl-group.
+  defp ctl_class(active) do
+    [
+      "flex items-center justify-center h-8 min-w-8 px-2 transition-colors",
+      if(active, do: "bg-violet-600 text-white", else: "text-gray-300 hover:text-white hover:bg-white/10")
+    ]
+  end
+
+  defp slider_fill(_page, count) when count <= 1, do: 100
+  defp slider_fill(page, count), do: Float.round(page / (count - 1) * 100, 2)
+
+  attr :event, :string, required: true
+  attr :name, :string, required: true
+  attr :value, :string, required: true
+  attr :icon, :string, required: true
+  attr :label, :string, required: true
+  attr :active, :boolean, required: true
+
+  defp menu_option(assigns) do
+    ~H"""
+    <button
+      phx-click={@event}
+      {%{"phx-value-#{@name}" => @value}}
+      class={[
+        "reader-menu-item w-full flex items-center gap-3 px-2 py-2 rounded-sm text-sm text-left transition-colors",
+        if(@active,
+          do: "is-active bg-white/[0.07] text-white",
+          else: "text-gray-300 hover:text-white hover:bg-white/[0.05]"
+        )
+      ]}
+    >
+      <.icon name={@icon} class={"w-4 h-4 flex-shrink-0 #{if @active, do: "text-ink", else: "text-gray-500"}"} />
+      <span class="flex-1 font-display font-bold uppercase tracking-wide">{@label}</span>
+      <.icon :if={@active} name="lucide-check" class="w-3.5 h-3.5 text-ink" />
+    </button>
+    """
+  end
+
   attr :book, :map, required: true
   attr :next_book, :map, default: nil
   attr :next_href, :string, default: nil
@@ -385,8 +435,6 @@ defmodule StashixWeb.ReaderLive do
       #reading-area { touch-action: none; }
       .reader-zone-left { cursor: w-resize; }
       .reader-zone-right { cursor: e-resize; }
-      input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; }
-      input[type=range]::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #8b5cf6; cursor: pointer; border: none; }
     </style>
     <div
       class="relative bg-black"
@@ -397,198 +445,138 @@ defmodule StashixWeb.ReaderLive do
       <%!-- Top bar overlay --%>
       <div
         class={[
-          "absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-1 bg-zinc-950/95 backdrop-blur border-b border-zinc-800 transition-transform duration-200",
+          "reader-bar reader-bar-top absolute top-0 left-0 right-0 z-30 flex items-center gap-3 px-3 sm:px-4 transition-transform duration-200",
           if(@overlay_visible, do: "translate-y-0", else: "-translate-y-full")
         ]}
-        style="height: 44px;"
+        style="height: 48px;"
       >
         <%!-- Left: close, always to the book page --%>
-        <div class="flex items-center min-w-0 w-36">
-          <button
-            phx-click="close"
-            class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
-          >
-            <.icon name="lucide-x" class="w-4 h-4" /> Close
-          </button>
-        </div>
+        <button
+          phx-click="close"
+          title="Close reader"
+          class="group flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-md text-gray-400 hover:text-white hover:bg-white/10 font-display font-bold uppercase tracking-wide transition-colors whitespace-nowrap"
+        >
+          <.icon name="lucide-x" class="w-4 h-4 transition-transform group-hover:rotate-90" />
+          <span class="hidden sm:inline">Close</span>
+        </button>
 
-        <%!-- Center: title --%>
-        <div class="flex-1 text-center px-4 min-w-0">
-          <span class="text-white text-sm font-medium truncate block">{@book.title}</span>
+        <%!-- Center: issue sticker + series (or book) title --%>
+        <div class="flex-1 min-w-0 flex items-center justify-center gap-2.5">
+          <span
+            :if={lbl = issue_label(@book)}
+            class="reader-sticker flex-shrink-0 px-1.5 bg-ink text-zinc-950 font-display font-black text-base leading-tight rounded-sm tabular-nums"
+          >
+            {lbl}
+          </span>
+          <span class="truncate font-display font-extrabold uppercase tracking-wide text-lg leading-none text-white">
+            {(@book.series && @book.series.name) || @book.title}
+          </span>
         </div>
 
         <%!-- Right: controls + page counter --%>
-        <div class="flex items-center gap-2 min-w-0 justify-end">
-          <%!-- View mode dropdown --%>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <%!-- View menu: layout, plus fit and direction on small screens --%>
           <div class="relative">
-            <button
-              phx-click="toggle_layout_menu"
-              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors whitespace-nowrap"
-            >
-              <.icon name="lucide-columns-2" class="w-4 h-4 flex-shrink-0" /> View Mode
-              <.icon
-                name="lucide-chevron-down"
-                class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"}
-              />
-            </button>
+            <div class="reader-ctl-group">
+              <button
+                phx-click="toggle_layout_menu"
+                title="View options"
+                aria-expanded={to_string(@layout_menu_open)}
+                class={[ctl_class(@layout_menu_open), "gap-1.5 px-2.5"]}
+              >
+                <.icon name={layout_icon(@page_layout)} class="w-4 h-4 flex-shrink-0" />
+                <span class="hidden md:inline font-display font-bold uppercase tracking-wide text-sm">View</span>
+                <.icon
+                  name="lucide-chevron-down"
+                  class={"w-3 h-3 flex-shrink-0 transition-transform#{if @layout_menu_open, do: " rotate-180", else: ""}"}
+                />
+              </button>
+            </div>
 
             <%= if @layout_menu_open do %>
               <div class="fixed inset-0 z-20" phx-click="close_layout_menu" />
-              <div class="absolute right-0 top-full mt-1 z-30 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 w-56">
-                <%!-- Single Page --%>
-                <button
-                  phx-click="set_layout"
-                  phx-value-layout="single"
-                  class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                >
-                  <span class={[
-                    "w-3.5 h-3.5 rounded-full border-2 flex-shrink-0",
-                    if(@page_layout == "single",
-                      do: "border-violet-500 bg-violet-500",
-                      else: "border-zinc-600"
-                    )
-                  ]}></span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class={[
-                      "w-4 h-4 flex-shrink-0",
-                      if(@page_layout == "single", do: "text-violet-400", else: "text-zinc-400")
-                    ]}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                  >
-                    <rect x="5" y="3" width="14" height="18" rx="1" />
-                  </svg>
-                  <span class={if(@page_layout == "single", do: "text-white font-medium", else: "text-zinc-300")}>Single Page</span>
-                </button>
-                <%!-- Facing Pages --%>
-                <button
-                  phx-click="set_layout"
-                  phx-value-layout="double"
-                  class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                >
-                  <span class={[
-                    "w-3.5 h-3.5 rounded-full border-2 flex-shrink-0",
-                    if(@page_layout == "double",
-                      do: "border-violet-500 bg-violet-500",
-                      else: "border-zinc-600"
-                    )
-                  ]}></span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class={[
-                      "w-4 h-4 flex-shrink-0",
-                      if(@page_layout == "double", do: "text-violet-400", else: "text-zinc-400")
-                    ]}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                  >
-                    <rect x="2" y="3" width="9" height="18" rx="1" />
-                    <rect x="13" y="3" width="9" height="18" rx="1" />
-                  </svg>
-                  <span class={if(@page_layout == "double", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages</span>
-                </button>
-                <%!-- Facing Pages Cover First --%>
-                <button
-                  phx-click="set_layout"
-                  phx-value-layout="cover"
-                  class="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-zinc-800 transition-colors"
-                >
-                  <span class={[
-                    "w-3.5 h-3.5 rounded-full border-2 flex-shrink-0",
-                    if(@page_layout == "cover",
-                      do: "border-violet-500 bg-violet-500",
-                      else: "border-zinc-600"
-                    )
-                  ]}></span>
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class={[
-                      "w-4 h-4 flex-shrink-0",
-                      if(@page_layout == "cover", do: "text-violet-400", else: "text-zinc-400")
-                    ]}
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                  >
-                    <rect x="8" y="2" width="8" height="10" rx="1" />
-                    <rect x="2" y="14" width="9" height="10" rx="1" />
-                    <rect x="13" y="14" width="9" height="10" rx="1" />
-                  </svg>
-                  <span class={if(@page_layout == "cover", do: "text-white font-medium", else: "text-zinc-300")}>Facing Pages (Cover First)</span>
-                </button>
+              <div class="reader-menu absolute right-0 top-full mt-2 z-30 w-60 p-1.5 rounded-md bg-zinc-950 ring-1 ring-white/15 shadow-2xl">
+                <p class="reader-menu-label">Layout</p>
+                <.menu_option
+                  :for={
+                    {layout, label} <- [
+                      {"single", "Single page"},
+                      {"double", "Facing pages"},
+                      {"cover", "Facing, cover first"}
+                    ]
+                  }
+                  event="set_layout"
+                  name="layout"
+                  value={layout}
+                  icon={layout_icon(layout)}
+                  label={label}
+                  active={@page_layout == layout}
+                />
+
+                <div class="sm:hidden">
+                  <p class="reader-menu-label mt-2">Fit</p>
+                  <.menu_option
+                    :for={{mode, label, icon} <- fit_modes()}
+                    event="set_fit"
+                    name="mode"
+                    value={mode}
+                    icon={icon}
+                    label={label}
+                    active={@fit_mode == mode}
+                  />
+
+                  <p class="reader-menu-label mt-2">Direction</p>
+                  <.menu_option
+                    event="toggle_direction"
+                    name="dir"
+                    value={@direction}
+                    icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
+                    label={if @direction == "ltr", do: "Left to right", else: "Right to left"}
+                    active={false}
+                  />
+                </div>
               </div>
             <% end %>
           </div>
 
-          <%!-- Fit mode buttons --%>
-          <div class="flex items-center gap-1">
+          <%!-- Fit mode --%>
+          <div class="reader-ctl-group hidden sm:flex divide-x divide-white/10">
             <button
+              :for={{mode, label, icon} <- fit_modes()}
               phx-click="set_fit"
-              phx-value-mode="page"
-              title="Fit page"
-              class={[
-                "flex items-center px-2 py-1.5 rounded transition-colors",
-                if(@fit_mode == "page",
-                  do: "bg-violet-600 text-white",
-                  else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700"
-                )
-              ]}
+              phx-value-mode={mode}
+              title={label}
+              aria-pressed={to_string(@fit_mode == mode)}
+              class={ctl_class(@fit_mode == mode)}
             >
-              <.icon name="lucide-maximize-2" class="w-4 h-4" />
-            </button>
-            <button
-              phx-click="set_fit"
-              phx-value-mode="width"
-              title="Fit width"
-              class={[
-                "flex items-center px-2 py-1.5 rounded transition-colors",
-                if(@fit_mode == "width",
-                  do: "bg-violet-600 text-white",
-                  else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700"
-                )
-              ]}
-            >
-              <.icon name="lucide-arrow-left-right" class="w-4 h-4" />
-            </button>
-            <button
-              phx-click="set_fit"
-              phx-value-mode="height"
-              title="Fit height"
-              class={[
-                "flex items-center px-2 py-1.5 rounded transition-colors",
-                if(@fit_mode == "height",
-                  do: "bg-violet-600 text-white",
-                  else: "bg-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-700"
-                )
-              ]}
-            >
-              <.icon name="lucide-arrow-up-down" class="w-4 h-4" />
+              <.icon name={icon} class="w-4 h-4" />
             </button>
           </div>
 
           <%!-- Direction toggle --%>
-          <button
-            phx-click="toggle_direction"
-            title="Toggle reading direction (LTR/RTL)"
-            class="flex items-center px-2.5 py-1.5 rounded text-xs font-mono text-zinc-300 hover:text-white bg-zinc-800 hover:bg-zinc-700 transition-colors"
-          >
-            {@direction |> String.upcase()}
-          </button>
+          <div class="reader-ctl-group hidden sm:flex">
+            <button
+              phx-click="toggle_direction"
+              title="Toggle reading direction (LTR/RTL)"
+              class={[ctl_class(false), "gap-1 px-2.5 font-display font-bold tracking-wide text-sm"]}
+            >
+              {@direction |> String.upcase()}
+              <.icon
+                name={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
+                class="w-3.5 h-3.5 text-ink"
+              />
+            </button>
+          </div>
 
           <%!-- Page counter --%>
-          <span class="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
+          <p class="min-w-[3.25rem] text-right tabular-nums leading-none whitespace-nowrap">
             <%= if @at_end do %>
-              <span class="font-display font-black uppercase tracking-wide text-ink">End</span>
+              <span class="font-display font-black uppercase tracking-wide text-xl text-ink">End</span>
             <% else %>
-              {@current_page + 1} / {@page_count}
+              <span class="font-display font-black text-xl text-white">{@current_page + 1}</span>
+              <span class="text-gray-600 text-xs"> / {@page_count}</span>
             <% end %>
-          </span>
+          </p>
         </div>
       </div>
 
@@ -625,29 +613,38 @@ defmodule StashixWeb.ReaderLive do
           data-action={if @direction == "ltr", do: "next_page", else: "prev_page"}
         />
 
-        <%!-- Floating zoom controls (Mapbox-style) --%>
+        <%!-- Floating zoom controls --%>
         <div
           class={[
             "absolute transition-transform duration-200",
             if(@overlay_visible, do: "translate-x-0", else: "translate-x-[calc(100%+16px)]")
           ]}
-          style="top: 56px; right: 16px; z-index: 25;"
+          style="top: 64px; right: 16px; z-index: 25;"
         >
-          <div class="flex flex-col rounded-md overflow-hidden shadow-xl border border-zinc-700 bg-zinc-900/90 backdrop-blur">
+          <div class="reader-ctl-group flex-col divide-y divide-white/10 backdrop-blur-md">
             <button
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
               title="Zoom in (+)"
-              class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors border-b border-zinc-700"
+              class={ctl_class(false)}
             >
-              <.icon name="lucide-plus" class="w-3.5 h-3.5" />
+              <.icon name="lucide-plus" class="w-4 h-4" />
             </button>
             <button
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
               title="Zoom out (-)"
-              class="flex items-center justify-center w-7 h-7 text-zinc-300 hover:text-white hover:bg-zinc-700 transition-colors"
+              class={ctl_class(false)}
             >
-              <.icon name="lucide-minus" class="w-3.5 h-3.5" />
+              <.icon name="lucide-minus" class="w-4 h-4" />
             </button>
+            <%!-- Zoom readout, filled in and shown by ReaderZoom while zoomed --%>
+            <button
+              id="reader-zoom-level"
+              phx-update="ignore"
+              onclick="window.dispatchEvent(new CustomEvent('reader:zoom-reset'))"
+              title="Reset zoom (0)"
+              class="items-center justify-center h-7 min-w-8 px-1 font-display font-bold text-xs text-ink tabular-nums hover:bg-white/10 transition-colors"
+              style="display: none;"
+            ></button>
           </div>
         </div>
 
@@ -672,7 +669,7 @@ defmodule StashixWeb.ReaderLive do
               class="absolute inset-0 flex items-center justify-center pointer-events-none"
               style="display: flex;"
             >
-              <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-zinc-600" />
+              <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-ink/50" />
             </div>
             <img
               id="reader-page-main"
@@ -692,26 +689,7 @@ defmodule StashixWeb.ReaderLive do
                 class="absolute inset-0 flex items-center justify-center pointer-events-none"
                 style="display: flex;"
               >
-                <svg
-                  class="animate-spin h-8 w-8 text-zinc-600"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  />
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
+                <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-ink/50" />
               </div>
               <img
                 id="reader-page-second"
@@ -740,13 +718,15 @@ defmodule StashixWeb.ReaderLive do
           <% end %>
         </div>
 
-        <%!-- Bottom progress bar overlay --%>
+        <%!-- Bottom bar: scrubber --%>
         <div class={[
-          "absolute bottom-0 left-0 right-0 z-30 px-4 py-3 bg-zinc-950/95 backdrop-blur border-t border-zinc-800 transition-transform duration-200",
+          "reader-bar reader-bar-bottom absolute bottom-0 left-0 right-0 z-30 px-4 py-2.5 transition-transform duration-200",
           if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
         ]}>
-          <div class="flex items-center gap-3">
-            <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@current_page + 1}</span>
+          <div class="flex items-center gap-4">
+            <span class="w-8 text-right font-display font-black text-xl leading-none text-white tabular-nums">
+              {@current_page + 1}
+            </span>
             <input
               id="page-slider"
               type="range"
@@ -754,10 +734,13 @@ defmodule StashixWeb.ReaderLive do
               max={@page_count - 1}
               value={@current_page}
               phx-hook="PageSlider"
-              class="flex-1 h-1.5 appearance-none bg-zinc-700 rounded-full accent-violet-500 cursor-pointer"
-              style="outline: none;"
+              aria-label="Page"
+              class="reader-slider flex-1"
+              style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
             />
-            <span class="text-zinc-400 text-xs tabular-nums whitespace-nowrap">{@page_count}</span>
+            <span class="w-8 font-display font-bold text-base leading-none text-gray-500 tabular-nums">
+              {@page_count}
+            </span>
           </div>
         </div>
       </div>

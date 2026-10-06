@@ -576,8 +576,16 @@ Hooks.PageImage = {
 }
 
 Hooks.PageSlider = {
+  // The track fill is a CSS gradient stopping at --fill. The server renders it,
+  // but it has to follow the thumb while dragging, before any event is pushed.
+  paint() {
+    const max = Number(this.el.max) || 0
+    const fill = max > 0 ? (Number(this.el.value) / max) * 100 : 100
+    this.el.style.setProperty("--fill", `${fill}%`)
+  },
   mounted() {
     this.isDragging = false
+    this.el.addEventListener('input', () => this.paint())
     this.el.addEventListener('pointerdown', () => { this.isDragging = true })
     this.el.addEventListener('change', (e) => {
       this.isDragging = false
@@ -591,6 +599,7 @@ Hooks.PageSlider = {
     if (!this.isDragging) {
       this.el.value = this.el.getAttribute('value')
     }
+    this.paint()
   }
 }
 
@@ -626,16 +635,18 @@ Hooks.ReaderKeyboard = {
 // Everything the reading area does with a pointer is handled here, on the
 // Pointer Events API alone. The zones carry `data-action` instead of
 // `phx-click` so LiveView never sees these interactions -- the hook decides
-// whether a gesture was a tap (navigate / toggle overlay), a double tap
-// (zoom), a drag (pan) or a pinch, and pushes the event itself. One code path,
-// no synthetic mouse events to second-guess.
+// whether a gesture was a tap (navigate / toggle overlay), a double tap (fit
+// the page to the screen width), a triple tap (actual size), a drag (pan) or a
+// pinch, and pushes the event itself. One code path, no synthetic mouse events
+// to second-guess.
 const TAP_MS = 260      // how long the overlay toggle waits for a second tap
-const DBLTAP_MS = 500   // two taps this far apart still count as a double tap
+const DBLTAP_MS = 500   // taps this far apart still chain into a double / triple tap
 const TAP_SLOP = 10     // px of movement still counted as a tap
 const DBLTAP_SLOP = 40  // px between two taps for them to count as a double tap
 const MIN_ZOOM = 1
 const MAX_ZOOM = 5
 const ZOOMED = 1.01     // above this we consider the view zoomed in
+const FALLBACK_ZOOM = 2 // double tap when the page already fills the width
 const ZONE_SIDE = 22        // % width of each nav zone; the rest is the centre
 const ZONE_SIDE_ZOOMED = 12 // nav zones give way to panning once zoomed in
 
@@ -662,9 +673,8 @@ Hooks.ReaderZoom = {
     this.lastTapAt = 0
     this.lastTapX = 0
     this.lastTapY = 0
+    this.tapCount = 0
     this.lastPageSrc = this.currentPageSrc()
-
-    this.buildIndicator()
 
     this.onPointerDown  = (e) => this.pointerDown(e)
     this.onPointerMove  = (e) => this.pointerMove(e)
@@ -701,7 +711,6 @@ Hooks.ReaderZoom = {
       this.panX = 0
       this.panY = 0
     }
-    if (!this.indicator.isConnected) document.body.appendChild(this.indicator)
     this.render()
   },
 
@@ -718,7 +727,6 @@ Hooks.ReaderZoom = {
     window.removeEventListener("reader:zoom-in",    this.onZoomIn)
     window.removeEventListener("reader:zoom-out",   this.onZoomOut)
     window.removeEventListener("reader:zoom-reset", this.onZoomReset)
-    this.indicator.remove()
     if (this.el.__readerZoom === this) delete this.el.__readerZoom
   },
 
@@ -813,16 +821,29 @@ Hooks.ReaderZoom = {
     // is commonly ~500ms, so the second tap regularly lands after the first
     // has already fired. Falling back to "single tap" there is what made
     // double tap look dead.
-    const isSecond = near && this.lastTapAt > 0 && now - this.lastTapAt < DBLTAP_MS
+    const chained = near && this.lastTapAt > 0 && now - this.lastTapAt < DBLTAP_MS
 
-    if (isSecond) {
+    if (chained && this.tapCount === 2) {
+      // Third tap: whatever the double tap did, land on actual size.
+      this.lastTapAt = 0
+      this.tapCount = 0
+      this.debug("triple tap -> actual size", {x, y, zoom: this.zoom})
+      this.zoomToActualSize(x, y)
+      return
+    }
+
+    if (chained) {
       const stillPending = this.tapTimer !== null
       this.clearTap()
-      this.lastTapAt = 0
       // If the first tap's action already went out, undo it. Only the overlay
       // toggle is ever deferred, and it is its own inverse.
       if (!stillPending && this.pendingAction) this.pushEvent(this.pendingAction, {})
       this.pendingAction = null
+      // Keep the chain open so a third tap can follow.
+      this.lastTapAt = now
+      this.lastTapX = x
+      this.lastTapY = y
+      this.tapCount = 2
       this.debug("double tap -> zoom toggle", {x, y, zoom: this.zoom, stillPending})
       this.toggleZoom(x, y)
       return
@@ -831,6 +852,7 @@ Hooks.ReaderZoom = {
     this.lastTapAt = now
     this.lastTapX = x
     this.lastTapY = y
+    this.tapCount = 1
 
     // Page turns fire on the spot -- waiting on them to see whether a second
     // tap is coming makes the reader feel sluggish. Only the overlay toggle
@@ -890,7 +912,8 @@ Hooks.ReaderZoom = {
   // content point c sits at screen offset s = z * (c + p); holding c fixed
   // across a zoom change gives p' = p + s * (1/z' - 1/z).
   setZoom(next, clientX, clientY) {
-    const z = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, next))
+    // Actual size can sit past MAX_ZOOM for a large scan on a small screen.
+    const z = Math.max(MIN_ZOOM, Math.min(Math.max(MAX_ZOOM, this.actualSizeZoom() || 0), next))
     if (z !== this.zoom) {
       const r = this.el.getBoundingClientRect()
       const sx = (clientX === undefined ? r.left + r.width / 2 : clientX) - (r.left + r.width / 2)
@@ -908,17 +931,49 @@ Hooks.ReaderZoom = {
     this.render()
   },
 
+  // Double tap: in to "page width fills the screen", or back out if zoomed.
   toggleZoom(clientX, clientY) {
     if (this.zoom > ZOOMED) {
       this.setZoom(1)
       return
     }
-    const img = this.pagesEl() && this.pagesEl().querySelector("img")
-    if (!img || !img.naturalWidth) return
-    // Width the image occupies at zoom 1 -> the factor that shows it 1:1.
+    const fit = this.fitWidthZoom()
+    if (fit && fit > 1.05) {
+      // The pages are centred, so zoom about the centre line: the left and
+      // right edges land exactly on the screen edges. Vertically, keep the
+      // tapped spot in place.
+      const r = this.el.getBoundingClientRect()
+      this.setZoom(fit, r.left + r.width / 2, clientY)
+    } else {
+      // Already as wide as the screen (portrait phone, "fit width" mode).
+      this.setZoom(FALLBACK_ZOOM, clientX, clientY)
+    }
+  },
+
+  // Triple tap: one image pixel per CSS pixel -- 100% on the zoom readout.
+  zoomToActualSize(clientX, clientY) {
+    const actual = this.actualSizeZoom()
+    if (actual) this.setZoom(actual, clientX, clientY)
+  },
+
+  pageImages() {
+    const pages = this.pagesEl()
+    return pages ? [...pages.querySelectorAll("img")] : []
+  },
+
+  // Zoom factor at which the visible page(s) span the reading area's width.
+  fitWidthZoom() {
+    const shown = this.pageImages()
+      .reduce((sum, img) => sum + img.getBoundingClientRect().width, 0) / this.zoom
+    return shown ? this.el.getBoundingClientRect().width / shown : null
+  },
+
+  // Zoom factor that shows the page at its natural pixel size.
+  actualSizeZoom() {
+    const img = this.pageImages()[0]
+    if (!img || !img.naturalWidth) return null
     const shown = img.getBoundingClientRect().width / this.zoom
-    if (!shown) return
-    this.setZoom(Math.max(1.5, img.naturalWidth / shown), clientX, clientY)
+    return shown ? img.naturalWidth / shown : null
   },
 
   // --- rendering -----------------------------------------------------------
@@ -954,11 +1009,13 @@ Hooks.ReaderZoom = {
     }
     this.el.style.cursor = zoomed ? "grab" : ""
 
-    if (zoomed) {
-      this.indicator.textContent = `${Math.round(this.zoom * 100)}%`
-      this.indicator.style.display = "block"
-    } else {
-      this.indicator.style.display = "none"
+    // The readout is a cell of the zoom controls, so it slides away with the
+    // overlay. It shows the page's real scale: 100% is actual size.
+    const level = document.getElementById("reader-zoom-level")
+    if (level) {
+      const actual = this.actualSizeZoom()
+      level.textContent = `${Math.round((actual ? this.zoom / actual : this.zoom) * 100)}%`
+      level.style.display = zoomed ? "flex" : "none"
     }
   },
 
@@ -973,20 +1030,6 @@ Hooks.ReaderZoom = {
     const maxY = r.height * (this.zoom - 1) / (2 * this.zoom)
     this.panX = Math.max(-maxX, Math.min(maxX, this.panX))
     this.panY = Math.max(-maxY, Math.min(maxY, this.panY))
-  },
-
-  buildIndicator() {
-    this.indicator = document.createElement("div")
-    this.indicator.style.cssText = [
-      "position:fixed", "bottom:56px", "right:16px", "z-index:50",
-      "background:rgba(0,0,0,0.75)", "color:#fff", "padding:3px 8px",
-      "border-radius:6px", "font-size:12px", "font-family:monospace",
-      "pointer-events:auto", "display:none", "cursor:pointer",
-      "user-select:none", "border:1px solid rgba(255,255,255,0.15)"
-    ].join(";")
-    this.indicator.title = "Click to reset zoom (0)"
-    this.indicator.addEventListener("click", () => this.setZoom(1))
-    document.body.appendChild(this.indicator)
   }
 }
 
