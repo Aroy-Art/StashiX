@@ -1022,8 +1022,4 @@ defmodule StashixWeb.IdentifyComponent do
   defp rate_text({n, 3_600_000}), do: "#{n} requests per hour for this endpoint"
   defp rate_text({n, 60_000}), do: "#{n} requests per minute"
   defp rate_text({n, ms}), do: "#{n} requests per #{div(ms, 1000)}s"
-
-  defp input_class,
-    do:
-      "w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
 end

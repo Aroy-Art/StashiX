@@ -96,7 +96,9 @@ defmodule StashixWeb do
       import StashixWeb.CoreComponents
 
       # Shared "ink" design language components
+      import StashixWeb.UI.Data
       import StashixWeb.UI.Dialog
+      import StashixWeb.UI.Forms
       import StashixWeb.UI.Ink
       import StashixWeb.UI.Menu
       import StashixWeb.UI.Page

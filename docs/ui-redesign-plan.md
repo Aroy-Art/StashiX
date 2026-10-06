@@ -263,9 +263,9 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [ ] `stats_live.ex`: `page_hero`, summary tiles as `stat`s in an indicia
   panel, chart cards as `panel`s with `section` headings, ECharts theme using
   violet/ink and the display font for axis labels (`Hooks.Chart` in `app.js`).
-- [ ] `UI.Forms`: `field`, `text_input`, `textarea`, `toggle`, `checkbox`;
+- [x] `UI.Forms`: `field`, `text_input`, `textarea`, `toggle`, `checkbox`;
   delete both `input_class/0` helpers and `field_class/0`.
-- [ ] `UI.Data`: `data_table`, `tabs`.
+- [x] `UI.Data`: `data_table`, `tabs`.
 - [ ] `admin_live.ex` (1,617 lines), one tab per commit, each moved to its own
   function component or module while it is being restyled:
   - [ ] users
@@ -274,9 +274,11 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   - [ ] publishers (aliases + visibility)
 - [ ] `admin_metadata_live.ex`: sources, settings, review, jobs.
 - [ ] `identify_component.ex`: dialog shell, form fields, result rows.
-- [ ] `login_live.ex`, `setup_live.ex`: kill the indigo, use `field` +
-  `ink_button` (comic-cover layout: **ask first**).
-- [ ] Error pages (`error_html.ex`): ink styling (reader ghost: **ask first**).
+- [ ] `login_live.ex`, `setup_live.ex`: comic-cover layout (approved
+  2026-10-06): masthead, issue box with the app version, halftone field, form
+  where the art would be, barcode strip.
+- [ ] Error pages (`error_html.ex`): reader ghost (approved 2026-10-06): hollow
+  page with the ghost, error code sticker, caption box, ink button home.
 
 ### Phase 6 — Cleanup
 

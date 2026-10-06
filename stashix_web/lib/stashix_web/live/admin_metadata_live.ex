@@ -978,8 +978,4 @@ defmodule StashixWeb.AdminMetadataLive do
     </div>
     """
   end
-
-  defp input_class,
-    do:
-      "w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
 end

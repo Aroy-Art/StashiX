@@ -428,3 +428,28 @@
 @media (min-width: 40rem) {
   [data-overflow] .shelf-arrows { display: flex; }
 }
+
+/* ── Form controls ──────────────────────────────────────────────────────── */
+
+/* Checkbox: a square that fills with ink and gets a black tick. */
+.ink-check {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 0 0 auto;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  border: 1px solid var(--color-gray-500);
+  border-radius: 0.1875rem;
+  background: var(--color-gray-800) center / 0.8rem no-repeat;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+.ink-check:hover { border-color: var(--color-gray-300); }
+.ink-check:checked {
+  border-color: var(--color-ink);
+  background-color: var(--color-ink);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2309090b' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+.ink-check:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ink-check:disabled { opacity: 0.4; cursor: not-allowed; }

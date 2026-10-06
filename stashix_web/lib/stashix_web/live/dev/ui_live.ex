@@ -318,6 +318,46 @@ defmodule StashixWeb.Dev.UiLive do
         </form>
       </.specimen>
 
+      <.specimen title="Form controls" note="field, text_input, textarea, checkbox, toggle">
+        <form phx-change="noop" class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
+          <.field label="Name" required hint="Shown on every cover.">
+            <.text_input name="name" value="Ink Patrol" />
+          </.field>
+          <.field label="Year" error="Must be a four-digit year.">
+            <.text_input name="year" value="20x1" inputmode="numeric" />
+          </.field>
+          <.field label="Summary" class="sm:col-span-2">
+            <.textarea name="summary" rows={3} placeholder="Leave blank to inherit…" />
+          </.field>
+          <.checkbox name="ongoing" checked>Ongoing series</.checkbox>
+          <.checkbox name="locked">Lock metadata</.checkbox>
+        </form>
+        <.toggle
+          on={@segment == "page"}
+          phx-click="set_segment"
+          phx-value-v={if @segment == "page", do: "width", else: "page"}
+        >
+          Enabled
+        </.toggle>
+      </.specimen>
+
+      <.specimen title="Tabs and table" note="tabs, data_table">
+        <div class="w-full space-y-4">
+          <.tabs label="Example sections">
+            <:tab patch="/dev/ui" active>Sources</:tab>
+            <:tab patch="/dev/ui">Settings</:tab>
+            <:tab patch="/dev/ui" count={3}>Review</:tab>
+          </.tabs>
+          <.data_table id="ui-table" rows={[%{name: "ada", role: "admin"}, %{name: "sam", role: "user"}]}>
+            <:col :let={row} label="Username"><span class="font-semibold text-white">{row.name}</span></:col>
+            <:col :let={row} label="Role">{row.role}</:col>
+            <:action :let={_row}>
+              <.ink_button size="md" variant="danger">Delete</.ink_button>
+            </:action>
+          </.data_table>
+        </div>
+      </.specimen>
+
       <.specimen title="Dialog" note="dialog, dialog_footer — rendered to open, removed to close">
         <.ink_button variant="ghost" size="md" phx-click="toggle_dialog">Open dialog</.ink_button>
         <.dialog :if={@dialog} id="ui-dialog" title="Edit something" on_close={JS.push("toggle_dialog")}>
