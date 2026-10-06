@@ -76,7 +76,7 @@ defmodule StashixWeb.ReaderLive do
 
   # Paging forward again from the end card carries straight on into the next issue.
   def handle_event("next_page", _params, %{assigns: %{at_end: true, next_href: href}} = socket) do
-    if href, do: {:noreply, push_navigate(socket, to: href)}, else: {:noreply, socket}
+    if href, do: {:noreply, push_navigate(socket, to: href, replace: true)}, else: {:noreply, socket}
   end
 
   def handle_event("next_page", _params, socket) do
@@ -95,11 +95,18 @@ defmodule StashixWeb.ReaderLive do
     {:noreply, socket |> assign(current_page: new_page, at_end: false) |> schedule_progress_save()}
   end
 
-  # Closing is an event rather than a plain link so the pending save lands before
-  # the book page loads and reads it. `replace` keeps the reader out of history.
-  def handle_event("close", _params, socket) do
-    socket = flush_progress(socket)
-    {:noreply, push_navigate(socket, to: ~p"/book/#{socket.assigns.book.id}", replace: true)}
+  # Leaving is an event rather than a plain link so the pending save lands before
+  # the next page loads and reads it. The client picks how to get there (see the
+  # "reader:exit" handler in app.js) so the reader never stays in the history.
+  def handle_event("exit", %{"to" => to}, socket) when to in ["book", "series"] do
+    book = socket.assigns.book
+
+    path =
+      if to == "series" and book.series_id,
+        do: ~p"/series/#{book.series_id}",
+        else: ~p"/book/#{book.id}"
+
+    {:noreply, socket |> flush_progress() |> push_event("reader:exit", %{to: path})}
   end
 
   def handle_event("set_layout", %{"layout" => layout}, socket)
@@ -320,6 +327,7 @@ defmodule StashixWeb.ReaderLive do
         <%= if @next_book do %>
           <.link
             navigate={@next_href}
+            replace
             class="reader-end-page pointer-events-auto relative block w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm bg-zinc-900"
             aria-label={"Read next issue #{@next_label}"}
           >
@@ -374,20 +382,23 @@ defmodule StashixWeb.ReaderLive do
             <.link
               :if={@next_book}
               navigate={@next_href}
+              replace
               class="ink-btn pointer-events-auto inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
             >
               Next issue <span class="text-ink">{@next_label}</span>
               <.icon name="lucide-arrow-right" class="w-4 h-4" />
             </.link>
-            <.link
-              navigate={~p"/book/#{@book.id}"}
+            <button
+              phx-click="exit"
+              phx-value-to="book"
               class="reader-end-alt pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors"
             >
               <.icon name="lucide-book-open" class="w-4 h-4" /> Issue page
-            </.link>
-            <.link
+            </button>
+            <button
               :if={@book.series}
-              navigate={~p"/series/#{@book.series.id}"}
+              phx-click="exit"
+              phx-value-to="series"
               class={[
                 "pointer-events-auto inline-flex items-center gap-2 rounded-md font-display uppercase tracking-wide",
                 if(@next_book,
@@ -399,7 +410,7 @@ defmodule StashixWeb.ReaderLive do
               ]}
             >
               <.icon name="lucide-library" class="w-4 h-4" /> Back to series
-            </.link>
+            </button>
           </div>
 
           <p
@@ -452,7 +463,8 @@ defmodule StashixWeb.ReaderLive do
       >
         <%!-- Left: close, always to the book page --%>
         <button
-          phx-click="close"
+          phx-click="exit"
+          phx-value-to="book"
           title="Close reader"
           class="group flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-md text-gray-400 hover:text-white hover:bg-white/10 font-display font-bold uppercase tracking-wide transition-colors whitespace-nowrap"
         >
@@ -621,7 +633,7 @@ defmodule StashixWeb.ReaderLive do
           ]}
           style="top: 64px; right: 16px; z-index: 25;"
         >
-          <div class="reader-ctl-group flex-col divide-y divide-white/10 backdrop-blur-md">
+          <div class="reader-ctl-group reader-ctl-float flex-col divide-y divide-white/10">
             <button
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
               title="Zoom in (+)"

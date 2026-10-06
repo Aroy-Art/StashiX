@@ -42,8 +42,8 @@ defmodule StashixWeb.ReaderLiveTest do
     render_hook(view, "next_page", %{})
     assert has_element?(view, "#reader-end")
     assert has_element?(view, ~s|#reader-end a[href="/read/#{second.id}"]|)
-    assert has_element?(view, ~s|#reader-end a[href="/book/#{first.id}"]|)
-    assert has_element?(view, ~s|#reader-end a[href="/series/#{first.series_id}"]|)
+    assert has_element?(view, ~s|#reader-end button[phx-value-to="book"]|)
+    assert has_element?(view, ~s|#reader-end button[phx-value-to="series"]|)
     assert Library.get_progress(user.id, first.id).current_page == 1
 
     render_hook(view, "prev_page", %{})
@@ -61,8 +61,9 @@ defmodule StashixWeb.ReaderLiveTest do
     render_hook(view, "next_page", %{})
     assert Library.get_progress(user.id, first.id) == nil
 
-    render_hook(view, "close", %{})
-    assert_redirect(view, ~p"/book/#{first.id}")
+    render_hook(view, "exit", %{"to" => "book"})
+    assert_push_event(view, "reader:exit", %{to: to})
+    assert to == ~p"/book/#{first.id}"
     assert Library.get_progress(user.id, first.id).current_page == 1
   end
 
@@ -73,7 +74,9 @@ defmodule StashixWeb.ReaderLiveTest do
 
     assert html =~ "The End"
     refute html =~ "Next issue"
-    assert has_element?(view, ~s|#reader-end a[href="/series/#{second.series_id}"]|)
+    view |> element(~s|#reader-end button[phx-value-to="series"]|) |> render_click()
+    assert_push_event(view, "reader:exit", %{to: to})
+    assert to == ~p"/series/#{second.series_id}"
 
     # Nothing to carry on into: paging forward again stays put.
     assert render_hook(view, "next_page", %{}) =~ "The End"

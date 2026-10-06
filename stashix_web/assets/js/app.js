@@ -603,8 +603,27 @@ Hooks.PageSlider = {
   }
 }
 
+// Path of the page the reader was opened from, i.e. the history entry right
+// below it. Leaving the reader for that same page pops back onto it instead of
+// stacking a second copy; anything else replaces the reader's entry. Either way
+// the reader is gone from the history, so "back" never reopens it.
+let pageBelowReader = null
+const pathOf = (href) => new URL(href, window.location.href).pathname
+const isReaderPath = (path) => path.startsWith("/read/")
+if (!isReaderPath(window.location.pathname)) pageBelowReader = window.location.pathname
+window.addEventListener("phx:navigate", ({detail}) => {
+  const path = pathOf(detail.href)
+  if (!isReaderPath(path)) pageBelowReader = path
+  // Reached by back/forward: what sits below is no longer the page we last saw.
+  else if (detail.pop) pageBelowReader = null
+})
+
 Hooks.ReaderKeyboard = {
   mounted() {
+    this.handleEvent("reader:exit", ({to}) => {
+      if (pageBelowReader === to) window.history.back()
+      else this.js().navigate(to, {replace: true})
+    })
     this.handleKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return
       if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
