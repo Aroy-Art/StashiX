@@ -216,6 +216,10 @@
   pointer-events: none;
 }
 
+/* Sidebar: the current page keeps the ink bar of a menu item but its icon is
+   violet. Declared after the menu rule of equal weight, so it wins. */
+.nav-item.is-active .ink-menu-icon { color: var(--color-violet-400); }
+
 /* Navbar search: the small sibling of .search-headline, a field on a heavy rule. */
 .nav-search {
   background: transparent;
