@@ -99,18 +99,28 @@ defmodule StashixWeb.AllBooksLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <.browse_header title="Books" subtitle={"#{@total} standalone books"}>
-        <:controls>
-          <.library_filter libraries={@sidebar_libraries} selected_id={@library_id} />
-          <span class="w-px h-5 mx-1 bg-white/15" aria-hidden="true"></span>
-          <.sort_select options={@sort_options} selected={@sort} />
-        </:controls>
-      </.browse_header>
+    <% first = List.first(@books) %>
+    <.page wide fade cover_src={first && ~p"/api/books/#{first.id}/cover?s=s"}>
+      <.page_hero title="Books" eyebrow="Browse" count={@total > 0 && @total}>
+        <:meta>
+          <span>
+            <span class="text-white font-semibold">{@total}</span>
+            {if @total == 1, do: "standalone book", else: "standalone books"}
+          </span>
+          <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
+        </:meta>
+      </.page_hero>
+
+      <.browse_toolbar
+        libraries={@sidebar_libraries}
+        library_id={@library_id}
+        sort_options={@sort_options}
+        sort={@sort}
+      />
 
       <%= if @books != [] do %>
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
-        <.media_grid>
+        <.cover_grid>
           <%= for book <- @books do %>
             <% prog = @progress_map[book.id] %>
             <% progress =
@@ -129,14 +139,14 @@ defmodule StashixWeb.AllBooksLive do
               blurhash={book.cover && book.cover.blurhash}
             />
           <% end %>
-        </.media_grid>
+        </.cover_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
       <% end %>
 
-      <%= if !@loading && @books == [] do %>
-        <.browse_empty icon="lucide-library-big" label="No books found." />
-      <% end %>
-    </div>
+      <.empty_state :if={!@loading && @books == []} ghost="0" title="No books on this shelf">
+        {if @library_id, do: "Nothing in this library yet. Try another one.", else: "Scan a library to fill it."}
+      </.empty_state>
+    </.page>
     """
   end
 end

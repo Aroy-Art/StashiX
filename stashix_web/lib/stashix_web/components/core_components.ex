@@ -19,7 +19,7 @@ defmodule StashixWeb.CoreComponents do
 
   import StashixWeb.UI.Icon
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
-  import StashixWeb.UI.Ink, only: [ink_button: 1, sticker: 1, progress_bar: 1]
+  import StashixWeb.UI.Ink, only: [ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
@@ -816,42 +816,45 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc """
+  Control row above a browse grid: library filter pills on the left (only
+  with more than one library to pick from), sort on the right.
+  """
+  attr :libraries, :list, default: []
+  attr :library_id, :string, default: nil
+  attr :sort_options, :list, required: true
+  attr :sort, :string, required: true
+
+  def browse_toolbar(assigns) do
+    ~H"""
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4 border-b border-white/15">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <.library_filter :if={length(@libraries) > 1} libraries={@libraries} selected_id={@library_id} />
+      </div>
+      <.sort_select options={@sort_options} selected={@sort} class="ml-auto" />
+    </div>
+    """
+  end
+
   attr :libraries, :list, required: true
   attr :selected_id, :string, default: nil
   attr :event, :string, default: "filter_library"
 
   def library_filter(assigns) do
     ~H"""
-    <div class="contents">
-      <button
-        phx-click={@event}
-        phx-value-id=""
-        class={[
-          "px-3 py-1 text-sm rounded-lg border transition-colors",
-          if(is_nil(@selected_id),
-            do: "bg-violet-600 border-violet-500 text-white",
-            else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-          )
-        ]}
-      >
-        All Libraries
-      </button>
-      <%= for lib <- @libraries do %>
-        <button
-          phx-click={@event}
-          phx-value-id={lib.id}
-          class={[
-            "px-3 py-1 text-sm rounded-lg border transition-colors",
-            if(@selected_id == lib.id,
-              do: "bg-violet-600 border-violet-500 text-white",
-              else: "bg-gray-800 border-gray-700 text-gray-400 hover:text-white"
-            )
-          ]}
-        >
-          {lib.name}
-        </button>
-      <% end %>
-    </div>
+    <.pill tag="button" type="button" active={is_nil(@selected_id)} phx-click={@event} phx-value-id="">
+      All libraries
+    </.pill>
+    <.pill
+      :for={lib <- @libraries}
+      tag="button"
+      type="button"
+      active={@selected_id == lib.id}
+      phx-click={@event}
+      phx-value-id={lib.id}
+    >
+      {lib.name}
+    </.pill>
     """
   end
 

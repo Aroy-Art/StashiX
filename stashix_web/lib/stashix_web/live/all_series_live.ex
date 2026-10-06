@@ -90,29 +90,39 @@ defmodule StashixWeb.AllSeriesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <.browse_header title="Series" subtitle={"#{@total} series"}>
-        <:controls>
-          <.library_filter libraries={@sidebar_libraries} selected_id={@library_id} />
-          <span class="w-px h-5 mx-1 bg-white/15" aria-hidden="true"></span>
-          <.sort_select options={@sort_options} selected={@sort} />
-        </:controls>
-      </.browse_header>
+    <% first = List.first(@series) %>
+    <.page wide fade cover_src={first && ~p"/api/series/#{first.id}/cover?s=s"}>
+      <.page_hero title="Series" eyebrow="Browse" count={@total > 0 && @total}>
+        <:meta>
+          <span>
+            <span class="text-white font-semibold">{@total}</span>
+            {if @total == 1, do: "series", else: "series"}
+          </span>
+          <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
+        </:meta>
+      </.page_hero>
+
+      <.browse_toolbar
+        libraries={@sidebar_libraries}
+        library_id={@library_id}
+        sort_options={@sort_options}
+        sort={@sort}
+      />
 
       <%= if @series != [] do %>
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
-        <.media_grid>
+        <.cover_grid>
           <%= for s <- @series do %>
             <.series_card series={s} />
           <% end %>
-        </.media_grid>
+        </.cover_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
       <% end %>
 
-      <%= if !@loading && @series == [] do %>
-        <.browse_empty icon="lucide-book-copy" label="No series found." />
-      <% end %>
-    </div>
+      <.empty_state :if={!@loading && @series == []} ghost="0" title="No series on this shelf">
+        {if @library_id, do: "Nothing in this library yet. Try another one.", else: "Scan a library to fill it."}
+      </.empty_state>
+    </.page>
     """
   end
 end

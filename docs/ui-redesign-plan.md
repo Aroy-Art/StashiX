@@ -239,7 +239,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 4 — Browse pages
 
-- [ ] `all_series_live.ex`, `all_books_live.ex`, `all_issues_live.ex`:
+- [x] `all_series_live.ex`, `all_books_live.ex`, `all_issues_live.ex`:
   `page` + `page_hero` (title in display type, total as ghost numeral),
   library filter as `pill`s, sort as `ink_select`, `cover_grid`.
 - [ ] `all_publishers_live.ex`: extract `<.publisher_card>`; cover strip
