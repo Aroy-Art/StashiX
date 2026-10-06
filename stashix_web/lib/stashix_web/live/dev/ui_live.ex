@@ -19,12 +19,23 @@ defmodule StashixWeb.Dev.UiLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, page_title: "UI", colors: @colors, segment: "page", menu_value: "single")}
+    {:ok,
+     assign(socket,
+       page_title: "UI",
+       colors: @colors,
+       segment: "page",
+       menu_value: "single",
+       select: %{"sort" => "title_asc", "publisher" => "", "role" => "user"}
+     )}
   end
 
   @impl true
-  def handle_event("set_segment", %{"value" => value}, socket), do: {:noreply, assign(socket, segment: value)}
-  def handle_event("set_menu", %{"value" => value}, socket), do: {:noreply, assign(socket, menu_value: value)}
+  def handle_event("set_segment", %{"v" => value}, socket), do: {:noreply, assign(socket, segment: value)}
+  def handle_event("set_menu", %{"v" => value}, socket), do: {:noreply, assign(socket, menu_value: value)}
+  def handle_event("noop", _params, socket), do: {:noreply, socket}
+
+  def handle_event("select_changed", params, socket),
+    do: {:noreply, assign(socket, select: Map.take(params, ~w(sort publisher role)))}
 
   attr :title, :string, required: true
   attr :note, :string, default: nil
@@ -127,7 +138,7 @@ defmodule StashixWeb.Dev.UiLive do
           tag="button"
           active={@segment == value}
           phx-click="set_segment"
-          phx-value-value={value}
+          phx-value-v={value}
         >
           Fit {value}
         </.pill>
@@ -135,9 +146,9 @@ defmodule StashixWeb.Dev.UiLive do
         <.chip count={3}>Flat chip</.chip>
       </.specimen>
 
-      <.specimen title="Segmented control" note=".ink-segmented — becomes <.segmented> in Phase 2">
-        <div class="ink-segmented divide-x divide-white/10">
-          <button
+      <.specimen title="Segmented control" note="segmented, segment">
+        <.segmented>
+          <.segment
             :for={
               {value, icon} <- [
                 {"page", "lucide-scan"},
@@ -145,26 +156,32 @@ defmodule StashixWeb.Dev.UiLive do
                 {"height", "lucide-move-vertical"}
               ]
             }
+            icon={icon}
+            title={"Fit #{value}"}
+            active={@segment == value}
             phx-click="set_segment"
-            phx-value-value={value}
-            aria-pressed={to_string(@segment == value)}
-            class={[
-              "flex items-center justify-center h-8 min-w-8 px-2 transition-colors",
-              if(@segment == value,
-                do: "bg-violet-600 text-white",
-                else: "text-gray-300 hover:text-white hover:bg-white/10"
-              )
-            ]}
-          >
-            <.icon name={icon} class="w-4 h-4" />
-          </button>
-        </div>
+            phx-value-v={value}
+          />
+        </.segmented>
+        <.segmented vertical>
+          <.segment icon="lucide-plus" title="Zoom in" />
+          <.segment icon="lucide-minus" title="Zoom out" />
+        </.segmented>
+        <.segmented>
+          <.segment class="gap-1 px-2.5 font-display font-bold tracking-wide text-sm">
+            LTR <.icon name="lucide-arrow-right" class="w-3.5 h-3.5 text-ink" />
+          </.segment>
+        </.segmented>
       </.specimen>
 
-      <.specimen title="Menu" note=".ink-menu — becomes <.ink_menu> in Phase 2">
-        <div class="ink-menu w-60 p-1.5 rounded-md bg-zinc-950 ring-1 ring-white/15">
-          <p class="ink-menu-label">Layout</p>
-          <button
+      <.specimen title="Menu" note="ink_menu, menu_label, menu_item, menu_separator">
+        <.ink_menu id="ui-menu-choice" align="start" panel_class="w-60">
+          <:trigger class="ink-segmented h-8 items-center gap-1.5 px-2.5 text-gray-300 hover:text-white font-display font-bold uppercase tracking-wide text-sm">
+            <.icon name="lucide-rectangle-vertical" class="w-4 h-4" /> View
+            <.icon name="lucide-chevron-down" class="w-3 h-3" />
+          </:trigger>
+          <.menu_label>Layout</.menu_label>
+          <.menu_item
             :for={
               {value, label, icon} <- [
                 {"single", "Single page", "lucide-rectangle-vertical"},
@@ -172,24 +189,70 @@ defmodule StashixWeb.Dev.UiLive do
                 {"cover", "Facing, cover first", "lucide-layout-panel-top"}
               ]
             }
+            icon={icon}
+            active={@menu_value == value}
             phx-click="set_menu"
-            phx-value-value={value}
-            class={[
-              "ink-menu-item w-full flex items-center gap-3 px-2 py-2 rounded-sm text-sm text-left transition-colors",
-              if(@menu_value == value,
-                do: "is-active bg-white/[0.07] text-white",
-                else: "text-gray-300 hover:text-white hover:bg-white/[0.05]"
-              )
-            ]}
+            phx-value-v={value}
           >
-            <.icon
-              name={icon}
-              class={"w-4 h-4 flex-shrink-0 #{if @menu_value == value, do: "text-ink", else: "text-gray-500"}"}
+            {label}
+          </.menu_item>
+        </.ink_menu>
+
+        <.ink_menu id="ui-menu-actions">
+          <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors">
+            <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Actions
+            <.icon name="lucide-chevron-down" class="w-3 h-3" />
+          </:trigger>
+          <.menu_item icon="lucide-pencil" phx-click="noop">Edit metadata</.menu_item>
+          <.menu_item icon="lucide-refresh-cw" phx-click="noop">Rescan</.menu_item>
+          <.menu_item icon="lucide-settings" navigate="/dev/ui">A link</.menu_item>
+          <.menu_separator />
+          <.menu_item icon="lucide-zap" tone="warning" phx-click="noop">Force rescan</.menu_item>
+          <.menu_item icon="lucide-trash-2" tone="danger" phx-click="noop">Delete</.menu_item>
+        </.ink_menu>
+
+        <.ink_menu id="ui-menu-icon" modal>
+          <:trigger
+            label="More"
+            class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <.icon name="lucide-ellipsis-vertical" class="w-4 h-4" />
+          </:trigger>
+          <.menu_label>Modal menu</.menu_label>
+          <.menu_item icon="lucide-check" phx-click="noop">Dismiss click is swallowed</.menu_item>
+        </.ink_menu>
+      </.specimen>
+
+      <.specimen title="Select" note="ink_select — value arrives through the form's phx-change">
+        <form id="ui-select-form" phx-change="select_changed" class="flex flex-wrap items-center gap-6">
+          <.ink_select
+            id="ui-select-sort"
+            name="sort"
+            label="Sort"
+            value={@select["sort"]}
+            options={[{"Title A → Z", "title_asc"}, {"Title Z → A", "title_desc"}, {"Newest first", "added_desc"}]}
+          />
+          <.ink_select
+            id="ui-select-publisher"
+            name="publisher"
+            label="Publisher"
+            prompt="All publishers"
+            searchable
+            value={@select["publisher"]}
+            options={for n <- 1..40, do: {"Publisher number #{n}", "p#{n}"}}
+          />
+          <div class="w-56">
+            <.ink_select
+              id="ui-select-role"
+              name="role"
+              label="Role"
+              variant="field"
+              value={@select["role"]}
+              options={[{"User", "user"}, {"Admin", "admin"}]}
             />
-            <span class="flex-1 font-display font-bold uppercase tracking-wide">{label}</span>
-            <.icon :if={@menu_value == value} name="lucide-check" class="w-3.5 h-3.5 text-ink" />
-          </button>
-        </div>
+          </div>
+          <code id="ui-select-state" class="text-xs text-gray-400">{inspect(@select)}</code>
+        </form>
       </.specimen>
 
       <.specimen title="Panels and figures" note="panel, stat_list, stat, progress_bar">

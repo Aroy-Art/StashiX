@@ -89,7 +89,7 @@ defmodule StashixWeb.UI.Ink do
   @doc "Class for the right half of a `split_button/1`."
   def split_aside_class,
     do:
-      "flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40 transition-colors"
+      "flex items-center px-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-r-md border-l border-violet-400/40 transition-colors"
 
   @doc "Round glass button holding a single icon. `label` is the accessible name."
   attr :icon, :string, required: true

@@ -126,7 +126,33 @@
   text-transform: uppercase;
   color: var(--color-gray-500);
 }
-.ink-menu-item.is-active { box-shadow: inset 3px 0 0 0 var(--color-ink); }
+.ink-menu-item.is-active {
+  box-shadow: inset 3px 0 0 0 var(--color-ink);
+  background: rgb(255 255 255 / 0.07);
+  color: #fff;
+}
+.ink-menu-item.is-active .ink-menu-icon { color: var(--color-ink); }
+.ink-menu-item:not(.is-active) .ink-menu-check { display: none; }
+
+/* The panel is a popover in the top layer; InkMenu sets top/left. The second
+   shadow is the hairline ring, since a popover gets no Tailwind ring reset. */
+.ink-menu[popover] {
+  position: fixed;
+  inset: auto;
+  border: 0;
+  max-height: calc(100dvh - 1rem);
+  box-shadow: 4px 4px 0 0 var(--color-ink), 0 0 0 1px rgb(255 255 255 / 0.15), 0 20px 40px -10px rgb(0 0 0 / 0.9);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ink-menu[popover]:popover-open { animation: ink-menu-in 120ms ease-out; }
+  @keyframes ink-menu-in {
+    from { opacity: 0; transform: translateY(-4px); }
+  }
+}
+
+/* Select trigger: ink border once a value is picked, chevron flips when open. */
+.ink-select[data-has-value] > [data-menu-trigger] { border-color: var(--color-ink); color: #fff; }
+.ink-select[data-open] .ink-select-chevron { transform: rotate(180deg); }
 
 /* Panel backing: an ink-to-violet gradient that shows as a 4px edge
    down the right side of the panel sitting on top of it. */

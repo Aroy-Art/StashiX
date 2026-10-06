@@ -22,12 +22,13 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import "../vendor/blurhash"
 import * as echarts from "../vendor/echarts.min"
+import InkMenu from "./hooks/ink_menu.js"
 import SaladUI from "./ui/index.js";
 import { SaladUIHook } from "./ui/core/hook.js";
 import "./ui/components/dialog.js";
 import "./ui/components/dropdown_menu.js";
 
-let Hooks = { SaladUI: SaladUIHook }
+let Hooks = { SaladUI: SaladUIHook, InkMenu }
 
 Hooks.Sidebar = {
   mounted() {
