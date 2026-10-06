@@ -680,68 +680,37 @@ defmodule StashixWeb.SeriesLive do
 
         <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
           <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Name</label>
-              <input
-                type="text"
-                name="series[name]"
-                value={@edit_form[:name].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Name" class="col-span-2">
+              <.text_input name="series[name]" value={@edit_form[:name].value} />
+            </.field>
 
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
-              <textarea
+            <.field label="Summary" class="col-span-2">
+              <.textarea
                 name="series[summary]"
                 rows="4"
                 placeholder="Leave blank to inherit from first issue with a summary…"
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-              >{@edit_form[:summary].value}</textarea>
-            </div>
-
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
-              <input
-                type="number"
-                name="series[volume]"
-                value={@edit_form[:volume].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                value={@edit_form[:summary].value}
               />
-            </div>
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
-              <input
-                type="text"
-                name="series[language]"
-                value={@edit_form[:language].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Volume">
+              <.text_input type="number" name="series[volume]" value={@edit_form[:volume].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Start Year</label>
-              <input
-                type="number"
-                name="series[start_year]"
-                value={@edit_form[:start_year].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Language">
+              <.text_input name="series[language]" value={@edit_form[:language].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">End Year</label>
-              <input
-                type="number"
-                name="series[end_year]"
-                value={@edit_form[:end_year].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Start Year">
+              <.text_input type="number" name="series[start_year]" value={@edit_form[:start_year].value} />
+            </.field>
+
+            <.field label="End Year">
+              <.text_input type="number" name="series[end_year]" value={@edit_form[:end_year].value} />
+            </.field>
 
             <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Age Rating</label>
               <% current_rating = common_age_rating(@series.books) %>
               <.ink_select
                 id="edit-series-age-rating"
@@ -806,7 +775,7 @@ defmodule StashixWeb.SeriesLive do
             </div>
 
             <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Publisher</label>
               <div
                 id={"pub-picker-series-#{@series.id}"}
                 phx-hook="PublisherSearch"

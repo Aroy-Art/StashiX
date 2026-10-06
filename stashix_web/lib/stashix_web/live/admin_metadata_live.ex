@@ -594,36 +594,32 @@ defmodule StashixWeb.AdminMetadataLive do
       class="max-w-xl space-y-5"
     >
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Auto-match threshold (%)</label>
-          <input
+        <.field label="Auto-match threshold (%)" hint="Minimum score to apply a match without review.">
+          <.text_input
             type="number"
             min="0"
             max="100"
             name="settings[auto_match_threshold]"
             phx-debounce="600"
             value={round(@settings["auto_match_threshold"] * 100)}
-            class={input_class()}
           />
-          <p class="text-xs text-gray-500 mt-1">Minimum score to apply a match without review.</p>
-        </div>
-        <div>
-          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Required lead (%)</label>
-          <input
+        </.field>
+        <.field label="Required lead (%)" hint="How far ahead of the runner-up the best match must be.">
+          <.text_input
             type="number"
             min="0"
             max="100"
             name="settings[auto_match_margin]"
             phx-debounce="600"
             value={round(@settings["auto_match_margin"] * 100)}
-            class={input_class()}
           />
-          <p class="text-xs text-gray-500 mt-1">How far ahead of the runner-up the best match must be.</p>
-        </div>
+        </.field>
       </div>
 
-      <div>
-        <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">When applying a match automatically</label>
+      <.field
+        label="When applying a match automatically"
+        hint="In the Identify dialog you can pick exactly which fields to overwrite."
+      >
         <.ink_select
           id="settings-overwrite-mode"
           name="settings[overwrite_mode]"
@@ -632,34 +628,27 @@ defmodule StashixWeb.AdminMetadataLive do
           value={@settings["overwrite_mode"]}
           options={[{"Only fill empty fields", "fill"}, {"Replace fields the source provides", "replace"}]}
         />
-        <p class="text-xs text-gray-500 mt-1">
-          In the Identify dialog you can pick exactly which fields to overwrite.
-        </p>
-      </div>
+      </.field>
 
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Cache searches (hours)</label>
-          <input
+        <.field label="Cache searches (hours)">
+          <.text_input
             type="number"
             min="0"
             name="settings[cache_search_hours]"
             value={@settings["cache_search_hours"]}
             phx-debounce="600"
-            class={input_class()}
           />
-        </div>
-        <div>
-          <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Cache issue/series details (days)</label>
-          <input
+        </.field>
+        <.field label="Cache issue/series details (days)">
+          <.text_input
             type="number"
             min="0"
             name="settings[cache_detail_days]"
             value={@settings["cache_detail_days"]}
             phx-debounce="600"
-            class={input_class()}
           />
-        </div>
+        </.field>
         <p class="col-span-2 text-xs text-gray-500 -mt-2">
           Source responses are cached to save API requests. 0 disables caching.
         </p>

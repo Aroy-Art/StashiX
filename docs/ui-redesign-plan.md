@@ -283,11 +283,11 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 ### Phase 6 — Cleanup
 
-- [ ] Split `admin_live.ex` into one function component (or module) per tab.
+- [x] Split `admin_live.ex` into one function component (or module) per tab.
 - [ ] `data_table/1` exists but the admin tables are still hand-written
   `<table>`s with shared classes (rows expand, forms sit inside); convert the
   simple ones (users, aliases, visibility).
-- [ ] Admin forms use shared classes (`input_class/0`, label class string) but
+- [x] Admin forms use shared classes (`input_class/0`, label class string) but
   not yet `field/1` + `text_input/1`; convert while splitting.
 - [x] Delete the unused Phoenix default components in `core_components.ex`
   (`input/1`, `label/1`, `error/1`, `simple_form/1`, `button/1`, `header/1`,

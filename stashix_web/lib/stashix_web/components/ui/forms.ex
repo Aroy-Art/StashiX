@@ -48,16 +48,14 @@ defmodule StashixWeb.UI.Forms do
   attr :rest, :global, include: @input_attrs
 
   def text_input(assigns) do
-    assigns = assign_new(assigns, :type, fn -> Map.get(assigns.rest, :type, "text") end)
-
     ~H"""
-    <input type={@type} class={[input_class(@size), @mono && "font-mono", @class]} {@rest} />
+    <input class={[input_class(@size), @mono && "font-mono", @class]} {@rest} />
     """
   end
 
   @doc "Multi-line input. The text goes in `value`."
   attr :value, :string, default: nil
-  attr :rows, :integer, default: 4
+  attr :rows, :any, default: 4
   attr :mono, :boolean, default: false
   attr :class, :any, default: nil
   attr :rest, :global, include: @input_attrs

@@ -596,58 +596,27 @@ defmodule StashixWeb.BookLive do
 
         <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
           <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Title</label>
-              <input
-                type="text"
-                name="book[title]"
-                value={@edit_form[:title].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Title" class="col-span-2">
+              <.text_input name="book[title]" value={@edit_form[:title].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Issue #</label>
-              <input
-                type="text"
-                name="book[issue_number]"
-                value={@edit_form[:issue_number].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Issue #">
+              <.text_input name="book[issue_number]" value={@edit_form[:issue_number].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Volume</label>
-              <input
-                type="number"
-                name="book[volume]"
-                value={@edit_form[:volume].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Volume">
+              <.text_input type="number" name="book[volume]" value={@edit_form[:volume].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Year</label>
-              <input
-                type="number"
-                name="book[year]"
-                value={@edit_form[:year].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Year">
+              <.text_input type="number" name="book[year]" value={@edit_form[:year].value} />
+            </.field>
 
-            <div>
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Language</label>
-              <input
-                type="text"
-                name="book[language]"
-                value={@edit_form[:language].value}
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-              />
-            </div>
+            <.field label="Language">
+              <.text_input name="book[language]" value={@edit_form[:language].value} />
+            </.field>
 
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Age Rating</label>
+            <.field label="Age Rating" class="col-span-2">
               <.ink_select
                 id="edit-book-age-rating"
                 name="book[age_rating]"
@@ -664,28 +633,18 @@ defmodule StashixWeb.BookLive do
                   {"Explicit", "explicit"}
                 ]}
               />
-            </div>
+            </.field>
+
+            <.field label="Summary" class="col-span-2">
+              <.textarea name="book[summary]" rows="4" value={@edit_form[:summary].value} />
+            </.field>
+
+            <.field label="Notes" class="col-span-2">
+              <.textarea name="book[notes]" rows="3" value={@edit_form[:notes].value} />
+            </.field>
 
             <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Summary</label>
-              <textarea
-                name="book[summary]"
-                rows="4"
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-              >{@edit_form[:summary].value}</textarea>
-            </div>
-
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Notes</label>
-              <textarea
-                name="book[notes]"
-                rows="3"
-                class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500 resize-none"
-              >{@edit_form[:notes].value}</textarea>
-            </div>
-
-            <div class="col-span-2">
-              <label class="block text-xs font-medium text-gray-400 mb-1.5">Publisher</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Publisher</label>
               <div
                 id={"pub-picker-book-#{@book.id}"}
                 phx-hook="PublisherSearch"

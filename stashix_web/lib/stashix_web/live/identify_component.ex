@@ -676,8 +676,7 @@ defmodule StashixWeb.IdentifyComponent do
               phx-target={@myself}
               class="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end"
             >
-              <div class="col-span-2 sm:col-span-2">
-                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Source</label>
+              <.field label="Source" class="col-span-2 sm:col-span-2">
                 <.ink_select
                   id={"#{@id}-source"}
                   name="source"
@@ -686,21 +685,19 @@ defmodule StashixWeb.IdentifyComponent do
                   value={@source_key}
                   options={Enum.map(@sources, fn {key, name} -> {name, key} end)}
                 />
-              </div>
+              </.field>
               <div class={if @kind == :series, do: "col-span-2 sm:col-span-3", else: "col-span-2 sm:col-span-2"}>
                 <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Series</label>
                 <input type="text" name="q[series_name]" value={@form[:series_name].value} class={input_class()} />
               </div>
               <%= if @kind == :issue do %>
-                <div>
-                  <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Number</label>
-                  <input type="text" name="q[number]" value={@form[:number].value} class={input_class()} />
-                </div>
+                <.field label="Number">
+                  <.text_input name="q[number]" value={@form[:number].value} />
+                </.field>
               <% end %>
-              <div>
-                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Year</label>
-                <input type="text" name="q[year]" value={@form[:year].value} class={input_class()} />
-              </div>
+              <.field label="Year">
+                <.text_input name="q[year]" value={@form[:year].value} />
+              </.field>
               <div class="col-span-2 sm:col-span-6 flex items-center justify-end gap-4">
                 <label class="flex items-center gap-2 text-xs text-gray-500" title="Ignore cached responses">
                   <input type="hidden" name="refresh" value="false" />
