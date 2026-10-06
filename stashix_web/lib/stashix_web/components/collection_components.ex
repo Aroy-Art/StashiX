@@ -121,8 +121,10 @@ defmodule StashixWeb.CollectionComponents do
   end
 
   @doc """
-  Card for a library or a publisher: a strip of its covers, its name and its
-  counts. `:menu` sits in the top-right corner, outside the link.
+  Card for a library or a publisher, drawn as an indicia panel: a strip of its
+  covers, its name and its counts under ink labels. `:menu` sits in the
+  top-right corner, outside the link; the default slot is a line below the
+  counts.
   """
   attr :navigate, :string, required: true
   attr :name, :string, required: true
@@ -138,14 +140,17 @@ defmodule StashixWeb.CollectionComponents do
     assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
 
     ~H"""
+    <%!-- An indicia panel (ink left edge, violet-to-aqua wash, halftone) with a
+         strip of covers across the top. --%>
     <div class={[
-      "collection-card group relative rounded-md bg-gray-900 ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
+      "collection-card indicia group relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
       @class
     ]}>
-      <.link navigate={@navigate} class="block rounded-md overflow-hidden focus-visible:outline-2 focus-visible:outline-ink">
-        <div class="relative flex h-24 bg-gray-950 overflow-hidden">
+      <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+      <.link navigate={@navigate} class="relative block focus-visible:outline-2 focus-visible:outline-ink">
+        <div class="relative flex h-24 bg-gray-950 overflow-hidden border-b border-white/10">
           <div :if={@covers == []} class="flex-1 flex items-center justify-center">
-            <.icon name={@icon} class="w-8 h-8 text-gray-400" />
+            <.icon name={@icon} class="w-8 h-8 text-gray-600" />
           </div>
           <img
             :for={url <- @covers}
@@ -155,21 +160,18 @@ defmodule StashixWeb.CollectionComponents do
             class="flex-1 min-w-0 h-full object-cover object-top"
             onerror="this.style.display='none'"
           />
-          <div :if={@covers != []} class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/10 to-transparent">
+          <div :if={@covers != []} class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-gray-950/80 to-transparent">
           </div>
         </div>
-        <div class="px-3 pt-1 pb-3">
-          <p class="font-display font-extrabold uppercase text-xl leading-tight tracking-wide text-white truncate group-hover:text-ink transition-colors">
+        <div class="px-4 pt-3 pb-4">
+          <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-white truncate group-hover:text-ink transition-colors">
             {@name}
           </p>
-          <dl :if={@stats != []} class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1">
-            <div :for={{label, count} <- @stats} class="flex items-baseline gap-1">
-              <dd class="font-display font-bold text-base leading-none text-gray-100 tabular-nums">{count}</dd>
-              <dt class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-400">{label}</dt>
-            </div>
+          <dl :if={@stats != []} class="flex flex-wrap gap-x-6 gap-y-2 mt-3">
+            <.stat :for={{label, count} <- @stats} label={label}>{count}</.stat>
           </dl>
-          <p :if={@stats == [] and @note} class="mt-1 text-xs text-gray-400">{@note}</p>
-          {render_slot(@inner_block)}
+          <p :if={@stats == [] and @note} class="mt-2 text-xs text-gray-400">{@note}</p>
+          <div :if={@inner_block != []} class="mt-2.5">{render_slot(@inner_block)}</div>
         </div>
       </.link>
       <div :if={@menu != []} class="absolute top-1.5 right-1.5 rounded bg-gray-950/70 backdrop-blur-sm">

@@ -6,6 +6,7 @@ defmodule StashixWeb.Dev.UiLive do
   """
   use StashixWeb, :live_view
 
+  import StashixWeb.CollectionComponents, only: [collection_card: 1]
   import StashixWeb.DetailComponents
 
   @colors [
@@ -407,6 +408,33 @@ defmodule StashixWeb.Dev.UiLive do
           class="flex-shrink-0 w-36"
         />
       </.shelf>
+
+      <.specimen title="Collection card" note="collection_card — libraries on home, publishers">
+        <% swatch = fn color ->
+          "data:image/svg+xml," <>
+            URI.encode(
+              "<svg xmlns='http://www.w3.org/2000/svg' width='60' height='90'><rect width='60' height='90' fill='#{color}'/><circle cx='30' cy='38' r='16' fill='rgba(0,0,0,.25)'/></svg>"
+            )
+        end %>
+        <.collection_card
+          navigate="/dev/ui"
+          name="Comics"
+          covers={Enum.map(~w(rebeccapurple deepskyblue orange crimson seagreen), swatch)}
+          stats={[{"series", 341}, {"books", 391}, {"issues", 2302}]}
+          class="w-64"
+        >
+          <.chip>262 GiB</.chip>
+        </.collection_card>
+        <.collection_card
+          navigate="/dev/ui"
+          name="Aqua Press"
+          icon="lucide-building"
+          covers={Enum.map(~w(slategray rebeccapurple teal), swatch)}
+          stats={[{"series", 5}, {"books", 1}, {"issues", 18}]}
+          class="w-72"
+        />
+        <.collection_card navigate="/dev/ui" name="Empty imprint" icon="lucide-building" note="No content" class="w-64" />
+      </.specimen>
 
       <.specimen title="Flash" note="flash — put_flash/3 shows these bottom right; info clears itself after 6s">
         <.ink_button variant="ghost" size="md" phx-click="flash" phx-value-kind="info">Show info flash</.ink_button>
