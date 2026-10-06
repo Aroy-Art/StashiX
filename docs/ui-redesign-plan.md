@@ -172,7 +172,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   should be pixel-identical; this proves the API before the old pages use it.
   - [x] `series_live.ex`
   - [x] `book_live.ex`
-  - [ ] `search_live.ex`
+  - [x] `search_live.ex`
   - [ ] `reader_live.ex`
   - [x] `detail_components.ex`, `metadata_components.ex`
 
