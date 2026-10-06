@@ -226,27 +226,34 @@ defmodule StashixWeb.BookLive do
 
   defp load_external_ids(book), do: Repo.preload(book, [:external_ids, :urls]) |> Map.take([:external_ids, :urls])
 
-  # Links to the record on each source's site, when we can build one.
-  # `{label, href}` pills: one per external ID, then any stored URL not already linked from one.
+  # `{label, href}` pills: one per external ID, then any stored URL for a site not already linked.
+  # A stored URL for the source's own site wins over the one built from the ID.
   defp external_links(%{external_ids: ids, urls: urls}) do
     sources =
       Enum.map(ids, fn e ->
         source = to_string(e.source)
 
-        href =
+        {host, fallback} =
           case source do
-            "Comic Vine" -> "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"
-            "Grand Comics Database" -> "https://www.comics.org/issue/#{e.source_id}/"
-            "Metron" -> Enum.find_value(urls, &(String.contains?(&1.url, "metron.cloud") && &1.url))
-            _ -> nil
+            "Comic Vine" -> {"comicvine.gamespot.com", "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"}
+            "Grand Comics Database" -> {"comics.org", "https://www.comics.org/issue/#{e.source_id}/"}
+            "Metron" -> {"metron.cloud", nil}
+            _ -> {nil, nil}
           end
 
-        {source, href}
+        {source, (host && Enum.find_value(urls, &(url_host(&1.url) == host && &1.url))) || fallback}
       end)
 
-    linked = for {_source, href} <- sources, href, do: href
+    linked = for {_source, href} <- sources, href, do: url_host(href)
 
-    sources ++ for(u <- urls, u.url not in linked, do: {URI.parse(u.url).host || u.url, u.url})
+    sources ++ for(u <- urls, url_host(u.url) not in linked, do: {url_host(u.url) || u.url, u.url})
+  end
+
+  defp url_host(url) do
+    case URI.parse(url).host do
+      nil -> nil
+      host -> String.replace_prefix(host, "www.", "")
+    end
   end
 
   # Scalar facts for the details grid; empty values are dropped by the grid.
