@@ -22,6 +22,7 @@ defmodule StashixWeb.UI.Data do
 
   slot :col, required: true do
     attr :label, :string
+    attr :align, :string, values: ~w(left right)
     attr :class, :any
   end
 
@@ -37,7 +38,10 @@ defmodule StashixWeb.UI.Data do
             <th
               :for={col <- @col}
               scope="col"
-              class="px-4 py-3 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400 whitespace-nowrap"
+              class={[
+                "px-4 py-3 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400 whitespace-nowrap",
+                col[:align] == "right" && "text-right"
+              ]}
             >
               {col[:label]}
             </th>
@@ -46,7 +50,12 @@ defmodule StashixWeb.UI.Data do
         </thead>
         <tbody class="divide-y divide-white/[0.06]">
           <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="hover:bg-white/[0.03] transition-colors">
-            <td :for={col <- @col} class={["px-4 py-3 text-gray-200", col[:class]]}>{render_slot(col, row)}</td>
+            <td
+              :for={col <- @col}
+              class={["px-4 py-3 text-gray-200", col[:align] == "right" && "text-right tabular-nums", col[:class]]}
+            >
+              {render_slot(col, row)}
+            </td>
             <td :if={@action != []} class="px-4 py-3">
               <div class="flex items-center justify-end gap-2">{render_slot(@action, row)}</div>
             </td>

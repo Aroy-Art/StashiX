@@ -284,7 +284,8 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 ### Phase 6 — Cleanup
 
 - [x] Split `admin_live.ex` into one function component (or module) per tab.
-- [ ] `data_table/1` exists but the admin tables are still hand-written
+- [x] (aliases and visibility converted; users and cleanup tables keep their
+  hand-written rows because rows expand or carry forms) `data_table/1` exists but the admin tables are still hand-written
   `<table>`s with shared classes (rows expand, forms sit inside); convert the
   simple ones (users, aliases, visibility).
 - [x] Admin forms use shared classes (`input_class/0`, label class string) but

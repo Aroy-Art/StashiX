@@ -207,56 +207,18 @@ defmodule StashixWeb.AdminLive.Publishers do
                 <span class="text-gray-500">({length(@publishers_with_aliases)})</span>
               <% end %>
             </h3>
-            <div class="rounded-lg border border-white/10 overflow-hidden">
-              <table class="w-full text-sm">
-                <thead>
-                  <tr class="border-b border-white/10 bg-gray-900/50">
-                    <th class="px-3 py-2 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                      Master
-                    </th>
-                    <th class="px-3 py-2 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                      Alias
-                    </th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y divide-white/10">
-                  <%= if @publishers_with_aliases == [] do %>
-                    <tr>
-                      <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">
-                        No aliases configured
-                      </td>
-                    </tr>
-                  <% else %>
-                    <%= for p <- @publishers_with_aliases do %>
-                      <tr class="group hover:bg-gray-800/40 transition-colors">
-                        <td class="px-3 py-2">
-                          <.link
-                            navigate={~p"/publisher/#{p.canonical_publisher_id}"}
-                            class="text-gray-300 hover:text-violet-300 transition-colors"
-                          >
-                            {p.canonical && p.canonical.name}
-                          </.link>
-                        </td>
-                        <td class="px-3 py-2">
-                          <.link
-                            navigate={~p"/publisher/#{p.canonical_publisher_id}"}
-                            class="text-gray-400 hover:text-violet-300 transition-colors"
-                          >
-                            {p.name}
-                          </.link>
-                        </td>
-                        <td class="px-3 py-2 text-right">
-                          <.ink_button variant="danger" size="md" phx-click="remove_alias" phx-value-id={p.id}>
-                            Remove
-                          </.ink_button>
-                        </td>
-                      </tr>
-                    <% end %>
-                  <% end %>
-                </tbody>
-              </table>
-            </div>
+            <.data_table id="publisher-aliases" rows={@publishers_with_aliases}>
+              <:col :let={p} label="Master">
+                <.link navigate={~p"/publisher/#{p.canonical_publisher_id}"} class="hover:text-ink transition-colors">
+                  {p.canonical && p.canonical.name}
+                </.link>
+              </:col>
+              <:col :let={p} label="Alias" class="text-gray-400">{p.name}</:col>
+              <:action :let={p}>
+                <.ink_button variant="danger" size="md" phx-click="remove_alias" phx-value-id={p.id}>Remove</.ink_button>
+              </:action>
+              <:empty>No aliases configured</:empty>
+            </.data_table>
           </div>
         </div>
       <% end %>
@@ -327,92 +289,55 @@ defmodule StashixWeb.AdminLive.Publishers do
             <% end %>
           </div>
 
-          <div class="rounded-lg border border-white/10 overflow-hidden">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b border-white/10 bg-gray-900/50">
-                  <th class="px-3 py-2 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                    Name
-                  </th>
-                  <th class="px-3 py-2 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                    Status
-                  </th>
-                  <th class="px-3 py-2 text-right text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                    Series
-                  </th>
-                  <th class="px-3 py-2 text-right text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                    Books
-                  </th>
-                  <th class="px-3 py-2 text-right text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
-                    Issues
-                  </th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-white/10">
-                <%= for p <- @pub_vis_publishers do %>
-                  <% stats =
-                    Map.get(@pub_vis_stats, p.id, %{
-                      series_count: 0,
-                      books_count: 0,
-                      issues_count: 0
-                    })
-
-                  master_hidden = p.canonical && p.canonical.hidden
-                  effectively_hidden = p.hidden || master_hidden %>
-                  <tr class="group hover:bg-gray-800/40 transition-colors">
-                    <td class="px-3 py-2">
-                      <.link
-                        navigate={~p"/publisher/#{p.id}"}
-                        class={"hover:text-violet-300 transition-colors #{if effectively_hidden, do: "text-gray-500 line-through", else: "text-gray-300"}"}
-                      >
-                        {p.name}
-                      </.link>
-                    </td>
-                    <td class="px-3 py-2">
-                      <%= cond do %>
-                        <% p.hidden -> %>
-                          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-white/15">Hidden</span>
-                        <% master_hidden -> %>
-                          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-white/15">Alias · Hidden</span>
-                        <% not is_nil(p.canonical_publisher_id) -> %>
-                          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-gray-800 text-gray-500 border border-white/15">Alias</span>
-                        <% true -> %>
-                          <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 border border-violet-800/40">Visible</span>
-                      <% end %>
-                    </td>
-                    <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
-                      {stats.series_count}
-                    </td>
-                    <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
-                      {stats.books_count}
-                    </td>
-                    <td class="px-3 py-2 text-right text-gray-500 tabular-nums">
-                      {stats.issues_count}
-                    </td>
-                    <td class="px-3 py-2 text-right">
-                      <%= if is_nil(p.canonical_publisher_id) do %>
-                        <button
-                          phx-click="toggle_publisher_hidden"
-                          phx-value-id={p.id}
-                          class={"text-xs transition-colors #{if p.hidden, do: "text-violet-400 hover:text-violet-300", else: "text-gray-500 hover:text-red-400"}"}
-                        >
-                          {if p.hidden, do: "Show", else: "Hide"}
-                        </button>
-                      <% end %>
-                    </td>
-                  </tr>
-                <% end %>
-                <%= if @pub_vis_publishers == [] do %>
-                  <tr>
-                    <td colspan="6" class="px-3 py-6 text-center text-sm text-gray-500">
-                      No publishers found
-                    </td>
-                  </tr>
-                <% end %>
-              </tbody>
-            </table>
-          </div>
+          <% no_stats = %{series_count: 0, books_count: 0, issues_count: 0} %>
+          <.data_table id="publisher-visibility" rows={@pub_vis_publishers}>
+            <:col :let={p} label="Name">
+              <.link
+                navigate={~p"/publisher/#{p.id}"}
+                class={[
+                  "hover:text-ink transition-colors",
+                  (p.hidden || (p.canonical && p.canonical.hidden)) && "text-gray-500 line-through"
+                ]}
+              >
+                {p.name}
+              </.link>
+            </:col>
+            <:col :let={p} label="Status">
+              <%= cond do %>
+                <% p.hidden -> %>
+                  <.chip>Hidden</.chip>
+                <% p.canonical && p.canonical.hidden -> %>
+                  <.chip>Alias · hidden</.chip>
+                <% not is_nil(p.canonical_publisher_id) -> %>
+                  <.chip>Alias</.chip>
+                <% true -> %>
+                  <span class="inline-flex px-2 py-0.5 rounded-md bg-ink/10 border border-ink/40 text-xs font-medium text-ink">
+                    Visible
+                  </span>
+              <% end %>
+            </:col>
+            <:col :let={p} label="Series" align="right" class="text-gray-400">
+              {Map.get(@pub_vis_stats, p.id, no_stats).series_count}
+            </:col>
+            <:col :let={p} label="Books" align="right" class="text-gray-400">
+              {Map.get(@pub_vis_stats, p.id, no_stats).books_count}
+            </:col>
+            <:col :let={p} label="Issues" align="right" class="text-gray-400">
+              {Map.get(@pub_vis_stats, p.id, no_stats).issues_count}
+            </:col>
+            <:action :let={p}>
+              <.ink_button
+                :if={is_nil(p.canonical_publisher_id)}
+                variant={if p.hidden, do: "ghost", else: "danger"}
+                size="md"
+                phx-click="toggle_publisher_hidden"
+                phx-value-id={p.id}
+              >
+                {if p.hidden, do: "Show", else: "Hide"}
+              </.ink_button>
+            </:action>
+            <:empty>No publishers found</:empty>
+          </.data_table>
 
           <%!-- Bottom pagination --%>
           <%= if total_pages > 1 do %>
