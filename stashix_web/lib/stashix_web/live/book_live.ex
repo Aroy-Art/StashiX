@@ -318,14 +318,11 @@ defmodule StashixWeb.BookLive do
         />
       </div>
       <div class="min-w-0 flex-1">
-        <p class={[
-          "flex items-center gap-1 text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500",
-          @dir == :next && "justify-end"
-        ]}>
+        <.eyebrow size="sm" tone="muted" class={["flex items-center gap-1", @dir == :next && "justify-end"]}>
           <.icon :if={@dir == :prev} name="lucide-arrow-left" class="w-3 h-3" />
           {if @dir == :prev, do: "Previous", else: "Next"}
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
-        </p>
+        </.eyebrow>
         <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-white mt-1 tabular-nums">
           #{Decimal.to_integer(@book.issue_number)}
         </p>
@@ -406,13 +403,12 @@ defmodule StashixWeb.BookLive do
 
       <%!-- Hero: tilted cover, giant issue number behind the title --%>
       <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-10 pt-2">
-        <span
+        <.ghost_numeral
           :if={numbered}
-          class="ghost-numeral hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem] pointer-events-none"
-          aria-hidden="true"
+          class="hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem]"
         >
           {issue_no}
-        </span>
+        </.ghost_numeral>
 
         <.hero_cover
           id={"book-cover-#{@book.id}"}
@@ -429,16 +425,8 @@ defmodule StashixWeb.BookLive do
             class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-2 mb-3"
             style="--i:1"
           >
-            <span
-              :if={numbered}
-              class="inline-block -rotate-3 px-2 pt-0.5 rounded-sm bg-ink text-gray-950 font-display font-black text-2xl leading-none tabular-nums"
-            >
-              #{issue_no}
-            </span>
-            <p
-              :if={@book.series && !standalone_volume?(@book)}
-              class="text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300"
-            >
+            <.sticker :if={numbered} size="lg">#{issue_no}</.sticker>
+            <.eyebrow :if={@book.series && !standalone_volume?(@book)}>
               <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-white transition-colors">
                 {@book.series.name}
               </.link>
@@ -449,15 +437,12 @@ defmodule StashixWeb.BookLive do
                   true -> ""
                 end})
               </span>
-            </p>
+            </.eyebrow>
           </div>
 
-          <h1
-            class="rise font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance break-words"
-            style="--i:2"
-          >
+          <.display_heading level={1} size="hero" class="rise" style="--i:2">
             {book_display_title(@book)}
-          </h1>
+          </.display_heading>
 
           <div
             class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
@@ -474,21 +459,13 @@ defmodule StashixWeb.BookLive do
           </div>
 
           <%!-- Progress bar --%>
-          <div
+          <.progress_bar
             :if={in_progress}
-            class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs rounded-full bg-white/10 overflow-hidden"
+            value={(@progress + 1) / @book.page_count}
+            label="Reading progress"
+            class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs"
             style="--i:3"
-            role="progressbar"
-            aria-valuemin="0"
-            aria-valuemax={@book.page_count}
-            aria-valuenow={@progress + 1}
-          >
-            <div
-              class="h-full bg-violet-500 rounded-full"
-              style={"width: #{round((@progress + 1) / @book.page_count * 100)}%"}
-            >
-            </div>
-          </div>
+          />
 
           <%!-- Format pills (only when multiple files exist) --%>
           <div
@@ -496,7 +473,7 @@ defmodule StashixWeb.BookLive do
             class="rise flex items-center justify-center sm:justify-start gap-1.5 mt-5"
             style="--i:4"
           >
-            <span class="text-[10px] font-semibold tracking-[0.16em] uppercase text-gray-500 mr-1">Format</span>
+            <.eyebrow tag="span" size="sm" tone="muted" class="mr-1">Format</.eyebrow>
             <%= for f <- @book.files do %>
               <%= if @selected_file && f.id == @selected_file.id do %>
                 <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-white text-gray-950">
@@ -515,63 +492,55 @@ defmodule StashixWeb.BookLive do
           </div>
 
           <%!-- Read button --%>
-          <div
-            :if={@book.page_count > 0 && @selected_file}
-            class="ink-split rise relative z-10 inline-flex items-stretch rounded-md mt-7"
-            style="--i:5"
-          >
-            <.link
-              navigate={
-                if @fully_read,
-                  do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
-                  else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
-              }
-              class="inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-l-md transition-colors"
-            >
+          <div :if={@book.page_count > 0 && @selected_file} class="rise relative z-10 mt-7" style="--i:5">
+            <.split_button navigate={
+              if @fully_read,
+                do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
+                else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
+            }>
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
                 @fully_read -> "Read Again"
                 @progress > 0 -> "Continue"
                 true -> "Read"
               end}
-            </.link>
-            <.dropdown_menu id="read-options-menu" class="flex">
-              <.dropdown_menu_trigger
-                class="flex items-center px-2.5 bg-violet-700 hover:bg-violet-600 text-white rounded-r-md border-l border-violet-400/40 transition-colors"
-                aria-label="More reading options"
-              >
-                <.icon name="lucide-chevron-down" class="w-4 h-4" />
-              </.dropdown_menu_trigger>
-              <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
-                <.link
-                  navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
-                  hidden={@progress == 0 || @fully_read}
-                  class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                >
-                  <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
-                </.link>
-                <button
-                  phx-click={
-                    JS.push("mark_read")
-                    |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
-                  }
-                  hidden={@fully_read}
-                  class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                >
-                  <.icon name="lucide-circle-check-big" class="w-4 h-4 mr-2" /> Mark as Read
-                </button>
-                <button
-                  phx-click={
-                    JS.push("mark_unread")
-                    |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
-                  }
-                  hidden={!@fully_read && @progress == 0}
-                  class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
-                >
-                  <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
-                </button>
-              </.dropdown_menu_content>
-            </.dropdown_menu>
+              <:aside>
+                <.dropdown_menu id="read-options-menu" class="flex">
+                  <.dropdown_menu_trigger class={split_aside_class()} aria-label="More reading options">
+                    <.icon name="lucide-chevron-down" class="w-4 h-4" />
+                  </.dropdown_menu_trigger>
+                  <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-48">
+                    <.link
+                      navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
+                      hidden={@progress == 0 || @fully_read}
+                      class="relative flex items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                    >
+                      <.icon name="lucide-rotate-ccw" class="w-4 h-4 mr-2" /> Read from Beginning
+                    </.link>
+                    <button
+                      phx-click={
+                        JS.push("mark_read")
+                        |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                      }
+                      hidden={@fully_read}
+                      class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                    >
+                      <.icon name="lucide-circle-check-big" class="w-4 h-4 mr-2" /> Mark as Read
+                    </button>
+                    <button
+                      phx-click={
+                        JS.push("mark_unread")
+                        |> JS.dispatch("salad_ui:command", to: "#read-options-menu", detail: %{command: "close"})
+                      }
+                      hidden={!@fully_read && @progress == 0}
+                      class="relative flex w-full items-center rounded-sm px-2 py-1.5 text-sm text-gray-300 hover:bg-gray-700 cursor-default select-none outline-none"
+                    >
+                      <.icon name="lucide-circle-x" class="w-4 h-4 mr-2" /> Mark as Unread
+                    </button>
+                  </.dropdown_menu_content>
+                </.dropdown_menu>
+              </:aside>
+            </.split_button>
           </div>
         </div>
       </header>
