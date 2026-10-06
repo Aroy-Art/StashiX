@@ -16,6 +16,16 @@
     <.live_title default="Stashix" suffix=" · Stashix">
       {assigns[:page_title]}
     </.live_title>
+    <%!-- The display face sets the sidebar and every heading. Without the preload it
+         is only requested once the CSS is parsed, and the first paint shows the
+         fallback before swapping. --%>
+    <link
+      rel="preload"
+      href={~p"/fonts/big-shoulders-display-latin.woff2"}
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/app.js"}>
     </script>

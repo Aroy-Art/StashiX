@@ -32,7 +32,7 @@ defmodule StashixWeb.Layouts do
       navigate={@navigate}
       aria-current={@active && "page"}
       class={[
-        "ink-menu-item group flex items-center gap-3 min-w-0 px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-lg leading-6 transition-colors",
+        "ink-menu-item group flex items-center gap-3 min-w-0 px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-lg lg:text-base leading-6 transition-colors",
         if(@active, do: "is-active", else: "text-gray-200 hover:text-white hover:bg-white/[0.06]"),
         @class
       ]}

@@ -472,3 +472,8 @@ Add a dated line when a phase closes or a decision changes.
 - 2026-10-06 — Sidebar readability settled inside the design language: same
   display type, 18px (was 15px), gray-200 (was gray-400), wider tracking
   (0.07em), 18px icons. Panel and ink bar unchanged.
+- 2026-10-06 — Display font is preloaded in the root layout. Without it every
+  full page load painted the fallback face first and swapped ~10ms later
+  (measured: sidebar label 89px wide, then 68px), which showed as flicker in
+  the sidebar and headings. Sidebar labels are 16px on desktop, 18px in the
+  mobile drawer, and the drawer is 18rem wide (was 13rem).
