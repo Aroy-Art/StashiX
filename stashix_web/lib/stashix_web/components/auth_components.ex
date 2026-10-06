@@ -39,7 +39,7 @@ defmodule StashixWeb.AuthComponents do
             </span>
           </div>
           <div class="min-w-0 flex-1">
-            <.logo id="cover-logo" glow={false} class="cover-masthead" />
+            <.logo id="cover-logo" class="cover-masthead" />
             <div class="mt-2 h-1.5 bg-gradient-to-r from-violet-500 via-ink to-ink"></div>
             <.eyebrow tone="light" class="mt-2 truncate">{@tagline}</.eyebrow>
           </div>

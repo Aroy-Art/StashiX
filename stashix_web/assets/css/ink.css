@@ -284,6 +284,23 @@
     6px 0 28px rgb(139 92 246 / 0.5),
     0 0 6px rgb(167 139 250 / 0.7);
 }
+/* The dot of the i, in ink: the same letter again on top, cut off below the
+   dot. With a line-height of 1 the dot of this face ends 0.2em from the top
+   and the stem starts at 0.29em, so the cut sits between them at 0.24em. */
+.logo-i {
+  position: relative;
+  display: inline-block;
+  line-height: 1;
+}
+.logo-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  line-height: 1;
+  color: var(--color-ink);
+  text-shadow: 0 0 0.2em color-mix(in oklch, var(--color-ink) 75%, transparent);
+  clip-path: inset(-0.3em -0.3em 76% -0.3em);
+}
 .logo-tail {
   position: absolute;
   left: 100%;
@@ -550,7 +567,6 @@
 }
 .cover-masthead {
   font-size: clamp(3rem, 15vw, 4.75rem);
-  text-shadow: 4px 4px 0 var(--color-violet-700);
 }
 .cover-issue-box {
   box-shadow: 3px 3px 0 0 var(--color-violet-600);
