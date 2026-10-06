@@ -164,7 +164,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 ### Phase 1 — Primitives (no visual change to pages)
 
 - [x] `UI.Ink`: `ink_button`, `split_button`, `icon_button`, `text_link`.
-- [ ] `UI.Ink`: `eyebrow`, `display_heading`, `ghost_numeral`, `sticker`, `kbd`.
+- [x] `UI.Ink`: `eyebrow`, `display_heading`, `ghost_numeral`, `sticker`, `kbd`.
 - [ ] `UI.Ink`: `pill`, `chip`, `panel`, `stat`, `progress_bar`.
 - [ ] `UI.Page`: `page`, `crumbs`, `page_hero`, `section`, `cover_grid`,
   `shelf`, `empty_state`.

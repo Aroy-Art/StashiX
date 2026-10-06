@@ -139,6 +139,138 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
+  # ---------------------------------------------------------------------------
+  # Type and labels
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Small tracked uppercase label that sits above a headline or names a section.
+
+  Sizes: `md` (11px) over hero headlines and filter groups, `sm` (10px) for
+  field and fact labels, `xs` (9px) inside dense detail grids.
+  """
+  attr :tag, :string, default: "p"
+  attr :tone, :string, default: "violet", values: ~w(violet muted ink light)
+  attr :size, :string, default: "md", values: ~w(xs sm md)
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def eyebrow(assigns) do
+    ~H"""
+    <.dynamic_tag
+      tag_name={@tag}
+      class={["font-bold uppercase", eyebrow_size(@size), eyebrow_tone(@tone), @class]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.dynamic_tag>
+    """
+  end
+
+  defp eyebrow_size("md"), do: "text-[11px] tracking-[0.2em]"
+  defp eyebrow_size("sm"), do: "text-[10px] tracking-[0.18em]"
+  defp eyebrow_size("xs"), do: "text-[9px] tracking-[0.14em]"
+
+  defp eyebrow_tone("violet"), do: "text-violet-300"
+  defp eyebrow_tone("muted"), do: "text-gray-500"
+  defp eyebrow_tone("ink"), do: "text-ink/80"
+  defp eyebrow_tone("light"), do: "text-gray-300"
+
+  @doc """
+  Heading in the display face. `hero` is the page title, `section` heads a
+  block of content, `panel` heads a side panel. `count` adds a trailing figure.
+  """
+  attr :level, :integer, default: 2, values: [1, 2, 3]
+  attr :size, :string, default: "section", values: ~w(hero section panel)
+  attr :count, :any, default: nil
+  attr :count_tone, :string, default: "muted", values: ~w(muted ink)
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def display_heading(assigns) do
+    ~H"""
+    <.dynamic_tag
+      tag_name={"h#{@level}"}
+      class={["font-display font-black uppercase text-white", heading_size(@size), @class]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span
+        :if={@count}
+        class={["tabular-nums", if(@count_tone == "ink", do: "text-ink", else: "text-gray-500")]}
+      >
+        {@count}
+      </span>
+    </.dynamic_tag>
+    """
+  end
+
+  defp heading_size("hero"), do: "text-5xl md:text-7xl leading-[0.88] text-balance break-words"
+  defp heading_size("section"), do: "text-3xl leading-none"
+  defp heading_size("panel"), do: "text-2xl leading-none"
+
+  @doc """
+  Oversized outlined figure that sits behind a hero. Decorative: hidden from
+  assistive tech and from the pointer. Size and position come from `class`.
+  """
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  def ghost_numeral(assigns) do
+    ~H"""
+    <span class={["ghost-numeral pointer-events-none", @class]} aria-hidden="true">
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  @doc "Ink label in black display type: issue numbers, counts. Tilted unless `tilt` is false."
+  attr :size, :string, default: "sm", values: ~w(xs sm md lg)
+  attr :tilt, :boolean, default: true
+  attr :class, :any, default: nil
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def sticker(assigns) do
+    ~H"""
+    <span
+      class={[
+        "inline-block bg-ink text-zinc-950 font-display font-black rounded-sm tabular-nums",
+        sticker_size(@size),
+        @tilt && "sticker",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
+
+  defp sticker_size("xs"), do: "px-1.5 text-xs leading-normal"
+  defp sticker_size("sm"), do: "px-1.5 text-base leading-tight"
+  defp sticker_size("md"), do: "px-2.5 py-0.5 text-lg leading-tight uppercase"
+  defp sticker_size("lg"), do: "px-2 pt-0.5 text-2xl leading-none"
+
+  @doc "Keyboard hint: one key cap per entry in `keys`."
+  attr :keys, :list, required: true
+  attr :class, :any, default: nil
+
+  def kbd(assigns) do
+    ~H"""
+    <kbd class={["inline-flex items-center gap-1 pointer-events-none", @class]}>
+      <span
+        :for={key <- @keys}
+        class="text-[10px] font-semibold text-gray-300 bg-gray-900/80 border border-white/20 rounded px-1.5 py-0.5 leading-none"
+      >
+        {key}
+      </span>
+    </kbd>
+    """
+  end
+
   attr :class, :any, default: nil
   attr :rest, :global, include: @link_attrs ++ @button_attrs
   slot :inner_block, required: true
