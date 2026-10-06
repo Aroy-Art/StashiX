@@ -9,7 +9,7 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
-    book = Library.get_book!(socket.assigns.access, id) |> Stashix.Repo.preload(:files)
+    book = Library.get_book!(socket.assigns.access, id) |> Stashix.Repo.preload([:files, :series])
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
 
@@ -35,6 +35,8 @@ defmodule StashixWeb.ReaderLive do
         _ -> (progress && progress.current_page) || 0
       end
 
+    {_prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
+
     settings = user.reader_settings || %{}
     page_layout = Map.get(settings, "page_layout", "single")
     direction = Map.get(settings, "direction", "ltr")
@@ -48,6 +50,9 @@ defmodule StashixWeb.ReaderLive do
        pages: pages,
        page_count: length(pages),
        current_page: current_page,
+       at_end: false,
+       next_book: next_book,
+       next_href: next_book && next_href(user.id, next_book),
        page_layout: page_layout,
        direction: direction,
        fit_mode: fit_mode,
@@ -58,22 +63,43 @@ defmodule StashixWeb.ReaderLive do
   end
 
   @impl true
+  # The end card sits one step past the last page; stepping back just closes it.
+  def handle_event("prev_page", _params, %{assigns: %{at_end: true}} = socket) do
+    {:noreply, assign(socket, :at_end, false)}
+  end
+
   def handle_event("prev_page", _params, socket) do
     step = prev_step(socket.assigns.page_layout, socket.assigns.current_page)
     new_page = max(socket.assigns.current_page - step, 0)
     {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
   end
 
+  # Paging forward again from the end card carries straight on into the next issue.
+  def handle_event("next_page", _params, %{assigns: %{at_end: true, next_href: href}} = socket) do
+    if href, do: {:noreply, push_navigate(socket, to: href)}, else: {:noreply, socket}
+  end
+
   def handle_event("next_page", _params, socket) do
-    step = next_step(socket.assigns.page_layout, socket.assigns.current_page)
-    new_page = min(socket.assigns.current_page + step, socket.assigns.page_count - 1)
-    {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
+    if last_page_showing?(socket.assigns) do
+      {:noreply, show_end(socket)}
+    else
+      step = next_step(socket.assigns.page_layout, socket.assigns.current_page)
+      new_page = min(socket.assigns.current_page + step, socket.assigns.page_count - 1)
+      {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
+    end
   end
 
   def handle_event("goto_page", %{"page" => page_str}, socket) do
     page = String.to_integer(page_str)
     new_page = max(0, min(page, socket.assigns.page_count - 1))
-    {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
+    {:noreply, socket |> assign(current_page: new_page, at_end: false) |> schedule_progress_save()}
+  end
+
+  # Closing is an event rather than a plain link so the pending save lands before
+  # the book page loads and reads it. `replace` keeps the reader out of history.
+  def handle_event("close", _params, socket) do
+    socket = flush_progress(socket)
+    {:noreply, push_navigate(socket, to: ~p"/book/#{socket.assigns.book.id}", replace: true)}
   end
 
   def handle_event("set_layout", %{"layout" => layout}, socket)
@@ -115,13 +141,25 @@ defmodule StashixWeb.ReaderLive do
 
   @impl true
   def handle_info(:save_progress, socket) do
+    {:noreply, save_progress(socket)}
+  end
+
+  defp save_progress(socket) do
     page = socket.assigns.current_page
 
     if page > 0 do
       Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, page)
     end
 
-    {:noreply, assign(socket, :save_timer, nil)}
+    assign(socket, :save_timer, nil)
+  end
+
+  # Writes a debounced save that is still pending; a no-op when nothing is waiting.
+  defp flush_progress(%{assigns: %{save_timer: nil}} = socket), do: socket
+
+  defp flush_progress(socket) do
+    Process.cancel_timer(socket.assigns.save_timer)
+    save_progress(socket)
   end
 
   # Read detection compares progress against book.page_count, so keep it equal to
@@ -134,6 +172,33 @@ defmodule StashixWeb.ReaderLive do
   end
 
   defp sync_page_count(book, _count), do: book
+
+  defp spread?(%{page_layout: layout, current_page: page, page_count: count}),
+    do: (layout == "double" or (layout == "cover" and page > 0)) and page + 1 < count
+
+  defp last_page_showing?(%{page_count: count} = assigns) do
+    last_visible = assigns.current_page + if(spread?(assigns), do: 1, else: 0)
+    count > 0 and last_visible >= count - 1
+  end
+
+  # Reaching the end card means the book is finished: save that now rather than on
+  # the debounce, so the pages its buttons lead to already show it as read.
+  defp show_end(socket) do
+    if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
+    %{access: access, current_user: user, book: book, page_count: count} = socket.assigns
+    Library.update_progress(access, user.id, book.id, count - 1)
+    assign(socket, at_end: true, save_timer: nil)
+  end
+
+  # A finished next issue would resume on its last page; start it over instead.
+  defp next_href(user_id, next_book) do
+    progress = Library.get_progress(user_id, next_book.id)
+    finished = progress && next_book.page_count > 0 && progress.current_page >= next_book.page_count - 1
+    if finished, do: ~p"/read/#{next_book.id}?page=0", else: ~p"/read/#{next_book.id}"
+  end
+
+  defp issue_label(%{issue_number: nil}), do: nil
+  defp issue_label(%{issue_number: n}), do: "##{Decimal.to_integer(n)}"
 
   defp schedule_progress_save(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
@@ -174,6 +239,133 @@ defmodule StashixWeb.ReaderLive do
 
   defp img_fit_style(_page), do: "max-height: 100%; max-width: 100%; width: auto; height: auto;"
 
+  attr :book, :map, required: true
+  attr :next_book, :map, default: nil
+  attr :next_href, :string, default: nil
+
+  # The "ghost page" past the last one. It is pointer-events-none so the click
+  # zones underneath keep working (left steps back, right carries on); only the
+  # links take pointers, which ReaderZoom already leaves alone.
+  defp end_card(assigns) do
+    assigns =
+      assign(assigns, label: issue_label(assigns.book), next_label: assigns.next_book && issue_label(assigns.next_book))
+
+    ~H"""
+    <div
+      id="reader-end"
+      class="reader-end absolute inset-0 z-20 pointer-events-none flex items-center justify-center px-6 py-16 overflow-hidden bg-zinc-950/85 backdrop-blur-md"
+      role="region"
+      aria-label="End of issue"
+    >
+      <div class="halftone absolute inset-0" aria-hidden="true"></div>
+      <span
+        class="ghost-numeral absolute -right-6 -bottom-12 text-[16rem] md:text-[26rem]"
+        aria-hidden="true"
+      >
+        {if @next_book, do: String.trim_leading(@next_label || "", "#"), else: "END"}
+      </span>
+
+      <div class="relative flex flex-col sm:flex-row items-center gap-7 sm:gap-12 max-w-3xl">
+        <%!-- The page that isn't there: next cover, or a hollow one with a ghost in it --%>
+        <%= if @next_book do %>
+          <.link
+            navigate={@next_href}
+            class="reader-end-page pointer-events-auto relative block w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm bg-zinc-900"
+            aria-label={"Read next issue #{@next_label}"}
+          >
+            <img
+              src={~p"/api/books/#{@next_book.id}/cover?s=m"}
+              alt=""
+              class="w-full h-full object-cover rounded-sm"
+              onerror="this.style.display='none'"
+              draggable="false"
+            />
+            <span class="reader-end-sticker absolute -top-3 -left-4 px-2.5 py-0.5 bg-ink text-zinc-950 font-display font-black uppercase text-lg leading-tight rounded-sm">
+              Next {@next_label}
+            </span>
+          </.link>
+        <% else %>
+          <div class="reader-end-page reader-end-hollow relative flex items-center justify-center w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm">
+            <.icon name="lucide-ghost" class="reader-end-ghost w-12 h-12 sm:w-20 sm:h-20 text-ink" />
+          </div>
+        <% end %>
+
+        <div class="min-w-0 text-center sm:text-left">
+          <p class="rise text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300" style="--i:1">
+            End of {if @label, do: "issue #{@label}", else: "the book"}
+            <span class="reader-end-stamp ml-2 inline-flex items-center gap-1 px-1.5 py-px border-2 border-ink text-ink rounded-sm">
+              <.icon name="lucide-check" class="w-3 h-3" /> Read
+            </span>
+          </p>
+
+          <h2
+            class="rise mt-3 font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance"
+            style="--i:2"
+          >
+            {if @next_book, do: "To be continued", else: "The End"}
+          </h2>
+
+          <%!-- Narration box, as lettered in the gutter of a last panel --%>
+          <p
+            class="rise reader-end-caption inline-block mt-5 px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold"
+            style="--i:3"
+          >
+            <%= cond do %>
+              <% @next_book -> %>
+                Meanwhile, in issue {@next_label}…
+              <% @book.series -> %>
+                That was the last one. Nothing past here but ghosts.
+              <% true -> %>
+                And they all closed the book. Nothing past here but ghosts.
+            <% end %>
+          </p>
+
+          <div class="rise flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-4 mt-7" style="--i:4">
+            <.link
+              :if={@next_book}
+              navigate={@next_href}
+              class="ink-btn pointer-events-auto inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
+            >
+              Next issue <span class="text-ink">{@next_label}</span>
+              <.icon name="lucide-arrow-right" class="w-4 h-4" />
+            </.link>
+            <.link
+              navigate={~p"/book/#{@book.id}"}
+              class="reader-end-alt pointer-events-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors"
+            >
+              <.icon name="lucide-book-open" class="w-4 h-4" /> Issue page
+            </.link>
+            <.link
+              :if={@book.series}
+              navigate={~p"/series/#{@book.series.id}"}
+              class={[
+                "pointer-events-auto inline-flex items-center gap-2 rounded-md font-display uppercase tracking-wide",
+                if(@next_book,
+                  do:
+                    "reader-end-alt px-4 py-2.5 ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-bold transition-colors",
+                  else:
+                    "ink-btn order-first px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-extrabold text-xl"
+                )
+              ]}
+            >
+              <.icon name="lucide-library" class="w-4 h-4" /> Back to series
+            </.link>
+          </div>
+
+          <p
+            class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-gray-500"
+            style="--i:5"
+          >
+            <span :if={@next_book}><kbd class="text-gray-300">→</kbd> keep reading</span>
+            <span :if={@next_book} class="text-white/25">/</span>
+            <span><kbd class="text-gray-300">←</kbd> last page</span>
+          </p>
+        </div>
+      </div>
+    </div>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -210,13 +402,13 @@ defmodule StashixWeb.ReaderLive do
         ]}
         style="height: 44px;"
       >
-        <%!-- Left: back --%>
+        <%!-- Left: close, always to the book page --%>
         <div class="flex items-center min-w-0 w-36">
           <button
-            onclick={"history.length > 1 ? history.back() : location.href = '#{~p"/book/#{@book.id}"}'"}
+            phx-click="close"
             class="flex items-center gap-1.5 text-zinc-400 hover:text-white text-sm transition-colors whitespace-nowrap"
           >
-            <.icon name="lucide-arrow-left" class="w-4 h-4" /> Back
+            <.icon name="lucide-x" class="w-4 h-4" /> Close
           </button>
         </div>
 
@@ -391,7 +583,11 @@ defmodule StashixWeb.ReaderLive do
 
           <%!-- Page counter --%>
           <span class="text-zinc-400 text-sm tabular-nums whitespace-nowrap">
-            {@current_page + 1} / {@page_count}
+            <%= if @at_end do %>
+              <span class="font-display font-black uppercase tracking-wide text-ink">End</span>
+            <% else %>
+              {@current_page + 1} / {@page_count}
+            <% end %>
           </span>
         </div>
       </div>
@@ -490,7 +686,7 @@ defmodule StashixWeb.ReaderLive do
               draggable="false"
             />
           </div>
-          <%= if (@page_layout == "double" || (@page_layout == "cover" && @current_page > 0)) && @current_page + 1 < @page_count do %>
+          <%= if spread?(assigns) do %>
             <div class="relative flex items-center justify-center h-full" style="max-width: 50%">
               <div
                 class="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -531,6 +727,8 @@ defmodule StashixWeb.ReaderLive do
             </div>
           <% end %>
         </div>
+
+        <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} />
 
         <%!-- Preload adjacent pages --%>
         <div class="hidden" aria-hidden="true">

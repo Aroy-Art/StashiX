@@ -310,6 +310,59 @@
 }
 .cover-stack:hover > .cover-stack-top { transform: rotate(-4deg) translateX(-3%); }
 
+/* ── Reader end card ────────────────────────────────────────────────────── */
+
+/* Halftone over the whole card rather than fading out of one corner. */
+.reader-end > .halftone {
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, #000 100%);
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, transparent 20%, #000 100%);
+}
+/* The "page that isn't there": dropped on the desk at an angle, inked shadow. */
+.reader-end-page {
+  transform: rotate(-4deg);
+  box-shadow: 6px 6px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
+  transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 200ms ease;
+}
+a.reader-end-page:hover {
+  transform: rotate(-1deg) translateY(-4px) scale(1.03);
+  box-shadow: 9px 9px 0 0 var(--color-ink), 0 30px 60px -20px rgb(0 0 0 / 0.9);
+}
+.reader-end-hollow {
+  box-shadow: none;
+  border: 2px dashed color-mix(in oklch, var(--color-ink) 55%, transparent);
+  background: repeating-linear-gradient(-45deg, rgb(255 255 255 / 0.04) 0 6px, transparent 6px 12px);
+}
+.reader-end-sticker {
+  transform: rotate(-7deg);
+  box-shadow: 2px 2px 0 0 rgb(0 0 0 / 0.6);
+}
+.reader-end-stamp {
+  transform: rotate(-3deg);
+  letter-spacing: 0.16em;
+}
+.reader-end-caption {
+  transform: rotate(-1deg);
+  box-shadow: 3px 3px 0 0 var(--color-violet-600);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .reader-end { animation: reader-end-in 220ms ease-out backwards; }
+  .reader-end-page { animation: reader-end-drop 520ms cubic-bezier(0.2, 1.4, 0.4, 1) backwards; }
+  .reader-end-stamp { animation: reader-end-stamp 320ms cubic-bezier(0.2, 1.6, 0.4, 1) 420ms backwards; }
+  .reader-end-ghost { animation: reader-end-float 3.2s ease-in-out infinite; }
+  @keyframes reader-end-in {
+    from { opacity: 0; }
+  }
+  @keyframes reader-end-drop {
+    from { opacity: 0; transform: translateY(-40px) rotate(9deg) scale(1.15); }
+  }
+  @keyframes reader-end-stamp {
+    from { opacity: 0; transform: rotate(-14deg) scale(2.2); }
+  }
+  @keyframes reader-end-float {
+    50% { transform: translateY(-10px) rotate(4deg); }
+  }
+}
+
 /* ── Search page ────────────────────────────────────────────────────────── */
 
 /* The query is the headline: a display-type input on a heavy rule. */
