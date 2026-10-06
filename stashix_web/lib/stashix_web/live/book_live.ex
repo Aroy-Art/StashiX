@@ -348,8 +348,8 @@ defmodule StashixWeb.BookLive do
     <% numbered = @book.issue_number && !standalone_volume?(@book) %>
     <% issue_no = numbered && Decimal.to_integer(@book.issue_number) %>
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
-    <.detail_page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
-      <.detail_crumbs crumbs={
+    <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
+      <.crumbs crumbs={
         [{"Home", "/"}, {@library.name, ~p"/library/#{@library.id}"}] ++
           if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series.id}"}], else: []) ++
           [{if(numbered, do: "##{issue_no}", else: @book.title), nil}]
@@ -402,7 +402,7 @@ defmodule StashixWeb.BookLive do
             </.dropdown_menu_content>
           </.dropdown_menu>
         </:actions>
-      </.detail_crumbs>
+      </.crumbs>
 
       <%!-- Hero: tilted cover, giant issue number behind the title --%>
       <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-10 pt-2">
@@ -652,7 +652,7 @@ defmodule StashixWeb.BookLive do
           {relative_path(@selected_file.path, @library)}
         </div>
       </footer>
-    </.detail_page>
+    </.page>
 
     <%!-- Identify Dialog --%>
     <%= if @current_user.role == :admin && @show_identify_dialog do %>

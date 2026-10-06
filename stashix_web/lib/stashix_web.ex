@@ -104,6 +104,7 @@ defmodule StashixWeb do
 
       # Shared "ink" design language components
       import StashixWeb.UI.Ink
+      import StashixWeb.UI.Page
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

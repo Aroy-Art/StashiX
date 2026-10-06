@@ -3,7 +3,6 @@ defmodule StashixWeb.SearchLive do
 
   alias Stashix.{Formatters, Library}
   alias Stashix.Library.{Book, BookCredit}
-  import StashixWeb.DetailComponents
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -557,7 +556,7 @@ defmodule StashixWeb.SearchLive do
       )
 
     ~H"""
-    <.detail_page wide fade cover_src={@backdrop}>
+    <.page wide fade cover_src={@backdrop}>
       <div class="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_17rem] lg:grid-rows-[auto_auto_1fr] lg:gap-x-10 lg:gap-y-7">
         <form id="search-form" phx-change="filter" phx-submit="filter" class="contents">
           <%!-- Hero: the query is the headline, the result count looms behind it --%>
@@ -948,7 +947,7 @@ defmodule StashixWeb.SearchLive do
           </div>
         </div>
       </div>
-    </.detail_page>
+    </.page>
     """
   end
 

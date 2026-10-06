@@ -47,37 +47,38 @@ defmodule StashixWeb.Dev.UiLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <.detail_page wide>
-      <header class="relative pt-2">
-        <span
-          class="ghost-numeral hidden sm:block absolute -top-2 right-0 text-[9rem] pointer-events-none"
-          aria-hidden="true"
-        >
-          UI
-        </span>
-        <p class="rise text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300 mb-3" style="--i:1">
-          Dev only
-        </p>
-        <h1 class="rise font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white" style="--i:2">
-          Style guide
-        </h1>
-      </header>
+    <.page wide>
+      <.crumbs crumbs={[{"Home", "/"}, {"Dev", nil}, {"Style guide", nil}]}>
+        <:actions><.kbd keys={["Ctrl", "K"]} /></:actions>
+      </.crumbs>
+
+      <.page_hero title="Style guide" eyebrow="Dev only" count="UI">
+        <:meta>
+          <span>Every shared component, every variant</span>
+          <span class="text-violet-300">docs/ui-redesign-plan.md</span>
+        </:meta>
+      </.page_hero>
 
       <.specimen title="Colour">
         <div :for={{name, class, note} <- @colors} class="w-40">
           <div class={["h-14 rounded-md ring-1 ring-white/15", class]}></div>
-          <p class="mt-2 text-[10px] font-bold tracking-[0.18em] uppercase text-ink/80">{name}</p>
+          <.eyebrow size="sm" tone="ink" class="mt-2">{name}</.eyebrow>
           <p class="text-xs text-gray-400">{note}</p>
         </div>
       </.specimen>
 
-      <.specimen title="Type">
+      <.specimen title="Type" note="eyebrow, display_heading, text_link">
         <div class="space-y-3">
-          <p class="text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300">Eyebrow</p>
-          <p class="font-display font-black uppercase text-6xl leading-[0.88] text-white">Hero headline</p>
-          <p class="font-display font-black uppercase text-3xl leading-none text-white">
-            Section heading <span class="text-gray-600 tabular-nums">12</span>
-          </p>
+          <div class="flex flex-wrap items-baseline gap-6">
+            <.eyebrow>Eyebrow md</.eyebrow>
+            <.eyebrow tone="light">Light</.eyebrow>
+            <.eyebrow size="sm" tone="ink">Small ink</.eyebrow>
+            <.eyebrow size="sm" tone="muted">Small muted</.eyebrow>
+            <.eyebrow size="xs" tone="muted">Extra small</.eyebrow>
+          </div>
+          <.display_heading size="hero">Hero headline</.display_heading>
+          <.display_heading count={12}>Section heading</.display_heading>
+          <.display_heading size="panel" level={3} count={2} count_tone="ink">Panel heading</.display_heading>
           <p class="text-[15px] text-gray-300 leading-7 max-w-xl">
             Body copy sits in the system sans at 15px on a relaxed leading, gray-300 on the page background.
           </p>
@@ -115,21 +116,26 @@ defmodule StashixWeb.Dev.UiLive do
         <.ink_button size="md" variant="danger">Delete</.ink_button>
       </.specimen>
 
-      <.specimen title="Stickers and pills" note=".sticker">
-        <span class="sticker px-1.5 bg-ink text-zinc-950 font-display font-black text-base leading-tight rounded-sm tabular-nums">
-          #12
-        </span>
-        <span class="px-2.5 py-1 text-xs rounded-full border bg-ink border-ink text-gray-950 font-semibold">Selected pill</span>
-        <span class="px-2.5 py-1 text-xs rounded-full border bg-gray-800 border-gray-600 text-gray-200">Pill</span>
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200">
-          Chip <span class="text-gray-500">3</span>
-        </span>
-        <span class="inline-flex items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-sm bg-gray-950 border border-ink/70 text-xs font-semibold text-ink">
-          Picked <.icon name="lucide-x" class="w-3.5 h-3.5" />
-        </span>
+      <.specimen title="Stickers, pills, chips" note="sticker, kbd, pill, chip">
+        <.sticker size="xs" tilt={false}>2</.sticker>
+        <.sticker>#12</.sticker>
+        <.sticker size="md">Up next</.sticker>
+        <.sticker size="lg">#12</.sticker>
+        <.kbd keys={["Ctrl", "K"]} />
+        <.pill
+          :for={value <- ~w(page width height)}
+          tag="button"
+          active={@segment == value}
+          phx-click="set_segment"
+          phx-value-value={value}
+        >
+          Fit {value}
+        </.pill>
+        <.chip navigate="/dev/ui" count={3}>Link chip</.chip>
+        <.chip count={3}>Flat chip</.chip>
       </.specimen>
 
-      <.specimen title="Segmented control" note=".ink-segmented">
+      <.specimen title="Segmented control" note=".ink-segmented — becomes <.segmented> in Phase 2">
         <div class="ink-segmented divide-x divide-white/10">
           <button
             :for={
@@ -186,32 +192,63 @@ defmodule StashixWeb.Dev.UiLive do
         </div>
       </.specimen>
 
-      <.specimen title="Panels" note="indicia/1, .ink-rail">
-        <div class="w-full max-w-2xl">
-          <.indicia>
-            <:item label="Pages">1,284</:item>
-            <:item label="Size">2.1 GB</:item>
-            <:item label="Age rating">Teen</:item>
-          </.indicia>
-        </div>
-        <div class="ink-rail flex rounded-lg w-64">
-          <div class="flex-1 bg-gray-900 rounded-lg ring-1 ring-white/10 px-5 py-4">
-            <h3 class="font-display font-black uppercase text-2xl leading-none text-white">
-              Filters <span class="text-ink tabular-nums">2</span>
-            </h3>
-            <p class="mt-2.5 text-[11px] font-bold tracking-[0.16em] uppercase text-gray-300">Section label</p>
+      <.specimen title="Panels and figures" note="panel, stat_list, stat, progress_bar">
+        <.panel variant="indicia" class="w-full max-w-2xl">
+          <.stat_list class="px-6 py-5">
+            <.stat label="Pages">1,284</.stat>
+            <.stat label="Size">2.1 GB</.stat>
+            <.stat label="Series" navigate="/series">42</.stat>
+          </.stat_list>
+        </.panel>
+        <.panel variant="rail" class="w-64 rounded-lg">
+          <div class="px-5 py-4 space-y-2.5">
+            <.display_heading size="panel" level={3} count={2} count_tone="ink">Filters</.display_heading>
+            <.eyebrow tone="light">Section label</.eyebrow>
           </div>
-        </div>
+        </.panel>
+        <.panel class="w-64 px-5 py-4 space-y-3">
+          <.eyebrow size="sm" tone="muted">Plain panel</.eyebrow>
+          <.progress_bar value={0.4} label="Reading progress" class="h-1.5" />
+          <.progress_bar value={1.0} label="Finished" class="h-1.5" />
+        </.panel>
       </.specimen>
 
-      <.specimen title="Cover" note="hero_cover/1, media_card/1">
+      <.specimen title="Cover" note="hero_cover, media_card">
         <div class="pb-4 pr-16">
           <.hero_cover id="ui-hero-cover" />
         </div>
         <.media_card navigate="/dev/ui" title="Media card" subtitle="2024" badge="#1" progress={0.4} class="w-36" />
         <.media_card navigate="/dev/ui#read" title="Read card" subtitle="2024" progress={1.0} class="w-36" />
       </.specimen>
-    </.detail_page>
+
+      <.section title="Section" count={6}>
+        <:actions>
+          <.text_link href="#">Show all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" /></.text_link>
+        </:actions>
+        <.cover_grid>
+          <.media_card :for={i <- 1..6} navigate={"/dev/ui#grid-#{i}"} title={"Grid card #{i}"} badge={"##{i}"} />
+        </.cover_grid>
+      </.section>
+
+      <.shelf id="ui-shelf" title="Shelf" count={14}>
+        <.media_card
+          :for={i <- 1..14}
+          navigate={"/dev/ui#shelf-#{i}"}
+          title={"Shelf card #{i}"}
+          class="flex-shrink-0 w-36"
+        />
+      </.shelf>
+
+      <.specimen title="Empty states" note="empty_state">
+        <.empty_state title="Nothing in the long box" ghost="0" class="flex-1">
+          Loosen the filters or try another spelling.
+          <:actions>
+            <.ink_button><.icon name="lucide-filter-x" class="w-4 h-4" /> Clear filters</.ink_button>
+          </:actions>
+        </.empty_state>
+        <.empty_state title="No series yet" icon="lucide-book-copy" class="flex-1" />
+      </.specimen>
+    </.page>
     """
   end
 end

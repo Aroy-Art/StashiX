@@ -421,8 +421,8 @@ defmodule StashixWeb.SeriesLive do
     <% issue_count = length(issue_sorted) %>
     <% read_count = Enum.count(issue_sorted, &((book_progress(&1, @progress_map) || 0.0) >= 1.0)) %>
     <% has_cover = @cover_book && @cover_book.cover %>
-    <.detail_page cover_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=s"}>
-      <.detail_crumbs crumbs={[
+    <.page cover_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=s"}>
+      <.crumbs crumbs={[
         {"Home", "/"},
         {@library.name, ~p"/library/#{@library.id}"},
         {@series.name, nil}
@@ -488,7 +488,7 @@ defmodule StashixWeb.SeriesLive do
             </.dropdown_menu_content>
           </.dropdown_menu>
         </:actions>
-      </.detail_crumbs>
+      </.crumbs>
 
       <%!-- Hero: fanned cover stack, giant issue count behind the title --%>
       <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-8 sm:gap-14 pt-2">
@@ -701,7 +701,7 @@ defmodule StashixWeb.SeriesLive do
         <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
         {relative_folder(@series, @library)}
       </div>
-    </.detail_page>
+    </.page>
 
     <%!-- Identify Dialog --%>
     <%= if @current_user.role == :admin && @show_identify_dialog do %>

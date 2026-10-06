@@ -1147,6 +1147,11 @@ if (window.__stashixBooted) {
     e.target.focus()
   })
 
+  // Arrow buttons on a shelf: scroll the row by most of its visible width.
+  window.addEventListener("stashix:scroll-by", (e) => {
+    e.target.scrollBy({ left: e.detail.pages * e.target.clientWidth * 0.8, behavior: "smooth" })
+  })
+
   window.addEventListener("stashix:scroll-to", (e) => {
     const el = document.getElementById(e.detail.id)
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
