@@ -23,6 +23,7 @@ defmodule StashixWeb.ReaderLive do
         []
       end
 
+    book = sync_page_count(book, length(pages))
     book_format = book_file && to_string(book_file.format)
 
     user = socket.assigns.current_user
@@ -122,6 +123,17 @@ defmodule StashixWeb.ReaderLive do
 
     {:noreply, assign(socket, :save_timer, nil)}
   end
+
+  # Read detection compares progress against book.page_count, so keep it equal to
+  # what the reader can actually page through (stale scans, ComicInfo PageCount).
+  defp sync_page_count(book, count) when count > 0 and book.page_count != count do
+    case Library.update_book(book, %{page_count: count}) do
+      {:ok, updated} -> updated
+      _ -> book
+    end
+  end
+
+  defp sync_page_count(book, _count), do: book
 
   defp schedule_progress_save(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)

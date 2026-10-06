@@ -269,6 +269,20 @@ defmodule Stashix.ScannerTest do
       [book] = Library.list_books(lib.id, access: Access.all())
       assert book.page_count == 1
     end
+
+    test "archive count wins over ComicInfo PageCount and skips credit pages", %{lib: lib, tmp: tmp} do
+      write_cbz(tmp, "My Book.cbz",
+        page_count: 3,
+        extra: [
+          {~c"zGroup-Credit.jpg", "credit"},
+          {~c"ComicInfo.xml", "<ComicInfo><Title>My Book</Title><PageCount>4</PageCount></ComicInfo>"}
+        ]
+      )
+
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      assert book.page_count == 3
+    end
   end
 
   # ── sidecar covers ────────────────────────────────────────────────────────
@@ -385,6 +399,8 @@ defmodule Stashix.ScannerTest do
         name = String.to_charlist("page#{String.pad_leading(to_string(i), 3, "0")}.jpg")
         {name, "fake jpeg: #{filename} page #{i}"}
       end
+
+    files = files ++ Keyword.get(opts, :extra, [])
 
     {:ok, {_, data}} = :zip.create(String.to_charlist(path), files, [:memory])
     File.write!(path, data)

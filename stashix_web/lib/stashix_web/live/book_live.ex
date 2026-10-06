@@ -469,7 +469,7 @@ defmodule StashixWeb.BookLive do
               <.icon name="lucide-check" class="w-3.5 h-3.5" /> Read
             </span>
             <span :if={in_progress} class="text-violet-300">
-              Page {@progress} of {@book.page_count}
+              Page {@progress + 1} of {@book.page_count}
             </span>
           </div>
 
@@ -481,9 +481,12 @@ defmodule StashixWeb.BookLive do
             role="progressbar"
             aria-valuemin="0"
             aria-valuemax={@book.page_count}
-            aria-valuenow={@progress}
+            aria-valuenow={@progress + 1}
           >
-            <div class="h-full bg-violet-500 rounded-full" style={"width: #{round(@progress / @book.page_count * 100)}%"}>
+            <div
+              class="h-full bg-violet-500 rounded-full"
+              style={"width: #{round((@progress + 1) / @book.page_count * 100)}%"}
+            >
             </div>
           </div>
 

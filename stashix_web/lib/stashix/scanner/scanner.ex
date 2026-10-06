@@ -766,14 +766,16 @@ defmodule Stashix.Scanner do
     collect_recursive(next_dirs, files ++ new_files)
   end
 
+  # The reader pages through what the extractor lists (credit pages excluded), so that
+  # count wins over ComicInfo's PageCount — otherwise the last page is never reached.
   defp resolve_page_count(metadata, file_path, fallback) do
-    case Map.get(metadata, :page_count) do
-      n when is_integer(n) and n > 0 ->
+    case Extractor.get_page_count(file_path) do
+      n when n > 0 ->
         n
 
       _ ->
-        case Extractor.get_page_count(file_path) do
-          n when n > 0 -> n
+        case Map.get(metadata, :page_count) do
+          n when is_integer(n) and n > 0 -> n
           _ -> fallback
         end
     end
