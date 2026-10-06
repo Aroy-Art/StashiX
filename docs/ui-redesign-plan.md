@@ -278,7 +278,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `login_live.ex`, `setup_live.ex`: comic-cover layout (approved
   2026-10-06): masthead, issue box with the app version, halftone field, form
   where the art would be, barcode strip.
-- [ ] Error pages (`error_html.ex`): reader ghost (approved 2026-10-06): hollow
+- [x] Error pages (`error_html.ex`): reader ghost (approved 2026-10-06): hollow
   page with the ghost, error code sticker, caption box, ink button home.
 
 ### Phase 6 — Cleanup
@@ -489,3 +489,24 @@ Add a dated line when a phase closes or a decision changes.
   (measured: sidebar label 89px wide, then 68px), which showed as flicker in
   the sidebar and headings. Sidebar labels are 16px on desktop, 18px in the
   mobile drawer, and the drawer is 18rem wide (was 13rem).
+- 2026-10-06 — Phase 5 done: `UI.Forms`, `UI.Data`, stats, admin (users,
+  libraries, cleanup, publishers), metadata admin, identify dialog, login and
+  setup as a comic cover (`AuthComponents.cover_page/1`), ghost error pages.
+  - Admin was migrated in place by script (buttons → `ink_button`, shared
+    input/label/table classes, ink checkboxes, `tabs/1`, `toggle/1`) and then
+    fixed by eye. It looks the part but is not yet built from `field/1` and
+    `data_table/1`, and `admin_live.ex` is still one 1,600-line module. Both
+    are listed under Phase 6.
+  - `ink_button` gained a `warning` variant and no longer wraps its label.
+  - Error pages are one self-contained document (inline SVG ghost, no icon
+    files, no assigns). With `debug_errors: true` in dev Phoenix shows its own
+    debug page instead; they were checked by rendering the template and
+    loading it against the running server.
+  - Verified in the browser: login (wrong password, success, sign out),
+    setup (validation error, both steps, back), every admin tab with its
+    forms open, identify dialog shell, stats with real data. Not exercised:
+    the identify search/apply flow (needs a configured metadata source; the
+    existing LiveView test covers apply), metadata review queue with entries.
+  - Noticed, not touched: generated ComicInfo.xml files with Writer and
+    Penciller produced no credits (stats show 0% with credits). Could be the
+    test files or the importer; worth a look outside this redesign.
