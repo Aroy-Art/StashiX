@@ -543,7 +543,7 @@ defmodule StashixWeb.SeriesLive do
           <.eyebrow tag="h2" size="sm" tone="muted">The Run</.eyebrow>
           <p class="tabular-nums leading-none">
             <span class="font-display font-black text-3xl text-white">{read_count}</span>
-            <span class="text-gray-600 text-sm"> / {issue_count} read</span>
+            <span class="text-gray-400 text-sm"> / {issue_count} read</span>
           </p>
         </div>
         <div class={["flex items-stretch h-5", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
@@ -561,7 +561,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Summary --%>
       <section :if={@summary_info} class="max-w-3xl">
         <p class="text-[15px] text-gray-300 leading-7 whitespace-pre-line">{@summary_info.text}</p>
-        <p :if={@summary_info.source} class="mt-2 text-xs text-gray-500 italic">
+        <p :if={@summary_info.source} class="mt-2 text-xs text-gray-400 italic">
           From issue {@summary_info.source}
         </p>
       </section>
@@ -653,7 +653,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Folder path --%>
       <div
         :if={@current_user.role == :admin && @series.path}
-        class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug"
+        class="flex items-start gap-1.5 text-[11px] font-mono text-gray-400 break-all leading-snug"
       >
         <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
         {relative_folder(@series, @library)}
@@ -671,7 +671,7 @@ defmodule StashixWeb.SeriesLive do
         <:description>
           Override metadata for this series. Changes persist until the next rescan.
           <%= if @series.path do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-400 mt-1 break-all">
               <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
               {relative_folder(@series, @library)}
             </p>

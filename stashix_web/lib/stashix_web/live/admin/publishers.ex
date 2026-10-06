@@ -40,7 +40,7 @@ defmodule StashixWeb.AdminLive.Publishers do
           <div class="space-y-4">
             <div>
               <h2 class="text-base font-semibold text-white mb-1">Link Publisher Alias</h2>
-              <p class="text-sm text-gray-500">
+              <p class="text-sm text-gray-400">
                 Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.
               </p>
             </div>
@@ -54,7 +54,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                   <span class="text-white">{src && src.name}</span>
                   <button
                     phx-click="clear_alias_source"
-                    class="text-gray-500 hover:text-white ml-2 flex-shrink-0"
+                    class="text-gray-400 hover:text-white ml-2 flex-shrink-0"
                   >
                     <.icon name="lucide-x" class="w-4 h-4" />
                   </button>
@@ -84,7 +84,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       onmousedown="event.preventDefault()"
                     >
                       <%= if src_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-gray-400">No publishers found</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(src_results) do %>
                           <button
@@ -115,7 +115,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                   <span class="text-white">{tgt && tgt.name}</span>
                   <button
                     phx-click="clear_alias_target"
-                    class="text-gray-500 hover:text-white ml-2 flex-shrink-0"
+                    class="text-gray-400 hover:text-white ml-2 flex-shrink-0"
                   >
                     <.icon name="lucide-x" class="w-4 h-4" />
                   </button>
@@ -146,7 +146,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       onmousedown="event.preventDefault()"
                     >
                       <%= if tgt_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-gray-400">No publishers found</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(tgt_results) do %>
                           <button
@@ -204,7 +204,7 @@ defmodule StashixWeb.AdminLive.Publishers do
             <h3 class="text-sm font-medium text-gray-400 mb-2">
               Current aliases
               <%= if @publishers_with_aliases != [] do %>
-                <span class="text-gray-500">({length(@publishers_with_aliases)})</span>
+                <span class="text-gray-400">({length(@publishers_with_aliases)})</span>
               <% end %>
             </h3>
             <.data_table id="publisher-aliases" rows={@publishers_with_aliases}>
@@ -233,7 +233,7 @@ defmodule StashixWeb.AdminLive.Publishers do
             <div class="relative">
               <.icon
                 name="lucide-search"
-                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none"
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
               />
               <input
                 type="search"
@@ -250,7 +250,7 @@ defmodule StashixWeb.AdminLive.Publishers do
 
           <%!-- Count + top pagination --%>
           <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-500">
+            <p class="text-xs text-gray-400">
               {@pub_vis_total} publisher{if @pub_vis_total == 1, do: "", else: "s"}
               <%= if @pub_vis_search != "" do %>
                 matching <span class="text-gray-400">"{@pub_vis_search}"</span>
@@ -296,7 +296,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                 navigate={~p"/publisher/#{p.id}"}
                 class={[
                   "hover:text-ink transition-colors",
-                  (p.hidden || (p.canonical && p.canonical.hidden)) && "text-gray-500 line-through"
+                  (p.hidden || (p.canonical && p.canonical.hidden)) && "text-gray-400 line-through"
                 ]}
               >
                 {p.name}
@@ -342,7 +342,7 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Bottom pagination --%>
           <%= if total_pages > 1 do %>
             <div class="flex items-center justify-between pt-1">
-              <p class="text-xs text-gray-500">Page {@pub_vis_page} of {total_pages}</p>
+              <p class="text-xs text-gray-400">Page {@pub_vis_page} of {total_pages}</p>
               <div class="flex gap-1">
                 <.ink_button
                   variant="ghost"

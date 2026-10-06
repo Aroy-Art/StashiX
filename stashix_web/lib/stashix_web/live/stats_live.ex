@@ -637,7 +637,7 @@ defmodule StashixWeb.StatsLive do
           <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
           sheets weighing <span class="font-display font-black text-xl">{@stats.paper_weight}</span>.
         </p>
-        <p class="mt-3 text-xs text-gray-500 tabular-nums">
+        <p class="mt-3 text-xs text-gray-400 tabular-nums">
           {format_number(@stats.total_pages)} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)
         </p>
       </div>
@@ -664,7 +664,7 @@ defmodule StashixWeb.StatsLive do
                 value={if @stats.metadata.total > 0, do: count / @stats.metadata.total, else: 0.0}
                 class="h-1 mt-2"
               />
-              <p class="mt-1.5 text-xs text-gray-500 tabular-nums">{count} of {@stats.metadata.total}</p>
+              <p class="mt-1.5 text-xs text-gray-400 tabular-nums">{count} of {@stats.metadata.total}</p>
             </div>
           </dl>
         </.panel>

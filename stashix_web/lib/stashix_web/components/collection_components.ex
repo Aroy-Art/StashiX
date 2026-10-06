@@ -145,7 +145,7 @@ defmodule StashixWeb.CollectionComponents do
       <.link navigate={@navigate} class="block rounded-md overflow-hidden focus-visible:outline-2 focus-visible:outline-ink">
         <div class="relative flex h-24 bg-gray-950 overflow-hidden">
           <div :if={@covers == []} class="flex-1 flex items-center justify-center">
-            <.icon name={@icon} class="w-8 h-8 text-gray-600" />
+            <.icon name={@icon} class="w-8 h-8 text-gray-400" />
           </div>
           <img
             :for={url <- @covers}
@@ -165,10 +165,10 @@ defmodule StashixWeb.CollectionComponents do
           <dl :if={@stats != []} class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1">
             <div :for={{label, count} <- @stats} class="flex items-baseline gap-1">
               <dd class="font-display font-bold text-base leading-none text-gray-100 tabular-nums">{count}</dd>
-              <dt class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-500">{label}</dt>
+              <dt class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-400">{label}</dt>
             </div>
           </dl>
-          <p :if={@stats == [] and @note} class="mt-1 text-xs text-gray-500">{@note}</p>
+          <p :if={@stats == [] and @note} class="mt-1 text-xs text-gray-400">{@note}</p>
           {render_slot(@inner_block)}
         </div>
       </.link>

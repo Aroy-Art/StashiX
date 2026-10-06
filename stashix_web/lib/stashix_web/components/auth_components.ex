@@ -76,7 +76,7 @@ defmodule StashixWeb.AuthComponents do
       cond do
         @current -> "bg-ink text-zinc-950 -rotate-1"
         @done -> "bg-white/10 text-gray-200"
-        true -> "text-gray-500 ring-1 ring-white/15"
+        true -> "text-gray-400 ring-1 ring-white/15"
       end
     ]}>
       <span class="tabular-nums">{@number}</span>

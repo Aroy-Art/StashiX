@@ -257,11 +257,11 @@ defmodule StashixWeb.CoreComponents do
               class="w-full h-full object-cover"
               onerror="this.style.display='none';this.nextElementSibling?.style.setProperty('display','flex')"
             />
-            <div class="w-full h-full hidden items-center justify-center text-gray-600">
+            <div class="w-full h-full hidden items-center justify-center text-gray-400">
               <.icon name={@fallback_icon} class="w-8 h-8" />
             </div>
           <% else %>
-            <div class="w-full h-full flex items-center justify-center text-gray-600">
+            <div class="w-full h-full flex items-center justify-center text-gray-400">
               <.icon name={@fallback_icon} class="w-8 h-8" />
             </div>
           <% end %>
@@ -318,7 +318,7 @@ defmodule StashixWeb.CoreComponents do
         <p class="text-[13px] leading-snug font-semibold text-gray-200 group-hover:text-white transition-colors line-clamp-2">
           {@title}
         </p>
-        <p :if={@subtitle} class="mt-0.5 text-xs text-gray-500 tabular-nums">{@subtitle}</p>
+        <p :if={@subtitle} class="mt-0.5 text-xs text-gray-400 tabular-nums">{@subtitle}</p>
       </div>
     </.link>
     """
@@ -439,7 +439,7 @@ defmodule StashixWeb.CoreComponents do
           <.progress_bar value={@progress} class="flex-1 h-1" />
           <span class="text-[10px] font-semibold text-gray-400 tabular-nums">{round(min(@progress, 1.0) * 100)}%</span>
         </div>
-        <p :if={!@progress && @detail} class="mt-0.5 text-xs text-gray-500 tabular-nums">{@detail}</p>
+        <p :if={!@progress && @detail} class="mt-0.5 text-xs text-gray-400 tabular-nums">{@detail}</p>
       </div>
     </.link>
     """
@@ -491,7 +491,7 @@ defmodule StashixWeb.CoreComponents do
     <.ink_menu id={@id} class={@class}>
       <:trigger
         label="Library actions"
-        class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+        class="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
       >
         <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
       </:trigger>

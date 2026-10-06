@@ -293,14 +293,14 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] Delete the unused Phoenix default components in `core_components.ex`
   (`input/1`, `label/1`, `error/1`, `simple_form/1`, `button/1`, `header/1`,
   `table/1`, `list/1`, `back/1`) after checking nothing renders them.
-- [ ] `grep -rn "indigo-\|rounded-xl\|bg-gray-800 border-gray-700" lib/` is
+- [x] `grep -rn "indigo-\|rounded-xl\|bg-gray-800 border-gray-700" lib/` is
   empty or every hit is justified.
-- [ ] Remove unused CSS and the `detail_page` alias.
-- [ ] No raw `<select>`, no `dropdown_menu` outside `components/ui/`.
-- [ ] Accessibility pass: focus rings visible on every interactive component
+- [x] Remove unused CSS and the `detail_page` alias.
+- [x] No raw `<select>`, no `dropdown_menu` outside `components/ui/`.
+- [x] Accessibility pass: focus rings visible on every interactive component
   (ink ring), menu and select keyboard-only, contrast of gray-500 labels on
   gray-950.
-- [ ] `prefers-reduced-motion` covers every new animation.
+- [x] `prefers-reduced-motion` covers every new animation.
 - [ ] Refresh `priv/static/screenshots` and the README images.
 
 ### Phase 7 — User settings (after everything else)

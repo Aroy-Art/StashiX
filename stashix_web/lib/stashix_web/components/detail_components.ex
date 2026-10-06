@@ -49,7 +49,7 @@ defmodule StashixWeb.DetailComponents do
             />
           </button>
         <% else %>
-          <div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-600">
+          <div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400">
             <.icon name="lucide-layers" class="w-14 h-14" />
           </div>
         <% end %>

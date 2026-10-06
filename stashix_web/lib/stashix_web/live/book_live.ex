@@ -320,7 +320,7 @@ defmodule StashixWeb.BookLive do
         <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors mt-1">
           {@book.title}
         </p>
-        <p class="text-[10px] text-gray-600 mt-0.5 tabular-nums">
+        <p class="text-[10px] text-gray-400 mt-0.5 tabular-nums">
           {[@book.year, @book.page_count > 0 && "#{@book.page_count} pp"]
           |> Enum.filter(& &1)
           |> Enum.join(" · ")}
@@ -399,7 +399,7 @@ defmodule StashixWeb.BookLive do
               <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-white transition-colors">
                 {@book.series.name}
               </.link>
-              <span :if={@book.series.start_year} class="text-gray-500 tracking-normal font-normal ml-1">
+              <span :if={@book.series.start_year} class="text-gray-400 tracking-normal font-normal ml-1">
                 ({@book.series.start_year}{cond do
                   @book.series.end_year -> "–#{@book.series.end_year}"
                   @book.series.ongoing -> "–"
@@ -506,7 +506,7 @@ defmodule StashixWeb.BookLive do
       <.indicia>
         <:item label="Publisher" show={@book.publishers != []}>
           <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
-            <span :if={idx > 0} class="text-gray-600"> / </span>
+            <span :if={idx > 0} class="text-gray-400"> / </span>
             <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
           <% end %>
         </:item>
@@ -551,7 +551,7 @@ defmodule StashixWeb.BookLive do
       <%!-- Metadata source + file path --%>
       <footer class="space-y-2">
         <%= if @book.metadata_locked || @book.metadata_matched_at do %>
-          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
             <%= if @book.metadata_locked do %>
               <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
                 <.icon name="lucide-lock" class="w-3 h-3" /> Locked
@@ -568,7 +568,7 @@ defmodule StashixWeb.BookLive do
         <% end %>
         <div
           :if={@current_user.role == :admin && @selected_file}
-          class="flex items-start gap-1.5 text-[11px] font-mono text-gray-600 break-all leading-snug"
+          class="flex items-start gap-1.5 text-[11px] font-mono text-gray-400 break-all leading-snug"
         >
           <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
           {relative_path(@selected_file.path, @library)}
@@ -587,7 +587,7 @@ defmodule StashixWeb.BookLive do
         <:description>
           Override metadata for this book. Changes persist until the next rescan.
           <%= if @selected_file do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-500 mt-1 break-all">
+            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-400 mt-1 break-all">
               <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
               {relative_path(@selected_file.path, @library)}
             </p>

@@ -348,7 +348,7 @@ defmodule StashixWeb.ReaderLive do
           </div>
 
           <p
-            class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-gray-500"
+            class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-gray-400"
             style="--i:5"
           >
             <span :if={@next_book}><kbd class="text-gray-300">→</kbd> keep reading</span>
@@ -506,7 +506,7 @@ defmodule StashixWeb.ReaderLive do
               <span class="font-display font-black uppercase tracking-wide text-xl text-ink">End</span>
             <% else %>
               <span class="font-display font-black text-xl text-white">{@current_page + 1}</span>
-              <span class="text-gray-600 text-xs"> / {@page_count}</span>
+              <span class="text-gray-400 text-xs"> / {@page_count}</span>
             <% end %>
           </p>
         </div>
@@ -666,7 +666,7 @@ defmodule StashixWeb.ReaderLive do
               class="reader-slider flex-1"
               style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
             />
-            <span class="w-8 font-display font-bold text-base leading-none text-gray-500 tabular-nums">
+            <span class="w-8 font-display font-bold text-base leading-none text-gray-400 tabular-nums">
               {@page_count}
             </span>
           </div>

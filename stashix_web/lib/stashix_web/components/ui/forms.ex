@@ -35,7 +35,7 @@ defmodule StashixWeb.UI.Forms do
         </.eyebrow>
         {render_slot(@inner_block)}
       </label>
-      <p :if={@hint && !@error} class="mt-1.5 text-xs text-gray-500">{@hint}</p>
+      <p :if={@hint && !@error} class="mt-1.5 text-xs text-gray-400">{@hint}</p>
       <p :if={@error} class="mt-1.5 text-xs font-medium text-red-300">{@error}</p>
     </div>
     """

@@ -153,7 +153,7 @@ defmodule StashixWeb.UI.Menu do
     <.icon
       :if={@icon}
       name={@icon}
-      class={"ink-menu-icon w-4 h-4 flex-shrink-0 #{if @tone == "default", do: "text-gray-500"} #{@icon_class}"}
+      class={"ink-menu-icon w-4 h-4 flex-shrink-0 #{if @tone == "default", do: "text-gray-400"} #{@icon_class}"}
     />
     <span class="flex-1 min-w-0 truncate font-display font-bold uppercase tracking-wide">
       {render_slot(@inner_block)}
@@ -287,7 +287,7 @@ defmodule StashixWeb.UI.Menu do
           <span class="flex-1 min-w-0 truncate">{label}</span>
           <.icon name="lucide-check" class="ink-menu-check w-3.5 h-3.5 flex-shrink-0 text-ink" />
         </button>
-        <p :if={@searchable} data-menu-empty hidden class="px-2 py-2 text-sm text-gray-500">No matches</p>
+        <p :if={@searchable} data-menu-empty hidden class="px-2 py-2 text-sm text-gray-400">No matches</p>
       </div>
     </div>
     """

@@ -186,7 +186,7 @@ defmodule StashixWeb.UI.Ink do
   defp eyebrow_size("xs"), do: "text-[9px] tracking-[0.14em]"
 
   defp eyebrow_tone("violet"), do: "text-violet-300"
-  defp eyebrow_tone("muted"), do: "text-gray-500"
+  defp eyebrow_tone("muted"), do: "text-gray-400"
   defp eyebrow_tone("ink"), do: "text-ink/80"
   defp eyebrow_tone("light"), do: "text-gray-300"
 
@@ -212,7 +212,7 @@ defmodule StashixWeb.UI.Ink do
       {render_slot(@inner_block)}
       <span
         :if={@count}
-        class={["tabular-nums", if(@count_tone == "ink", do: "text-ink", else: "text-gray-500")]}
+        class={["tabular-nums", if(@count_tone == "ink", do: "text-ink", else: "text-gray-400")]}
       >
         {@count}
       </span>
@@ -340,7 +340,7 @@ defmodule StashixWeb.UI.Ink do
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span :if={@count} class="text-gray-500">{@count}</span>
+      <span :if={@count} class="text-gray-400">{@count}</span>
     </.link>
     <span
       :if={!@link?}
@@ -351,7 +351,7 @@ defmodule StashixWeb.UI.Ink do
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span :if={@count} class="text-gray-600">{@count}</span>
+      <span :if={@count} class="text-gray-400">{@count}</span>
     </span>
     """
   end

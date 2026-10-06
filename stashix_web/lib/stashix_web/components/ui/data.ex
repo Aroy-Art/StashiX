@@ -61,7 +61,7 @@ defmodule StashixWeb.UI.Data do
             </td>
           </tr>
           <tr :if={@rows == [] and @empty != []}>
-            <td colspan={length(@col) + if(@action != [], do: 1, else: 0)} class="px-4 py-8 text-center text-gray-500">
+            <td colspan={length(@col) + if(@action != [], do: 1, else: 0)} class="px-4 py-8 text-center text-gray-400">
               {render_slot(@empty)}
             </td>
           </tr>

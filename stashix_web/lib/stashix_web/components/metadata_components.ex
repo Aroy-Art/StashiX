@@ -124,7 +124,7 @@ defmodule StashixWeb.MetadataComponents do
           >
             {String.trim(entry_name(n))}
           </.link>
-          <span :if={length(names) > @limit} class="block text-xs text-gray-500">
+          <span :if={length(names) > @limit} class="block text-xs text-gray-400">
             +{length(names) - @limit} more
           </span>
         </dd>
@@ -189,7 +189,7 @@ defmodule StashixWeb.MetadataComponents do
           class="text-sm text-gray-200 leading-tight truncate hover:text-white hover:underline transition-colors block"
         >{@name}</.link>
         <p :if={!@creator_id} class="text-sm text-gray-200 leading-tight truncate">{@name}</p>
-        <p class="text-[10px] text-gray-500 uppercase tracking-[0.1em] mt-0.5">{@role}</p>
+        <p class="text-[10px] text-gray-400 uppercase tracking-[0.1em] mt-0.5">{@role}</p>
       </div>
     </div>
     """
@@ -268,7 +268,7 @@ defmodule StashixWeb.MetadataComponents do
         </.chip>
         <.chip :if={!@search_param} count={entry_count(item)}>{entry_name(item)}</.chip>
       <% end %>
-      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-gray-600">+{@rest} more</span>
+      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-gray-400">+{@rest} more</span>
     </div>
     """
   end

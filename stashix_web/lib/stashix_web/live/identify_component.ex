@@ -638,13 +638,13 @@ defmodule StashixWeb.IdentifyComponent do
       >
         <:description>
           Search a metadata source and pick the matching entry.
-          <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-gray-500 font-mono truncate">
+          <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-gray-400 font-mono truncate">
             {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
           </p>
         </:description>
         <div class="relative">
           <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-            <span class="text-gray-500">Linked IDs:</span>
+            <span class="text-gray-400">Linked IDs:</span>
             <button
               :for={{key, id} <- @known_ids}
               type="button"
@@ -655,7 +655,7 @@ defmodule StashixWeb.IdentifyComponent do
               class="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-gray-800/60 px-2 py-1 text-gray-300 hover:border-violet-500 hover:text-white transition-colors"
             >
               <.icon name="lucide-link" class="w-3 h-3" />
-              {source_name(@sources, key)} <span class="font-mono text-gray-500">{"##{id}"}</span>
+              {source_name(@sources, key)} <span class="font-mono text-gray-400">{"##{id}"}</span>
             </button>
           </div>
 
@@ -699,7 +699,7 @@ defmodule StashixWeb.IdentifyComponent do
                 <.text_input name="q[year]" value={@form[:year].value} />
               </.field>
               <div class="col-span-2 sm:col-span-6 flex items-center justify-end gap-4">
-                <label class="flex items-center gap-2 text-xs text-gray-500" title="Ignore cached responses">
+                <label class="flex items-center gap-2 text-xs text-gray-400" title="Ignore cached responses">
                   <input type="hidden" name="refresh" value="false" />
                   <input
                     type="checkbox"
@@ -757,7 +757,7 @@ defmodule StashixWeb.IdentifyComponent do
                 @searching && "opacity-50"
               ]}
             >
-              <p :if={@candidates == [] and not @searching} class="text-sm text-gray-500 py-6 text-center">
+              <p :if={@candidates == [] and not @searching} class="text-sm text-gray-400 py-6 text-center">
                 No results yet.
               </p>
               <p
@@ -795,7 +795,7 @@ defmodule StashixWeb.IdentifyComponent do
                   </div>
                   <div class="min-w-0 flex-1">
                     <p class="text-sm text-white truncate">{c.title || c.series_name}</p>
-                    <p class="text-xs text-gray-500 truncate">
+                    <p class="text-xs text-gray-400 truncate">
                       {[
                         c.series_name,
                         c.number && "##{c.number}",
@@ -813,7 +813,7 @@ defmodule StashixWeb.IdentifyComponent do
                   >
                     <.icon name="lucide-link" class="w-3 h-3" /> Linked
                   </span>
-                  <span class="text-[10px] uppercase tracking-wide text-gray-500 flex-shrink-0">
+                  <span class="text-[10px] uppercase tracking-wide text-gray-400 flex-shrink-0">
                     {source_name(@sources, c.source_key)}
                   </span>
                   <span class={[
@@ -831,7 +831,7 @@ defmodule StashixWeb.IdentifyComponent do
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-gray-500 hover:text-white flex-shrink-0"
+                    class="text-gray-400 hover:text-white flex-shrink-0"
                     title="Open on source site"
                   >
                     <.icon name="lucide-external-link" class="w-4 h-4" />
@@ -891,10 +891,10 @@ defmodule StashixWeb.IdentifyComponent do
                             class="ink-check"
                           />
                         </td>
-                        <td class="px-3 py-1.5 text-gray-500 align-top">{row.label}</td>
+                        <td class="px-3 py-1.5 text-gray-400 align-top">{row.label}</td>
                         <td class={[
                           "px-3 py-1.5 align-top",
-                          if(checked && row.current, do: "text-gray-500 line-through", else: "text-gray-400")
+                          if(checked && row.current, do: "text-gray-400 line-through", else: "text-gray-400")
                         ]}>
                           {row.current || "—"}
                         </td>
@@ -902,8 +902,8 @@ defmodule StashixWeb.IdentifyComponent do
                           "px-3 py-1.5 align-top",
                           cond do
                             checked -> "text-emerald-300"
-                            row.selectable -> "text-gray-500"
-                            true -> "text-gray-500"
+                            row.selectable -> "text-gray-400"
+                            true -> "text-gray-400"
                           end
                         ]}>
                           {row.new || "—"}
@@ -913,7 +913,7 @@ defmodule StashixWeb.IdentifyComponent do
                   </tbody>
                 </table>
               </div>
-              <p :if={@preview} class="mt-2 text-xs text-gray-500">
+              <p :if={@preview} class="mt-2 text-xs text-gray-400">
                 Checked fields are written. Empty fields are selected by default; tick a filled field to overwrite it.
               </p>
             </div>
@@ -956,7 +956,7 @@ defmodule StashixWeb.IdentifyComponent do
           >
             <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-ink" />
             <p>Applying metadata…</p>
-            <p :if={@kind == :series and @queue_issues} class="text-xs text-gray-500">
+            <p :if={@kind == :series and @queue_issues} class="text-xs text-gray-400">
               Issues are queued for matching afterwards.
             </p>
           </div>

@@ -131,11 +131,11 @@ defmodule StashixWeb.AdminLive.Users do
                 <tr class="border-b border-white/10 bg-gray-950">
                   <td colspan="4" class="px-4 py-4">
                     <div class="space-y-2">
-                      <p class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
+                      <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
                         Library Access for {user.username}
                       </p>
                       <%= if @libraries == [] do %>
-                        <p class="text-sm text-gray-500">No libraries configured.</p>
+                        <p class="text-sm text-gray-400">No libraries configured.</p>
                       <% else %>
                         <%= for lib <- @libraries do %>
                           <% perm = Map.get(@user_permissions, lib.id)
@@ -153,7 +153,7 @@ defmodule StashixWeb.AdminLive.Users do
                             <input type="hidden" name="library_id" value={lib.id} />
                             <div>
                               <p class="text-sm text-white">{lib.name}</p>
-                              <p class="text-xs text-gray-500">{lib.root_path}</p>
+                              <p class="text-xs text-gray-400">{lib.root_path}</p>
                             </div>
                             <div class="flex items-center gap-4">
                               <%= if saved do %>
@@ -183,7 +183,7 @@ defmodule StashixWeb.AdminLive.Users do
                                 class={[
                                   "flex items-center gap-2 text-xs",
                                   if(current_rating == :unknown,
-                                    do: "text-gray-500 cursor-not-allowed",
+                                    do: "text-gray-400 cursor-not-allowed",
                                     else: "text-gray-400 cursor-pointer"
                                   )
                                 ]}

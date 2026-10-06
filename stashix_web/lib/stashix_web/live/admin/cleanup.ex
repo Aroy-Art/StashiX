@@ -25,7 +25,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
-            Deleted Series <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_series)})</span>
+            Deleted Series <span class="ml-2 text-sm font-normal text-gray-400">({length(@deleted_series)})</span>
           </h2>
           <%= if series_sel_count > 0 do %>
             <div class="flex items-center gap-3">
@@ -51,7 +51,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
           <% end %>
         </div>
         <%= if @deleted_series == [] do %>
-          <p class="text-gray-500 text-sm">No deleted series.</p>
+          <p class="text-gray-400 text-sm">No deleted series.</p>
         <% else %>
           <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
             <table class="w-full text-sm">
@@ -94,7 +94,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     </td>
                     <td class="px-4 py-3 text-white">{s.name}</td>
                     <td class="px-4 py-3 text-gray-400">{s.library.name}</td>
-                    <td class="px-4 py-3 text-gray-500 text-xs">
+                    <td class="px-4 py-3 text-gray-400 text-xs">
                       {Calendar.strftime(s.deleted_at, "%Y-%m-%d %H:%M")}
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
@@ -126,7 +126,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
-            Deleted Books <span class="ml-2 text-sm font-normal text-gray-500">({length(@deleted_books)})</span>
+            Deleted Books <span class="ml-2 text-sm font-normal text-gray-400">({length(@deleted_books)})</span>
           </h2>
           <%= if books_sel_count > 0 do %>
             <div class="flex items-center gap-3">
@@ -152,7 +152,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
           <% end %>
         </div>
         <%= if @deleted_books == [] do %>
-          <p class="text-gray-500 text-sm">No deleted books.</p>
+          <p class="text-gray-400 text-sm">No deleted books.</p>
         <% else %>
           <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
             <table class="w-full text-sm">
@@ -205,12 +205,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     </td>
                     <td class="px-4 py-3 text-gray-400">{b.library.name}</td>
                     <td
-                      class="px-4 py-3 text-gray-500 text-xs font-mono truncate max-w-xs"
+                      class="px-4 py-3 text-gray-400 text-xs font-mono truncate max-w-xs"
                       title={b.files |> List.first() |> then(&(&1 && &1.path))}
                     >
                       {b.files |> List.first() |> then(&(&1 && &1.path))}
                     </td>
-                    <td class="px-4 py-3 text-gray-500 text-xs">
+                    <td class="px-4 py-3 text-gray-400 text-xs">
                       {Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">

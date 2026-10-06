@@ -57,7 +57,7 @@ defmodule StashixWeb.Dev.UiLive do
     <section class="space-y-4">
       <div class="flex items-baseline gap-4 border-b border-white/10 pb-2">
         <h2 class="font-display font-black uppercase text-3xl leading-none text-white">{@title}</h2>
-        <p :if={@note} class="text-xs text-gray-500">{@note}</p>
+        <p :if={@note} class="text-xs text-gray-400">{@note}</p>
       </div>
       <div class="flex flex-wrap items-center gap-6">
         {render_slot(@inner_block)}
@@ -225,7 +225,7 @@ defmodule StashixWeb.Dev.UiLive do
         <.ink_menu id="ui-menu-icon" modal>
           <:trigger
             label="More"
-            class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+            class="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
           >
             <.icon name="lucide-ellipsis-vertical" class="w-4 h-4" />
           </:trigger>

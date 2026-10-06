@@ -188,7 +188,7 @@
           <div class="relative group">
             <.icon
               name="lucide-search"
-              class="absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-ink transition-colors"
+              class="absolute left-1 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-ink transition-colors"
             />
             <input
               id="navbar-search-input"
@@ -238,14 +238,14 @@
                           />
                         <% else %>
                           <div class="w-full h-full flex items-center justify-center">
-                            <.icon name="lucide-image-off" class="w-4 h-4 text-gray-600" />
+                            <.icon name="lucide-image-off" class="w-4 h-4 text-gray-400" />
                           </div>
                         <% end %>
                       </div>
                       <div class="flex-1 min-w-0">
                         <p class="truncate text-gray-200 leading-tight">{result.label}</p>
                         <%= if result.sub do %>
-                          <p class="text-xs text-gray-500 mt-0.5">{result.sub}</p>
+                          <p class="text-xs text-gray-400 mt-0.5">{result.sub}</p>
                         <% end %>
                       </div>
                       <.eyebrow tag="span" size="xs" tone="muted" class="shrink-0">
@@ -272,7 +272,7 @@
               label="Background tasks"
               class={[
                 "relative p-1.5 rounded-lg transition-colors hover:bg-white/10 flex items-center justify-center",
-                if(active_tasks != [], do: "text-ink", else: "text-gray-500 hover:text-white")
+                if(active_tasks != [], do: "text-ink", else: "text-gray-400 hover:text-white")
               ]}
             >
               <.icon name="lucide-activity" class={"w-4 h-4 #{if active_tasks != [], do: "animate-pulse"}"} />
@@ -282,7 +282,7 @@
               ></span>
             </:trigger>
             <.menu_label>Background tasks</.menu_label>
-            <p :if={all_tasks == []} class="px-2 pt-1 pb-2 text-sm text-gray-500">Nothing running</p>
+            <p :if={all_tasks == []} class="px-2 pt-1 pb-2 text-sm text-gray-400">Nothing running</p>
             <div
               :for={{lib_id, task} <- all_tasks}
               id={"task-#{lib_id}"}
@@ -301,7 +301,7 @@
                   end}
                 </span>
               </div>
-              <p class="mt-0.5 mb-2 text-[11px] text-gray-500">
+              <p class="mt-0.5 mb-2 text-[11px] text-gray-400">
                 {cond do
                   task.done -> "Complete"
                   Map.get(task, :phase) == :thumbnails -> "Generating covers"
@@ -328,7 +328,7 @@
               <span class="hidden sm:block text-sm text-gray-300">{@current_user.username}</span>
               <.icon
                 name="lucide-chevron-down"
-                class="w-3.5 h-3.5 text-gray-500 transition-transform group-data-[open]:rotate-180"
+                class="w-3.5 h-3.5 text-gray-400 transition-transform group-data-[open]:rotate-180"
               />
             </:trigger>
             <.menu_item :if={@current_user.role == :admin} icon="lucide-settings" navigate="/admin/users">

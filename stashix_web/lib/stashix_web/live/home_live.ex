@@ -389,7 +389,7 @@ defmodule StashixWeb.HomeLive do
               <:menu :if={@current_user.role == :admin}>
                 <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
               </:menu>
-              <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-500 tabular-nums">
+              <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-400 tabular-nums">
                 {Stashix.Formatters.format_bytes(data.total_size)}
               </p>
               <.scan_status
