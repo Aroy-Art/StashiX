@@ -271,6 +271,199 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
+  # ---------------------------------------------------------------------------
+  # Pills, chips, panels and figures
+  # ---------------------------------------------------------------------------
+
+  @doc """
+  Rounded toggle: ink when `active`. Wrap a visually hidden checkbox or radio
+  with the default `label` tag, or use `tag="button"` with a `phx-click`.
+  """
+  attr :active, :boolean, default: false
+  attr :tag, :string, default: "label", values: ~w(label button span)
+  attr :class, :any, default: nil
+  attr :rest, :global, include: @button_attrs
+  slot :inner_block, required: true
+
+  def pill(assigns) do
+    ~H"""
+    <.dynamic_tag
+      tag_name={@tag}
+      class={[
+        "cursor-pointer select-none px-2.5 py-1 text-xs rounded-full border transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white",
+        if(@active,
+          do: "bg-ink border-ink text-gray-950 font-semibold",
+          else: "bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400 hover:text-white"
+        ),
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+    </.dynamic_tag>
+    """
+  end
+
+  @doc """
+  Small tag for a name in a list (genre, character, link). Given `navigate` or
+  `href` it is a link that lights up in ink; otherwise a flat label. `count`
+  adds a dimmed figure after the name.
+  """
+  attr :count, :any, default: nil
+  attr :class, :any, default: nil
+  attr :rest, :global, include: @link_attrs
+  slot :inner_block, required: true
+
+  def chip(assigns) do
+    assigns = assign(assigns, link?: Enum.any?(~w(navigate patch href)a, &Map.has_key?(assigns.rest, &1)))
+
+    ~H"""
+    <.link
+      :if={@link?}
+      class={[
+        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span :if={@count} class="text-gray-500">{@count}</span>
+    </.link>
+    <span
+      :if={!@link?}
+      class={[
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300",
+        @class
+      ]}
+      {@rest}
+    >
+      {render_slot(@inner_block)}
+      <span :if={@count} class="text-gray-600">{@count}</span>
+    </span>
+    """
+  end
+
+  @doc """
+  Surface for grouped content.
+
+    * `plain` — gray-900 card with a hairline ring
+    * `indicia` — violet-to-ink wash under halftone dots with an ink left edge,
+      for a row of facts
+    * `rail` — plain card on an ink-to-violet backing that shows as a 4px edge
+      down its right side, for filter and side panels
+
+  `class` goes on the outer element. `inner_class` styles the card inside a
+  `rail` and replaces its default rounding and ring.
+  """
+  attr :variant, :string, default: "plain", values: ~w(plain indicia rail)
+  attr :class, :any, default: nil
+  attr :inner_class, :any, default: "rounded-lg ring-1 ring-white/10"
+  attr :rest, :global
+  slot :inner_block, required: true
+
+  def panel(%{variant: "indicia"} = assigns) do
+    ~H"""
+    <div
+      class={["indicia relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10", @class]}
+      {@rest}
+    >
+      <div class="halftone absolute inset-0" aria-hidden="true"></div>
+      <div class="relative">{render_slot(@inner_block)}</div>
+    </div>
+    """
+  end
+
+  def panel(%{variant: "rail"} = assigns) do
+    ~H"""
+    <div class={["ink-rail flex", @class || "rounded-lg"]} {@rest}>
+      <div class={["relative flex-1 min-w-0 bg-gray-900", @inner_class]}>
+        {render_slot(@inner_block)}
+      </div>
+    </div>
+    """
+  end
+
+  def panel(assigns) do
+    ~H"""
+    <div class={["bg-gray-900 rounded-lg ring-1 ring-white/10", @class]} {@rest}>
+      {render_slot(@inner_block)}
+    </div>
+    """
+  end
+
+  @doc "Wrapping row of `stat/1`s."
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  def stat_list(assigns) do
+    ~H"""
+    <dl class={["flex flex-wrap gap-x-10 gap-y-4", @class]}>
+      {render_slot(@inner_block)}
+    </dl>
+    """
+  end
+
+  @doc """
+  A labelled figure: small ink label over a value in display type. Goes inside
+  a `stat_list/1`. With `navigate` the value is a link.
+  """
+  attr :label, :string, required: true
+  attr :navigate, :string, default: nil
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  def stat(assigns) do
+    ~H"""
+    <div class={["min-w-0", @class]}>
+      <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1">{@label}</.eyebrow>
+      <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums">
+        <.link :if={@navigate} navigate={@navigate} class="hover:text-ink transition-colors">
+          {render_slot(@inner_block)}
+        </.link>
+        <span :if={!@navigate}>{render_slot(@inner_block)}</span>
+      </dd>
+    </div>
+    """
+  end
+
+  @doc """
+  Thin progress track. `value` is a fraction from 0 to 1; the fill turns green
+  at 1. Height and position come from `class`.
+  """
+  attr :value, :float, required: true
+  attr :label, :string, default: nil, doc: "accessible name; the bar is decorative without one"
+  attr :rounded, :boolean, default: true
+  attr :track, :string, default: "bg-white/10"
+  attr :class, :any, default: nil
+  attr :rest, :global
+
+  def progress_bar(assigns) do
+    assigns = assign(assigns, pct: round(min(max(assigns.value, 0.0), 1.0) * 100))
+
+    ~H"""
+    <div
+      class={["overflow-hidden", @track, @rounded && "rounded-full", @class]}
+      role={if @label, do: "progressbar"}
+      aria-label={@label}
+      aria-valuemin={@label && "0"}
+      aria-valuemax={@label && "100"}
+      aria-valuenow={@label && @pct}
+      aria-hidden={if !@label, do: "true"}
+      {@rest}
+    >
+      <div
+        class={[
+          "h-full transition-all",
+          @rounded && "rounded-full",
+          if(@value >= 1.0, do: "bg-green-500", else: "bg-violet-500")
+        ]}
+        style={"width: #{@pct}%"}
+      >
+      </div>
+    </div>
+    """
+  end
+
   attr :class, :any, default: nil
   attr :rest, :global, include: @link_attrs ++ @button_attrs
   slot :inner_block, required: true

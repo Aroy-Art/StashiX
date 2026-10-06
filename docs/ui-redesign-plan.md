@@ -165,7 +165,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 
 - [x] `UI.Ink`: `ink_button`, `split_button`, `icon_button`, `text_link`.
 - [x] `UI.Ink`: `eyebrow`, `display_heading`, `ghost_numeral`, `sticker`, `kbd`.
-- [ ] `UI.Ink`: `pill`, `chip`, `panel`, `stat`, `progress_bar`.
+- [x] `UI.Ink`: `pill`, `chip`, `panel`, `stat`, `progress_bar`.
 - [ ] `UI.Page`: `page`, `crumbs`, `page_hero`, `section`, `cover_grid`,
   `shelf`, `empty_state`.
 - [ ] Swap the four already-redesigned pages onto the primitives. Output
