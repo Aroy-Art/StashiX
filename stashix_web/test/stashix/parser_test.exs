@@ -5,6 +5,42 @@ defmodule Stashix.Metadata.ParserTest do
 
   defp d(n), do: Decimal.new(n)
 
+  describe "parse_filename/1 — yearless paren tags after the issue number" do
+    test "story-arc tag is ignored" do
+      r = Parser.parse_filename("Dark Horse Comics 008 (Coyote)")
+      assert r.series == "Dark Horse Comics"
+      assert Decimal.equal?(r.issue_number, Decimal.new("8"))
+      assert r.title == "Dark Horse Comics"
+    end
+
+    test "tag containing a dash is ignored" do
+      r = Parser.parse_filename("Dark Horse Comics 002 (Minutemen-The Saint)")
+      assert r.series == "Dark Horse Comics"
+      assert Decimal.equal?(r.issue_number, Decimal.new("2"))
+    end
+
+    test "issue number glued to the year paren" do
+      r = Parser.parse_filename("Dark Horse Comics 021(1994)(FB-DCP)(C2C)")
+      assert r.series == "Dark Horse Comics"
+      assert Decimal.equal?(r.issue_number, Decimal.new("21"))
+      assert r.year == 1994
+    end
+
+    test "scanner group tags are noise" do
+      assert Parser.parse_filename("Some Book (FB-DCP)(C2C)").title == "Some Book"
+
+      r = Parser.parse_filename("Asterix 11 - The Shield (1994) (FB-DCP) (Group)")
+      assert r.title == "The Shield"
+      assert Decimal.equal?(r.issue_number, Decimal.new("11"))
+    end
+
+    test "paren tag without an issue number stays in the title" do
+      r = Parser.parse_filename("Some Book (Deluxe Edition)")
+      assert r.title == "Some Book (Deluxe Edition)"
+      refute Map.has_key?(r, :issue_number)
+    end
+  end
+
   describe "parse_filename/1 — Issue/Volume prefix pattern" do
     test "Issue N - Title" do
       r = Parser.parse_filename("Issue 3 - Angel of Death")

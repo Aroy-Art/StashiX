@@ -6,6 +6,7 @@ defmodule Stashix.Metadata.Parser do
     HD 1080p 720p 480p
     FIXED Corrected v2 v3
     f2 f3
+    DCP [A-Za-z0-9]+-DCP
   )
 
   @noise_regex Regex.compile!(
@@ -398,6 +399,10 @@ defmodule Stashix.Metadata.Parser do
       Regex.replace(@noise_regex, filename, " ")
       |> then(&Regex.replace(~r/\s*\(of\s+\d+\)\s*/i, &1, " "))
       |> then(&Regex.replace(~r/\((\d{1,2})-(\d{4})\)/, &1, "(\\2)"))
+      # Whatever trails the year is scanner/release tagging — "(1994)(FB-DCP)(Group)"
+      |> then(&Regex.replace(~r/(\(\d{4}\))(?:\s*\([^)]*\))+\s*$/, &1, "\\1"))
+      # "Series 021(1994)" — give the issue number room before its paren group
+      |> then(&Regex.replace(~r/(\d)\(/, &1, "\\1 ("))
       |> String.trim()
 
     result = %{}
@@ -654,9 +659,13 @@ defmodule Stashix.Metadata.Parser do
   end
 
   defp match_filename_fallback(result, clean) do
-    with nil <- match_year_pattern(result, clean),
-         nil <- match_volume_pattern(result, clean),
-         nil <- match_issue_pattern(result, clean) do
+    # Yearless paren groups are story-arc or scanner tags — e.g.
+    # "Dark Horse Comics 008 (Coyote)" — and would hide a trailing issue number.
+    stripped = Regex.replace(~r/\s*\((?![^)]*\d{4})[^)]*\)/, clean, "") |> String.trim()
+
+    with nil <- match_year_pattern(result, stripped),
+         nil <- match_volume_pattern(result, stripped),
+         nil <- match_issue_pattern(result, stripped) do
       Map.put(result, :title, clean)
     end
   end
