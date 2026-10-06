@@ -120,6 +120,77 @@ defmodule Stashix.Accounts do
     |> Repo.update()
   end
 
+  # ---------------------------------------------------------------------------
+  # Self-service: what a signed-in user may change about their own account.
+  # Kept apart from update_user/2, which is the admin path and can set a role.
+  # ---------------------------------------------------------------------------
+
+  @doc "Updates appearance settings, e.g. `%{\"read_mark\" => \"stamp\"}`."
+  def update_ui_settings(%User{} = user, attrs) do
+    user |> User.ui_settings_changeset(attrs) |> Repo.update()
+  end
+
+  @doc "Updates display name, username and birth date."
+  def update_profile(%User{} = user, attrs) do
+    user |> User.profile_changeset(attrs) |> Repo.update()
+  end
+
+  @doc """
+  Changes the email address after checking the current password. Returns
+  `{:error, :invalid_password}` when it does not match and
+  `{:error, :rate_limited}` after too many wrong guesses.
+  """
+  def change_email(%User{} = user, current_password, attrs) do
+    with :ok <- verify_password(user, current_password) do
+      user |> User.email_changeset(attrs) |> Repo.update()
+    end
+  end
+
+  @doc """
+  Changes the password after checking the current one. Every token issued
+  before is revoked and open LiveView sockets are closed; the caller issues
+  fresh tokens for the session that made the change.
+  """
+  def change_password(%User{} = user, current_password, attrs) do
+    with :ok <- verify_password(user, current_password),
+         {:ok, updated} <- user |> User.password_changeset(attrs) |> Repo.update() do
+      disconnect_sessions(updated.id)
+      {:ok, updated}
+    end
+  end
+
+  @doc """
+  Signs the user out everywhere: revokes every token and closes open
+  sockets. The caller issues fresh tokens for the session it wants to keep.
+  """
+  def revoke_sessions(%User{} = user) do
+    with {:ok, updated} <- user |> User.revoke_tokens_changeset() |> Repo.update() do
+      disconnect_sessions(updated.id)
+      {:ok, updated}
+    end
+  end
+
+  # Wrong guesses are throttled like logins, under a key of their own so that
+  # someone holding a stolen session cannot lock the owner out of signing in.
+  defp verify_password(%User{id: id, password_hash: hash}, password) when is_binary(password) do
+    key = "settings:#{id}"
+
+    cond do
+      LoginThrottle.blocked?(key) ->
+        {:error, :rate_limited}
+
+      Bcrypt.verify_pass(password, hash) ->
+        LoginThrottle.clear(key)
+        :ok
+
+      true ->
+        LoginThrottle.record_failure(key)
+        {:error, :invalid_password}
+    end
+  end
+
+  defp verify_password(_user, _password), do: {:error, :invalid_password}
+
   def setup_complete? do
     Repo.aggregate(User, :count, :id) > 0
   end

@@ -307,13 +307,25 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   generated flat-colour covers. Keep the sizes or update
   `manifest.webmanifest` to match. The README has no images.
 
-### Phase 7 — User settings (after everything else)
+### Phase 7 — User settings
 
-- [ ] Per-user appearance settings, stored next to `reader_settings` on the
-  user. First setting: read mark on covers, `check` (default) or `stamp`.
-  Needs a settings page (or a section in the user menu), the assign made
-  available to every LiveView through `Live.Hooks`, and `media_card/1` reading
-  it instead of its default.
+- [x] Settings page at `/settings` with three tabs (`SettingsLive`), linked
+  from the user menu.
+  - [x] **UI** (`/settings`): read mark on covers, tick (default) or stamp,
+    picked from two preview cards. Stored in `users.ui_settings`.
+  - [x] **Personal** (`/settings/personal`): display name, username, birth
+    date. Role, email and join date shown read-only.
+  - [x] **Security** (`/settings/security`): change password, change email
+    (both ask for the current password), sign out everywhere else.
+- [x] Migration `20240101000042_add_ui_settings_to_users` — **run
+  `mix ecto.migrate`** on every existing database.
+- [x] `media_card/1` follows the setting without any plumbing: finished cards
+  carry both marks, the layout publishes the choice as `data-read-mark`, CSS
+  shows one. `read_mark="check|stamp"` on a card still forces it.
+
+Adding another appearance setting: add its key, default and choices to
+`@ui_defaults` / `@ui_choices` in `Accounts.User`, a control in
+`SettingsLive.ui_tab/1`, and read it with `User.ui_setting/2`.
 
 ---
 
@@ -541,3 +553,21 @@ Add a dated line when a phase closes or a decision changes.
     is hidden by its backdrop; no hover on touch (cover fan); metadata admin
     `sources`/`review`/`jobs` tabs are still private functions in one
     980-line module.
+- 2026-10-06 — Phase 7 done; the redesign plan is complete apart from the
+  manifest screenshots.
+  - Self-service account changes go through their own functions in
+    `Accounts` (`update_ui_settings/2`, `update_profile/2`, `change_email/3`,
+    `change_password/3`, `revoke_sessions/1`) and their own changesets, none
+    of which cast `:role`. The admin path (`update_user/2`) is untouched.
+  - Password, email and "sign out everywhere" are plain form posts to
+    `SettingsController`, not LiveView events: each rewrites the session
+    cookie with fresh tokens so the browser that made the change stays signed
+    in while every other token is revoked.
+  - Wrong guesses at the current password are throttled (10 per 5 minutes)
+    under a key separate from the login throttle, so a stolen session cannot
+    be used to lock the owner out of signing in.
+  - The top bar shows the display name when one is set.
+  - Verified in the browser: switching the read mark changes covers across
+    pages; profile save and live validation; wrong current password; password
+    change keeps this browser and signs a second browser out; email change;
+    sign out everywhere. 21 new tests.

@@ -22,6 +22,27 @@ defmodule Stashix.Auth.TokenHelper do
     end
   end
 
+  @doc """
+  The user a browser session belongs to: by its access token, or failing that
+  its refresh token. `session` is the session map with string keys.
+  """
+  def user_from_session(session) do
+    access_token = session["guardian_default_token"]
+
+    case access_token && resource_from_token(access_token) do
+      {:ok, user} ->
+        {:ok, user}
+
+      _ ->
+        refresh_token = session["guardian_refresh_token"]
+
+        case refresh_token && refresh_tokens(refresh_token) do
+          {:ok, user, _new_access, _new_refresh} -> {:ok, user}
+          _ -> {:error, :unauthenticated}
+        end
+    end
+  end
+
   def refresh_tokens(refresh_token) do
     with {:ok, claims} <- Guardian.decode_and_verify(refresh_token, %{"typ" => "refresh"}),
          {:ok, user} <- Guardian.resource_from_claims(claims),

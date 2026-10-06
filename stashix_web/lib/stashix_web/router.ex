@@ -148,6 +148,13 @@ defmodule StashixWeb.Router do
     live "/admin/metadata/review", AdminMetadataLive, :metadata_review
     live "/admin/metadata/jobs", AdminMetadataLive, :metadata_jobs
     live "/stats", StatsLive, :index
+    live "/settings", SettingsLive, :ui
+    live "/settings/personal", SettingsLive, :personal
+    live "/settings/security", SettingsLive, :security
+
+    post "/settings/password", SettingsController, :update_password
+    post "/settings/email", SettingsController, :update_email
+    post "/settings/sessions/revoke", SettingsController, :revoke_sessions
   end
 
   if Application.compile_env(:stashix, :dev_routes) do

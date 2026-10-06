@@ -199,7 +199,9 @@ defmodule StashixWeb.CoreComponents do
     * `page_count` — small page tally in the bottom-right corner (books only)
     * `progress` — fraction read; draws a bar along the bottom edge and, at 1.0,
       the read mark
-    * `read_mark` — `check` (a round green tick) or `stamp` (a tilted READ stamp)
+    * `read_mark` — `check` (a round green tick) or `stamp` (a tilted READ
+      stamp). Leave it out and the card follows the signed-in user's setting,
+      which the layout publishes as `data-read-mark` (see ink.css).
     * `type` — `:book` or `:series`, picks the placeholder icon
     * `stack` — more covers of the same series; they slide out from behind on
       hover and are only fetched then
@@ -211,7 +213,7 @@ defmodule StashixWeb.CoreComponents do
   attr :subtitle, :string, default: nil
   attr :badge, :string, default: nil
   attr :progress, :float, default: nil
-  attr :read_mark, :string, default: "check", values: ~w(check stamp)
+  attr :read_mark, :string, default: nil, values: [nil, "check", "stamp"]
   attr :type, :atom, default: :book
   attr :page_count, :integer, default: nil
   attr :blurhash, :string, default: nil
@@ -238,7 +240,7 @@ defmodule StashixWeb.CoreComponents do
       |> assign(:fallback_icon, if(assigns.type == :series, do: "lucide-book-copy", else: "lucide-book-open"))
 
     ~H"""
-    <.link navigate={@navigate} class={["media-card group relative block min-w-0", @class]}>
+    <.link navigate={@navigate} data-read-mark={@read_mark} class={["media-card group relative block min-w-0", @class]}>
       <div class="relative">
         <span
           :for={{url, depth} <- @stack |> Enum.take(2) |> Enum.with_index(1) |> Enum.reverse()}
@@ -267,8 +269,8 @@ defmodule StashixWeb.CoreComponents do
           <% end %>
 
           <div
-            :if={@read && @read_mark == "stamp"}
-            class="absolute inset-0 bg-gray-950/45 pointer-events-none"
+            :if={@read}
+            class="read-mark-stamp absolute inset-0 bg-gray-950/45 pointer-events-none"
             aria-hidden="true"
           >
           </div>
@@ -291,16 +293,16 @@ defmodule StashixWeb.CoreComponents do
           </span>
 
           <span
-            :if={@read && @read_mark == "check"}
-            class="absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-gray-950/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
+            :if={@read}
+            class="read-mark-check absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-gray-950/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
             title="Read"
           >
             <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
             <span class="sr-only">Read</span>
           </span>
           <span
-            :if={@read && @read_mark == "stamp"}
-            class="read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
+            :if={@read}
+            class="read-mark-stamp read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
           >
             Read
           </span>

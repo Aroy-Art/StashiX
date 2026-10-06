@@ -361,6 +361,7 @@ defmodule StashixWeb.Dev.UiLive do
           subtitle="2024"
           badge="#2"
           progress={1.0}
+          read_mark="check"
           class="w-36"
         />
         <.media_card

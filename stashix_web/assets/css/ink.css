@@ -250,7 +250,22 @@
 }
 .media-card:focus-visible { outline: none; }
 
-/* READ stamp across the cover (read_mark="stamp"). */
+/* Which read mark shows. A finished card carries both; the user's choice sits
+   on the layout as data-read-mark, and a card can force one with its own. */
+.read-mark-stamp { display: none; }
+[data-read-mark="stamp"] .read-mark-stamp { display: block; }
+[data-read-mark="stamp"] .read-mark-check { display: none; }
+.media-card[data-read-mark="check"] .read-mark-stamp { display: none; }
+.media-card[data-read-mark="check"] .read-mark-check { display: flex; }
+
+/* Settings: a choice card lights up in ink when its radio is checked. */
+.choice-card:hover { box-shadow: 0 0 0 1px rgb(255 255 255 / 0.3); }
+.choice-card:has(:checked) { box-shadow: 0 0 0 2px var(--color-ink), 5px 5px 0 0 var(--color-ink); }
+.choice-card:has(:focus-visible) { outline: 2px solid #fff; outline-offset: 3px; }
+.choice-card-on { display: none; }
+.choice-card:has(:checked) .choice-card-on { display: inline-block; }
+
+/* READ stamp across the cover. */
 .read-stamp {
   transform: translateX(-50%) rotate(-12deg);
   letter-spacing: 0.16em;
