@@ -3,7 +3,112 @@ defmodule StashixWeb.MetadataComponents do
   use Phoenix.Component
 
   alias Phoenix.LiveView.JS
+  alias Stashix.Metadata.Roles
   import StashixUi.Icon, only: [icon: 1]
+
+  @doc """
+  Headline credits plus a "More info" expander holding everything else.
+  Shared by the book and series pages; renders nothing when there is nothing to show.
+  """
+  attr :id, :string, required: true
+  attr :credits, :list, default: [], doc: "[{role, [{name, id} | {name, count, id}]}]"
+  attr :facts, :list, default: [], doc: "[{label, value}]"
+  attr :genres, :list, default: []
+  attr :tags, :list, default: []
+  attr :arcs, :list, default: []
+  attr :characters, :list, default: []
+  attr :teams, :list, default: []
+  attr :locations, :list, default: []
+  attr :universes, :list, default: []
+  attr :reprints, :list, default: []
+  attr :urls, :list, default: [], doc: "URL strings"
+  attr :notes, :string, default: nil
+
+  def details_panel(assigns) do
+    assigns =
+      assign(assigns,
+        headline: Roles.headline(assigns.credits),
+        facts: Enum.reject(assigns.facts, fn {_, v} -> v in [nil, "", []] end),
+        notes: assigns.notes || ""
+      )
+
+    lists =
+      ~w(credits facts genres tags arcs characters teams locations universes reprints urls)a
+
+    assigns =
+      assign(assigns, show: assigns.notes != "" || Enum.any?(lists, &(assigns[&1] != [])))
+
+    ~H"""
+    <div :if={@show} class="space-y-5">
+      <.credits_line groups={@headline} />
+      <.expander id={@id}>
+        <.detail_section label="Credits" show={@credits != []}>
+          <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
+            <%= for {role, entries} <- @credits, entry <- entries do %>
+              <.creator_card name={entry_name(entry)} role={credit_role(role, entry)} creator_id={entry_id(entry)} />
+            <% end %>
+          </div>
+        </.detail_section>
+
+        <.detail_grid entries={@facts} />
+
+        <.detail_section label="Genres" show={@genres != []}>
+          <.chips items={@genres} search_param="genre" />
+        </.detail_section>
+
+        <.detail_section label="Tags" show={@tags != []}>
+          <.chips items={@tags} search_param="tag" />
+        </.detail_section>
+
+        <.detail_section label="Story Arcs" show={@arcs != []}>
+          <.chips items={@arcs} />
+        </.detail_section>
+
+        <.detail_section label="Characters" show={@characters != []}>
+          <.chips items={@characters} search_param="character" />
+        </.detail_section>
+
+        <.detail_section label="Teams" show={@teams != []}>
+          <.chips items={@teams} search_param="team" />
+        </.detail_section>
+
+        <.detail_section label="Locations" show={@locations != []}>
+          <.chips items={@locations} search_param="location" />
+        </.detail_section>
+
+        <.detail_section label="Universes" show={@universes != []}>
+          <.chips items={@universes} />
+        </.detail_section>
+
+        <.detail_section label="Reprints" show={@reprints != []}>
+          <.chips items={@reprints} />
+        </.detail_section>
+
+        <.detail_section label="URLs" show={@urls != []}>
+          <div class="flex flex-wrap gap-2">
+            <a
+              :for={url <- @urls}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 underline underline-offset-2"
+            >
+              {URI.parse(url).host || url}
+              <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
+            </a>
+          </div>
+        </.detail_section>
+
+        <.detail_section label="Notes" show={@notes != ""}>
+          <p class="text-sm text-gray-400 leading-relaxed whitespace-pre-line break-words">{@notes}</p>
+        </.detail_section>
+      </.expander>
+    </div>
+    """
+  end
+
+  defp credit_role(role, {_name, count, _id}) when count > 1, do: "#{role} · #{count} issues"
+  defp credit_role(role, _entry), do: role
 
   @doc "Headline credits as one column per role; long lists are cut with a '+N more' marker."
   attr :groups, :list, required: true, doc: "[{heading, [name | {name, count}]}]"

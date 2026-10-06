@@ -584,90 +584,24 @@ defmodule StashixWeb.BookLive do
         <:item label="Age Rating">{Formatters.format_age_rating(@book.age_rating)}</:item>
       </.indicia>
 
-      <%!-- Credits + details expander --%>
-      <% credit_groups = Roles.group(@book_details.credits) %>
-      <% headline_groups = Roles.headline(credit_groups) %>
-      <% has_extras =
-        @book_details.characters != [] || @book_details.teams != [] ||
-          @book_details.story_arcs != [] || @book_details.genres != [] ||
-          @book_details.tags != [] || @book_details.locations != [] ||
-          @book_details.universes != [] || @book_details.reprints != [] ||
-          @book_details.urls != [] || credit_groups != [] ||
-          Enum.any?(book_facts(@book_details), fn {_, v} -> v not in [nil, ""] end) ||
-          (@book.notes || "") != "" %>
-      <%= if credit_groups != [] || has_extras do %>
-        <div class="space-y-5">
-          <.credits_line groups={headline_groups} />
-          <%= if has_extras do %>
-            <.expander id="book-details">
-              <%!-- Full credits by role --%>
-              <.detail_section label="Credits" show={credit_groups != []}>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <%= for {role, names} <- credit_groups, {creator_name, creator_id} <- names do %>
-                    <.creator_card name={creator_name} role={role} creator_id={creator_id} />
-                  <% end %>
-                </div>
-              </.detail_section>
-
-              <.detail_grid entries={book_facts(@book_details)} />
-
-              <%!-- Chips sections --%>
-              <.detail_section label="Genres" show={@book_details.genres != []}>
-                <.chips items={Enum.map(@book_details.genres, & &1.name)} search_param="genre" />
-              </.detail_section>
-
-              <.detail_section label="Tags" show={@book_details.tags != []}>
-                <.chips items={Enum.map(@book_details.tags, & &1.name)} search_param="tag" />
-              </.detail_section>
-
-              <.detail_section label="Characters" show={@book_details.characters != []}>
-                <.chips items={Enum.map(@book_details.characters, & &1.name)} search_param="character" />
-              </.detail_section>
-
-              <.detail_section label="Teams" show={@book_details.teams != []}>
-                <.chips items={Enum.map(@book_details.teams, & &1.name)} search_param="team" />
-              </.detail_section>
-
-              <.detail_section label="Locations" show={@book_details.locations != []}>
-                <.chips items={Enum.map(@book_details.locations, & &1.name)} search_param="location" />
-              </.detail_section>
-
-              <.detail_section label="Universes" show={@book_details.universes != []}>
-                <.chips items={
-                  Enum.map(@book_details.universes, fn u ->
-                    if u.designation in [nil, ""], do: u.name, else: "#{u.name} (#{u.designation})"
-                  end)
-                } />
-              </.detail_section>
-
-              <.detail_section label="Reprints" show={@book_details.reprints != []}>
-                <.chips items={Enum.map(@book_details.reprints, & &1.name)} />
-              </.detail_section>
-
-              <.detail_section label="URLs" show={@book_details.urls != []}>
-                <div class="flex flex-wrap gap-2">
-                  <a
-                    :for={u <- @book_details.urls}
-                    href={u.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 underline underline-offset-2"
-                  >
-                    {URI.parse(u.url).host || u.url}
-                    <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
-                  </a>
-                </div>
-              </.detail_section>
-
-              <.detail_section label="Notes" show={(@book.notes || "") != ""}>
-                <p class="text-sm text-gray-400 leading-relaxed whitespace-pre-line break-words">
-                  {@book.notes}
-                </p>
-              </.detail_section>
-            </.expander>
-          <% end %>
-        </div>
-      <% end %>
+      <.details_panel
+        id="book-details"
+        credits={Roles.group(@book_details.credits)}
+        facts={book_facts(@book_details)}
+        genres={Enum.map(@book_details.genres, & &1.name)}
+        tags={Enum.map(@book_details.tags, & &1.name)}
+        characters={Enum.map(@book_details.characters, & &1.name)}
+        teams={Enum.map(@book_details.teams, & &1.name)}
+        locations={Enum.map(@book_details.locations, & &1.name)}
+        universes={
+          Enum.map(@book_details.universes, fn u ->
+            if u.designation in [nil, ""], do: u.name, else: "#{u.name} (#{u.designation})"
+          end)
+        }
+        reprints={Enum.map(@book_details.reprints, & &1.name)}
+        urls={Enum.map(@book_details.urls, & &1.url)}
+        notes={@book.notes}
+      />
 
       <%!-- Prev / Next navigation --%>
       <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label="Adjacent issues">

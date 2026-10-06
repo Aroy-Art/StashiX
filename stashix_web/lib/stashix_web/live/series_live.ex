@@ -629,65 +629,19 @@ defmodule StashixWeb.SeriesLive do
         </:item>
       </.indicia>
 
-      <%!-- Series details expander --%>
       <% sd = @series_details %>
-      <% creator_groups = Roles.group_counts(sd.creators) %>
-      <% headline_groups = Roles.headline(creator_groups) %>
-      <% facts = series_facts(sd.series) %>
-      <% has_extras =
-        sd.characters != [] || sd.teams != [] || sd.arcs != [] || sd.genres != [] ||
-          sd.tags != [] || sd.locations != [] || sd.universes != [] ||
-          creator_groups != [] || Enum.any?(facts, fn {_, v} -> v not in [nil, ""] end) %>
-      <%= if headline_groups != [] || has_extras do %>
-        <div class="space-y-5">
-          <.credits_line groups={headline_groups} />
-          <%= if has_extras do %>
-            <.expander id="series-details">
-              <.detail_section label="Creators" show={creator_groups != []}>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
-                  <%= for {role, entries} <- creator_groups, {name, count, creator_id} <- entries do %>
-                    <.creator_card
-                      name={name}
-                      role={if count > 1, do: "#{role} · #{count} issues", else: role}
-                      creator_id={creator_id}
-                    />
-                  <% end %>
-                </div>
-              </.detail_section>
-
-              <.detail_grid entries={facts} />
-
-              <.detail_section label="Genres" show={sd.genres != []}>
-                <.chips items={sd.genres} search_param="genre" />
-              </.detail_section>
-
-              <.detail_section label="Tags" show={sd.tags != []}>
-                <.chips items={sd.tags} search_param="tag" />
-              </.detail_section>
-
-              <.detail_section label="Story Arcs" show={sd.arcs != []}>
-                <.chips items={sd.arcs} />
-              </.detail_section>
-
-              <.detail_section label="Characters" show={sd.characters != []}>
-                <.chips items={sd.characters} search_param="character" />
-              </.detail_section>
-
-              <.detail_section label="Teams" show={sd.teams != []}>
-                <.chips items={sd.teams} search_param="team" />
-              </.detail_section>
-
-              <.detail_section label="Locations" show={sd.locations != []}>
-                <.chips items={sd.locations} search_param="location" />
-              </.detail_section>
-
-              <.detail_section label="Universes" show={sd.universes != []}>
-                <.chips items={sd.universes} />
-              </.detail_section>
-            </.expander>
-          <% end %>
-        </div>
-      <% end %>
+      <.details_panel
+        id="series-details"
+        credits={Roles.group_counts(sd.creators)}
+        facts={series_facts(sd.series)}
+        genres={sd.genres}
+        tags={sd.tags}
+        arcs={sd.arcs}
+        characters={sd.characters}
+        teams={sd.teams}
+        locations={sd.locations}
+        universes={sd.universes}
+      />
 
       <%!-- Issues --%>
       <section>
