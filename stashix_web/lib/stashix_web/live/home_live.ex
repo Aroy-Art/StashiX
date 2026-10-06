@@ -607,35 +607,7 @@ defmodule StashixWeb.HomeLive do
                   <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold text-white">{lib.name}</h3>
                     <%= if @current_user.role == :admin do %>
-                      <.dropdown_menu id={"home-lib-menu-#{lib.id}"}>
-                        <.dropdown_menu_trigger class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-700 transition-all ml-1 flex-shrink-0">
-                          <.icon name="lucide-ellipsis-vertical" class="w-3 h-3" />
-                        </.dropdown_menu_trigger>
-                        <.dropdown_menu_content
-                          align="end"
-                          class="bg-gray-800 border-gray-700 text-gray-300 whitespace-nowrap"
-                        >
-                          <.dropdown_menu_item
-                            class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
-                            on-select={JS.push("sidebar_scan", value: %{id: lib.id})}
-                          >
-                            <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 mr-2 shrink-0" /> Scan for new files
-                          </.dropdown_menu_item>
-                          <.dropdown_menu_item
-                            class="hover:bg-gray-700 focus:bg-gray-700 cursor-pointer"
-                            on-select={JS.push("sidebar_force_scan", value: %{id: lib.id})}
-                          >
-                            <.icon name="lucide-rotate-ccw" class="w-3.5 h-3.5 mr-2 shrink-0" /> Force rescan
-                          </.dropdown_menu_item>
-                          <.dropdown_menu_separator class="bg-gray-700" />
-                          <.dropdown_menu_link_item
-                            href="/admin"
-                            class="hover:bg-gray-700 focus:bg-gray-700"
-                          >
-                            <.icon name="lucide-settings" class="w-3.5 h-3.5 mr-2 shrink-0" /> Settings
-                          </.dropdown_menu_link_item>
-                        </.dropdown_menu_content>
-                      </.dropdown_menu>
+                      <.library_menu id={"home-lib-menu-#{lib.id}"} library_id={lib.id} class="ml-1 flex-shrink-0" />
                     <% end %>
                   </div>
                   <div class="flex flex-wrap gap-1.5 mb-2.5">

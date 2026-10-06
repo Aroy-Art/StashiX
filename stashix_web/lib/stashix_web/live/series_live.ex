@@ -428,65 +428,37 @@ defmodule StashixWeb.SeriesLive do
         {@series.name, nil}
       ]}>
         <:actions :if={@current_user.role == :admin}>
-          <.dropdown_menu id="series-admin-menu">
-            <.dropdown_menu_trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
+          <.ink_menu id="series-admin-menu">
+            <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
               <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
-            </.dropdown_menu_trigger>
-            <.dropdown_menu_content align="end" class="bg-gray-800 border-gray-700 min-w-44">
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("open_edit_dialog")}
-              >
-                <.icon name="lucide-pencil" class="w-4 h-4 mr-2" /> Edit Metadata
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("fetch_metadata")}
-              >
-                <.icon name="lucide-cloud-download" class="w-4 h-4 mr-2" /> Fetch Metadata
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("open_identify_dialog")}
-              >
-                <.icon name="lucide-scan-search" class="w-4 h-4 mr-2" /> Identify Series…
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("toggle_metadata_lock")}
-              >
-                <%= if @series.metadata_locked do %>
-                  <.icon name="lucide-lock-open" class="w-4 h-4 mr-2" /> Unlock Metadata
-                <% else %>
-                  <.icon name="lucide-lock" class="w-4 h-4 mr-2" /> Lock Metadata
-                <% end %>
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-gray-300"
-                on-select={JS.push("rescan_series")}
-              >
-                <%= if @scanning do %>
-                  <.icon
-                    name="lucide-loader-circle"
-                    class="w-4 h-4 mr-2 animate-spin text-violet-400"
-                  /> Scanning…
-                <% else %>
-                  <.icon name="lucide-refresh-cw" class="w-4 h-4 mr-2" /> Rescan Series
-                <% end %>
-              </.dropdown_menu_item>
-              <.dropdown_menu_item
-                class="hover:bg-gray-700 focus:bg-gray-700 text-amber-400"
-                on-select={JS.push("force_rescan_series")}
-              >
-                <%= if @scanning do %>
-                  <.icon name="lucide-loader-circle" class="w-4 h-4 mr-2 animate-spin" /> Scanning…
-                <% else %>
-                  <.icon name="lucide-zap" class="w-4 h-4 mr-2" /> Force Rescan
-                <% end %>
-              </.dropdown_menu_item>
-            </.dropdown_menu_content>
-          </.dropdown_menu>
+            </:trigger>
+            <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">Edit metadata</.menu_item>
+            <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata">Fetch metadata</.menu_item>
+            <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog">Identify series…</.menu_item>
+            <.menu_item
+              icon={if @series.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
+              phx-click="toggle_metadata_lock"
+            >
+              {if @series.metadata_locked, do: "Unlock metadata", else: "Lock metadata"}
+            </.menu_item>
+            <.menu_separator />
+            <.menu_item
+              icon={if @scanning, do: "lucide-loader-circle", else: "lucide-refresh-cw"}
+              icon_class={if @scanning, do: "animate-spin"}
+              phx-click="rescan_series"
+            >
+              {if @scanning, do: "Scanning…", else: "Rescan series"}
+            </.menu_item>
+            <.menu_item
+              icon={if @scanning, do: "lucide-loader-circle", else: "lucide-zap"}
+              icon_class={if @scanning, do: "animate-spin"}
+              tone="warning"
+              phx-click="force_rescan_series"
+            >
+              {if @scanning, do: "Scanning…", else: "Force rescan"}
+            </.menu_item>
+          </.ink_menu>
         </:actions>
       </.crumbs>
 

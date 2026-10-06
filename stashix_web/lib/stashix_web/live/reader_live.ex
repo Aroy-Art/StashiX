@@ -423,7 +423,7 @@ defmodule StashixWeb.ReaderLive do
               title="View options"
               class={[
                 segment_class(false),
-                "gap-1.5 px-2.5 group-data-[open]:bg-violet-600 group-data-[open]:text-white"
+                "gap-1.5 px-2.5 group-data-[open]:bg-violet-600! group-data-[open]:text-white!"
               ]}
             >
               <.icon name={layout_icon(@page_layout)} class="w-4 h-4 flex-shrink-0" />

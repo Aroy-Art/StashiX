@@ -184,14 +184,14 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   patches while open (the activity menu re-renders during a scan).
 - [x] Reader uses `<.ink_menu>`; delete `menu_option/1`, `layout_menu_open`,
   `toggle_layout_menu`, `close_layout_menu`. Update `reader_live_test.exs`.
-- [ ] Replace SaladUI dropdowns:
-  - [ ] `app.html.heex` user menu
-  - [ ] `app.html.heex` activity menu (scan rows as `run_bar`s: **ask first**)
-  - [ ] `app.html.heex` sidebar library ⋮ menu (top layer, no portal)
-  - [ ] `home_live.ex` library card ⋮ menu
-  - [ ] `series_live.ex` admin menu
-  - [ ] `book_live.ex` admin menu
-  - [ ] `book_live.ex` read-options menu inside `split_button`; drop the
+- [x] Replace SaladUI dropdowns:
+  - [x] `app.html.heex` user menu
+  - [x] `app.html.heex` activity menu (scan rows as `run_bar`s — approved)
+  - [x] `app.html.heex` sidebar library ⋮ menu (top layer, no portal)
+  - [x] `home_live.ex` library card ⋮ menu
+  - [x] `series_live.ex` admin menu
+  - [x] `book_live.ex` admin menu
+  - [x] `book_live.ex` read-options menu inside `split_button`; drop the
     `salad_ui:command` close dispatches and the unused `read_menu_open` assign
 - [ ] `UI.Menu.ink_select` + hook, including `searchable`.
 - [ ] Replace native selects:

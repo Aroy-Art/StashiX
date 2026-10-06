@@ -18,6 +18,7 @@ defmodule StashixWeb.CoreComponents do
   use Gettext, backend: StashixWeb.Gettext
 
   import StashixUi.Icon
+  import StashixWeb.UI.Menu, only: [ink_menu: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
 
@@ -856,6 +857,32 @@ defmodule StashixWeb.CoreComponents do
         d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
       />
     </svg>
+    """
+  end
+
+  @doc "Admin ⋮ menu for a library: scan, force rescan, settings. Events are handled by `StashixWeb.Live.Hooks`."
+  attr :id, :string, required: true
+  attr :library_id, :string, required: true
+  attr :class, :any, default: nil
+
+  def library_menu(assigns) do
+    ~H"""
+    <.ink_menu id={@id} class={@class}>
+      <:trigger
+        label="Library actions"
+        class="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+      >
+        <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
+      </:trigger>
+      <.menu_item icon="lucide-refresh-cw" phx-click={JS.push("sidebar_scan", value: %{id: @library_id})}>
+        Scan for new files
+      </.menu_item>
+      <.menu_item icon="lucide-rotate-ccw" phx-click={JS.push("sidebar_force_scan", value: %{id: @library_id})}>
+        Force rescan
+      </.menu_item>
+      <.menu_separator />
+      <.menu_item icon="lucide-settings" navigate="/admin/libraries">Settings</.menu_item>
+    </.ink_menu>
     """
   end
 

@@ -464,6 +464,45 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
+  @doc """
+  Progress as a row of blocks filling in ink, like the run of a series.
+  `value` is a fraction from 0 to 1; `nil` means "working, amount unknown".
+  """
+  attr :value, :any, required: true
+  attr :segments, :integer, default: 24
+  attr :label, :string, default: nil, doc: "accessible name; the bar is decorative without one"
+  attr :class, :any, default: nil
+
+  def run_bar(assigns) do
+    filled = if assigns.value, do: trunc(min(max(assigns.value, 0.0), 1.0) * assigns.segments), else: 0
+    assigns = assign(assigns, filled: filled, pct: assigns.value && round(min(max(assigns.value, 0.0), 1.0) * 100))
+
+    ~H"""
+    <div
+      class={["flex items-stretch gap-[2px] h-2", @class]}
+      role={if @label, do: "progressbar"}
+      aria-label={@label}
+      aria-valuemin={@label && @pct && "0"}
+      aria-valuemax={@label && @pct && "100"}
+      aria-valuenow={@label && @pct}
+      aria-hidden={if !@label, do: "true"}
+    >
+      <span
+        :for={i <- 1..@segments}
+        class={[
+          "flex-1 min-w-0 rounded-[1px]",
+          cond do
+            is_nil(@value) -> "bg-ink/25 animate-pulse"
+            i <= @filled -> "bg-ink"
+            i == @filled + 1 and @filled < @segments -> "bg-ink/40 animate-pulse"
+            true -> "bg-white/10"
+          end
+        ]}
+      ></span>
+    </div>
+    """
+  end
+
   attr :class, :any, default: nil
   attr :rest, :global, include: @link_attrs ++ @button_attrs
   slot :inner_block, required: true
