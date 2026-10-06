@@ -18,7 +18,7 @@ defmodule StashixWeb.SettingsLive do
   def mount(_params, _session, socket) do
     {:ok,
      socket
-     |> assign(page_title: "Settings", preview_cover: preview_cover(socket.assigns.access))
+     |> assign(page_title: "Settings", preview_covers: preview_covers(socket))
      |> assign_profile_form(User.profile_changeset(socket.assigns.current_user, %{}))}
   end
 
@@ -60,13 +60,23 @@ defmodule StashixWeb.SettingsLive do
 
   defp assign_profile_form(socket, changeset), do: assign(socket, profile_form: to_form(changeset, as: :profile))
 
-  # A real cover makes the read-mark preview honest; any readable book will do.
-  defp preview_cover(access) do
-    case Library.list_all_books(access: access, limit: 1) do
-      [book | _] -> ~p"/api/books/#{book.id}/cover"
-      _ -> nil
+  # Real covers make the read-mark preview honest: one random book per choice,
+  # the same one twice when the library only has one. Picked on the connected
+  # mount only, so the covers do not change between the first paint and the
+  # socket connecting.
+  defp preview_covers(socket) do
+    if connected?(socket) do
+      case Library.random_cover_book_ids(socket.assigns.access, 2) do
+        [] -> %{}
+        [only] -> %{"check" => cover_path(only), "stamp" => cover_path(only)}
+        [first, second] -> %{"check" => cover_path(first), "stamp" => cover_path(second)}
+      end
+    else
+      %{}
     end
   end
+
+  defp cover_path(book_id), do: ~p"/api/books/#{book_id}/cover"
 
   defp field_error(form, field) do
     case form[field].errors do
@@ -92,7 +102,7 @@ defmodule StashixWeb.SettingsLive do
         <:tab patch={~p"/settings/security"} active={@live_action == :security}>Security</:tab>
       </.tabs>
 
-      <.ui_tab :if={@live_action == :ui} current_user={@current_user} preview_cover={@preview_cover} />
+      <.ui_tab :if={@live_action == :ui} current_user={@current_user} preview_covers={@preview_covers} />
       <.personal_tab :if={@live_action == :personal} form={@profile_form} current_user={@current_user} />
       <.security_tab :if={@live_action == :security} current_user={@current_user} />
     </.page>
@@ -100,7 +110,7 @@ defmodule StashixWeb.SettingsLive do
   end
 
   attr :current_user, :map, required: true
-  attr :preview_cover, :string, default: nil
+  attr :preview_covers, :map, default: %{}
 
   defp ui_tab(assigns) do
     assigns = assign(assigns, read_mark: User.ui_setting(assigns.current_user, "read_mark"))
@@ -125,7 +135,7 @@ defmodule StashixWeb.SettingsLive do
             <.media_card
               navigate="#"
               title=""
-              cover_url={@preview_cover}
+              cover_url={@preview_covers[value]}
               size="m"
               progress={1.0}
               read_mark={value}

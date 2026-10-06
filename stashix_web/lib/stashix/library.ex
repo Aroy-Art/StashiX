@@ -1596,6 +1596,19 @@ defmodule Stashix.Library do
     end)
   end
 
+  @doc "Ids of up to `count` books the user may see that have a cover, picked at random."
+  def random_cover_book_ids(access, count) do
+    from(bc in BookCover,
+      join: b in ^Access.books(access),
+      on: b.id == bc.book_id and is_nil(b.deleted_at),
+      where: not is_nil(bc.path),
+      order_by: fragment("RANDOM()"),
+      limit: ^count,
+      select: b.id
+    )
+    |> Repo.all()
+  end
+
   @doc """
   For each series, the ids of its second and third issues that have a cover
   (the first is the series cover itself), in reading order.
