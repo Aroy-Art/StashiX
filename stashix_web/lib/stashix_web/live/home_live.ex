@@ -30,15 +30,34 @@ defmodule StashixWeb.HomeLive do
        scan_progress: %{},
        total_books: total_books,
        total_issues: total_issues,
-       total_series: total_series,
-       spotlight: pick_spotlight(libraries_data, continue_reading),
-       recommendations: pick_recommendations(libraries_data)
-     )}
+       total_series: total_series
+     )
+     |> assign_picks()}
   end
 
-  defp pick_spotlight(_libraries_data, [_ | _]), do: nil
+  # The spotlight and the "start reading" picks are random, and mount runs
+  # twice per visit: once for the static HTML, once when the socket connects.
+  # Picking in both showed one book for a moment and then swapped it for
+  # another. So nothing is picked for the static render (the hero shows a
+  # placeholder of the same size instead), and what is picked on connect is
+  # kept for the rest of the visit, scans included.
+  defp assign_picks(socket) do
+    %{libraries_data: libraries_data, continue_reading: continue_reading} = socket.assigns
+    spotlight = socket.assigns[:spotlight]
+    picks = socket.assigns[:recommendations] || %{books: [], series: []}
 
-  defp pick_spotlight(libraries_data, []) do
+    if connected?(socket) do
+      assign(socket,
+        picks_pending: false,
+        spotlight: if(continue_reading == [], do: spotlight || pick_spotlight(libraries_data)),
+        recommendations: if(picks == %{books: [], series: []}, do: pick_recommendations(libraries_data), else: picks)
+      )
+    else
+      assign(socket, spotlight: nil, recommendations: picks, picks_pending: continue_reading == [])
+    end
+  end
+
+  defp pick_spotlight(libraries_data) do
     all_books = Enum.flat_map(libraries_data, & &1.recent_books)
     all_series = Enum.flat_map(libraries_data, & &1.recent_series)
 
@@ -138,10 +157,9 @@ defmodule StashixWeb.HomeLive do
        next_issue: Library.next_issue_books(access, user.id, 20),
        total_books: Library.count_all_books(access: access, type: "standalone"),
        total_issues: Library.count_all_books(access: access, type: "issue"),
-       total_series: Library.count_all_series(access: access),
-       spotlight: pick_spotlight(libraries_data, continue_reading),
-       recommendations: pick_recommendations(libraries_data)
-     )}
+       total_series: Library.count_all_series(access: access)
+     )
+     |> assign_picks()}
   end
 
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
@@ -285,6 +303,26 @@ defmodule StashixWeb.HomeLive do
     """
   end
 
+  # Same footprint as home_hero/1, shown for the static render while the
+  # spotlight has not been picked yet, so nothing jumps when it arrives.
+  defp home_hero_placeholder(assigns) do
+    ~H"""
+    <div
+      class="relative flex flex-col items-center sm:flex-row sm:items-end gap-7 sm:gap-12 pt-2"
+      aria-hidden="true"
+    >
+      <div class="w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md bg-white/[0.06] ring-1 ring-white/10 -rotate-2 animate-pulse">
+      </div>
+      <div class="flex-1 w-full sm:pb-1 space-y-4">
+        <div class="h-3 w-32 mx-auto sm:mx-0 rounded-sm bg-white/[0.06]"></div>
+        <div class="h-12 md:h-16 w-3/4 max-w-md mx-auto sm:mx-0 rounded-sm bg-white/[0.06] animate-pulse"></div>
+        <div class="h-4 w-40 mx-auto sm:mx-0 rounded-sm bg-white/[0.06]"></div>
+        <div class="h-12 w-44 mx-auto sm:mx-0 mt-7 rounded-md bg-white/[0.06]"></div>
+      </div>
+    </div>
+    """
+  end
+
   @impl true
   def render(assigns) do
     picks? =
@@ -304,16 +342,17 @@ defmodule StashixWeb.HomeLive do
     ~H"""
     <.page wide cover_src={@hero && "#{@hero.cover}?s=s"}>
       <.home_hero :if={@hero} hero={@hero} />
+      <.home_hero_placeholder :if={!@hero and @picks_pending} />
 
-      <.page_hero :if={!@hero} title="Your stash" eyebrow="Welcome" />
-      <.empty_state :if={!@hero} ghost="0" title="Nothing on the shelves yet">
+      <.page_hero :if={!@hero and !@picks_pending} title="Your stash" eyebrow="Welcome" />
+      <.empty_state :if={!@hero and !@picks_pending} ghost="0" title="Nothing on the shelves yet">
         Add a library and scan it, and what you can read shows up here.
         <:actions :if={@current_user.role == :admin}>
           <.ink_button navigate={~p"/admin/libraries"}><.icon name="lucide-folder-plus" class="w-4 h-4" /> Add a library</.ink_button>
         </:actions>
       </.empty_state>
 
-      <.panel :if={@hero} variant="indicia">
+      <.panel :if={@hero || @picks_pending} variant="indicia">
         <.stat_list inline class="px-6 py-5 lg:py-3.5">
           <.stat label="Series" navigate={~p"/series"}>{@total_series}</.stat>
           <.stat label="Books" navigate={~p"/books"}>{@total_books}</.stat>
