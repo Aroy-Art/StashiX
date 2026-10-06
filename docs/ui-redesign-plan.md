@@ -465,3 +465,7 @@ Add a dated line when a phase closes or a decision changes.
     ComicInfo.xml in generated files; home library card and sidebar scan
     progress watched through a real 64-file scan.
   - Left: touch devices have no hover (cover fan, long-box pull-out).
+- 2026-10-06 — Sidebar reverted to the Phase 3 look (display type, ink bar,
+  gray-950 panel). The plain-sans version looked out of place next to the
+  rest. Readability of the sidebar is still an open complaint; do not retry
+  the sans route.
