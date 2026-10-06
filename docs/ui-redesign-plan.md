@@ -209,7 +209,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `UI.Menu.segmented` + `segment`; reader fit, direction and zoom clusters
   use it. Search type tabs stay bespoke (big display-type tabs with a tilted
   ink marker are their own look, not a segmented control).
-- [ ] Navbar search results dropdown takes the menu skin.
+- [x] Navbar search results dropdown takes the menu skin.
 - [ ] `UI.Data.dialog` on native `<dialog>`; the series and book edit dialogs
   use it (moved up from Phase 3).
 - [ ] `login_live.ex` alert, the three browse-page separators and the
