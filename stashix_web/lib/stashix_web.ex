@@ -89,7 +89,7 @@ defmodule StashixWeb do
       # HTML escaping functionality
       import Phoenix.HTML
 
-      # Icon component (both lucide- and hero- prefixes)
+      # Icon component
       import StashixWeb.UI.Icon
 
       # Core UI components

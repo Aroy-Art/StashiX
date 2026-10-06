@@ -1,32 +1,13 @@
 defmodule StashixWeb.UI.Icon do
   @moduledoc """
-  Renders icons from two supported sets via a unified `icon/1` component.
-
-  The icon set is selected by the `name` prefix:
-
-  | Prefix    | Library                                 | Rendering  |
-  |-----------|-----------------------------------------|------------|
-  | `lucide-` | [Lucide](https://lucide.dev)            | Inline SVG |
-  | `hero-`   | [Heroicons](https://heroicons.com)      | CSS `<span>` |
-
-  ## Heroicons styles
-
-  | Suffix   | Style   |
-  |----------|---------|
-  | *(none)* | Outline |
-  | `-solid` | Solid   |
-  | `-mini`  | Mini    |
-
-  Heroicons are embedded into `app.css` by the Tailwind plugin — no extra
-  HTTP request. Lucide icons are read from the `lucide` dep at compile time;
-  an unknown name renders nothing and logs a warning.
-
-  ## Examples
+  Renders [Lucide](https://lucide.dev) icons as inline SVG.
 
       <.icon name="lucide-x" />
       <.icon name="lucide-refresh-cw" class="w-4 h-4 animate-spin" />
-      <.icon name="hero-x-mark-solid" />
-      <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
+
+  Icon bodies are read from the `lucide` dep when this module compiles. An
+  unknown name renders nothing and logs a warning; a test checks every name
+  used in the web layer against the set.
   """
 
   use Phoenix.Component
@@ -54,12 +35,6 @@ defmodule StashixWeb.UI.Icon do
     >
       {@svg}
     </svg>
-    """
-  end
-
-  def icon(%{name: "hero-" <> _} = assigns) do
-    ~H"""
-    <span class={[@name, @class]}></span>
     """
   end
 
