@@ -3,11 +3,15 @@ defmodule StashixWeb.CoverHelper do
 
   alias Stashix.Media.ImageResizer
 
-  @valid_sizes ~w(sx s m l lg xl)
+  # Spelled out as atoms so they exist as soon as this module is loaded.
+  # String.to_existing_atom/1 relied on ImageResizer having been loaded first,
+  # which in dev (lazy module loading) made the first sized request a 500.
+  @sizes %{"sx" => :sx, "s" => :s, "m" => :m, "l" => :l, "lg" => :lg, "xl" => :xl}
+  @valid_sizes Map.keys(@sizes)
 
   # s= predefined size → resize and cache to disk
   def serve_cover(conn, path, %{"s" => s} = _params) when s in @valid_sizes do
-    size = String.to_existing_atom(s)
+    size = Map.fetch!(@sizes, s)
     format = if webp_supported?(conn), do: :webp, else: :jpeg
     content_type = if format == :webp, do: "image/webp", else: "image/jpeg"
 
