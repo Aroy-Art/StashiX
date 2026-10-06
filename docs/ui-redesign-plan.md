@@ -250,13 +250,13 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `publisher_live.ex`: same treatment; it is a near copy of
   `library_live.ex`, so extract the shared overview + sub-page layout into one
   component both use.
-- [ ] `home_live.ex`:
-  - [ ] one `<.home_hero>` for both spotlight and continue-reading (the two
+- [x] `home_live.ex`:
+  - [x] one `<.home_hero>` for both spotlight and continue-reading (the two
     blocks are ~110 duplicated lines), built from `page`, `hero_cover`,
     `ink_button`
-  - [ ] stat strip → `stat`s
-  - [ ] continue reading / up next / recommendations → `section` + `shelf`
-  - [ ] library cards → shared with the publisher card
+  - [x] stat strip → `stat`s
+  - [x] continue reading / up next / recommendations → `section` + `shelf`
+  - [x] library cards → shared with the publisher card
 
 ### Phase 5 — Stats, admin, auth
 
@@ -427,3 +427,26 @@ Add a dated line when a phase closes or a decision changes.
     one page gives duplicate ids (pre-existing).
   - Browse pages still have the old `browse_header` and pill filters above
     the new cards; that is Phase 4.
+- 2026-10-06 — Phase 4 done: series/books/issues browse pages, publishers,
+  library and publisher (one `collection_page/1`), home.
+  - New shared pieces: `series_card/1`, `book_card/1`, `browse_toolbar/1` in
+    `core_components.ex`; `collection_page/1`, `collection_card/1` in
+    `components/collection_components.ex`. Deleted `browse_header/1`,
+    `media_grid/1`, `browse_empty/1` and the `full_bleed` layout switch.
+  - Series cards fan two more covers on hover. `Series.stack_book_ids`
+    (virtual) is filled by `Library.series_stack_map/2`, one windowed query
+    per listing; the images are only fetched on hover.
+  - Home: the three stacked list sections (also reading, up next, start
+    reading) are shelves of ordinary cards now, and the hero is one
+    `home_hero/1` fed by `hero/1` for all three cases.
+  - Fixed on the way: cover requests with a size failed with a 500 in dev
+    until `ImageResizer` happened to be loaded (`String.to_existing_atom`);
+    duplicate element ids when a book sits in two shelves (`scope` attr).
+  - Long-box view: specimen on `/dev/ui` (`UI.LongBox`, marked EXPERIMENT;
+    `/dev/ui?fake` shows a fuller made-up shelf). Still undecided. If
+    dropped: delete `components/ui/long_box.ex`, its CSS block in `ink.css`
+    and the specimen.
+  - Known gaps: shelf arrow buttons show even when the row does not
+    overflow; a touch device has no hover, so the cover fan and the long-box
+    pull-out never show there; publisher pages were only checked with
+    hand-inserted publishers.

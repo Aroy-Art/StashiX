@@ -643,6 +643,11 @@ defmodule StashixWeb.CoreComponents do
   attr :page_count, :integer, default: nil
   attr :blurhash, :string, default: nil
   attr :stack, :list, default: [], doc: "up to two more cover URLs, fanned out behind the cover on hover"
+
+  attr :scope, :string,
+    default: nil,
+    doc: "set when the same item can appear twice on a page, to keep element ids unique"
+
   attr :class, :string, default: ""
 
   def media_card(assigns) do
@@ -655,7 +660,7 @@ defmodule StashixWeb.CoreComponents do
           else: assigns.cover_url
         )
       )
-      |> assign(:cover_id, "cover-#{:erlang.phash2(assigns.navigate)}")
+      |> assign(:cover_id, "cover-#{:erlang.phash2({assigns.scope, assigns.navigate})}")
       |> assign(:read, is_number(assigns.progress) and assigns.progress >= 1.0)
       |> assign(:fallback_icon, if(assigns.type == :series, do: "lucide-book-copy", else: "lucide-book-open"))
 
@@ -749,6 +754,7 @@ defmodule StashixWeb.CoreComponents do
   @doc "`media_card/1` for a series: years, issue count and the fanned stack of its next covers."
   attr :series, :map, required: true
   attr :size, :string, default: "m"
+  attr :scope, :string, default: nil
   attr :class, :string, default: ""
 
   def series_card(assigns) do
@@ -763,6 +769,7 @@ defmodule StashixWeb.CoreComponents do
       type={:series}
       blurhash={@series.cover_blurhash}
       stack={Enum.map(Map.get(@series, :stack_book_ids) || [], &"/api/books/#{&1}/cover?s=s")}
+      scope={@scope}
       class={@class}
     />
     """
@@ -777,6 +784,7 @@ defmodule StashixWeb.CoreComponents do
   attr :as, :atom, default: :book, values: [:book, :issue]
   attr :read, :integer, default: nil
   attr :size, :string, default: "m"
+  attr :scope, :string, default: nil
   attr :class, :string, default: ""
 
   def book_card(assigns) do
@@ -814,6 +822,7 @@ defmodule StashixWeb.CoreComponents do
       page_count={if @as == :book, do: @book.page_count}
       type={:book}
       blurhash={@blurhash || nil}
+      scope={@scope}
       class={@class}
     />
     """
@@ -848,24 +857,6 @@ defmodule StashixWeb.CoreComponents do
   # ---------------------------------------------------------------------------
   # Browse / list-page shared components
   # ---------------------------------------------------------------------------
-
-  attr :title, :string, required: true
-  attr :subtitle, :string, default: nil
-  slot :controls
-
-  def browse_header(assigns) do
-    ~H"""
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold text-white">{@title}</h1>
-        <p :if={@subtitle} class="text-sm text-gray-500 mt-0.5">{@subtitle}</p>
-      </div>
-      <div :if={@controls != []} class="flex flex-wrap items-center gap-2">
-        {render_slot(@controls)}
-      </div>
-    </div>
-    """
-  end
 
   @doc """
   Control row above a browse grid: library filter pills on the left (only
@@ -920,32 +911,6 @@ defmodule StashixWeb.CoreComponents do
     <form id={@id} phx-change={@event} class={@class}>
       <.ink_select id={"#{@id}-input"} name="value" label="Sort" value={@selected} options={@options} />
     </form>
-    """
-  end
-
-  attr :id, :string, default: nil
-  slot :inner_block, required: true
-
-  def media_grid(assigns) do
-    ~H"""
-    <div
-      id={@id}
-      class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-8 gap-4"
-    >
-      {render_slot(@inner_block)}
-    </div>
-    """
-  end
-
-  attr :icon, :string, required: true
-  attr :label, :string, required: true
-
-  def browse_empty(assigns) do
-    ~H"""
-    <div class="text-center py-16 text-gray-500">
-      <.icon name={@icon} class="w-12 h-12 mx-auto mb-3 text-gray-700" />
-      <p>{@label}</p>
-    </div>
     """
   end
 

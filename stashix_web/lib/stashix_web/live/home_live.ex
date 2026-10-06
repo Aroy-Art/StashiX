@@ -1,6 +1,8 @@
 defmodule StashixWeb.HomeLive do
   use StashixWeb, :live_view
 
+  import StashixWeb.CollectionComponents, only: [collection_card: 1]
+
   alias Stashix.Library
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -22,7 +24,6 @@ defmodule StashixWeb.HomeLive do
     {:ok,
      assign(socket,
        page_title: "Home",
-       full_bleed: true,
        libraries_data: libraries_data,
        continue_reading: continue_reading,
        next_issue: next_issue,
@@ -145,636 +146,281 @@ defmodule StashixWeb.HomeLive do
 
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
+  # What the hero shows: the book being read, else a random pick, else nothing.
+  defp hero(%{continue_reading: [%{book: book, current_page: page} | _]}) do
+    series = loaded(book.series)
+    count = series && Map.get(series, :issue_count)
+
+    %{
+      id: "home-hero-#{book.id}",
+      eyebrow: "Continue reading",
+      series: series,
+      sticker: book.issue_number && "##{book.issue_number}",
+      ghost: book.issue_number && to_string(book.issue_number),
+      title: book.title,
+      meta:
+        Enum.reject(
+          [
+            book.issue_number && count && count > 0 && "Issue #{book.issue_number} of #{count}",
+            book.page_count && book.page_count > 0 && "Page #{page + 1} of #{book.page_count}"
+          ],
+          &(&1 in [nil, false])
+        ),
+      progress: if(book.page_count && book.page_count > 1, do: min(page / (book.page_count - 1), 1.0)),
+      cover: ~p"/api/books/#{book.id}/cover",
+      to: ~p"/book/#{book.id}",
+      primary: {"Continue", "lucide-play", ~p"/read/#{book.id}"},
+      secondary: {"Details", ~p"/book/#{book.id}"}
+    }
+  end
+
+  defp hero(%{spotlight: {:book, book}}) do
+    %{
+      id: "home-hero-#{book.id}",
+      eyebrow: "Discover",
+      series: loaded(book.series),
+      sticker: book.issue_number && "##{book.issue_number}",
+      ghost: book.issue_number && to_string(book.issue_number),
+      title: book.title,
+      meta: if(book.page_count && book.page_count > 0, do: ["#{book.page_count} pages"], else: []),
+      progress: nil,
+      cover: ~p"/api/books/#{book.id}/cover",
+      to: ~p"/book/#{book.id}",
+      primary: {"Start reading", "lucide-play", ~p"/read/#{book.id}"},
+      secondary: {"Details", ~p"/book/#{book.id}"}
+    }
+  end
+
+  defp hero(%{spotlight: {:series, series}}) do
+    %{
+      id: "home-hero-#{series.id}",
+      eyebrow: "Discover a series",
+      series: nil,
+      sticker: nil,
+      ghost: series.issue_count && series.issue_count > 1 && to_string(series.issue_count),
+      title: series.name,
+      meta:
+        Enum.reject(
+          [series.issue_count && "#{series.issue_count} issues", Stashix.Formatters.series_years(series)],
+          &is_nil/1
+        ),
+      progress: nil,
+      cover: ~p"/api/series/#{series.id}/cover",
+      to: ~p"/series/#{series.id}",
+      primary: {"Browse series", "lucide-library", ~p"/series/#{series.id}"},
+      secondary: nil
+    }
+  end
+
+  defp hero(_assigns), do: nil
+
+  defp loaded(%Ecto.Association.NotLoaded{}), do: nil
+  defp loaded(other), do: other
+
+  attr :hero, :map, required: true
+
+  defp home_hero(assigns) do
+    ~H"""
+    <header class="relative flex flex-col items-center sm:flex-row sm:items-end gap-7 sm:gap-12 pt-2">
+      <.ghost_numeral :if={@hero.ghost} class="hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[14rem]">
+        {@hero.ghost}
+      </.ghost_numeral>
+
+      <.link
+        navigate={@hero.to}
+        aria-label={@hero.title}
+        class="rise relative block w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/15 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] -rotate-2 hover:rotate-0 transition-transform duration-300"
+      >
+        <img
+          src={"#{@hero.cover}?s=l"}
+          alt=""
+          class="w-full h-full object-cover"
+          onerror="this.style.display='none'"
+          draggable="false"
+        />
+      </.link>
+
+      <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-1">
+        <div class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-2 mb-3" style="--i:1">
+          <.sticker :if={@hero.sticker} size="lg">{@hero.sticker}</.sticker>
+          <.eyebrow>
+            {@hero.eyebrow}
+            <span :if={@hero.series} class="text-white/25"> / </span>
+            <.link
+              :if={@hero.series}
+              navigate={~p"/series/#{@hero.series.id}"}
+              class="hover:text-white transition-colors"
+            >
+              {@hero.series.name}
+            </.link>
+          </.eyebrow>
+        </div>
+
+        <.display_heading level={1} size="hero" class="rise" style="--i:2">{@hero.title}</.display_heading>
+
+        <p
+          :if={@hero.meta != []}
+          class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+          style="--i:3"
+        >
+          <span :for={part <- @hero.meta}>{part}</span>
+        </p>
+        <.progress_bar
+          :if={@hero.progress}
+          value={@hero.progress}
+          label="Reading progress"
+          class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs"
+          style="--i:3"
+        />
+
+        <div class="rise flex items-center justify-center sm:justify-start flex-wrap gap-4 mt-7" style="--i:4">
+          <% {label, icon, to} = @hero.primary %>
+          <.ink_button navigate={to}><.icon name={icon} class="w-4 h-4" /> {label}</.ink_button>
+          <.ink_button :if={@hero.secondary} variant="ghost" navigate={elem(@hero.secondary, 1)}>
+            {elem(@hero.secondary, 0)}
+          </.ink_button>
+        </div>
+      </div>
+    </header>
+    """
+  end
+
   @impl true
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        hero: hero(assigns),
+        recent_series: Enum.flat_map(assigns.libraries_data, & &1.recent_series),
+        recent_books: Enum.flat_map(assigns.libraries_data, & &1.recent_books),
+        recent_issues: Enum.flat_map(assigns.libraries_data, & &1.recent_issues),
+        show_picks: assigns.next_issue == [] or length(assigns.continue_reading) <= 1
+      )
+
     ~H"""
-    <div>
-      <%!-- HERO: random spotlight when no reading in progress --%>
-      <%= if @continue_reading == [] && @spotlight != nil do %>
-        <% {spotlight_type, spotlight_item} = @spotlight %>
-        <div
-          class="relative flex items-center gap-4 sm:gap-8 px-4 sm:px-8 py-5 sm:py-7 overflow-hidden"
-          style="min-height:200px"
-        >
-          <div
-            class="absolute inset-0"
-            style="background:linear-gradient(130deg,rgba(76,29,149,0.55) 0%,transparent 65%)"
-          >
-          </div>
-          <div
-            class="absolute inset-0"
-            style="background:radial-gradient(ellipse at 16% 55%,rgba(124,92,245,0.2) 0%,transparent 54%)"
-          >
-          </div>
-          <div
-            class="absolute inset-x-0 bottom-0 h-14"
-            style="background:linear-gradient(to top,#030712,transparent)"
-          >
-          </div>
+    <.page wide cover_src={@hero && "#{@hero.cover}?s=s"}>
+      <.home_hero :if={@hero} hero={@hero} />
 
-          <%= if spotlight_type == :book do %>
-            <.link
-              navigate={~p"/book/#{spotlight_item.id}"}
-              class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
-              style="width:104px;height:156px;background:#1a1040"
-            >
-              <img
-                src={~p"/api/books/#{spotlight_item.id}/cover?s=m"}
-                class="w-full h-full object-cover"
-                onerror="this.style.display='none'"
-              />
-            </.link>
-            <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
-              <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
-                Discover<%= if spotlight_item.series do %>
-                  ·
-                  <.link
-                    navigate={~p"/series/#{spotlight_item.series.id}"}
-                    class="hover:text-violet-300 transition-colors"
-                  >{spotlight_item.series.name}</.link>
-                <% end %>
-              </p>
-              <h1
-                class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight"
-                style="letter-spacing:-0.3px;text-wrap:balance"
-              >
-                {if spotlight_item.issue_number,
-                  do: "##{spotlight_item.issue_number} – #{spotlight_item.title}",
-                  else: spotlight_item.title}
-              </h1>
-              <p class="text-xs sm:text-sm text-gray-400">
-                {if spotlight_item.page_count, do: "#{spotlight_item.page_count} pages", else: ""}
-              </p>
-              <div class="flex gap-2 mt-1">
-                <.link
-                  navigate={~p"/read/#{spotlight_item.id}"}
-                  class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
-                >
-                  <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                  Start Reading
-                </.link>
-                <.link
-                  navigate={~p"/book/#{spotlight_item.id}"}
-                  class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors"
-                >
-                  Details
-                </.link>
-              </div>
-            </div>
-          <% else %>
-            <.link
-              navigate={~p"/series/#{spotlight_item.id}"}
-              class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
-              style="width:104px;height:156px;background:#1a1040"
-            >
-              <img
-                src={~p"/api/series/#{spotlight_item.id}/cover?s=m"}
-                class="w-full h-full object-cover"
-                onerror="this.style.display='none'"
-              />
-            </.link>
-            <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
-              <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
-                Discover · Series
-              </p>
-              <h1
-                class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight"
-                style="letter-spacing:-0.3px;text-wrap:balance"
-              >
-                {spotlight_item.name}
-              </h1>
-              <p class="text-xs sm:text-sm text-gray-400">
-                {[
-                  "#{spotlight_item.issue_count} issues",
-                  Stashix.Formatters.series_years(spotlight_item)
-                ]
-                |> Enum.reject(&is_nil/1)
-                |> Enum.join(" · ")}
-              </p>
-              <div class="flex gap-2 mt-1">
-                <.link
-                  navigate={~p"/series/#{spotlight_item.id}"}
-                  class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
-                >
-                  Browse Series
-                </.link>
-              </div>
-            </div>
-          <% end %>
-        </div>
-      <% end %>
+      <.page_hero :if={!@hero} title="Your stash" eyebrow="Welcome" />
+      <.empty_state :if={!@hero} ghost="0" title="Nothing on the shelves yet">
+        Add a library and scan it, and what you can read shows up here.
+        <:actions :if={@current_user.role == :admin}>
+          <.ink_button navigate={~p"/admin/libraries"}><.icon name="lucide-folder-plus" class="w-4 h-4" /> Add a library</.ink_button>
+        </:actions>
+      </.empty_state>
 
-      <%!-- HERO: cinematic spotlight on what you're reading --%>
-      <%= if @continue_reading != [] do %>
-        <% %{book: hero, current_page: hero_page} = hd(@continue_reading) %>
-        <% hero_pct =
-          if hero.page_count && hero.page_count > 1,
-            do: round(min(hero_page / (hero.page_count - 1), 1.0) * 100),
-            else: nil %>
-        <div
-          class="relative flex items-center gap-4 sm:gap-8 px-4 sm:px-8 py-5 sm:py-7 overflow-hidden"
-          style="min-height:200px"
-        >
-          <div
-            class="absolute inset-0"
-            style="background:linear-gradient(130deg,rgba(76,29,149,0.55) 0%,transparent 65%)"
-          >
-          </div>
-          <div
-            class="absolute inset-0"
-            style="background:radial-gradient(ellipse at 16% 55%,rgba(124,92,245,0.2) 0%,transparent 54%)"
-          >
-          </div>
-          <div
-            class="absolute inset-x-0 bottom-0 h-14"
-            style="background:linear-gradient(to top,#030712,transparent)"
-          >
-          </div>
+      <.panel :if={@hero} variant="indicia">
+        <.stat_list class="px-6 py-5">
+          <.stat label="Series" navigate={~p"/series"}>{@total_series}</.stat>
+          <.stat label="Books" navigate={~p"/books"}>{@total_books}</.stat>
+          <.stat label="Issues" navigate={~p"/issues"}>{@total_issues}</.stat>
+        </.stat_list>
+      </.panel>
 
-          <.link
-            navigate={~p"/book/#{hero.id}"}
-            class="relative z-10 flex-shrink-0 rounded-md overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.75)] hover:scale-[1.02] transition-transform duration-200"
-            style="width:104px;height:156px;background:#1a1040"
+      <%!-- The hero already shows the first book in progress --%>
+      <.shelf
+        :if={length(@continue_reading) > 1}
+        id="home-also-reading"
+        title="Also reading"
+        count={length(@continue_reading) - 1}
+      >
+        <.book_card
+          :for={%{book: book, current_page: page} <- Enum.drop(@continue_reading, 1)}
+          book={book}
+          read={page}
+          as={if book.issue_number, do: :issue, else: :book}
+          scope="also-reading"
+          class="flex-shrink-0 w-36"
+        />
+      </.shelf>
+
+      <.shelf :if={@next_issue != []} id="home-up-next" title="Up next" count={length(@next_issue)}>
+        <.book_card :for={book <- @next_issue} book={book} as={:issue} scope="up-next" class="flex-shrink-0 w-36" />
+      </.shelf>
+
+      <.shelf
+        :if={@show_picks and (@recommendations.books != [] or @recommendations.series != [])}
+        id="home-picks"
+        title="Start reading"
+      >
+        <.book_card
+          :for={book <- @recommendations.books}
+          book={book}
+          as={if book.issue_number, do: :issue, else: :book}
+          scope="picks"
+          class="flex-shrink-0 w-36"
+        />
+        <.series_card :for={s <- @recommendations.series} series={s} scope="picks" class="flex-shrink-0 w-36" />
+      </.shelf>
+
+      <.section :if={@libraries_data != []} title="Libraries" count={length(@libraries_data)}>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+          <.collection_card
+            :for={data <- @libraries_data}
+            navigate={~p"/library/#{data.library.id}"}
+            name={data.library.name}
+            covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
+            stats={[{"series", data.series_count}, {"books", data.book_count}, {"issues", data.issue_count}]}
+            note="Empty — scan it to fill it"
           >
-            <img
-              src={~p"/api/books/#{hero.id}/cover?s=m"}
-              class="w-full h-full object-cover"
-              onerror="this.style.display='none'"
+            <:menu :if={@current_user.role == :admin}>
+              <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
+            </:menu>
+            <p :if={data.total_size > 0} class="mt-1 text-xs text-gray-500 tabular-nums">
+              {Stashix.Formatters.format_bytes(data.total_size)}
+            </p>
+            <.scan_status
+              :if={@scan_progress[data.library.id]}
+              progress={@scan_progress[data.library.id]}
+              name={data.library.name}
             />
-          </.link>
-
-          <div class="relative z-10 flex flex-col gap-2 min-w-0 flex-1">
-            <p class="text-[10px] sm:text-xs font-semibold tracking-widest uppercase text-violet-400 truncate">
-              Continue Reading<%= if hero.series do %>
-                ·
-                <.link
-                  navigate={~p"/series/#{hero.series.id}"}
-                  class="hover:text-violet-300 transition-colors"
-                >{hero.series.name}</.link>
-              <% end %>
-            </p>
-            <h1
-              class="text-lg sm:text-[1.6rem] font-bold text-white leading-tight"
-              style="letter-spacing:-0.3px;text-wrap:balance"
-            >
-              {if hero.issue_number, do: "##{hero.issue_number} – #{hero.title}", else: hero.title}
-            </h1>
-            <p class="text-xs sm:text-sm text-gray-400">
-              {cond do
-                hero.type == "issue" && hero.issue_number && hero.series ->
-                  "Issue #{hero.issue_number} of #{hero.series.issue_count} · #{if hero.page_count, do: "#{hero.page_count} pages", else: ""}"
-
-                hero.type == "issue" && hero.issue_number ->
-                  "Issue ##{hero.issue_number}"
-
-                hero.page_count ->
-                  "#{hero.page_count} pages"
-
-                true ->
-                  ""
-              end}
-            </p>
-            <%= if hero_pct do %>
-              <div class="flex items-center gap-3">
-                <div class="w-32 sm:w-44 h-1 bg-gray-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-violet-500 rounded-full" style={"width:#{hero_pct}%"}></div>
-                </div>
-                <span class="text-xs text-gray-500">{hero_pct}%</span>
-              </div>
-            <% end %>
-            <div class="flex gap-2 mt-1">
-              <.link
-                navigate={~p"/read/#{hero.id}"}
-                class="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-md transition-colors"
-              >
-                <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg> Continue
-              </.link>
-              <.link
-                navigate={~p"/book/#{hero.id}"}
-                class="flex items-center px-3 sm:px-4 py-2 bg-gray-800/80 hover:bg-gray-700 text-gray-300 hover:text-white text-sm font-semibold rounded-md border border-gray-700 hover:border-gray-600 transition-colors"
-              >
-                Details
-              </.link>
-            </div>
-          </div>
+          </.collection_card>
         </div>
-      <% end %>
+      </.section>
 
-      <%!-- STAT STRIP --%>
-      <div class="flex items-center px-4 sm:px-8 py-2.5 border-b border-gray-800 bg-gray-900/50">
-        <.link
-          navigate={~p"/books"}
-          class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group"
-        >
-          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_books}</span>
-          <span class="text-xs text-gray-500">Books</span>
-        </.link>
-        <.link
-          navigate={~p"/series"}
-          class="flex items-baseline gap-1.5 pr-5 mr-5 border-r border-gray-800 hover:text-violet-400 transition-colors group"
-        >
-          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_series}</span>
-          <span class="text-xs text-gray-500">Series</span>
-        </.link>
-        <.link
-          navigate={~p"/issues"}
-          class="flex items-baseline gap-1.5 hover:text-violet-400 transition-colors group"
-        >
-          <span class="text-[1.1rem] font-bold text-white group-hover:text-violet-400 transition-colors">{@total_issues}</span>
-          <span class="text-xs text-gray-500">Issues</span>
-        </.link>
-      </div>
+      <.shelf :if={@recent_series != []} id="home-recent-series" title="Recent series">
+        <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />
+      </.shelf>
 
-      <%!-- TWO-COLUMN BODY --%>
-      <div class="flex flex-col lg:flex-row gap-5 p-4 lg:p-6 lg:items-start">
-        <%!-- Left column: reading queue + up next --%>
-        <div class="flex-1 min-w-0 flex flex-col gap-5">
-          <%!-- Continue Reading (secondary items — hero covers the first) --%>
-          <%= if length(@continue_reading) > 1 do %>
-            <section>
-              <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Also Reading
-              </h2>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <%= for %{book: book, current_page: current_page} <- Enum.drop(@continue_reading, 1) do %>
-                  <% pct =
-                    if book.page_count && book.page_count > 1,
-                      do: round(min(current_page / (book.page_count - 1), 1.0) * 100),
-                      else: nil %>
-                  <.link
-                    navigate={~p"/book/#{book.id}"}
-                    class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors"
-                  >
-                    <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
-                      <img
-                        src={~p"/api/books/#{book.id}/cover?s=s"}
-                        class="w-full h-full object-cover"
-                        onerror="this.style.display='none'"
-                      />
-                    </div>
-                    <div class="flex-1 min-w-0 flex flex-col justify-center gap-1">
-                      <%= if book.series do %>
-                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400">
-                          {book.series.name}
-                        </p>
-                      <% end %>
-                      <p class="text-sm font-semibold text-white leading-snug">
-                        {if book.issue_number,
-                          do: "##{book.issue_number} – #{book.title}",
-                          else: book.title}
-                      </p>
-                      <%= if pct do %>
-                        <div class="flex items-center gap-2">
-                          <div class="flex-1 h-1 bg-gray-700 rounded-full overflow-hidden">
-                            <div class="h-full bg-violet-500 rounded-full" style={"width:#{pct}%"}></div>
-                          </div>
-                          <span class="text-[10px] text-gray-500">{pct}%</span>
-                        </div>
-                      <% end %>
-                    </div>
-                  </.link>
-                <% end %>
-              </div>
-            </section>
-          <% end %>
+      <.shelf :if={@recent_books != []} id="home-recent-books" title="Recent books">
+        <.book_card :for={book <- @recent_books} book={book} scope="recent-books" class="flex-shrink-0 w-36" />
+      </.shelf>
 
-          <%!-- Up Next --%>
-          <%= if @next_issue != [] do %>
-            <section>
-              <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold text-white flex items-center gap-2">
-                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Up Next
-                </h2>
-                <.link navigate={~p"/issues"} class="text-xs text-violet-400 hover:text-violet-300">See all →</.link>
-              </div>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <%= for book <- Enum.take(@next_issue, 5) do %>
-                  <.link
-                    navigate={~p"/book/#{book.id}"}
-                    class="group flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors"
-                  >
-                    <div class="w-12 h-[72px] rounded flex-shrink-0 overflow-hidden bg-gray-800">
-                      <img
-                        src={~p"/api/books/#{book.id}/cover?s=s"}
-                        class="w-full h-full object-cover"
-                        onerror="this.style.display='none'"
-                      />
-                    </div>
-                    <div class="flex-1 min-w-0 flex flex-col justify-center gap-0.5">
-                      <%= if book.series do %>
-                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400">
-                          {book.series.name}
-                        </p>
-                      <% end %>
-                      <p class="text-sm font-semibold text-white leading-snug">
-                        {if book.issue_number,
-                          do: "##{book.issue_number} – #{book.title}",
-                          else: book.title}
-                      </p>
-                      <p class="text-xs text-gray-500">
-                        {cond do
-                          book.type == "issue" && book.issue_number && book.series ->
-                            "Issue #{book.issue_number} of #{book.series.issue_count}"
+      <.shelf :if={@recent_issues != []} id="home-recent-issues" title="Recent issues">
+        <.book_card :for={book <- @recent_issues} book={book} as={:issue} scope="recent-issues" class="flex-shrink-0 w-36" />
+      </.shelf>
+    </.page>
+    """
+  end
 
-                          book.issue_number ->
-                            "Issue ##{book.issue_number}"
+  attr :progress, :map, required: true
+  attr :name, :string, required: true
 
-                          true ->
-                            ""
-                        end}
-                      </p>
-                    </div>
-                    <div class="flex-shrink-0 self-center">
-                      <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-900/40 text-violet-300 border border-violet-800/40">Next</span>
-                    </div>
-                  </.link>
-                <% end %>
-              </div>
-            </section>
-          <% end %>
+  # Scan progress inside a library card; fades out once the scan is done.
+  defp scan_status(assigns) do
+    progress = assigns.progress
+    collecting = progress.total == 0 and not progress.done
 
-          <%!-- Recommendations when left column is sparse --%>
-          <%= if @next_issue == [] || length(@continue_reading) <= 1 do %>
-            <% rec_books = @recommendations.books %>
-            <% rec_series = @recommendations.series %>
-            <%= if rec_books != [] || rec_series != [] do %>
-              <section>
-                <h2 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                  <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Start Reading
-                </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <%= for book <- rec_books do %>
-                    <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <.link navigate={~p"/book/#{book.id}"} class="absolute inset-0 rounded-lg z-10"></.link>
-                      <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
-                        <img
-                          src={~p"/api/books/#{book.id}/cover?s=s"}
-                          class="w-full h-full object-cover"
-                          onerror="this.style.display='none'"
-                        />
-                      </div>
-                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                        <%= if book.series && !is_struct(book.series, Ecto.Association.NotLoaded) do %>
-                          <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
-                            {book.series.name}
-                          </p>
-                        <% end %>
-                        <p class="text-sm font-semibold text-white leading-snug">
-                          {if book.issue_number,
-                            do: "##{book.issue_number} – #{book.title}",
-                            else: book.title}
-                        </p>
-                        <p class="text-xs text-gray-500">
-                          {[book.year && to_string(book.year), book.page_count && "#{book.page_count} pages"]
-                          |> Enum.reject(&is_nil/1)
-                          |> Enum.join(" · ")}
-                        </p>
-                        <.link
-                          navigate={~p"/read/#{book.id}"}
-                          class="relative z-20 mt-0.5 self-start flex items-center gap-1 px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
-                        >
-                          <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" /></svg>
-                          Read
-                        </.link>
-                      </div>
-                    </div>
-                  <% end %>
-                  <%= for s <- rec_series do %>
-                    <div class="relative flex gap-3 p-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-violet-700/50 transition-colors">
-                      <.link navigate={~p"/series/#{s.id}"} class="absolute inset-0 rounded-lg z-10"></.link>
-                      <div class="w-16 h-24 rounded flex-shrink-0 overflow-hidden bg-gray-800">
-                        <img
-                          src={~p"/api/series/#{s.id}/cover?s=s"}
-                          class="w-full h-full object-cover"
-                          onerror="this.style.display='none'"
-                        />
-                      </div>
-                      <div class="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-                        <p class="text-[10px] font-semibold tracking-wide uppercase text-violet-400 truncate">
-                          Series
-                        </p>
-                        <p class="text-sm font-semibold text-white leading-snug">{s.name}</p>
-                        <p class="text-xs text-gray-500">
-                          {[
-                            "#{s.issue_count} issues",
-                            Stashix.Formatters.series_years(s)
-                          ]
-                          |> Enum.reject(&is_nil/1)
-                          |> Enum.join(" · ")}
-                        </p>
-                        <.link
-                          navigate={~p"/series/#{s.id}"}
-                          class="relative z-20 mt-0.5 self-start px-2.5 py-1 bg-violet-700/60 hover:bg-violet-600 text-violet-200 hover:text-white text-xs font-semibold rounded transition-colors"
-                        >
-                          Browse
-                        </.link>
-                      </div>
-                    </div>
-                  <% end %>
-                </div>
-              </section>
-            <% end %>
-          <% end %>
-        </div>
+    assigns =
+      assign(assigns,
+        collecting: collecting,
+        label:
+          cond do
+            progress.done -> "Complete"
+            collecting -> "Collecting files…"
+            true -> "Scanning… #{progress.scanned}/#{progress.total}"
+          end,
+        value:
+          cond do
+            progress.done -> 1.0
+            collecting -> nil
+            true -> progress.scanned / progress.total
+          end
+      )
 
-        <%!-- Right column: libraries --%>
-        <div class="w-full lg:w-60 lg:flex-shrink-0 flex flex-col gap-3">
-          <h2 class="text-sm font-semibold text-white flex items-center gap-2">
-            <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Libraries
-          </h2>
-          <div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
-            <%= for %{library: lib, book_count: books, series_count: series, issue_count: issues, total_size: total_size, cover_books: covers} <- @libraries_data do %>
-              <div class="rounded-lg bg-gray-900 border border-gray-800 overflow-hidden hover:border-gray-700 transition-colors">
-                <div class="flex h-14 overflow-hidden relative bg-gray-800">
-                  <%= for book <- Enum.take(covers, 5) do %>
-                    <div class="flex-1 min-w-0">
-                      <img
-                        src={~p"/api/books/#{book.id}/cover?s=sx"}
-                        class="w-full h-full object-cover"
-                        onerror="this.style.display='none'"
-                      />
-                    </div>
-                  <% end %>
-                  <div class="absolute inset-0 bg-gradient-to-t from-gray-900/60 to-transparent"></div>
-                </div>
-                <div class="p-3">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold text-white">{lib.name}</h3>
-                    <%= if @current_user.role == :admin do %>
-                      <.library_menu id={"home-lib-menu-#{lib.id}"} library_id={lib.id} class="ml-1 flex-shrink-0" />
-                    <% end %>
-                  </div>
-                  <div class="flex flex-wrap gap-1.5 mb-2.5">
-                    <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{books} books</span>
-                    <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{issues} issues</span>
-                    <span class="text-[10px] bg-violet-900/40 text-violet-300 border border-violet-800/40 rounded px-1.5 py-0.5">{series} series</span>
-                    <%= if total_size > 0 do %>
-                      <span class="text-[10px] bg-gray-800 text-gray-400 border border-gray-700 rounded px-1.5 py-0.5">{Stashix.Formatters.format_bytes(
-                        total_size
-                      )}</span>
-                    <% end %>
-                  </div>
-                  <%= if progress = @scan_progress[lib.id] do %>
-                    <% collecting = progress.total == 0 and not progress.done
-
-                    label =
-                      cond do
-                        progress.done -> "Complete"
-                        collecting -> "Collecting files..."
-                        true -> "Scanning..."
-                      end
-
-                    pct =
-                      if progress.total > 0,
-                        do: round(progress.scanned / progress.total * 100),
-                        else: 0 %>
-                    <div class={"mb-2 transition-opacity duration-1000 #{if progress.done, do: "opacity-0", else: "opacity-100"}"}>
-                      <div class="flex justify-between text-[10px] text-gray-500 mb-1">
-                        <span>{label}</span>
-                        <%= if not collecting do %>
-                          <span>{progress.scanned}/{progress.total}</span>
-                        <% end %>
-                      </div>
-                      <.run_bar
-                        value={
-                          cond do
-                            progress.done -> 1.0
-                            collecting -> nil
-                            true -> pct / 100
-                          end
-                        }
-                        label={"#{lib.name} scan progress"}
-                      />
-                    </div>
-                  <% end %>
-                  <.link
-                    navigate={~p"/library/#{lib.id}"}
-                    class="text-xs text-violet-400 hover:text-violet-300"
-                  >Browse collection →</.link>
-                </div>
-              </div>
-            <% end %>
-          </div>
-        </div>
-      </div>
-
-      <%!-- RECENTLY ADDED SHELF --%>
-      <% recent_books = @libraries_data |> Enum.flat_map(& &1.recent_books) %>
-      <% recent_series = @libraries_data |> Enum.flat_map(& &1.recent_series) %>
-      <% recent_issues = @libraries_data |> Enum.flat_map(& &1.recent_issues) %>
-
-      <%= if recent_books != [] do %>
-        <section class="px-4 sm:px-6 pb-6">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
-              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Recent Books
-            </h2>
-            <div class="flex gap-1">
-              <button
-                onclick="document.getElementById('home-recent-books').scrollBy({left:-500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-left" class="w-4 h-4" />
-              </button>
-              <button
-                onclick="document.getElementById('home-recent-books').scrollBy({left:500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-right" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div id="home-recent-books" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <%= for book <- recent_books do %>
-              <.media_card
-                navigate={~p"/book/#{book.id}"}
-                title={book.title}
-                cover_url={~p"/api/books/#{book.id}/cover"}
-                size="m"
-                subtitle={book.year && to_string(book.year)}
-                page_count={book.page_count}
-                type={:book}
-                blurhash={book.cover && book.cover.blurhash}
-                class="flex-shrink-0 w-32"
-              />
-            <% end %>
-          </div>
-        </section>
-      <% end %>
-
-      <%= if recent_series != [] do %>
-        <section class="px-4 sm:px-6 pb-6">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
-              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Recent Series
-            </h2>
-            <div class="flex gap-1">
-              <button
-                onclick="document.getElementById('home-recent-series').scrollBy({left:-500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-left" class="w-4 h-4" />
-              </button>
-              <button
-                onclick="document.getElementById('home-recent-series').scrollBy({left:500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-right" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div id="home-recent-series" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <%= for s <- recent_series do %>
-              <.series_card series={s} class="flex-shrink-0 w-32" />
-            <% end %>
-          </div>
-        </section>
-      <% end %>
-
-      <%= if recent_issues != [] do %>
-        <section class="px-4 sm:px-6 pb-8">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-sm font-semibold text-white flex items-center gap-2">
-              <span class="w-0.5 h-4 bg-violet-500 rounded-full inline-block"></span> Recent Issues
-            </h2>
-            <div class="flex gap-1">
-              <button
-                onclick="document.getElementById('home-recent-issues').scrollBy({left:-500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-left" class="w-4 h-4" />
-              </button>
-              <button
-                onclick="document.getElementById('home-recent-issues').scrollBy({left:500,behavior:'smooth'})"
-                class="p-1 rounded text-gray-500 hover:text-white hover:bg-gray-800"
-              >
-                <.icon name="lucide-chevron-right" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          <div id="home-recent-issues" class="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            <%= for book <- recent_issues do %>
-              <.media_card
-                navigate={~p"/book/#{book.id}"}
-                title={book.title}
-                cover_url={~p"/api/books/#{book.id}/cover"}
-                size="m"
-                subtitle={book.year && to_string(book.year)}
-                badge={
-                  cond do
-                    book.volume && book.issue_number -> "Vol #{book.volume}  ##{book.issue_number}"
-                    book.issue_number -> "##{book.issue_number}"
-                    true -> nil
-                  end
-                }
-                type={:book}
-                blurhash={book.cover && book.cover.blurhash}
-                class="flex-shrink-0 w-32"
-              />
-            <% end %>
-          </div>
-        </section>
-      <% end %>
+    ~H"""
+    <div class={["mt-2.5 transition-opacity duration-1000", if(@progress.done, do: "opacity-0", else: "opacity-100")]}>
+      <p class="mb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-ink/80 tabular-nums">{@label}</p>
+      <.run_bar value={@value} label={"#{@name} scan progress"} />
     </div>
     """
   end
