@@ -242,7 +242,7 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
 - [x] `all_series_live.ex`, `all_books_live.ex`, `all_issues_live.ex`:
   `page` + `page_hero` (title in display type, total as ghost numeral),
   library filter as `pill`s, sort as `ink_select`, `cover_grid`.
-- [ ] `all_publishers_live.ex`: extract `<.publisher_card>`; cover strip
+- [x] `all_publishers_live.ex`: extract `<.publisher_card>`; cover strip
   stays, name in display type, counts as `stat`s.
 - [x] `library_live.ex`: `crumbs`, hero with a cover wash from the newest
   cover, stat tiles as an `indicia` panel, `shelf` ×3, sub-pages share the

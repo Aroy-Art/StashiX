@@ -120,6 +120,65 @@ defmodule StashixWeb.CollectionComponents do
     """
   end
 
+  @doc """
+  Card for a library or a publisher: a strip of its covers, its name and its
+  counts. `:menu` sits in the top-right corner, outside the link.
+  """
+  attr :navigate, :string, required: true
+  attr :name, :string, required: true
+  attr :covers, :list, default: [], doc: "cover URLs for the strip"
+  attr :stats, :list, default: [], doc: "[{label, count}]; zero counts are skipped"
+  attr :note, :string, default: nil, doc: "dim text shown when every count is zero"
+  attr :icon, :string, default: "lucide-library"
+  attr :class, :any, default: nil
+  slot :menu
+  slot :inner_block
+
+  def collection_card(assigns) do
+    assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
+
+    ~H"""
+    <div class={[
+      "collection-card group relative rounded-md bg-gray-900 ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
+      @class
+    ]}>
+      <.link navigate={@navigate} class="block rounded-md overflow-hidden focus-visible:outline-2 focus-visible:outline-ink">
+        <div class="relative flex h-24 bg-gray-950 overflow-hidden">
+          <div :if={@covers == []} class="flex-1 flex items-center justify-center">
+            <.icon name={@icon} class="w-8 h-8 text-gray-600" />
+          </div>
+          <img
+            :for={url <- @covers}
+            src={url}
+            alt=""
+            loading="lazy"
+            class="flex-1 min-w-0 h-full object-cover object-top"
+            onerror="this.style.display='none'"
+          />
+          <div :if={@covers != []} class="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/10 to-transparent">
+          </div>
+        </div>
+        <div class="px-3 pt-1 pb-3">
+          <p class="font-display font-extrabold uppercase text-xl leading-tight tracking-wide text-white truncate group-hover:text-ink transition-colors">
+            {@name}
+          </p>
+          <dl :if={@stats != []} class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 mt-1">
+            <div :for={{label, count} <- @stats} class="flex items-baseline gap-1">
+              <dd class="font-display font-bold text-base leading-none text-gray-100 tabular-nums">{count}</dd>
+              <dt class="text-[10px] font-bold tracking-[0.14em] uppercase text-gray-500">{label}</dt>
+            </div>
+          </dl>
+          <p :if={@stats == [] and @note} class="mt-1 text-xs text-gray-500">{@note}</p>
+          {render_slot(@inner_block)}
+        </div>
+      </.link>
+      <div :if={@menu != []} class="absolute top-1.5 right-1.5 rounded bg-gray-950/70 backdrop-blur-sm">
+        {render_slot(@menu)}
+      </div>
+    </div>
+    """
+  end
+
   attr :to, :string, required: true
 
   defp view_all(assigns) do

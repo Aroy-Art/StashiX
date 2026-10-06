@@ -1,6 +1,8 @@
 defmodule StashixWeb.AllPublishersLive do
   use StashixWeb, :live_view
 
+  import StashixWeb.CollectionComponents
+
   alias Stashix.Library
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -67,81 +69,41 @@ defmodule StashixWeb.AllPublishersLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="space-y-6">
-      <.browse_header title="Publishers" subtitle={"#{@total} publishers"} />
+    <.page wide>
+      <.page_hero title="Publishers" eyebrow="Browse" count={@total > 0 && @total}>
+        <:meta>
+          <span>
+            <span class="text-white font-semibold">{@total}</span>
+            {if @total == 1, do: "publisher", else: "publishers"}
+          </span>
+          <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
+        </:meta>
+      </.page_hero>
 
-      <%= if @publishers != [] do %>
-        <.pagination id="page-top" page={@page} total_pages={@total_pages} />
+      <.pagination id="page-top" page={@page} total_pages={@total_pages} />
 
-        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6 gap-4 mx-2 2xl:mx-20">
-          <%= for pub <- @publishers do %>
-            <% stats =
-              Map.get(@stats_map, pub.id, %{series_count: 0, books_count: 0, issues_count: 0}) %>
-            <% covers = Map.get(@covers_map, pub.id, []) %>
-            <.link
-              navigate={~p"/publisher/#{pub.id}"}
-              class="group block rounded-xl border border-gray-800 bg-gray-900 hover:border-violet-700/60 hover:bg-gray-800/60 overflow-hidden transition-all"
-            >
-              <%!-- Cover strip --%>
-              <div class="flex h-24 bg-gray-950 overflow-hidden">
-                <%= if covers == [] do %>
-                  <div class="flex-1 flex items-center justify-center">
-                    <.icon name="lucide-building-2" class="w-8 h-8 text-gray-700" />
-                  </div>
-                <% else %>
-                  <%= for {book_id, blurhash} <- covers do %>
-                    <div class="flex-1 relative min-w-0">
-                      <.blurhash_image
-                        id={"pub-cover-#{book_id}"}
-                        src={~p"/api/books/#{book_id}/cover?s=sx"}
-                        blurhash={blurhash}
-                        class="absolute inset-0 w-full h-full object-cover object-top"
-                      />
-                    </div>
-                  <% end %>
-                <% end %>
-              </div>
+      <div :if={@publishers != []} class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 scroll-mt-4">
+        <% empty = %{series_count: 0, books_count: 0, issues_count: 0} %>
+        <.collection_card
+          :for={pub <- @publishers}
+          navigate={~p"/publisher/#{pub.id}"}
+          name={pub.name}
+          icon="lucide-building-2"
+          covers={for {book_id, _blurhash} <- Map.get(@covers_map, pub.id, []), do: ~p"/api/books/#{book_id}/cover?s=sx"}
+          stats={
+            stats = Map.get(@stats_map, pub.id, empty)
+            [{"series", stats.series_count}, {"books", stats.books_count}, {"issues", stats.issues_count}]
+          }
+          note="No content"
+        />
+      </div>
 
-              <%!-- Card body --%>
-              <div class="p-3 space-y-2">
-                <p class="text-sm font-semibold text-white group-hover:text-violet-200 transition-colors truncate">
-                  {pub.name}
-                </p>
-                <div class="flex flex-wrap gap-1.5">
-                  <%= if stats.series_count > 0 do %>
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-900/40 text-violet-300 border border-violet-800/40">
-                      <.icon name="lucide-layers" class="w-2.5 h-2.5" />
-                      {stats.series_count} series
-                    </span>
-                  <% end %>
-                  <%= if stats.books_count > 0 do %>
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-800 text-gray-400 border border-gray-700">
-                      <.icon name="lucide-book" class="w-2.5 h-2.5" />
-                      {stats.books_count} books
-                    </span>
-                  <% end %>
-                  <%= if stats.issues_count > 0 do %>
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-800 text-gray-400 border border-gray-700">
-                      <.icon name="lucide-newspaper" class="w-2.5 h-2.5" />
-                      {stats.issues_count} issues
-                    </span>
-                  <% end %>
-                  <%= if stats.series_count == 0 && stats.books_count == 0 && stats.issues_count == 0 do %>
-                    <span class="text-[10px] text-gray-600">No content</span>
-                  <% end %>
-                </div>
-              </div>
-            </.link>
-          <% end %>
-        </div>
+      <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
 
-        <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
-      <% end %>
-
-      <%= if !@loading && @publishers == [] do %>
-        <.browse_empty icon="lucide-building-2" label="No publishers found." />
-      <% end %>
-    </div>
+      <.empty_state :if={!@loading && @publishers == []} ghost="0" title="No publishers yet">
+        Publishers appear once metadata has been matched.
+      </.empty_state>
+    </.page>
     """
   end
 end
