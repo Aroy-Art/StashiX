@@ -301,7 +301,11 @@ Every phase ends with: `mix format`, `mix compile --warnings-as-errors`,
   (ink ring), menu and select keyboard-only, contrast of gray-500 labels on
   gray-950.
 - [x] `prefers-reduced-motion` covers every new animation.
-- [ ] Refresh `priv/static/screenshots` and the README images.
+- [ ] Refresh `priv/static/screenshots/desktop.png` (1920×937) and
+  `mobile.png` (500×1018), used by the PWA manifest. **Left for the owner:**
+  they should show a real library; the only data available to the agent was
+  generated flat-colour covers. Keep the sizes or update
+  `manifest.webmanifest` to match. The README has no images.
 
 ### Phase 7 — User settings (after everything else)
 
@@ -513,3 +517,27 @@ Add a dated line when a phase closes or a decision changes.
   - Noticed, not touched: generated ComicInfo.xml files with Writer and
     Penciller produced no credits (stats show 0% with credits). Could be the
     test files or the importer; worth a look outside this redesign.
+- 2026-10-06 — Phase 6 done, except the manifest screenshots (need a real
+  library).
+  - `admin_live.ex` 1,617 → 624 lines; tabs live in `live/admin/{users,
+    libraries,cleanup,publishers}.ex` as markup-only components.
+  - 28 label+input pairs became `field/1` + `text_input/1`/`textarea/1`;
+    alias and visibility tables are `data_table/1`. Users and cleanup tables
+    stay hand-written (expanding rows, forms inside).
+  - `core_components.ex` 1,053 → ~670 lines: Phoenix generator leftovers gone.
+  - Icons: bodies embedded at compile time (`deps/` no longer needed at
+    runtime); three names that had vanished from Lucide fixed (`trash-2`,
+    `building-2`, `filter-x`); `test/stashix_web/components/icon_test.exs`
+    guards against the next rename.
+  - Tokens: 28 unused SaladUI colour tokens, `tailwind.config.js` and the
+    Lucide Tailwind plugin deleted; hero- icons were never functional and the
+    branch for them is gone. Radii and default border colour unchanged.
+  - Accessibility: global ink focus ring; secondary text is gray-400
+    everywhere (was 500/600); reduced-motion catch-all that spares spinners.
+    Checked by tabbing through a page and by measuring text contrast on nine
+    pages. Not done: a screen-reader pass.
+  - Long-box experiment deleted (user decision).
+  - Remaining rough edges, none blocking: a flash raised under an open modal
+    is hidden by its backdrop; no hover on touch (cover fan); metadata admin
+    `sources`/`review`/`jobs` tabs are still private functions in one
+    980-line module.
