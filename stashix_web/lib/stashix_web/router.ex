@@ -162,7 +162,11 @@ defmodule StashixWeb.Router do
 
     scope "/dev" do
       pipe_through :browser
-      live_dashboard "/dashboard", metrics: StashixWeb.Telemetry
+
+      live_dashboard "/dashboard",
+        metrics: StashixWeb.Telemetry,
+        on_mount: [{StashixWeb.Live.Hooks, :admin_only}]
+
       live "/ui", StashixWeb.Dev.UiLive, :index
     end
   end

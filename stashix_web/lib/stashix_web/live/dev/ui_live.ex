@@ -9,6 +9,8 @@ defmodule StashixWeb.Dev.UiLive do
   import StashixWeb.CollectionComponents, only: [collection_card: 1]
   import StashixWeb.DetailComponents
 
+  on_mount {StashixWeb.Live.Hooks, :admin_only}
+
   @colors [
     {"background", "bg-gray-950", "gray-950 — page"},
     {"panel", "bg-gray-900", "gray-900 — panels"},

@@ -95,6 +95,16 @@ defmodule StashixWeb.Live.Hooks do
     end
   end
 
+  # Gate only: no shell assigns, so it also fits LiveViews we do not own
+  # (LiveDashboard) and pages that render without the app chrome.
+  def on_mount(:admin_only, _params, session, socket) do
+    case authenticate_from_session(session) do
+      {:ok, user} when user.role == :admin -> {:cont, socket}
+      {:ok, _user} -> {:halt, redirect(socket, to: "/")}
+      {:error, _} -> {:halt, redirect(socket, to: "/login")}
+    end
+  end
+
   def on_mount(:optional_auth, _params, session, socket) do
     case authenticate_from_session(session) do
       {:ok, user} ->
