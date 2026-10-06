@@ -227,20 +227,26 @@ defmodule StashixWeb.BookLive do
   defp load_external_ids(book), do: Repo.preload(book, [:external_ids, :urls]) |> Map.take([:external_ids, :urls])
 
   # Links to the record on each source's site, when we can build one.
+  # `{label, href}` pills: one per external ID, then any stored URL not already linked from one.
   defp external_links(%{external_ids: ids, urls: urls}) do
-    Enum.map(ids, fn e ->
-      source = to_string(e.source)
+    sources =
+      Enum.map(ids, fn e ->
+        source = to_string(e.source)
 
-      href =
-        case source do
-          "Comic Vine" -> "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"
-          "Grand Comics Database" -> "https://www.comics.org/issue/#{e.source_id}/"
-          "Metron" -> Enum.find_value(urls, &(String.contains?(&1.url, "metron.cloud") && &1.url))
-          _ -> nil
-        end
+        href =
+          case source do
+            "Comic Vine" -> "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"
+            "Grand Comics Database" -> "https://www.comics.org/issue/#{e.source_id}/"
+            "Metron" -> Enum.find_value(urls, &(String.contains?(&1.url, "metron.cloud") && &1.url))
+            _ -> nil
+          end
 
-      {source, e.source_id, href}
-    end)
+        {source, href}
+      end)
+
+    linked = for {_source, href} <- sources, href, do: href
+
+    sources ++ for(u <- urls, u.url not in linked, do: {URI.parse(u.url).host || u.url, u.url})
   end
 
   # Scalar facts for the details grid; empty values are dropped by the grid.
@@ -599,7 +605,7 @@ defmodule StashixWeb.BookLive do
           end)
         }
         reprints={Enum.map(@book_details.reprints, & &1.name)}
-        urls={Enum.map(@book_details.urls, & &1.url)}
+        links={external_links(@external_ids)}
         notes={@book.notes}
       />
 
@@ -610,9 +616,9 @@ defmodule StashixWeb.BookLive do
         <.adjacent_card :if={@next_book} book={@next_book} dir={:next} />
       </nav>
 
-      <%!-- External metadata sources + file path --%>
+      <%!-- Metadata source + file path --%>
       <footer class="space-y-2">
-        <%= if @external_ids.external_ids != [] || @book.metadata_source || @book.metadata_locked do %>
+        <%= if @book.metadata_locked || @book.metadata_matched_at do %>
           <div class="flex flex-wrap items-center gap-2 text-xs text-gray-500">
             <%= if @book.metadata_locked do %>
               <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
@@ -625,20 +631,6 @@ defmodule StashixWeb.BookLive do
                                   Stashix.Metadata.Sources.module(@book.metadata_source).name()) ||
                   @book.metadata_source} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
               </span>
-            <% end %>
-            <%= for {source, id, href} <- external_links(@external_ids) do %>
-              <%= if href do %>
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-white/10 hover:border-white/30 hover:text-gray-300 transition-colors"
-                >
-                  {source} <.icon name="lucide-external-link" class="w-3 h-3" />
-                </a>
-              <% else %>
-                <span class="px-2 py-0.5 rounded-full border border-white/10" title={id}>{source}</span>
-              <% end %>
             <% end %>
           </div>
         <% end %>

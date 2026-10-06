@@ -21,7 +21,7 @@ defmodule StashixWeb.MetadataComponents do
   attr :locations, :list, default: []
   attr :universes, :list, default: []
   attr :reprints, :list, default: []
-  attr :urls, :list, default: [], doc: "URL strings"
+  attr :links, :list, default: [], doc: "[{label, href | nil}]"
   attr :notes, :string, default: nil
 
   def details_panel(assigns) do
@@ -33,7 +33,7 @@ defmodule StashixWeb.MetadataComponents do
       )
 
     lists =
-      ~w(credits facts genres tags arcs characters teams locations universes reprints urls)a
+      ~w(credits facts genres tags arcs characters teams locations universes reprints links)a
 
     assigns =
       assign(assigns, show: assigns.notes != "" || Enum.any?(lists, &(assigns[&1] != [])))
@@ -84,18 +84,25 @@ defmodule StashixWeb.MetadataComponents do
           <.chips items={@reprints} />
         </.detail_section>
 
-        <.detail_section label="URLs" show={@urls != []}>
-          <div class="flex flex-wrap gap-2">
-            <a
-              :for={url <- @urls}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 underline underline-offset-2"
-            >
-              {URI.parse(url).host || url}
-              <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
-            </a>
+        <.detail_section label="Links" show={@links != []}>
+          <div class="flex flex-wrap gap-1.5">
+            <%= for {label, href} <- @links do %>
+              <a
+                :if={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors"
+              >
+                {label} <.icon name="lucide-external-link" class="w-3 h-3 shrink-0" />
+              </a>
+              <span
+                :if={!href}
+                class="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300"
+              >
+                {label}
+              </span>
+            <% end %>
           </div>
         </.detail_section>
 
