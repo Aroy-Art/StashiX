@@ -907,7 +907,7 @@ defmodule StashixWeb.SearchLive do
             <span :if={@filter_count > 0 or @params["q"] != ""}>Loosen the filters or try another spelling.</span>
             <:actions :if={@filter_count > 0}>
               <.ink_button type="button" phx-click="clear_filters">
-                <.icon name="lucide-filter-x" class="w-4 h-4" /> Clear filters
+                <.icon name="lucide-funnel-x" class="w-4 h-4" /> Clear filters
               </.ink_button>
             </:actions>
           </.empty_state>

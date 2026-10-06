@@ -88,7 +88,7 @@ defmodule StashixWeb.AllPublishersLive do
           :for={pub <- @publishers}
           navigate={~p"/publisher/#{pub.id}"}
           name={pub.name}
-          icon="lucide-building-2"
+          icon="lucide-building"
           covers={for {book_id, _blurhash} <- Map.get(@covers_map, pub.id, []), do: ~p"/api/books/#{book_id}/cover?s=sx"}
           stats={
             stats = Map.get(@stats_map, pub.id, empty)

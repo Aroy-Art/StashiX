@@ -120,7 +120,7 @@ defmodule StashixWeb.Dev.UiLive do
           <.icon name="lucide-play" class="w-4 h-4" /> Continue <span class="text-ink">#4</span>
         </.ink_button>
         <.ink_button variant="ghost"><.icon name="lucide-book-open" class="w-4 h-4" /> Ghost</.ink_button>
-        <.ink_button variant="danger"><.icon name="lucide-trash-2" class="w-4 h-4" /> Danger</.ink_button>
+        <.ink_button variant="danger"><.icon name="lucide-trash" class="w-4 h-4" /> Danger</.ink_button>
         <.split_button>
           <.icon name="lucide-play" class="w-4 h-4" /> Read
           <:aside>
@@ -219,7 +219,7 @@ defmodule StashixWeb.Dev.UiLive do
           <.menu_item icon="lucide-settings" navigate="/dev/ui">A link</.menu_item>
           <.menu_separator />
           <.menu_item icon="lucide-zap" tone="warning" phx-click="noop">Force rescan</.menu_item>
-          <.menu_item icon="lucide-trash-2" tone="danger" phx-click="noop">Delete</.menu_item>
+          <.menu_item icon="lucide-trash" tone="danger" phx-click="noop">Delete</.menu_item>
         </.ink_menu>
 
         <.ink_menu id="ui-menu-icon" modal>
@@ -407,7 +407,7 @@ defmodule StashixWeb.Dev.UiLive do
         <.empty_state title="Nothing in the long box" ghost="0" class="flex-1">
           Loosen the filters or try another spelling.
           <:actions>
-            <.ink_button><.icon name="lucide-filter-x" class="w-4 h-4" /> Clear filters</.ink_button>
+            <.ink_button><.icon name="lucide-funnel-x" class="w-4 h-4" /> Clear filters</.ink_button>
           </:actions>
         </.empty_state>
         <.empty_state title="No series yet" icon="lucide-book-copy" class="flex-1" />
