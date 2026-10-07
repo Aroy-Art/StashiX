@@ -3,7 +3,7 @@ defmodule StashixWeb.Live.Hooks do
   import Phoenix.Component
 
   alias Stashix.Auth.TokenHelper
-  alias Stashix.{Health, Library}
+  alias Stashix.{Accounts, Health, Library}
   alias Stashix.Library.Access
 
   def on_mount(:require_auth, _params, session, socket) do
@@ -14,6 +14,7 @@ defmodule StashixWeb.Live.Hooks do
         {initial_progress, initial_health} =
           if connected?(socket) do
             Stashix.Accounts.touch_session(session["session_id"])
+            Accounts.touch_last_seen(user)
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
             Enum.each(libraries, &Health.subscribe(&1.id))
             {load_active_scan_progress(libraries), load_active_health_progress(libraries)}
@@ -60,6 +61,7 @@ defmodule StashixWeb.Live.Hooks do
         {initial_progress, initial_health} =
           if connected?(socket) do
             Stashix.Accounts.touch_session(session["session_id"])
+            Accounts.touch_last_seen(user)
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
             Enum.each(libraries, &Health.subscribe(&1.id))
             {load_active_scan_progress(libraries), load_active_health_progress(libraries)}

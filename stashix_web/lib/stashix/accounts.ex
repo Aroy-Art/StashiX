@@ -26,6 +26,21 @@ defmodule Stashix.Accounts do
     Repo.all(User)
   end
 
+  @last_seen_min_interval 15 * 60
+
+  def touch_last_seen(user) do
+    now = DateTime.utc_now()
+    stale = is_nil(user.last_seen_at) or DateTime.diff(now, user.last_seen_at) >= @last_seen_min_interval
+
+    if stale do
+      user
+      |> User.last_seen_changeset()
+      |> Repo.update()
+    else
+      {:ok, user}
+    end
+  end
+
   def create_user(attrs) do
     %User{}
     |> User.changeset(attrs)

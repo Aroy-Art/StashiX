@@ -18,6 +18,7 @@ defmodule Stashix.Accounts.User do
     field :ui_settings, :map, default: %{}
     # Embedded in issued tokens; bumping it revokes every token issued before.
     field :token_version, :integer, default: 0
+    field :last_seen_at, :utc_datetime
 
     has_many :library_permissions, Stashix.Library.LibraryPermission
 
@@ -142,4 +143,8 @@ defmodule Stashix.Accounts.User do
 
   @doc "Revokes every token issued so far without changing anything else."
   def revoke_tokens_changeset(user), do: change(user, token_version: user.token_version + 1)
+
+  def last_seen_changeset(user) do
+    change(user, last_seen_at: DateTime.utc_now() |> DateTime.truncate(:second))
+  end
 end

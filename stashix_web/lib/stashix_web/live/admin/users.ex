@@ -72,6 +72,7 @@ defmodule StashixWeb.AdminLive.Users do
               </th>
               <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Email</th>
               <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Role</th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Last seen</th>
               <th class="px-4 py-3"></th>
             </tr>
           </thead>
@@ -92,6 +93,11 @@ defmodule StashixWeb.AdminLive.Users do
                   ]}>
                     {user.role}
                   </span>
+                </td>
+                <td class="px-4 py-3 text-gray-400 text-xs">
+                  {if user.last_seen_at,
+                    do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
+                    else: "Never"}
                 </td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center gap-3 justify-end">
@@ -129,7 +135,7 @@ defmodule StashixWeb.AdminLive.Users do
               </tr>
               <%= if perm_open do %>
                 <tr class="border-b border-white/10 bg-gray-950">
-                  <td colspan="4" class="px-4 py-4">
+                  <td colspan="5" class="px-4 py-4">
                     <div class="space-y-2">
                       <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
                         Library Access for {user.username}
