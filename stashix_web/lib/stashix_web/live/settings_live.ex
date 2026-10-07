@@ -113,6 +113,10 @@ defmodule StashixWeb.SettingsLive do
     end
   end
 
+  defp stale?(%Session{last_seen_at: at}) do
+    DateTime.diff(DateTime.utc_now(), at, :day) >= 30
+  end
+
   defp field_error(form, field) do
     case form[field].errors do
       [{message, opts} | _] ->
@@ -294,13 +298,33 @@ defmodule StashixWeb.SettingsLive do
           <.display_heading size="panel" class="mb-1">Sessions</.display_heading>
           <p class="mb-4 text-sm text-gray-400">Where this account is signed in.</p>
           <ul :if={@sessions != []} id="sessions" class="mb-5 border-y border-white/10 divide-y divide-white/10">
-            <li :for={session <- @sessions} class="flex items-center justify-between gap-3 py-3">
+            <li
+              :for={session <- @sessions}
+              class={["flex items-center justify-between gap-3 py-3", stale?(session) && "opacity-60"]}
+            >
               <div class="min-w-0">
-                <p class="font-display font-bold uppercase text-lg leading-tight tracking-wide text-white truncate">
+                <p class={[
+                  "font-display font-bold uppercase text-lg leading-tight tracking-wide truncate",
+                  stale?(session) && "text-red-400 line-through decoration-red-400/50",
+                  !stale?(session) && "text-white"
+                ]}>
                   {Session.device(session)}
                 </p>
                 <p class="text-xs text-gray-400">
                   {last_seen(session)} · signed in {Calendar.strftime(session.inserted_at, "%-d %b %Y")}
+                </p>
+                <p :if={session.ip_address} class="text-xs text-gray-400">
+                  IP:
+                  <span
+                    class="relative inline-block font-mono align-baseline cursor-pointer"
+                    phx-click={
+                      JS.toggle_class("invisible", to: "#ip-mask-#{session.id}")
+                      |> JS.toggle_class("opacity-0 pointer-events-none", to: "#ip-val-#{session.id}")
+                    }
+                  >
+                    <span id={"ip-mask-#{session.id}"} class="blur-sm select-none">xxx.xxx.xxx.xxx</span>
+                    <span id={"ip-val-#{session.id}"} class="absolute inset-0 opacity-0 pointer-events-none">{session.ip_address}</span>
+                  </span>
                 </p>
               </div>
               <.sticker :if={session.id == @current_session_id} size="xs" tilt={false} class="shrink-0 uppercase">

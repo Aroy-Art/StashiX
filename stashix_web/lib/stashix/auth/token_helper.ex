@@ -17,9 +17,9 @@ defmodule Stashix.Auth.TokenHelper do
     end
   end
 
-  @doc "Records a sign-in (see `Accounts.create_session/2`) and issues its tokens."
-  def start_session(user, user_agent) do
-    with {:ok, session} <- Accounts.create_session(user, user_agent),
+  @doc "Records a sign-in (see `Accounts.create_session/3`) and issues its tokens."
+  def start_session(user, user_agent, ip_address \\ nil) do
+    with {:ok, session} <- Accounts.create_session(user, user_agent, ip_address),
          {:ok, access_token, refresh_token} <- generate_tokens(user, session.id) do
       {:ok, access_token, refresh_token, session.id}
     end

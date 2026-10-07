@@ -22,7 +22,7 @@ defmodule StashixWeb.AuthController do
 
     case Accounts.authenticate_user(login, password) do
       {:ok, user} ->
-        case TokenHelper.start_session(user, conn |> get_req_header("user-agent") |> List.first()) do
+        case TokenHelper.start_session(user, conn |> get_req_header("user-agent") |> List.first(), ip_string(conn)) do
           {:ok, access_token, refresh_token, _session_id} ->
             json(conn, %{
               access_token: access_token,
@@ -78,6 +78,13 @@ defmodule StashixWeb.AuthController do
         conn
         |> put_status(:unauthorized)
         |> json(%{error: "invalid refresh token: #{inspect(reason)}"})
+    end
+  end
+
+  defp ip_string(conn) do
+    case conn.remote_ip do
+      nil -> nil
+      ip -> ip |> :inet.ntoa() |> List.to_string()
     end
   end
 

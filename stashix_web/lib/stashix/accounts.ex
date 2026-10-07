@@ -1,5 +1,6 @@
 defmodule Stashix.Accounts do
   import Ecto.Query
+  require Logger
 
   alias Stashix.Repo
   alias Stashix.Accounts.{Session, User}
@@ -87,7 +88,7 @@ defmodule Stashix.Accounts do
   @session_touch_interval 5 * 60
 
   @doc "Records a sign-in. Rows of the user that are no longer live are cleared on the way."
-  def create_session(%User{} = user, user_agent) do
+  def create_session(%User{} = user, user_agent, ip_address \\ nil) do
     now = DateTime.truncate(DateTime.utc_now(), :second)
 
     Repo.delete_all(
@@ -95,13 +96,21 @@ defmodule Stashix.Accounts do
         where: s.user_id == ^user.id and (s.expires_at <= ^now or s.token_version != ^user.token_version)
     )
 
-    Repo.insert(%Session{
-      user_id: user.id,
-      user_agent: user_agent && String.slice(user_agent, 0, 500),
-      token_version: user.token_version,
-      last_seen_at: now,
-      expires_at: DateTime.add(now, @session_ttl)
-    })
+    result =
+      Repo.insert(%Session{
+        user_id: user.id,
+        user_agent: user_agent && String.slice(user_agent, 0, 500),
+        ip_address: ip_address,
+        token_version: user.token_version,
+        last_seen_at: now,
+        expires_at: DateTime.add(now, @session_ttl)
+      })
+
+    if match?({:ok, _}, result) do
+      Logger.info("sign_in user_id=#{user.id} ip=#{ip_address || "unknown"} ua=#{inspect(user_agent)}")
+    end
+
+    result
   end
 
   @doc "The user's live sessions, most recently used first."

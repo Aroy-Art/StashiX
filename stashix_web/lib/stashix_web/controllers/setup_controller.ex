@@ -41,7 +41,11 @@ defmodule StashixWeb.SetupController do
            }) do
         {:ok, user} ->
           {:ok, access_token, refresh_token, _session_id} =
-            TokenHelper.start_session(user, conn |> get_req_header("user-agent") |> List.first())
+            TokenHelper.start_session(
+              user,
+              conn |> get_req_header("user-agent") |> List.first(),
+              conn.remote_ip && conn.remote_ip |> :inet.ntoa() |> List.to_string()
+            )
 
           conn
           |> put_status(:created)

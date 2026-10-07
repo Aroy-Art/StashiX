@@ -51,6 +51,8 @@ defmodule StashixWeb.Endpoint do
     pass: ["*/*"],
     json_decoder: Phoenix.json_library()
 
+  plug Plug.RewriteOn, [:x_forwarded_for]
+  plug StashixWeb.Plugs.RequestLogger
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options

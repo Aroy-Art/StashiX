@@ -15,6 +15,7 @@ defmodule Stashix.Accounts.Session do
 
   schema "user_sessions" do
     field :user_agent, :string
+    field :ip_address, :string
     field :token_version, :integer
     field :last_seen_at, :utc_datetime
     field :expires_at, :utc_datetime

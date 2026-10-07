@@ -72,7 +72,8 @@ defmodule StashixWeb.SessionController do
   @doc "Starts a recorded session for the user and writes it to the cookie."
   def sign_in(conn, user) do
     user_agent = conn |> get_req_header("user-agent") |> List.first()
-    {:ok, access_token, refresh_token, session_id} = TokenHelper.start_session(user, user_agent)
+    ip_address = conn.remote_ip && conn.remote_ip |> :inet.ntoa() |> List.to_string()
+    {:ok, access_token, refresh_token, session_id} = TokenHelper.start_session(user, user_agent, ip_address)
 
     conn
     |> put_session("guardian_default_token", access_token)
