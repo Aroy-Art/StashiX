@@ -35,7 +35,7 @@ defmodule StashixWeb.UI.Page do
         >
         </div>
         <div :if={!@fade && @cover_src} class="detail-backdrop absolute inset-0">
-          <img src={@cover_src} alt="" class="w-full h-full object-cover" />
+          <img src={@cover_src} alt="" class="backdrop-static w-full h-full object-cover" />
         </div>
         <div class="halftone absolute inset-0"></div>
       </div>

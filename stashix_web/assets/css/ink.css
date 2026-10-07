@@ -21,6 +21,15 @@
   opacity: 0.38;
 }
 
+/* Static (non-fade) backdrop: fades in on load. */
+@keyframes backdrop-fadein {
+  from { opacity: 0; }
+  to   { opacity: 0.38; }
+}
+.detail-backdrop > img.backdrop-static {
+  animation: backdrop-fadein 900ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Layers managed by the BackdropFade hook: the new cover fades in over the old. */
 .detail-backdrop > img.backdrop-layer {
   position: absolute;
