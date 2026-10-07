@@ -401,8 +401,8 @@ defmodule StashixWeb.AdminHealthLive do
         <div class="flex items-start gap-2 pt-1">
           <.icon name="lucide-alert-triangle" class="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
           <div class="min-w-0">
-            <p class="text-red-400 text-xs font-medium">{error_summary(row.error_message)}</p>
-            <p :if={error_detail(row.error_message)} class="text-gray-500 text-xs mt-0.5">
+            <p class="text-red-400 text-xs font-mono">{row.error_message}</p>
+            <p :if={error_detail(row.error_message)} class="text-gray-400 text-xs mt-1">
               {error_detail(row.error_message)}
             </p>
           </div>
@@ -443,14 +443,6 @@ defmodule StashixWeb.AdminHealthLive do
   defp format_dt(nil), do: "—"
   defp format_dt(dt), do: NaiveDateTime.to_string(dt) |> String.slice(0, 16)
 
-  defp error_summary("File not found on disk"), do: "File missing from disk"
-  defp error_summary("Archive contains no readable pages"), do: "Archive is empty or unreadable"
-  defp error_summary("CRC mismatch" <> _), do: "Archive is corrupted (CRC mismatch)"
-  defp error_summary("Not a valid archive" <> _), do: "Not a valid archive"
-  defp error_summary("ZIP error: " <> _), do: "ZIP extraction failed"
-  defp error_summary(msg) when is_binary(msg), do: msg
-  defp error_summary(_), do: "Unknown error"
-
   defp error_detail("File not found on disk"),
     do:
       "The file was registered in the library but no longer exists at the expected path. Run a re-scan to remove or reassign it."
@@ -462,6 +454,11 @@ defmodule StashixWeb.AdminHealthLive do
   defp error_detail("CRC mismatch" <> _),
     do:
       "One or more entries in the archive have a checksum mismatch, indicating file corruption. The download or copy may be incomplete."
+
+  @eocd_detail "The ZIP's internal file table (End of Central Directory) is missing. The file was likely cut off during download or copy — re-downloading it usually fixes this."
+  defp error_detail("Truncated ZIP" <> _), do: @eocd_detail
+  defp error_detail(":bad_eocd"), do: @eocd_detail
+  defp error_detail(":eocd_not_found"), do: @eocd_detail
 
   defp error_detail("Not a valid archive" <> _),
     do:

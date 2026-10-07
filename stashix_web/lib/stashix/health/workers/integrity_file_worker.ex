@@ -34,6 +34,12 @@ defmodule Stashix.Health.Workers.IntegrityFileWorker do
     end
   end
 
+  # :bad_eocd — the End of Central Directory record at the end of the ZIP is
+  # missing or malformed. Usually means the file was truncated mid-download or
+  # mid-copy; the outer container exists but the internal file table is gone.
+  defp format_error(:bad_eocd), do: "Truncated ZIP — End of Central Directory missing or corrupt"
+  defp format_error(:eocd_not_found), do: "Truncated ZIP — End of Central Directory not found"
+  defp format_error(:not_a_zip_file), do: "Not a valid ZIP archive"
   defp format_error(:bad_crc), do: "CRC mismatch — archive is corrupted"
   defp format_error(:file_read_error), do: "Could not read file"
   defp format_error(:bad_magic), do: "Not a valid archive (wrong file signature)"
