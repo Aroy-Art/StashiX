@@ -402,7 +402,7 @@ defmodule StashixWeb.AdminHealthLive do
           <span class="text-gray-500 text-xs whitespace-nowrap shrink-0 pt-0.5">{format_dt(row.checked_at)}</span>
         </div>
         <div class="flex items-start gap-2 pt-1">
-          <.icon name="lucide-alert-triangle" class="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+          <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
           <div class="min-w-0">
             <p class="text-red-400 text-xs font-mono">{row.error_message}</p>
             <p :if={error_detail(row.error_message)} class="text-gray-400 text-xs mt-1">
