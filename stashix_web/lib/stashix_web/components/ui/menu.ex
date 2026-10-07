@@ -13,7 +13,7 @@ defmodule StashixWeb.UI.Menu do
 
   @link_attrs ~w(navigate patch href replace method download target rel)
 
-  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-gray-900 text-gray-100 ring-1 ring-white/15 overflow-y-auto overscroll-contain"
+  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-gray-800 text-gray-100 ring-1 ring-white/15 overflow-y-auto overscroll-contain"
 
   @doc """
   Dropdown menu. The `:trigger` slot is the content of the button that opens
@@ -258,7 +258,7 @@ defmodule StashixWeb.UI.Menu do
         data-align={if @variant == "field", do: "start", else: @align}
         class={[@base, "max-w-[min(24rem,calc(100vw-1rem))]"]}
       >
-        <div :if={@searchable} class="sticky -top-1.5 z-10 -mt-1.5 -mx-1.5 mb-1.5 p-1.5 bg-zinc-950">
+        <div :if={@searchable} class="sticky -top-1.5 z-10 -mt-1.5 -mx-1.5 mb-1.5 p-1.5 bg-gray-800">
           <%!-- form="" detaches the box from the surrounding form, so typing
                in it neither submits nor fires phx-change. --%>
           <input
