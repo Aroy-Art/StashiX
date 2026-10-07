@@ -13,7 +13,7 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   """
   require Logger
 
-  alias Stashix.Library
+  alias Stashix.{Health, Library}
   alias Stashix.Library.{Book, BookFile}
   alias Stashix.Metadata.Writer.{MetronInfoXml, ComicInfoXml}
   alias Stashix.Scanner
@@ -39,6 +39,7 @@ defmodule Stashix.Metadata.Writer.FileWriter do
           case write_cbz(file.path, metron, comic) do
             {:error, reason} when reason in [:bad_eocd, :not_a_zip_file, :eocd_not_found] ->
               Logger.warning("CBZ at #{file.path} has bad ZIP structure (#{inspect(reason)}), falling back to sidecar")
+              Health.upsert_integrity_result(book.library_id, file.id, file.path, :error, inspect(reason))
               write_sidecar(file.path, metron)
 
             other ->
