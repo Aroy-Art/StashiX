@@ -392,9 +392,12 @@ defmodule StashixWeb.AdminHealthLive do
             <.link navigate={~p"/book/#{row.book_id}"} class="text-white font-medium hover:underline text-sm">
               {row.title}
             </.link>
-            <p class="text-gray-400 font-mono text-xs truncate mt-0.5" title={row.file_path}>
-              {Path.basename(row.file_path)}
-            </p>
+            <details class="mt-0.5 group">
+              <summary class="text-gray-400 font-mono text-xs cursor-pointer list-none hover:text-gray-200">
+                {Path.basename(row.file_path)}
+              </summary>
+              <p class="text-gray-500 font-mono text-xs mt-1 break-all">{row.file_path}</p>
+            </details>
           </div>
           <span class="text-gray-500 text-xs whitespace-nowrap shrink-0 pt-0.5">{format_dt(row.checked_at)}</span>
         </div>
