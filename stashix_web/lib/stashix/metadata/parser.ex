@@ -145,7 +145,7 @@ defmodule Stashix.Metadata.Parser do
         :issue_number,
         parse_decimal(xpath(doc, ~x"//ComicInfo/Number/text()"os))
       )
-      |> maybe_put(:volume, parse_int(xpath(doc, ~x"//ComicInfo/Volume/text()"os)))
+      |> maybe_put(:volume, filter_year_as_volume(parse_int(xpath(doc, ~x"//ComicInfo/Volume/text()"os))))
       |> maybe_put(:year, parse_int(xpath(doc, ~x"//ComicInfo/Year/text()"os)))
       |> maybe_put(:publisher, xpath(doc, ~x"//ComicInfo/Publisher/text()"os))
       |> maybe_put(:page_count, parse_int(xpath(doc, ~x"//ComicInfo/PageCount/text()"os)))
@@ -697,6 +697,11 @@ defmodule Stashix.Metadata.Parser do
       |> maybe_put(:issue_number, parse_decimal(issue))
     end
   end
+
+  # Old ComicVine/ComicTagger tools stored the series start year in <Volume>.
+  # A 4-digit year-shaped value is not a real volume number.
+  defp filter_year_as_volume(v) when is_integer(v) and v >= 1800 and v <= 2099, do: nil
+  defp filter_year_as_volume(v), do: v
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map

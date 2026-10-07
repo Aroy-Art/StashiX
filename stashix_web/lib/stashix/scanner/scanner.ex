@@ -118,6 +118,16 @@ defmodule Stashix.Scanner do
   end
 
   defp do_scan(library_id, force) do
+    do_scan_safe(library_id, force)
+  rescue
+    e ->
+      msg = Exception.message(e)
+      Logger.error("Scan failed for library #{library_id}: #{msg}")
+      update_task_status(library_id, %{done: true, failed: true, error: msg})
+      broadcast_progress(library_id, 0, 0, true, :failed, msg)
+  end
+
+  defp do_scan_safe(library_id, force) do
     library = Library.get_library!(library_id)
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
 
@@ -561,6 +571,17 @@ defmodule Stashix.Scanner do
   end
 
   defp do_scan_series(series_id, force) do
+    do_scan_series_safe(series_id, force)
+  rescue
+    e ->
+      msg = Exception.message(e)
+      series = Library.get_series!(series_id)
+      library_id = series.library_id
+      Logger.error("Series scan failed for #{series.name}: #{msg}")
+      broadcast_progress(library_id, 0, 0, true, :failed, msg)
+  end
+
+  defp do_scan_series_safe(series_id, force) do
     series = Library.get_series!(series_id)
     library = Library.get_library!(series.library_id)
     library_id = library.id
@@ -635,6 +656,16 @@ defmodule Stashix.Scanner do
   end
 
   defp do_scan_file(library_id, file_path) do
+    do_scan_file_safe(library_id, file_path)
+  rescue
+    e ->
+      msg = Exception.message(e)
+      Logger.error("File scan failed for #{file_path}: #{msg}")
+      update_task_status(library_id, %{done: true, failed: true, error: msg})
+      broadcast_progress(library_id, 0, 0, true, :failed, msg)
+  end
+
+  defp do_scan_file_safe(library_id, file_path) do
     unless File.regular?(file_path) do
       Logger.warning("FileWatcher: #{file_path} no longer exists, skipping")
     else
@@ -921,11 +952,12 @@ defmodule Stashix.Scanner do
     :ets.insert(@ets_table, {library_id, status})
   end
 
-  defp broadcast_progress(library_id, scanned, total, done \\ false, phase \\ :scan) do
+  defp broadcast_progress(library_id, scanned, total, done \\ false, phase \\ :scan, error \\ nil) do
     Phoenix.PubSub.broadcast(
       Stashix.PubSub,
       "scan:#{library_id}",
-      {:scan_progress, %{library_id: library_id, scanned: scanned, total: total, done: done, phase: phase}}
+      {:scan_progress,
+       %{library_id: library_id, scanned: scanned, total: total, done: done, phase: phase, error: error}}
     )
   end
 end

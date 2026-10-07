@@ -113,6 +113,26 @@ defmodule StashixWeb.HomeLive do
 
   @impl true
   def handle_info(
+        {:scan_progress, %{library_id: lib_id, scanned: scanned, total: total, done: done, phase: phase, error: error}},
+        socket
+      ) do
+    failed = phase == :failed
+
+    socket =
+      update(
+        socket,
+        :scan_progress,
+        &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: done, failed: failed, error: error})
+      )
+
+    if done do
+      Process.send_after(self(), {:clear_scan_progress, lib_id}, if(failed, do: 8_000, else: 3_000))
+    end
+
+    {:noreply, socket}
+  end
+
+  def handle_info(
         {:scan_progress, %{library_id: lib_id, scanned: scanned, total: total, done: done}},
         socket
       ) do
@@ -120,7 +140,7 @@ defmodule StashixWeb.HomeLive do
       update(
         socket,
         :scan_progress,
-        &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: done})
+        &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: done, failed: false})
       )
 
     if done do
@@ -135,7 +155,7 @@ defmodule StashixWeb.HomeLive do
      update(
        socket,
        :scan_progress,
-       &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: false})
+       &Map.put(&1, lib_id, %{scanned: scanned, total: total, done: false, failed: false})
      )}
   end
 
@@ -462,19 +482,23 @@ defmodule StashixWeb.HomeLive do
   # Scan progress inside a library card; fades out once the scan is done.
   defp scan_status(assigns) do
     progress = assigns.progress
-    collecting = progress.total == 0 and not progress.done
+    failed = Map.get(progress, :failed, false)
+    collecting = progress.total == 0 and not progress.done and not failed
 
     assigns =
       assign(assigns,
+        failed: failed,
         collecting: collecting,
         label:
           cond do
+            failed -> "Scan failed"
             progress.done -> "Complete"
             collecting -> "Collecting files…"
             true -> "Scanning… #{progress.scanned}/#{progress.total}"
           end,
         value:
           cond do
+            failed -> 1.0
             progress.done -> 1.0
             collecting -> nil
             true -> progress.scanned / progress.total
@@ -483,8 +507,16 @@ defmodule StashixWeb.HomeLive do
 
     ~H"""
     <div class={["mt-2.5 transition-opacity duration-1000", if(@progress.done, do: "opacity-0", else: "opacity-100")]}>
-      <p class="mb-1 text-[10px] font-bold tracking-[0.14em] uppercase text-ink/80 tabular-nums">{@label}</p>
-      <.run_bar value={@value} label={"#{@name} scan progress"} />
+      <p class={[
+        "mb-1 text-[10px] font-bold tracking-[0.14em] uppercase tabular-nums",
+        if(@failed, do: "text-red-500", else: "text-ink/80")
+      ]}>
+        {@label}
+      </p>
+      <p :if={@failed && @progress[:error]} class="mt-0.5 text-[10px] text-red-400 leading-tight break-words">
+        {@progress[:error]}
+      </p>
+      <.run_bar :if={not @failed} value={@value} label={"#{@name} scan progress"} />
     </div>
     """
   end

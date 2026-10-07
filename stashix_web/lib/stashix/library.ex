@@ -965,7 +965,10 @@ defmodule Stashix.Library do
       nil ->
         %Series{}
         |> Series.changeset(attrs)
-        |> Repo.insert()
+        |> Repo.insert(
+          on_conflict: [set: Map.to_list(Map.take(attrs, [:name, :start_year, :end_year, :ongoing]))],
+          conflict_target: [:library_id, :path]
+        )
 
       series ->
         series
