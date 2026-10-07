@@ -837,6 +837,13 @@ defmodule Stashix.Library do
         do: where(query, [s], s.start_year <= ^filters[:year_to]),
         else: query
 
+    query =
+      case filters[:series_status] do
+        "ongoing" -> where(query, [s], s.ongoing == true)
+        "completed" -> where(query, [s], s.ongoing == false)
+        _ -> query
+      end
+
     # Book-level filters: keep series that contain at least one matching book.
     book_filters =
       Map.take(filters, [:age_ratings, :publisher_id, :creator_ids, :creator_match, :role | book_facets()])

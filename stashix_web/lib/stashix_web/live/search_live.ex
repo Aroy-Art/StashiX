@@ -39,8 +39,14 @@ defmodule StashixWeb.SearchLive do
   @age_rating_strings Enum.map(@age_ratings, &to_string/1)
   @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
+  @series_statuses [
+    {"Any", ""},
+    {"Ongoing", "ongoing"},
+    {"Completed", "completed"}
+  ]
+
   # URL params that count as filters (everything except q, type, sort, page).
-  @filter_keys ~w(from to age creator creator_match role library publisher genre tag character team location status)
+  @filter_keys ~w(from to age creator creator_match role library publisher genre tag character team location status series_status)
   # Name-based book facets, each with a typeahead picker: {param, title, plural}.
   @facets [
     {"genre", "Genre", "genres"},
@@ -80,6 +86,7 @@ defmodule StashixWeb.SearchLive do
        years: Enum.map(year_counts, &elem(&1, 0)),
        types: @types,
        read_statuses: @read_statuses,
+       series_statuses: @series_statuses,
        age_ratings: @age_ratings,
        credit_roles: @credit_roles,
        creator_query: "",
@@ -277,6 +284,9 @@ defmodule StashixWeb.SearchLive do
 
     status = if params["status"] in ["unread", "in_progress", "read"], do: params["status"]
 
+    series_status =
+      if params["series_status"] in ["ongoing", "completed"], do: params["series_status"]
+
     %{
       "q" => q,
       "type" => type,
@@ -290,6 +300,7 @@ defmodule StashixWeb.SearchLive do
       "creator_match" => if(length(creators) > 1 and params["creator_match"] == "any", do: "any"),
       "role" => if(params["role"] in @credit_roles, do: params["role"]),
       "status" => status,
+      "series_status" => series_status,
       "page" => params["page"]
     }
     |> Map.merge(Map.new(@facet_keys, &{&1, normalize_names(params[&1])}))
@@ -393,6 +404,7 @@ defmodule StashixWeb.SearchLive do
       creator_match: params["creator_match"] || "all",
       role: params["role"],
       read_status: params["status"],
+      series_status: params["series_status"],
       user_id: user_id,
       sort: params["sort"]
     }
@@ -475,9 +487,16 @@ defmodule StashixWeb.SearchLive do
         []
       end
 
+    series_status =
+      if s = params["series_status"] do
+        [{List.keyfind(@series_statuses, s, 1) |> elem(0), "series_status", nil}]
+      else
+        []
+      end
+
     facets = for {key, title, _} <- @facets, name <- params[key], do: {"#{title}: #{name}", key, name}
 
-    year ++ ages ++ creator ++ role ++ library ++ publisher ++ facets ++ status
+    year ++ ages ++ creator ++ role ++ library ++ publisher ++ facets ++ status ++ series_status
   end
 
   # A facet param is a name or a list of names (chips on book pages link with one).
@@ -681,6 +700,23 @@ defmodule StashixWeb.SearchLive do
                         name="status"
                         value={value}
                         checked={(@params["status"] || "") == value}
+                        class="sr-only"
+                      />
+                      {label}
+                    </.pill>
+                  <% end %>
+                </div>
+              </.filter_section>
+
+              <.filter_section :if={@params["type"] in ["all", "series"]} title="Series status">
+                <div class="grid grid-cols-3 gap-1.5">
+                  <%= for {label, value} <- @series_statuses do %>
+                    <.pill active={(@params["series_status"] || "") == value} class="text-center">
+                      <input
+                        type="radio"
+                        name="series_status"
+                        value={value}
+                        checked={(@params["series_status"] || "") == value}
                         class="sr-only"
                       />
                       {label}
