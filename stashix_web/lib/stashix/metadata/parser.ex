@@ -60,9 +60,13 @@ defmodule Stashix.Metadata.Parser do
             %{}
 
           xmls ->
-            # MetronInfo wins; ComicInfo fills fields MetronInfo lacks (e.g. Title).
             comic = if data = xmls[:comicinfo], do: parse_comicinfo_xml(data), else: %{}
             metron = if data = xmls[:metroninfo], do: parse_metroninfo_xml(data), else: %{}
+
+            # When MetronInfo is present it owns the title — don't let ComicInfo's
+            # title bleed through even if MetronInfo has no stories element.
+            comic = if xmls[:metroninfo], do: Map.delete(comic, :title), else: comic
+
             merge_comic_metron(comic, metron)
         end
 
