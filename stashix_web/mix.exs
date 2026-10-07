@@ -84,7 +84,7 @@ defmodule Stashix.MixProject do
       {:guardian, "~> 2.0"},
       {:bcrypt_elixir, "~> 3.0"},
       {:sweet_xml, "~> 0.7"},
-      {:req, "~> 0.5"},
+      {:req, "~> 0.7"},
       {:oban, "~> 2.19"},
       {:cloak_ecto, "~> 1.3"},
       {:unzip, "~> 0.12"},
