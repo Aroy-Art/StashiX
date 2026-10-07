@@ -332,7 +332,9 @@ defmodule Stashix.Metadata.Parser do
       |> maybe_put(:reprints, if(reprints != [], do: reprints))
       |> maybe_put(:stories, if(stories != [], do: stories))
       # MetronInfo has no Title element; the first story name is the issue title.
-      |> maybe_put(:title, if(stories != [], do: hd(stories).name))
+      # Skip story names that are format descriptors ("TPB", "HC", etc.) written
+      # by taggers to indicate collection type rather than an actual title.
+      |> maybe_put(:title, metroninfo_title(stories, xpath(doc, ~x"//MetronInfo/Series/Name/text()"os)))
       |> maybe_put(:urls, if(urls != [], do: urls))
       |> maybe_put(:prices, if(prices != [], do: prices))
       |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
@@ -706,6 +708,17 @@ defmodule Stashix.Metadata.Parser do
   # A 4-digit year-shaped value is not a real volume number.
   defp filter_year_as_volume(v) when is_integer(v) and v >= 1800 and v <= 2099, do: nil
   defp filter_year_as_volume(v), do: v
+
+  # Format-type labels written by taggers into <Stories> instead of a real title.
+  @format_descriptors ~w(tpb hc ogn gn annual special deluxe omnibus compendium digest hardcover paperback)
+
+  # Use the first story name as title unless it's just a format descriptor. Fall
+  # back to the series name for standalones where the series IS the book title.
+  defp metroninfo_title([], series_name), do: series_name
+
+  defp metroninfo_title([%{name: name} | _], series_name) do
+    if String.downcase(name) in @format_descriptors, do: series_name, else: name
+  end
 
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
