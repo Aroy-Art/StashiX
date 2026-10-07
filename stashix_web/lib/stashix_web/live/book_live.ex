@@ -106,13 +106,27 @@ defmodule StashixWeb.BookLive do
 
     case Library.update_book(book, params) do
       {:ok, updated_book} ->
-        if Stashix.Settings.metadata()["write_to_files"], do: Metadata.enqueue_write(updated_book.id)
         book = Library.get_book_with_series(socket.assigns.access, updated_book.id)
 
-        {:noreply,
-         socket
-         |> assign(book: book, page_title: book.title)
-         |> close_dialog(~p"/book/#{book.id}")}
+        socket =
+          socket
+          |> assign(book: book, page_title: book.title)
+          |> close_dialog(~p"/book/#{book.id}")
+
+        socket =
+          case Metadata.write_book_files(updated_book) do
+            :ok ->
+              socket
+
+            {:error, reason} ->
+              put_flash(
+                socket,
+                :error,
+                "Metadata saved to database but could not be written to file: #{inspect(reason)}"
+              )
+          end
+
+        {:noreply, socket}
 
       {:error, changeset} ->
         {:noreply, assign(socket, edit_form: to_form(changeset))}

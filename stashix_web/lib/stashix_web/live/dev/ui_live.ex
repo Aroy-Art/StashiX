@@ -80,7 +80,6 @@ defmodule StashixWeb.Dev.UiLive do
       <.page_hero title="Style guide" eyebrow="Dev only" count="UI">
         <:meta>
           <span>Every shared component, every variant</span>
-          <span class="text-violet-300">docs/ui-redesign-plan.md</span>
         </:meta>
       </.page_hero>
 

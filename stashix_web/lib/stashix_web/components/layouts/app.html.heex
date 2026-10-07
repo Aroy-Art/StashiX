@@ -40,6 +40,7 @@
                 {"Libraries", "/admin/libraries", "lucide-folder"},
                 {"Cleanup", "/admin/cleanup", "lucide-trash"},
                 {"Publishers", "/admin/publishers", "lucide-building"},
+                {"Health", "/admin/health", "lucide-heart-pulse"},
                 {"Metadata", "/admin/metadata", "lucide-database-zap"}
               ]
             }
@@ -118,15 +119,19 @@
     <%!-- Top header with search --%>
     <%= if Map.get(assigns, :current_user) do %>
       <% scan_progress = Map.get(assigns, :sidebar_scan_progress) || %{}
+      health_progress = Map.get(assigns, :sidebar_health_progress) || %{}
+
+      scan_tasks = Enum.map(scan_progress, fn {id, t} -> {id, Map.put(t, :source, :scan)} end)
+
+      health_tasks =
+        health_progress
+        |> Enum.map(fn {id, t} -> {"health:#{id}", Map.put(t, :library_id, id)} end)
 
       active_tasks =
-        scan_progress
+        (scan_tasks ++ health_tasks)
         |> Enum.filter(fn {_id, t} -> not t.done end)
-        |> Enum.map(fn {id, t} -> {id, t} end)
 
-      all_tasks =
-        scan_progress
-        |> Enum.map(fn {id, t} -> {id, t} end)
+      all_tasks = scan_tasks ++ health_tasks
 
       lib_names =
         (Map.get(assigns, :sidebar_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end) %>
@@ -248,35 +253,59 @@
             <.menu_label>Background tasks</.menu_label>
             <p :if={all_tasks == []} class="px-2 pt-1 pb-2 text-sm text-gray-400">Nothing running</p>
             <div
-              :for={{lib_id, task} <- all_tasks}
-              id={"task-#{lib_id}"}
+              :for={{task_id, task} <- all_tasks}
+              id={"task-#{task_id}"}
               class="px-2 py-2 border-t border-white/10 first-of-type:border-t-0"
             >
-              <% pct = if task.total > 0, do: task.scanned / task.total %>
-              <div class="flex items-baseline justify-between gap-3">
+              <% is_health = Map.has_key?(task, :type)
+              lib_id = if is_health, do: task.library_id, else: task_id
+              done = task.done
+
+              {progress, total} =
+                if is_health,
+                  do: {task.checked, task.total},
+                  else: {Map.get(task, :scanned, 0), task.total}
+
+              pct = if total > 0, do: progress / total %>
+              <div class="flex items-center justify-between gap-3">
                 <span class="min-w-0 truncate font-display font-bold uppercase tracking-wide text-sm text-white">
                   {Map.get(lib_names, lib_id, "Library")}
                 </span>
-                <span class="flex-shrink-0 font-display font-black text-lg leading-none tabular-nums text-ink">
-                  {cond do
-                    task.done -> "Done"
-                    pct -> "#{round(pct * 100)}%"
-                    true -> "…"
-                  end}
-                </span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                  <span class="font-display font-black text-lg leading-none tabular-nums text-ink">
+                    {cond do
+                      done -> "Done"
+                      pct -> "#{round(pct * 100)}%"
+                      true -> "…"
+                    end}
+                  </span>
+                  <button
+                    :if={!done}
+                    phx-click={if is_health, do: "cancel_health_scan", else: "cancel_scan"}
+                    phx-value-id={lib_id}
+                    title="Cancel"
+                    class="p-0.5 rounded text-gray-500 hover:text-red-400 hover:bg-white/10 transition-colors"
+                  >
+                    <.icon name="lucide-x" class="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
               <p class="mt-0.5 mb-2 text-[11px] text-gray-400">
                 {cond do
-                  task.done -> "Complete"
+                  done and is_health -> "Health check complete"
+                  done and Map.get(task, :phase) == :cancelled -> "Cancelled"
+                  done -> "Complete"
+                  is_health and task.type == :integrity -> "Checking archive integrity"
+                  is_health and task.type == :unsupported -> "Scanning for unsupported files"
                   Map.get(task, :phase) == :thumbnails -> "Generating covers"
                   Map.get(task, :phase) == :file -> "Indexing new file"
                   true -> "Scanning files"
                 end}
-                <span :if={!task.done} class="tabular-nums"> · {task.scanned} / {task.total} files</span>
+                <span :if={!done and total > 0} class="tabular-nums"> · {progress} / {total} files</span>
               </p>
               <.run_bar
-                value={if task.done, do: 1.0, else: pct}
-                label={"#{Map.get(lib_names, lib_id, "Library")} scan progress"}
+                value={if done, do: 1.0, else: pct}
+                label={"#{Map.get(lib_names, lib_id, "Library")} progress"}
               />
             </div>
           </.ink_menu>

@@ -143,6 +143,7 @@ defmodule StashixWeb.Router do
     live "/admin/libraries", AdminLive, :libraries
     live "/admin/cleanup", AdminLive, :cleanup
     live "/admin/publishers", AdminLive, :publishers
+    live "/admin/health", AdminHealthLive, :health
     live "/admin/metadata", AdminMetadataLive, :metadata_sources
     live "/admin/metadata/settings", AdminMetadataLive, :metadata_settings
     live "/admin/metadata/review", AdminMetadataLive, :metadata_review

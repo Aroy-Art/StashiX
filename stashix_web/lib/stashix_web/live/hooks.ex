@@ -3,7 +3,7 @@ defmodule StashixWeb.Live.Hooks do
   import Phoenix.Component
 
   alias Stashix.Auth.TokenHelper
-  alias Stashix.Library
+  alias Stashix.{Health, Library}
   alias Stashix.Library.Access
 
   def on_mount(:require_auth, _params, session, socket) do
@@ -11,13 +11,14 @@ defmodule StashixWeb.Live.Hooks do
       {:ok, user} ->
         libraries = Library.list_libraries(user)
 
-        initial_progress =
+        {initial_progress, initial_health} =
           if connected?(socket) do
             Stashix.Accounts.touch_session(session["session_id"])
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
-            load_active_scan_progress(libraries)
+            Enum.each(libraries, &Health.subscribe(&1.id))
+            {load_active_scan_progress(libraries), load_active_health_progress(libraries)}
           else
-            %{}
+            {%{}, %{}}
           end
 
         socket =
@@ -27,6 +28,7 @@ defmodule StashixWeb.Live.Hooks do
             access: Access.for_user(user),
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
+            sidebar_health_progress: initial_health,
             navbar_search_query: "",
             navbar_search_results: []
           )
@@ -55,13 +57,14 @@ defmodule StashixWeb.Live.Hooks do
       {:ok, user} when user.role == :admin ->
         libraries = Library.list_libraries(user)
 
-        initial_progress =
+        {initial_progress, initial_health} =
           if connected?(socket) do
             Stashix.Accounts.touch_session(session["session_id"])
             Enum.each(libraries, &Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{&1.id}"))
-            load_active_scan_progress(libraries)
+            Enum.each(libraries, &Health.subscribe(&1.id))
+            {load_active_scan_progress(libraries), load_active_health_progress(libraries)}
           else
-            %{}
+            {%{}, %{}}
           end
 
         socket =
@@ -71,6 +74,7 @@ defmodule StashixWeb.Live.Hooks do
             access: Access.for_user(user),
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
+            sidebar_health_progress: initial_health,
             navbar_search_query: "",
             navbar_search_results: []
           )
@@ -195,6 +199,16 @@ defmodule StashixWeb.Live.Hooks do
     {:halt, put_flash(socket, :info, "Force scan started")}
   end
 
+  defp handle_sidebar_scan("cancel_scan", %{"id" => id}, socket) do
+    Stashix.Scanner.cancel_scan(id)
+    {:halt, socket}
+  end
+
+  defp handle_sidebar_scan("cancel_health_scan", %{"id" => id}, socket) do
+    Health.cancel_integrity_scan(id)
+    {:halt, socket}
+  end
+
   defp handle_sidebar_scan(_event, _params, socket), do: {:cont, socket}
 
   defp handle_sidebar_progress(
@@ -210,6 +224,11 @@ defmodule StashixWeb.Live.Hooks do
 
     if done, do: Process.send_after(self(), {:clear_sidebar_scan_progress, id}, 3_000)
     {:cont, socket}
+  end
+
+  defp handle_sidebar_progress({:integrity_cancelled, %{library_id: id}}, socket) do
+    socket = update(socket, :sidebar_health_progress, &Map.delete(&1, id))
+    health_pass(socket)
   end
 
   defp handle_sidebar_progress(
@@ -231,7 +250,101 @@ defmodule StashixWeb.Live.Hooks do
     {:halt, update(socket, :sidebar_scan_progress, &Map.delete(&1, id))}
   end
 
+  defp handle_sidebar_progress({:integrity_started, %{library_id: id, total: total}}, socket) do
+    socket =
+      update(
+        socket,
+        :sidebar_health_progress,
+        &Map.put(&1, id, %{type: :integrity, checked: 0, total: total, done: false})
+      )
+
+    health_pass(socket)
+  end
+
+  defp handle_sidebar_progress({:integrity_file_done, %{library_id: id}}, socket) do
+    socket =
+      update(socket, :sidebar_health_progress, fn progress ->
+        case Map.get(progress, id) do
+          nil ->
+            progress
+
+          task ->
+            checked = task.checked + 1
+            done = checked >= task.total
+
+            if done do
+              Process.send_after(self(), {:clear_sidebar_health_progress, id}, 3_000)
+            end
+
+            Map.put(progress, id, %{task | checked: checked, done: done})
+        end
+      end)
+
+    health_pass(socket)
+  end
+
+  defp handle_sidebar_progress({:unsupported_scan_started, %{library_id: id}}, socket) do
+    socket =
+      update(
+        socket,
+        :sidebar_health_progress,
+        &Map.put(&1, id, %{type: :unsupported, checked: 0, total: 0, done: false})
+      )
+
+    health_pass(socket)
+  end
+
+  defp handle_sidebar_progress({:unsupported_scan_done, %{library_id: id}}, socket) do
+    socket =
+      update(socket, :sidebar_health_progress, fn progress ->
+        case Map.get(progress, id) do
+          nil ->
+            progress
+
+          task ->
+            Process.send_after(self(), {:clear_sidebar_health_progress, id}, 3_000)
+            Map.put(progress, id, %{task | done: true})
+        end
+      end)
+
+    health_pass(socket)
+  end
+
+  defp handle_sidebar_progress({:clear_sidebar_health_progress, id}, socket) do
+    {:halt, update(socket, :sidebar_health_progress, &Map.delete(&1, id))}
+  end
+
   defp handle_sidebar_progress(_msg, socket), do: {:cont, socket}
+
+  defp health_pass(socket) do
+    if socket.view == StashixWeb.AdminHealthLive, do: {:cont, socket}, else: {:halt, socket}
+  end
+
+  defp load_active_health_progress(libraries) do
+    import Ecto.Query
+
+    running_lib_ids =
+      from(j in Oban.Job,
+        where:
+          j.worker in [
+            "Stashix.Health.Workers.IntegrityLibraryWorker",
+            "Stashix.Health.Workers.IntegrityFileWorker"
+          ] and j.state in ["available", "scheduled", "executing", "retryable"],
+        select: fragment("?->>'library_id'", j.args),
+        distinct: true
+      )
+      |> Stashix.Repo.all()
+      |> MapSet.new()
+
+    libraries
+    |> Enum.filter(&MapSet.member?(running_lib_ids, &1.id))
+    |> Map.new(fn lib ->
+      %{total: total, checked: checked} = Health.integrity_progress(lib.id)
+      {lib.id, %{type: :integrity, checked: checked, total: total, done: false}}
+    end)
+  rescue
+    _ -> %{}
+  end
 
   defp load_active_scan_progress(libraries) do
     library_ids = MapSet.new(libraries, & &1.id)

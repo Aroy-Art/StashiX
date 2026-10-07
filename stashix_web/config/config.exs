@@ -21,7 +21,7 @@ config :stashix,
 config :stashix, Oban,
   engine: Oban.Engines.Basic,
   repo: Stashix.Repo,
-  queues: [metadata: 4, metadata_write: 2],
+  queues: [metadata: 4, metadata_write: 2, health: 4],
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},

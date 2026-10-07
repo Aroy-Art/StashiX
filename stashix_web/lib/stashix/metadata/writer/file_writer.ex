@@ -35,8 +35,18 @@ defmodule Stashix.Metadata.Writer.FileWriter do
 
     result =
       case String.downcase(Path.extname(file.path)) do
-        ".cbz" -> write_cbz(file.path, metron, comic)
-        _ -> write_sidecar(file.path, metron)
+        ".cbz" ->
+          case write_cbz(file.path, metron, comic) do
+            {:error, reason} when reason in [:bad_eocd, :not_a_zip_file, :eocd_not_found] ->
+              Logger.warning("CBZ at #{file.path} has bad ZIP structure (#{inspect(reason)}), falling back to sidecar")
+              write_sidecar(file.path, metron)
+
+            other ->
+              other
+          end
+
+        _ ->
+          write_sidecar(file.path, metron)
       end
 
     case result do

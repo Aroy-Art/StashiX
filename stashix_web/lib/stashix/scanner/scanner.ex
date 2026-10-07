@@ -32,6 +32,10 @@ defmodule Stashix.Scanner do
     GenServer.cast(__MODULE__, {:scan_book, book_id})
   end
 
+  def cancel_scan(library_id) do
+    GenServer.cast(__MODULE__, {:cancel_scan, library_id})
+  end
+
   def backfill_blurhashes do
     GenServer.cast(__MODULE__, :backfill_blurhashes)
   end
@@ -59,10 +63,26 @@ defmodule Stashix.Scanner do
 
   @impl true
   def handle_cast({:scan, library_id, force}, state) do
-    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
-      do_scan(library_id, force)
-    end)
+    {:ok, pid} =
+      Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
+        do_scan(library_id, force)
+      end)
 
+    :ets.insert(@ets_table, {library_id, %{pid: pid, done: false, phase: :starting}})
+    {:noreply, state}
+  end
+
+  def handle_cast({:cancel_scan, library_id}, state) do
+    case :ets.lookup(@ets_table, library_id) do
+      [{^library_id, %{pid: pid, done: false}}] when is_pid(pid) ->
+        if Process.alive?(pid), do: Process.exit(pid, :kill)
+
+      _ ->
+        :ok
+    end
+
+    :ets.delete(@ets_table, library_id)
+    broadcast_progress(library_id, 0, 0, true, :cancelled)
     {:noreply, state}
   end
 
@@ -949,7 +969,14 @@ defmodule Stashix.Scanner do
   end
 
   defp update_task_status(library_id, status) do
-    :ets.insert(@ets_table, {library_id, status})
+    pid =
+      case :ets.lookup(@ets_table, library_id) do
+        [{^library_id, %{pid: p}}] -> p
+        _ -> nil
+      end
+
+    entry = if pid, do: Map.put(status, :pid, pid), else: status
+    :ets.insert(@ets_table, {library_id, entry})
   end
 
   defp broadcast_progress(library_id, scanned, total, done \\ false, phase \\ :scan, error \\ nil) do
