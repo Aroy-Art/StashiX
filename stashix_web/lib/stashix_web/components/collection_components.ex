@@ -61,17 +61,17 @@ defmodule StashixWeb.CollectionComponents do
       </.panel>
 
       <.shelf :if={@recent_series != []} id="collection-series" title="Series" count={@series_count}>
-        <:actions><.view_all :if={@series_count > 20} to={"#{@base_path}/series"} /></:actions>
+        <:actions><.view_all to={"#{@base_path}/series"} /></:actions>
         <.series_card :for={s <- @recent_series} series={s} class="flex-shrink-0 w-36" />
       </.shelf>
 
       <.shelf :if={@recent_books != []} id="collection-books" title="Books" count={@books_count}>
-        <:actions><.view_all :if={@books_count > 20} to={"#{@base_path}/books"} /></:actions>
+        <:actions><.view_all to={"#{@base_path}/books"} /></:actions>
         <.book_card :for={b <- @recent_books} book={b} class="flex-shrink-0 w-36" />
       </.shelf>
 
       <.shelf :if={@recent_issues != []} id="collection-issues" title="Issues" count={@issues_count}>
-        <:actions><.view_all :if={@issues_count > 20} to={"#{@base_path}/issues"} /></:actions>
+        <:actions><.view_all to={"#{@base_path}/issues"} /></:actions>
         <.book_card :for={b <- @recent_issues} book={b} as={:issue} class="flex-shrink-0 w-36" />
       </.shelf>
 
@@ -184,7 +184,7 @@ defmodule StashixWeb.CollectionComponents do
 
   attr :to, :string, required: true
 
-  defp view_all(assigns) do
+  def view_all(assigns) do
     ~H"""
     <.text_link navigate={@to}>
       View all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />

@@ -1,7 +1,7 @@
 defmodule StashixWeb.HomeLive do
   use StashixWeb, :live_view
 
-  import StashixWeb.CollectionComponents, only: [collection_card: 1]
+  import StashixWeb.CollectionComponents, only: [collection_card: 1, view_all: 1]
 
   alias Stashix.Library
 
@@ -462,14 +462,17 @@ defmodule StashixWeb.HomeLive do
       </div>
 
       <.shelf :if={@recent_series != []} id="home-recent-series" title="Recent series">
+        <:actions><.view_all to={~p"/series"} /></:actions>
         <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />
       </.shelf>
 
       <.shelf :if={@recent_books != []} id="home-recent-books" title="Recent books">
+        <:actions><.view_all to={~p"/books"} /></:actions>
         <.book_card :for={book <- @recent_books} book={book} scope="recent-books" class="flex-shrink-0 w-36" />
       </.shelf>
 
       <.shelf :if={@recent_issues != []} id="home-recent-issues" title="Recent issues">
+        <:actions><.view_all to={~p"/issues"} /></:actions>
         <.book_card :for={book <- @recent_issues} book={book} as={:issue} scope="recent-issues" class="flex-shrink-0 w-36" />
       </.shelf>
     </.page>
