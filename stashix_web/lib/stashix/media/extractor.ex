@@ -2,7 +2,7 @@ defmodule Stashix.Media.Extractor do
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
   # Known credit/ad pages that don't follow the z-prefix convention (lowercase, no extension).
-  @credit_page_names ["the saint", "coverbrazoff"]
+  @credit_page_names ["the saint", "coverbrazoff", "zsou-nerd"]
 
   # Exclude scanner/group credit pages — e.g. "zSoU-Nerd.jpg".
   # These are sorted last by prefixing 'z' and contain no page numbers.
