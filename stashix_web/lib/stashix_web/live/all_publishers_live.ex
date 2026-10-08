@@ -82,19 +82,17 @@ defmodule StashixWeb.AllPublishersLive do
 
       <.pagination id="page-top" page={@page} total_pages={@total_pages} />
 
-      <div :if={@publishers != []} class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 scroll-mt-4">
+      <div :if={@publishers != []} class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 scroll-mt-4">
         <% empty = %{series_count: 0, books_count: 0, issues_count: 0} %>
-        <.collection_card
+        <.publisher_card
           :for={pub <- @publishers}
           navigate={~p"/publisher/#{pub.id}"}
           name={pub.name}
-          icon="lucide-building"
           covers={for {book_id, _blurhash} <- Map.get(@covers_map, pub.id, []), do: ~p"/api/books/#{book_id}/cover?s=sx"}
           stats={
             stats = Map.get(@stats_map, pub.id, empty)
             [{"series", stats.series_count}, {"books", stats.books_count}, {"issues", stats.issues_count}]
           }
-          note="No content"
         />
       </div>
 

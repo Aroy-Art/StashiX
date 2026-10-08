@@ -182,6 +182,55 @@ defmodule StashixWeb.CollectionComponents do
     """
   end
 
+  @doc """
+  Publisher-specific card: narrow cover-spine strip on the left, name + stats on the right.
+  """
+  attr :navigate, :string, required: true
+  attr :name, :string, required: true
+  attr :covers, :list, default: []
+  attr :stats, :list, default: []
+
+  def publisher_card(assigns) do
+    assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
+
+    ~H"""
+    <div class="group relative overflow-hidden rounded-lg bg-gray-900 ring-1 ring-white/10 hover:ring-ink/40 transition-all duration-200">
+      <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
+      <.link navigate={@navigate} class="relative flex h-36 focus-visible:outline-2 focus-visible:outline-ink">
+        <div class="relative w-24 flex-shrink-0 overflow-hidden bg-gray-950">
+          <div :if={@covers == []} class="flex h-full items-center justify-center">
+            <.icon name="lucide-building" class="w-6 h-6 text-gray-700" />
+          </div>
+          <div :if={@covers != []} class="flex flex-col h-full">
+            <img
+              :for={url <- @covers}
+              src={url}
+              alt=""
+              loading="lazy"
+              class="flex-1 min-h-0 w-full object-cover object-left"
+              onerror="this.style.display='none'"
+            />
+          </div>
+          <div class="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-gray-900/80 pointer-events-none">
+          </div>
+        </div>
+        <div class="flex-1 min-w-0 flex flex-col justify-center px-4 py-5 border-l border-white/5">
+          <p class="font-display font-black uppercase leading-tight tracking-wide text-white group-hover:text-ink transition-colors line-clamp-2 text-lg">
+            {@name}
+          </p>
+          <dl :if={@stats != []} class="flex flex-col gap-0.5 mt-2.5">
+            <div :for={{label, count} <- @stats} class="flex items-baseline gap-2">
+              <span class="text-sm font-bold text-white tabular-nums">{count}</span>
+              <span class="text-[10px] uppercase tracking-widest text-ink/80 font-semibold">{label}</span>
+            </div>
+          </dl>
+          <p :if={@stats == []} class="mt-1 text-xs text-gray-500">No content</p>
+        </div>
+      </.link>
+    </div>
+    """
+  end
+
   attr :to, :string, required: true
 
   def view_all(assigns) do
