@@ -8,6 +8,8 @@ defmodule StashixWeb.SettingsLive do
   """
   use StashixWeb, :live_view
 
+  import StashixWeb.DetailComponents
+
   alias Stashix.Accounts
   alias Stashix.Accounts.{Session, User}
   alias Stashix.Library
@@ -157,7 +159,11 @@ defmodule StashixWeb.SettingsLive do
   attr :preview_covers, :map, default: %{}
 
   defp ui_tab(assigns) do
-    assigns = assign(assigns, read_mark: User.ui_setting(assigns.current_user, "read_mark"))
+    assigns =
+      assign(assigns,
+        read_mark: User.ui_setting(assigns.current_user, "read_mark"),
+        extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info")
+      )
 
     ~H"""
     <.section title="Read mark">
@@ -190,6 +196,33 @@ defmodule StashixWeb.SettingsLive do
           <p class="mt-1 text-xs text-gray-400">{blurb}</p>
           <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">On</.sticker>
         </label>
+      </form>
+    </.section>
+
+    <.section title="Book info">
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-gray-400">
+        Show file size and format on book and series pages. Off by default.
+      </p>
+      <form id="ui-settings-extended" phx-change="set_ui" class="flex flex-col gap-5 max-w-xl">
+        <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+          <input type="hidden" name="extended_book_info" value="off" />
+          <input
+            type="checkbox"
+            name="extended_book_info"
+            value="on"
+            checked={@extended_book_info == "on"}
+            class="sr-only peer"
+          />
+          <span class="relative w-10 h-6 rounded-full bg-gray-700 ring-1 ring-white/10 peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+          <span class="text-sm text-gray-200">Show extended book info</span>
+        </label>
+        <.indicia>
+          <:item label="Publisher">Image Comics</:item>
+          <:item label="Format" show={@extended_book_info == "on"}>CBZ</:item>
+          <:item label="Size" show={@extended_book_info == "on"}>47.3 MB</:item>
+          <:item label="Language">English</:item>
+          <:item label="Age Rating">Mature</:item>
+        </.indicia>
       </form>
     </.section>
     """

@@ -2,6 +2,7 @@ defmodule StashixWeb.SeriesLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Formatters, Library, Metadata, Scanner}
+  alias Stashix.Accounts.User
   alias Stashix.Library.Series
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
@@ -573,7 +574,13 @@ defmodule StashixWeb.SeriesLive do
           |> Integer.to_string()
           |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")}
         </:item>
-        <:item label="Size" show={Formatters.format_file_size(@total_size) != nil}>
+        <:item
+          label="Size"
+          show={
+            User.ui_setting(@current_user, "extended_book_info") == "on" &&
+              Formatters.format_file_size(@total_size) != nil
+          }
+        >
           {Formatters.format_file_size(@total_size)}
         </:item>
         <:item label="Age Rating" show={series_age_rating != nil}>

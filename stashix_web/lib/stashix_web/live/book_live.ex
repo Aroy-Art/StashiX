@@ -2,6 +2,7 @@ defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Formatters, Library, Metadata, Repo, Scanner}
+  alias Stashix.Accounts.User
   alias Stashix.Library.Book
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
@@ -524,10 +525,16 @@ defmodule StashixWeb.BookLive do
             <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
           <% end %>
         </:item>
-        <:item label="Format">
+        <:item label="Format" show={User.ui_setting(@current_user, "extended_book_info") == "on"}>
           {if @selected_file, do: String.upcase(to_string(@selected_file.format)), else: "—"}
         </:item>
-        <:item label="Size" show={@selected_file != nil && @selected_file.file_size > 0}>
+        <:item
+          label="Size"
+          show={
+            User.ui_setting(@current_user, "extended_book_info") == "on" &&
+              @selected_file != nil && @selected_file.file_size > 0
+          }
+        >
           {Formatters.format_file_size(@selected_file.file_size)}
         </:item>
         <:item label="Language" show={@book.language != nil}>
