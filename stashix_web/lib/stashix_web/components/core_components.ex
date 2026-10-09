@@ -493,7 +493,7 @@ defmodule StashixWeb.CoreComponents do
     <.ink_menu id={@id} class={@class}>
       <:trigger
         label="Library actions"
-        class="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+        class="p-1 text-white/30 hover:text-ink transition-colors"
       >
         <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
       </:trigger>

@@ -148,7 +148,10 @@ defmodule StashixWeb.CollectionComponents do
       @class
     ]}>
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-      <.link navigate={@navigate} class="relative block focus-visible:outline-2 focus-visible:outline-ink">
+      <.link navigate={@navigate} class="absolute inset-0 focus-visible:outline-2 focus-visible:outline-ink z-0">
+        <span class="sr-only">{@name}</span>
+      </.link>
+      <div class="relative pointer-events-none">
         <div class="relative flex h-24 bg-gray-950 overflow-hidden border-b border-white/10">
           <div :if={@covers == []} class="flex-1 flex items-center justify-center">
             <.icon name={@icon} class="w-8 h-8 text-gray-600" />
@@ -165,18 +168,23 @@ defmodule StashixWeb.CollectionComponents do
           </div>
         </div>
         <div class="px-4 pt-3 pb-4">
-          <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-white truncate group-hover:text-ink transition-colors">
-            {@name}
-          </p>
+          <div class="flex items-start justify-between gap-2">
+            <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-white truncate group-hover:text-ink transition-colors">
+              {@name}
+            </p>
+            <div
+              :if={@menu != []}
+              class="pointer-events-auto flex-shrink-0 -mt-0.5 -mr-1.5 rounded-full bg-white/5 ring-1 ring-white/10 [box-shadow:0_0_8px_5px_rgb(3_7_18/0.9)]"
+            >
+              {render_slot(@menu)}
+            </div>
+          </div>
           <dl :if={@stats != []} class="flex flex-wrap gap-x-6 gap-y-2 mt-3">
             <.stat :for={{label, count} <- @stats} label={label}>{count}</.stat>
           </dl>
           <p :if={@stats == [] and @note} class="mt-2 text-xs text-gray-400">{@note}</p>
-          <div :if={@inner_block != []} class="mt-2.5">{render_slot(@inner_block)}</div>
+          <div :if={@inner_block != []} class="pointer-events-auto mt-2.5">{render_slot(@inner_block)}</div>
         </div>
-      </.link>
-      <div :if={@menu != []} class="absolute top-1.5 right-1.5 rounded bg-gray-950/70 backdrop-blur-sm">
-        {render_slot(@menu)}
       </div>
     </div>
     """
