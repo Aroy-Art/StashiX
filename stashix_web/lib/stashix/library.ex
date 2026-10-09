@@ -1505,6 +1505,79 @@ defmodule Stashix.Library do
     :ok
   end
 
+  @doc "Unique publishers across all non-deleted books in a series, ordered by name."
+  def series_book_publishers(series_id) do
+    from(p in Publisher,
+      join: bp in "book_publishers",
+      on: bp.publisher_id == p.id,
+      join: b in Book,
+      on: b.id == bp.book_id,
+      where: b.series_id == ^series_id and is_nil(b.deleted_at),
+      order_by: p.name,
+      distinct: true
+    )
+    |> Repo.all()
+  end
+
+  @doc """
+  Pushes the series' publishers to all non-deleted books.
+
+  Modes:
+    * `:replace` - remove each book's current publishers and replace with the series publishers
+    * `:merge`   - add series publishers to each book, keeping existing ones
+    * `:fill`    - only update books that have no publisher set
+
+  Returns `{:ok, count}` where `count` is the number of books affected.
+  """
+  def push_publishers_to_books(series_id, mode) when mode in [:replace, :merge, :fill] do
+    series = Repo.get!(Series, series_id) |> Repo.preload(:publishers)
+    publisher_bins = Enum.map(series.publishers, &Ecto.UUID.dump!(&1.id))
+
+    if publisher_bins == [] do
+      {:ok, 0}
+    else
+      Repo.transaction(fn ->
+        book_bins =
+          from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
+          |> Repo.all()
+          |> Enum.map(&Ecto.UUID.dump!/1)
+
+        do_push_publishers(book_bins, publisher_bins, mode)
+      end)
+    end
+  end
+
+  defp do_push_publishers([], _pub_bins, _mode), do: 0
+
+  defp do_push_publishers(book_bins, pub_bins, :replace) do
+    from(bp in "book_publishers", where: bp.book_id in ^book_bins) |> Repo.delete_all()
+    pairs = for b <- book_bins, p <- pub_bins, do: %{book_id: b, publisher_id: p}
+    Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
+    length(book_bins)
+  end
+
+  defp do_push_publishers(book_bins, pub_bins, :merge) do
+    pairs = for b <- book_bins, p <- pub_bins, do: %{book_id: b, publisher_id: p}
+    Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
+    length(book_bins)
+  end
+
+  defp do_push_publishers(book_bins, pub_bins, :fill) do
+    books_with_publishers =
+      from(bp in "book_publishers", where: bp.book_id in ^book_bins, select: bp.book_id, distinct: true)
+      |> Repo.all()
+      |> MapSet.new()
+
+    empty_bins = Enum.reject(book_bins, &MapSet.member?(books_with_publishers, &1))
+
+    if empty_bins != [] do
+      pairs = for b <- empty_bins, p <- pub_bins, do: %{book_id: b, publisher_id: p}
+      Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
+    end
+
+    length(empty_bins)
+  end
+
   def update_book(book, attrs) do
     {publisher_ids, book_attrs} = Map.pop(attrs, "publisher_ids")
 

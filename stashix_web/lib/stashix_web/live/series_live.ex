@@ -11,7 +11,7 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount({StashixWeb.Live.Hooks, :require_auth})
 
-  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series)
+  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -52,9 +52,12 @@ defmodule StashixWeb.SeriesLive do
        show_admin_menu: false,
        show_edit_dialog: false,
        show_identify_dialog: false,
+       show_push_publishers_dialog: false,
+       push_publishers_mode: :replace,
        edit_form: nil,
        series_details: Library.series_details(socket.assigns.access, series.id),
-       all_publishers: Library.list_all_publishers()
+       all_publishers: Library.list_all_publishers(),
+       book_publishers: Library.series_book_publishers(series.id)
      )}
   end
 
@@ -217,6 +220,50 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, reload_series(socket)}
   end
 
+  def handle_event("open_push_publishers_dialog", _params, socket) do
+    {:noreply, assign(socket, show_push_publishers_dialog: true, push_publishers_mode: :replace)}
+  end
+
+  def handle_event("close_push_publishers_dialog", _params, socket) do
+    {:noreply, assign(socket, show_push_publishers_dialog: false)}
+  end
+
+  def handle_event("set_push_publishers_mode", %{"mode" => mode}, socket) do
+    atom = String.to_existing_atom(mode)
+    {:noreply, assign(socket, push_publishers_mode: atom)}
+  end
+
+  def handle_event("push_publishers_to_issues", _params, socket) do
+    series = socket.assigns.series
+    mode = socket.assigns.push_publishers_mode
+
+    case Library.push_publishers_to_books(series.id, mode) do
+      {:ok, 0} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "No issues were updated.")
+         |> assign(show_push_publishers_dialog: false)}
+
+      {:ok, count} ->
+        label = if count == 1, do: "1 issue", else: "#{count} issues"
+        series = Library.get_series_with_books(socket.assigns.access, series.id)
+        books = sort_books(series.books, socket.assigns.sort)
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Publishers pushed to #{label}.")
+         |> assign(
+           series: series,
+           books: books,
+           book_publishers: Library.series_book_publishers(series.id),
+           show_push_publishers_dialog: false
+         )}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not update publishers.")}
+    end
+  end
+
   def handle_event("rescan_series", _, socket) do
     Scanner.scan_series(socket.assigns.series.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
@@ -303,7 +350,8 @@ defmodule StashixWeb.SeriesLive do
       books: books,
       page_title: series.name,
       summary_info: derive_summary(series, books),
-      series_details: Library.series_details(socket.assigns.access, series.id)
+      series_details: Library.series_details(socket.assigns.access, series.id),
+      book_publishers: Library.series_book_publishers(series.id)
     )
   end
 
@@ -487,8 +535,8 @@ defmodule StashixWeb.SeriesLive do
         />
 
         <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
-          <.eyebrow :if={@series.publishers != []} class="rise mb-3" style="--i:1">
-            <%= for {pub, idx} <- Enum.with_index(@series.publishers) do %>
+          <.eyebrow :if={@book_publishers != []} class="rise mb-3" style="--i:1">
+            <%= for {pub, idx} <- Enum.with_index(@book_publishers) do %>
               <span :if={idx > 0} class="text-white/25"> / </span>
               <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-white transition-colors">{pub.name}</.link>
             <% end %>
@@ -799,6 +847,16 @@ defmodule StashixWeb.SeriesLive do
                   class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
               </div>
+              <.ink_button
+                :if={@series.publishers != []}
+                type="button"
+                variant="ghost"
+                size="md"
+                class="mt-2"
+                phx-click="open_push_publishers_dialog"
+              >
+                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues
+              </.ink_button>
             </div>
           </div>
 
@@ -807,6 +865,57 @@ defmodule StashixWeb.SeriesLive do
             <.ink_button type="submit" size="md">Save changes</.ink_button>
           </.dialog_footer>
         </.form>
+      </.dialog>
+    <% end %>
+
+    <%= if @current_user.role == :admin && @show_push_publishers_dialog do %>
+      <.dialog
+        id="push-publishers-dialog"
+        title="Push publishers to issues"
+        on_close={JS.push("close_push_publishers_dialog")}
+      >
+        <:description>
+          Apply the series publisher(s) to all issues. Choose how to handle issues that already have publishers.
+        </:description>
+
+        <div class="space-y-2 mt-3">
+          <%= for {mode, label, desc} <- [
+            {:replace, "Replace", "Remove each issue's current publishers and set them to match the series."},
+            {:merge, "Add", "Add the series publishers to each issue, keeping any they already have."},
+            {:fill, "Fill empty", "Only update issues that have no publisher set."}
+          ] do %>
+            <label class={[
+              "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
+              if(@push_publishers_mode == mode,
+                do: "border-violet-500 bg-violet-500/10",
+                else: "border-gray-700 hover:border-gray-500"
+              )
+            ]}>
+              <input
+                type="radio"
+                name="push_publishers_mode"
+                value={mode}
+                checked={@push_publishers_mode == mode}
+                phx-click="set_push_publishers_mode"
+                phx-value-mode={mode}
+                class="mt-0.5 accent-violet-500"
+              />
+              <div>
+                <p class="text-sm font-medium text-gray-100">{label}</p>
+                <p class="text-xs text-gray-400 mt-0.5">{desc}</p>
+              </div>
+            </label>
+          <% end %>
+        </div>
+
+        <.dialog_footer>
+          <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_publishers_dialog">
+            Cancel
+          </.ink_button>
+          <.ink_button type="button" size="md" phx-click="push_publishers_to_issues">
+            Push publishers
+          </.ink_button>
+        </.dialog_footer>
       </.dialog>
     <% end %>
     """
