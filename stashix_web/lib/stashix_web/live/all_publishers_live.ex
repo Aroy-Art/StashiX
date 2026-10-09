@@ -86,9 +86,13 @@ defmodule StashixWeb.AllPublishersLive do
         <% empty = %{series_count: 0, books_count: 0, issues_count: 0} %>
         <.publisher_card
           :for={pub <- @publishers}
+          id={"pub-#{pub.id}"}
           navigate={~p"/publisher/#{pub.id}"}
           name={pub.name}
-          covers={for {book_id, _blurhash} <- Map.get(@covers_map, pub.id, []), do: ~p"/api/books/#{book_id}/cover?s=sx"}
+          covers={
+            for {book_id, blurhash} <- Map.get(@covers_map, pub.id, []),
+                do: {~p"/api/books/#{book_id}/cover?s=sx", blurhash}
+          }
           stats={
             stats = Map.get(@stats_map, pub.id, empty)
             [{"series", stats.series_count}, {"books", stats.books_count}, {"issues", stats.issues_count}]

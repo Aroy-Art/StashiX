@@ -1469,7 +1469,7 @@ defmodule Stashix.Library do
       fn {_, book_id, blurhash} -> {Ecto.UUID.cast!(book_id), blurhash} end
     )
     |> Enum.into(%{}, fn {master_id, covers} ->
-      {master_id, covers |> Enum.uniq_by(&elem(&1, 0)) |> Enum.shuffle() |> Enum.take(5)}
+      {master_id, covers |> Enum.uniq_by(&elem(&1, 0)) |> Enum.sort_by(&elem(&1, 0)) |> Enum.take(5)}
     end)
   end
 

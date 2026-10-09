@@ -185,9 +185,10 @@ defmodule StashixWeb.CollectionComponents do
   @doc """
   Publisher-specific card: narrow cover-spine strip on the left, name + stats on the right.
   """
+  attr :id, :string, required: true
   attr :navigate, :string, required: true
   attr :name, :string, required: true
-  attr :covers, :list, default: []
+  attr :covers, :list, default: [], doc: "[{url, blurhash}] pairs"
   attr :stats, :list, default: []
 
   def publisher_card(assigns) do
@@ -202,14 +203,17 @@ defmodule StashixWeb.CollectionComponents do
             <.icon name="lucide-building" class="w-6 h-6 text-gray-700" />
           </div>
           <div :if={@covers != []} class="flex flex-col h-full">
-            <img
-              :for={url <- @covers}
-              src={url}
-              alt=""
-              loading="lazy"
-              class="flex-1 min-h-0 w-full object-cover object-left"
-              onerror="this.style.display='none'"
-            />
+            <div
+              :for={{{url, blurhash}, i} <- Enum.with_index(@covers)}
+              class="relative flex-1 min-h-0 overflow-hidden"
+            >
+              <.blurhash_image
+                id={"#{@id}-c#{i}"}
+                src={url}
+                blurhash={blurhash}
+                class="absolute inset-0 w-full h-full object-cover object-left"
+              />
+            </div>
           </div>
           <div class="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-gray-900/80 pointer-events-none">
           </div>
