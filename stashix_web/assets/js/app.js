@@ -104,6 +104,7 @@ Hooks.PublisherSearch = {
   mounted() {
     this.publishers = JSON.parse(this.el.dataset.publishers || "[]")
     this.selectedIds = new Set(JSON.parse(this.el.dataset.selectedIds || "[]"))
+    this.serverSelectedIds = this.el.dataset.selectedIds
     this.inputName = this.el.dataset.inputName
     this.dropdownEl = null
     this.badgesEl = this.el.querySelector(".pub-badges")
@@ -136,7 +137,15 @@ Hooks.PublisherSearch = {
   },
 
   updated() {
-    // LiveView may patch data attributes — restore input value but keep local state
+    // If the server pushed a new selection (e.g. after a push or save), re-sync.
+    // User edits don't change data-selected-ids on the server so they're safe.
+    if (this.el.dataset.selectedIds !== this.serverSelectedIds) {
+      this.serverSelectedIds = this.el.dataset.selectedIds
+      this.publishers = JSON.parse(this.el.dataset.publishers || "[]")
+      this.selectedIds = new Set(JSON.parse(this.el.dataset.selectedIds || "[]"))
+      this.renderBadges()
+      this.syncHiddenInputs()
+    }
     const val = this.input.value
     if (this.input.value !== val) this.input.value = val
   },
