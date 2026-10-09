@@ -174,7 +174,7 @@ defmodule StashixWeb.CollectionComponents do
             </p>
             <div
               :if={@menu != []}
-              class="pointer-events-auto flex-shrink-0 -mt-0.5 -mr-1.5 rounded-full bg-white/5 ring-1 ring-white/10 [box-shadow:0_0_8px_5px_rgb(3_7_18/0.9)]"
+              class="pointer-events-auto flex-shrink-0 -mt-0.5 -mr-1.5 rounded-full bg-white/5 ring-1 ring-white/10 [box-shadow:0_0_8px_5px_rgb(3_7_18/0.9)] transition-opacity md:opacity-0 md:group-hover:opacity-100"
             >
               {render_slot(@menu)}
             </div>
