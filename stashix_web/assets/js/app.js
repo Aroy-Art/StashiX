@@ -1187,6 +1187,15 @@ if (window.__stashixBooted) {
   // connect if there are any LiveViews on the page
   liveSocket.connect()
 
+  // CSS is render-blocking so by the time this deferred script runs the page is
+  // fully styled. Fade out the initial-load cover; fast loads never saw the
+  // spinner (500 ms animation-delay), slow loads see it disappear cleanly.
+  const stxLoader = document.getElementById("stx-loader")
+  if (stxLoader) {
+    stxLoader.style.opacity = "0"
+    stxLoader.addEventListener("transitionend", () => stxLoader.remove(), { once: true })
+  }
+
   // expose liveSocket on window for web console debug logs and latency simulation:
   // >> liveSocket.enableDebug()
   // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
