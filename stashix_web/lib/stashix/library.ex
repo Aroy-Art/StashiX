@@ -1520,6 +1520,52 @@ defmodule Stashix.Library do
   end
 
   @doc """
+  Preview of what `push_publishers_to_books/2` would do without executing it.
+
+  Returns `%{affected: [%{book: book, from: pubs, to: pubs}], unchanged: integer}`.
+  """
+  def push_publishers_preview(series_id, mode) when mode in [:replace, :merge, :fill] do
+    series = Repo.get!(Series, series_id) |> Repo.preload(:publishers)
+    series_pub_ids = MapSet.new(series.publishers, & &1.id)
+    series_pubs = Enum.sort_by(series.publishers, & &1.name)
+
+    books =
+      from(b in Book,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at),
+        order_by: [asc: b.issue_number],
+        preload: :publishers
+      )
+      |> Repo.all()
+
+    affected =
+      Enum.flat_map(books, fn book ->
+        book_pub_ids = MapSet.new(book.publishers, & &1.id)
+        sorted_from = Enum.sort_by(book.publishers, & &1.name)
+
+        case mode do
+          :replace ->
+            if book_pub_ids == series_pub_ids,
+              do: [],
+              else: [%{book: book, from: sorted_from, to: series_pubs}]
+
+          :merge ->
+            missing = Enum.reject(series_pubs, &MapSet.member?(book_pub_ids, &1.id))
+
+            if missing == [],
+              do: [],
+              else: [%{book: book, from: sorted_from, to: Enum.sort_by(book.publishers ++ missing, & &1.name)}]
+
+          :fill ->
+            if book.publishers == [],
+              do: [%{book: book, from: [], to: series_pubs}],
+              else: []
+        end
+      end)
+
+    %{affected: affected, unchanged: length(books) - length(affected)}
+  end
+
+  @doc """
   Pushes the series' publishers to all non-deleted books.
 
   Modes:

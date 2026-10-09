@@ -11,7 +11,7 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount({StashixWeb.Live.Hooks, :require_auth})
 
-  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues)
+  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -54,6 +54,8 @@ defmodule StashixWeb.SeriesLive do
        show_identify_dialog: false,
        show_push_publishers_dialog: false,
        push_publishers_mode: :replace,
+       push_publishers_preview: nil,
+       show_push_preview: false,
        edit_form: nil,
        series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers(),
@@ -221,7 +223,15 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_event("open_push_publishers_dialog", _params, socket) do
-    {:noreply, assign(socket, show_push_publishers_dialog: true, push_publishers_mode: :replace)}
+    preview = Library.push_publishers_preview(socket.assigns.series.id, :replace)
+
+    {:noreply,
+     assign(socket,
+       show_push_publishers_dialog: true,
+       push_publishers_mode: :replace,
+       push_publishers_preview: preview,
+       show_push_preview: false
+     )}
   end
 
   def handle_event("close_push_publishers_dialog", _params, socket) do
@@ -230,7 +240,12 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_event("set_push_publishers_mode", %{"mode" => mode}, socket) do
     atom = String.to_existing_atom(mode)
-    {:noreply, assign(socket, push_publishers_mode: atom)}
+    preview = Library.push_publishers_preview(socket.assigns.series.id, atom)
+    {:noreply, assign(socket, push_publishers_mode: atom, push_publishers_preview: preview)}
+  end
+
+  def handle_event("toggle_push_preview", _params, socket) do
+    {:noreply, assign(socket, show_push_preview: !socket.assigns.show_push_preview)}
   end
 
   def handle_event("push_publishers_to_issues", _params, socket) do
@@ -907,6 +922,68 @@ defmodule StashixWeb.SeriesLive do
             </label>
           <% end %>
         </div>
+
+        <%= if @push_publishers_preview do %>
+          <% affected_count = length(@push_publishers_preview.affected) %>
+          <% total = affected_count + @push_publishers_preview.unchanged %>
+          <div class="mt-4">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full"
+              phx-click="toggle_push_preview"
+            >
+              <.icon
+                name={if @show_push_preview, do: "lucide-chevron-down", else: "lucide-chevron-right"}
+                class="w-3.5 h-3.5"
+              />
+              <span>Preview</span>
+              <span class={["ml-1 font-medium", if(affected_count > 0, do: "text-violet-400", else: "text-gray-500")]}>
+                <%= if affected_count == 0 do %>
+                  no changes
+                <% else %>
+                  {affected_count} of {total} {if total == 1, do: "issue", else: "issues"} will change
+                <% end %>
+              </span>
+            </button>
+
+            <div :if={@show_push_preview} class="mt-2 rounded-md border border-gray-700 overflow-hidden">
+              <%= if affected_count == 0 do %>
+                <p class="px-3 py-4 text-sm text-gray-400 text-center">All issues already match — no changes needed.</p>
+              <% else %>
+                <%!-- header row --%>
+                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                  <span></span>
+                  <span class="col-span-1">Before</span>
+                  <span></span>
+                  <span>After</span>
+                </div>
+                <div class="max-h-52 overflow-y-auto divide-y divide-gray-800/80">
+                  <%= for entry <- @push_publishers_preview.affected do %>
+                    <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-2 text-xs">
+                      <span class="text-gray-500 tabular-nums">
+                        {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
+                      </span>
+                      <span class="text-gray-500 italic truncate">
+                        {if entry.from == [], do: "none", else: Enum.map_join(entry.from, ", ", & &1.name)}
+                      </span>
+                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-gray-600 shrink-0" />
+                      <span class="text-gray-100 truncate">
+                        {Enum.map_join(entry.to, ", ", & &1.name)}
+                      </span>
+                    </div>
+                  <% end %>
+                </div>
+                <%= if @push_publishers_preview.unchanged > 0 do %>
+                  <p class="px-3 py-1.5 text-xs text-gray-500 border-t border-gray-800">
+                    {@push_publishers_preview.unchanged} {if @push_publishers_preview.unchanged == 1,
+                      do: "issue",
+                      else: "issues"} already up to date
+                  </p>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
 
         <.dialog_footer>
           <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_publishers_dialog">
