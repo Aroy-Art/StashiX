@@ -1520,14 +1520,52 @@ defmodule Stashix.Library do
   end
 
   @doc """
-  Preview of what `push_publishers_to_books/2` would do without executing it.
+  Preview of what `set_series_age_rating/3` would do without executing it.
+
+  Returns `%{affected: [%{book: map, from: atom, to: atom}], unchanged: integer}`.
+  """
+  def push_age_rating_preview(series_id, rating, mode) when mode in [:replace, :fill] do
+    target = String.to_existing_atom(rating)
+
+    books =
+      from(b in Book,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at),
+        order_by: [asc: b.issue_number],
+        select: %{id: b.id, title: b.title, issue_number: b.issue_number, age_rating: b.age_rating}
+      )
+      |> Repo.all()
+
+    affected =
+      Enum.flat_map(books, fn book ->
+        current = book.age_rating || :unknown
+
+        will_change? =
+          case mode do
+            :replace -> current != target
+            :fill -> current in [:unknown, nil] and target != :unknown
+          end
+
+        if will_change?,
+          do: [%{book: book, from: current, to: target}],
+          else: []
+      end)
+
+    %{affected: affected, unchanged: length(books) - length(affected)}
+  end
+
+  @doc """
+  Preview of what `push_publishers_to_books/3` would do without executing it.
+
+  `publisher_ids` is the list of publisher UUIDs to push (may differ from the
+  series' saved publishers when called with unsaved form state).
 
   Returns `%{affected: [%{book: book, from: pubs, to: pubs}], unchanged: integer}`.
   """
-  def push_publishers_preview(series_id, mode) when mode in [:replace, :merge, :fill] do
-    series = Repo.get!(Series, series_id) |> Repo.preload(:publishers)
-    series_pub_ids = MapSet.new(series.publishers, & &1.id)
-    series_pubs = Enum.sort_by(series.publishers, & &1.name)
+  def push_publishers_preview(series_id, publisher_ids, mode) when mode in [:replace, :merge, :fill] do
+    target_pubs =
+      from(p in Publisher, where: p.id in ^publisher_ids, order_by: p.name) |> Repo.all()
+
+    target_pub_ids = MapSet.new(target_pubs, & &1.id)
 
     books =
       from(b in Book,
@@ -1544,12 +1582,12 @@ defmodule Stashix.Library do
 
         case mode do
           :replace ->
-            if book_pub_ids == series_pub_ids,
+            if book_pub_ids == target_pub_ids,
               do: [],
-              else: [%{book: book, from: sorted_from, to: series_pubs}]
+              else: [%{book: book, from: sorted_from, to: target_pubs}]
 
           :merge ->
-            missing = Enum.reject(series_pubs, &MapSet.member?(book_pub_ids, &1.id))
+            missing = Enum.reject(target_pubs, &MapSet.member?(book_pub_ids, &1.id))
 
             if missing == [],
               do: [],
@@ -1557,7 +1595,7 @@ defmodule Stashix.Library do
 
           :fill ->
             if book.publishers == [],
-              do: [%{book: book, from: [], to: series_pubs}],
+              do: [%{book: book, from: [], to: target_pubs}],
               else: []
         end
       end)
@@ -1566,23 +1604,33 @@ defmodule Stashix.Library do
   end
 
   @doc """
-  Pushes the series' publishers to all non-deleted books.
+  Pushes a given list of publishers to all non-deleted books in the series.
+
+  `publisher_ids` is the list of publisher UUIDs to push (may differ from the
+  series' saved publishers when called with unsaved form state).
 
   Modes:
-    * `:replace` - remove each book's current publishers and replace with the series publishers
-    * `:merge`   - add series publishers to each book, keeping existing ones
+    * `:replace` - remove each book's current publishers and replace with the given publishers
+    * `:merge`   - add the given publishers to each book, keeping existing ones
     * `:fill`    - only update books that have no publisher set
 
   Returns `{:ok, count}` where `count` is the number of books affected.
   """
-  def push_publishers_to_books(series_id, mode) when mode in [:replace, :merge, :fill] do
-    series = Repo.get!(Series, series_id) |> Repo.preload(:publishers)
-    publisher_bins = Enum.map(series.publishers, &Ecto.UUID.dump!(&1.id))
+  def push_publishers_to_books(series_id, publisher_ids, mode) when mode in [:replace, :merge, :fill] do
+    publisher_bins = Enum.map(publisher_ids, &Ecto.UUID.dump!/1)
+    series_bin = Ecto.UUID.dump!(series_id)
 
     if publisher_bins == [] do
       {:ok, 0}
     else
       Repo.transaction(fn ->
+        # Sync the series record to match what's being pushed.
+        from(sp in "series_publishers", where: sp.series_id == ^series_bin) |> Repo.delete_all()
+
+        Repo.insert_all("series_publishers", Enum.map(publisher_bins, &%{series_id: series_bin, publisher_id: &1}),
+          on_conflict: :nothing
+        )
+
         book_bins =
           from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
           |> Repo.all()

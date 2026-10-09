@@ -232,6 +232,20 @@ Hooks.PublisherSearch = {
   }
 }
 
+// Reads the current publisher selection from a PublisherSearch picker and pushes
+// the IDs to the server so unsaved changes are included in the push preview/action.
+Hooks.PushPublishers = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      const picker = document.getElementById(this.el.dataset.pickerId)
+      const ids = picker
+        ? [...picker.querySelectorAll("input[type=hidden]")].map(el => el.value).filter(Boolean)
+        : []
+      this.pushEvent("open_push_publishers_dialog", { publisher_ids: ids })
+    })
+  }
+}
+
 Hooks.SearchNav = {
   mounted() {
     this.activeIndex = -1

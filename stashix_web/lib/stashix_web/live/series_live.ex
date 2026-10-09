@@ -11,7 +11,9 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount({StashixWeb.Live.Hooks, :require_auth})
 
-  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview)
+  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview open_push_age_rating_dialog close_push_age_rating_dialog set_push_age_rating_target set_push_age_rating_mode toggle_push_age_rating_preview push_age_rating_to_issues)
+
+  @age_ratings Ecto.Enum.values(Stashix.Library.Book, :age_rating)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -53,13 +55,20 @@ defmodule StashixWeb.SeriesLive do
        show_edit_dialog: false,
        show_identify_dialog: false,
        show_push_publishers_dialog: false,
+       push_publisher_ids: [],
        push_publishers_mode: :replace,
        push_publishers_preview: nil,
        show_push_preview: false,
+       show_push_age_rating_dialog: false,
+       push_age_rating_target: nil,
+       push_age_rating_mode: :replace,
+       push_age_rating_preview: nil,
+       show_push_age_rating_preview: false,
        edit_form: nil,
        series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers(),
-       book_publishers: Library.series_book_publishers(series.id)
+       book_publishers: Library.series_book_publishers(series.id),
+       age_ratings: @age_ratings
      )}
   end
 
@@ -222,12 +231,21 @@ defmodule StashixWeb.SeriesLive do
     {:noreply, reload_series(socket)}
   end
 
-  def handle_event("open_push_publishers_dialog", _params, socket) do
-    preview = Library.push_publishers_preview(socket.assigns.series.id, :replace)
+  def handle_event("open_push_publishers_dialog", params, socket) do
+    series = socket.assigns.series
+    # Use IDs from the form's current state (may be unsaved); fall back to saved publishers.
+    ids =
+      case params["publisher_ids"] do
+        [_ | _] = list -> Enum.reject(list, &(&1 == ""))
+        _ -> Enum.map(series.publishers, & &1.id)
+      end
+
+    preview = Library.push_publishers_preview(series.id, ids, :replace)
 
     {:noreply,
      assign(socket,
        show_push_publishers_dialog: true,
+       push_publisher_ids: ids,
        push_publishers_mode: :replace,
        push_publishers_preview: preview,
        show_push_preview: false
@@ -240,7 +258,7 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_event("set_push_publishers_mode", %{"mode" => mode}, socket) do
     atom = String.to_existing_atom(mode)
-    preview = Library.push_publishers_preview(socket.assigns.series.id, atom)
+    preview = Library.push_publishers_preview(socket.assigns.series.id, socket.assigns.push_publisher_ids, atom)
     {:noreply, assign(socket, push_publishers_mode: atom, push_publishers_preview: preview)}
   end
 
@@ -252,7 +270,7 @@ defmodule StashixWeb.SeriesLive do
     series = socket.assigns.series
     mode = socket.assigns.push_publishers_mode
 
-    case Library.push_publishers_to_books(series.id, mode) do
+    case Library.push_publishers_to_books(series.id, socket.assigns.push_publisher_ids, mode) do
       {:ok, 0} ->
         {:noreply,
          socket
@@ -276,6 +294,67 @@ defmodule StashixWeb.SeriesLive do
 
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Could not update publishers.")}
+    end
+  end
+
+  def handle_event("open_push_age_rating_dialog", _params, socket) do
+    series = socket.assigns.series
+    default = common_age_rating(series.books) || :unknown
+    target = Atom.to_string(default)
+    preview = Library.push_age_rating_preview(series.id, target, :replace)
+
+    {:noreply,
+     assign(socket,
+       show_push_age_rating_dialog: true,
+       push_age_rating_target: target,
+       push_age_rating_mode: :replace,
+       push_age_rating_preview: preview,
+       show_push_age_rating_preview: false
+     )}
+  end
+
+  def handle_event("close_push_age_rating_dialog", _params, socket) do
+    {:noreply, assign(socket, show_push_age_rating_dialog: false)}
+  end
+
+  def handle_event("set_push_age_rating_target", %{"rating" => rating}, socket) do
+    preview = Library.push_age_rating_preview(socket.assigns.series.id, rating, socket.assigns.push_age_rating_mode)
+    {:noreply, assign(socket, push_age_rating_target: rating, push_age_rating_preview: preview)}
+  end
+
+  def handle_event("set_push_age_rating_mode", %{"mode" => mode}, socket) do
+    atom = String.to_existing_atom(mode)
+    preview = Library.push_age_rating_preview(socket.assigns.series.id, socket.assigns.push_age_rating_target, atom)
+    {:noreply, assign(socket, push_age_rating_mode: atom, push_age_rating_preview: preview)}
+  end
+
+  def handle_event("toggle_push_age_rating_preview", _params, socket) do
+    {:noreply, assign(socket, show_push_age_rating_preview: !socket.assigns.show_push_age_rating_preview)}
+  end
+
+  def handle_event("push_age_rating_to_issues", _params, socket) do
+    series = socket.assigns.series
+    target = socket.assigns.push_age_rating_target
+    only_unknown = socket.assigns.push_age_rating_mode == :fill
+
+    case Library.set_series_age_rating(series.id, target, only_unknown: only_unknown) do
+      {:ok, []} ->
+        {:noreply,
+         socket
+         |> put_flash(:info, "No issues were updated.")
+         |> assign(show_push_age_rating_dialog: false)}
+
+      {:ok, ids} ->
+        label = if length(ids) == 1, do: "1 issue", else: "#{length(ids)} issues"
+
+        {:noreply,
+         socket
+         |> put_flash(:info, "Age rating pushed to #{label}.")
+         |> reload_series()
+         |> assign(show_push_age_rating_dialog: false)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not update age rating.")}
     end
   end
 
@@ -505,6 +584,21 @@ defmodule StashixWeb.SeriesLive do
               phx-click="toggle_metadata_lock"
             >
               {if @series.metadata_locked, do: "Unlock metadata", else: "Lock metadata"}
+            </.menu_item>
+            <.menu_separator />
+            <.menu_item
+              :if={@series.publishers != []}
+              icon="lucide-arrow-down-to-line"
+              phx-click="open_push_publishers_dialog"
+            >
+              Push publishers to issues…
+            </.menu_item>
+            <.menu_item
+              :if={@series.books != []}
+              icon="lucide-shield"
+              phx-click="open_push_age_rating_dialog"
+            >
+              Push age rating to issues…
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -863,14 +957,15 @@ defmodule StashixWeb.SeriesLive do
                 />
               </div>
               <.ink_button
-                :if={@series.publishers != []}
                 type="button"
                 variant="ghost"
                 size="md"
                 class="mt-2"
-                phx-click="open_push_publishers_dialog"
+                id="push-publishers-btn"
+                phx-hook="PushPublishers"
+                data-picker-id={"pub-picker-series-#{@series.id}"}
               >
-                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues
+                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues…
               </.ink_button>
             </div>
           </div>
@@ -995,6 +1090,150 @@ defmodule StashixWeb.SeriesLive do
         </.dialog_footer>
       </.dialog>
     <% end %>
+
+    <%= if @current_user.role == :admin && @show_push_age_rating_dialog do %>
+      <.dialog
+        id="push-age-rating-dialog"
+        title="Push age rating to issues"
+        on_close={JS.push("close_push_age_rating_dialog")}
+      >
+        <:description>
+          Apply an age rating to all issues in this series.
+        </:description>
+
+        <div class="space-y-4 mt-3">
+          <div>
+            <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">
+              Rating to apply
+            </label>
+            <form phx-change="set_push_age_rating_target">
+              <.ink_select
+                id="push-age-rating-select"
+                name="rating"
+                label="Age rating"
+                variant="field"
+                value={@push_age_rating_target}
+                options={Enum.map(@age_ratings, &{Formatters.format_age_rating(&1), Atom.to_string(&1)})}
+              />
+            </form>
+          </div>
+
+          <div class="space-y-2">
+            <%= for {mode, label, desc} <- [
+              {:replace, "Replace", "Overwrite the age rating on all issues."},
+              {:fill, "Fill unknown", "Only update issues that are currently unrated."}
+            ] do %>
+              <label class={[
+                "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
+                if(@push_age_rating_mode == mode,
+                  do: "border-violet-500 bg-violet-500/10",
+                  else: "border-gray-700 hover:border-gray-500"
+                )
+              ]}>
+                <input
+                  type="radio"
+                  name="push_age_rating_mode"
+                  value={mode}
+                  checked={@push_age_rating_mode == mode}
+                  phx-click="set_push_age_rating_mode"
+                  phx-value-mode={mode}
+                  class="mt-0.5 accent-violet-500"
+                />
+                <div>
+                  <p class="text-sm font-medium text-gray-100">{label}</p>
+                  <p class="text-xs text-gray-400 mt-0.5">{desc}</p>
+                </div>
+              </label>
+            <% end %>
+          </div>
+        </div>
+
+        <%= if @push_age_rating_preview do %>
+          <% ar_affected = length(@push_age_rating_preview.affected) %>
+          <% ar_total = ar_affected + @push_age_rating_preview.unchanged %>
+          <div class="mt-4">
+            <button
+              type="button"
+              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full"
+              phx-click="toggle_push_age_rating_preview"
+            >
+              <.icon
+                name={if @show_push_age_rating_preview, do: "lucide-chevron-down", else: "lucide-chevron-right"}
+                class="w-3.5 h-3.5"
+              />
+              <span>Preview</span>
+              <span class={[
+                "ml-1 font-medium",
+                if(ar_affected > 0, do: "text-violet-400", else: "text-gray-500")
+              ]}>
+                <%= if ar_affected == 0 do %>
+                  no changes
+                <% else %>
+                  {ar_affected} of {ar_total} {if ar_total == 1, do: "issue", else: "issues"} will change
+                <% end %>
+              </span>
+            </button>
+
+            <div :if={@show_push_age_rating_preview} class="mt-2 rounded-md border border-gray-700 overflow-hidden">
+              <%= if ar_affected == 0 do %>
+                <p class="px-3 py-4 text-sm text-gray-400 text-center">
+                  All issues already match — no changes needed.
+                </p>
+              <% else %>
+                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                  <span></span>
+                  <span>Before</span>
+                  <span></span>
+                  <span>After</span>
+                </div>
+                <div class="max-h-52 overflow-y-auto divide-y divide-gray-800/80">
+                  <%= for entry <- @push_age_rating_preview.affected do %>
+                    <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-2 text-xs">
+                      <span class="text-gray-500 tabular-nums">
+                        {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
+                      </span>
+                      <span class="text-gray-500 italic truncate">
+                        {short_age_label(entry.from)}
+                      </span>
+                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-gray-600 shrink-0" />
+                      <span class="text-gray-100 truncate">
+                        {short_age_label(entry.to)}
+                      </span>
+                    </div>
+                  <% end %>
+                </div>
+                <%= if @push_age_rating_preview.unchanged > 0 do %>
+                  <p class="px-3 py-1.5 text-xs text-gray-500 border-t border-gray-800">
+                    {@push_age_rating_preview.unchanged} {if @push_age_rating_preview.unchanged == 1,
+                      do: "issue",
+                      else: "issues"} already up to date
+                  </p>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <.dialog_footer>
+          <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_age_rating_dialog">
+            Cancel
+          </.ink_button>
+          <.ink_button type="button" size="md" phx-click="push_age_rating_to_issues">
+            Push age rating
+          </.ink_button>
+        </.dialog_footer>
+      </.dialog>
+    <% end %>
     """
   end
+
+  defp short_age_label(:unknown), do: "Unrated"
+  defp short_age_label(:everyone), do: "Everyone"
+  defp short_age_label(:teen), do: "Teen"
+  defp short_age_label(:teen_plus), do: "Teen+"
+  defp short_age_label(:mature), do: "Mature"
+  defp short_age_label(:adult), do: "Adult"
+  defp short_age_label(:explicit), do: "Explicit"
+  defp short_age_label(nil), do: "Unrated"
+  defp short_age_label(other), do: to_string(other)
 end
