@@ -9,7 +9,7 @@ defmodule Stashix.Metadata.Workers.MatchBookWorker do
   alias Stashix.Library.Book
 
   @impl true
-  def perform(%Oban.Job{args: %{"book_id" => id}}) do
+  def perform(%Oban.Job{args: %{"book_id" => id} = args}) do
     case Repo.get(Book, id) do
       nil ->
         {:cancel, :not_found}
@@ -18,7 +18,23 @@ defmodule Stashix.Metadata.Workers.MatchBookWorker do
         {:cancel, :deleted}
 
       book ->
-        case Stashix.Metadata.identify_book(book) do
+        opts = if args["overwrite_title"], do: [overwrite_title: true], else: []
+
+        result =
+          case {args["source_key"], args["series_source_id"]} do
+            {key, sid} when is_binary(key) and is_binary(sid) ->
+              case Stashix.Metadata.apply_issue_in_series(book, key, sid, opts) do
+                {:ok, _} -> {:applied, book}
+                {:error, :not_found} -> Stashix.Metadata.identify_book(book, opts)
+                {:error, {:rate_limited, ms}} -> {:snooze, ms}
+                {:error, _} = err -> err
+              end
+
+            _ ->
+              Stashix.Metadata.identify_book(book, opts)
+          end
+
+        case result do
           {:applied, _} -> :ok
           {:review, _} -> :ok
           {:snooze, ms} -> {:snooze, max(div(ms, 1000), 5)}

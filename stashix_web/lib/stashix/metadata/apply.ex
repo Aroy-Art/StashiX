@@ -50,11 +50,13 @@ defmodule Stashix.Metadata.Apply do
   def apply_book(%Book{} = book, source_mod, metadata, settings, opts \\ []) do
     book = Repo.preload(book, [:series, :publishers, :files | Map.values(@child_assocs)])
     rule = rule(settings, opts, book_field_keys())
+    overwrite_title = Keyword.get(opts, :overwrite_title, false)
 
     attrs =
       @book_fields
       |> Enum.reduce(%{}, fn field, acc ->
-        put_if(acc, field, Map.get(metadata, field), current_value(book, field), rule)
+        field_rule = if field == :title and overwrite_title, do: {:mode, "replace"}, else: rule
+        put_if(acc, field, Map.get(metadata, field), current_value(book, field), field_rule)
       end)
       # A known issue number / real page count from the file is only replaced when explicitly chosen.
       |> put_if(:issue_number, metadata[:issue_number], book.issue_number, fill_unless_chosen(rule))
@@ -130,9 +132,10 @@ defmodule Stashix.Metadata.Apply do
   title that is just the file name (the scanner's fallback) counts as empty.
   """
   def current_value(%Book{} = book, :title) do
-    book = Repo.preload(book, :files)
+    book = Repo.preload(book, [:files, :series])
     stems = Enum.map(book.files, &Path.basename(&1.path, Path.extname(&1.path)))
-    if book.title in stems, do: nil, else: book.title
+    series_name = book.series && book.series.name
+    if book.title in stems or book.title == series_name, do: nil, else: book.title
   end
 
   def current_value(%Book{} = book, field), do: Map.get(book, field)

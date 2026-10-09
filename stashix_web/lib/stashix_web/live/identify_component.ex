@@ -88,7 +88,8 @@ defmodule StashixWeb.IdentifyComponent do
         searching: false,
         loading_preview: false,
         applying: false,
-        queue_issues: true
+        queue_issues: true,
+        overwrite_issue_titles: false
       )
 
     # A stored source id beats searching: fetch it straight away. Search stays
@@ -261,10 +262,15 @@ defmodule StashixWeb.IdentifyComponent do
     {:noreply, update(socket, :queue_issues, &(!&1))}
   end
 
+  def handle_event("toggle_overwrite_issue_titles", _params, socket) do
+    {:noreply, update(socket, :overwrite_issue_titles, &(!&1))}
+  end
+
   def handle_event("apply", _params, %{assigns: %{selected: %Candidate{} = c, preview: preview}} = socket)
       when is_map(preview) do
     target = fresh(socket.assigns.target)
     queue_issues = socket.assigns.queue_issues
+    overwrite_issue_titles = socket.assigns.overwrite_issue_titles
     opts = [fields: MapSet.to_list(socket.assigns.selected_fields)]
     settings = Stashix.Settings.metadata()
 
@@ -279,8 +285,13 @@ defmodule StashixWeb.IdentifyComponent do
           %Series{} ->
             with {:ok, series} <- Metadata.apply_series_metadata(target, c.source_key, preview, settings, opts) do
               if queue_issues do
+                book_opts =
+                  if overwrite_issue_titles,
+                    do: [overwrite_title: true, source_key: c.source_key, series_source_id: c.id],
+                    else: []
+
                 Matcher.series_book_ids(series.id)
-                |> Enum.each(&Metadata.enqueue_book/1)
+                |> Enum.each(&Metadata.enqueue_book(&1, book_opts))
               end
 
               {:ok, series}
@@ -309,16 +320,6 @@ defmodule StashixWeb.IdentifyComponent do
 
   def handle_async(:preview, {:ok, {:ok, metadata}}, socket) do
     target = fresh(socket.assigns.target)
-
-    # For books: when CV strips the issue title (format label like "TPB", "HC"),
-    # surface the series/volume name as the proposed book title so the user can
-    # apply it.  The Apply layer already guards against overwriting a real title.
-    metadata =
-      if match?(%Book{}, target) and is_nil(metadata[:title]) and is_binary(metadata[:series]) do
-        Map.put(metadata, :title, metadata[:series])
-      else
-        metadata
-      end
 
     rows = preview_rows(target, metadata)
     selected = socket.assigns.selected && enrich_candidate(socket.assigns.selected, metadata)
@@ -920,15 +921,31 @@ defmodule StashixWeb.IdentifyComponent do
           <% end %>
 
           <div class="pt-5 flex flex-wrap items-center justify-end gap-3">
-            <label :if={@kind == :series} class="mr-auto flex items-center gap-2 text-sm text-gray-400">
-              <input
-                type="checkbox"
-                checked={@queue_issues}
-                phx-click="toggle_queue_issues"
-                phx-target={@myself}
-                class="ink-check"
-              /> Then match all issues
-            </label>
+            <div :if={@kind == :series} class="mr-auto flex flex-col gap-1.5">
+              <label class="flex items-center gap-2 text-sm text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={@queue_issues}
+                  phx-click="toggle_queue_issues"
+                  phx-target={@myself}
+                  class="ink-check"
+                /> Then match all issues
+              </label>
+              <div
+                :if={@queue_issues}
+                class="relative ml-[7px] pl-3 before:content-[''] before:absolute before:left-0 before:-top-1.5 before:bottom-1/2 before:border-l before:border-gray-600/60 after:content-[''] after:absolute after:left-0 after:top-1/2 after:w-3 after:border-t after:border-gray-600/60"
+              >
+                <label class="flex items-center gap-2 text-sm text-gray-400">
+                  <input
+                    type="checkbox"
+                    checked={@overwrite_issue_titles}
+                    phx-click="toggle_overwrite_issue_titles"
+                    phx-target={@myself}
+                    class="ink-check"
+                  /> Overwrite existing issue titles
+                </label>
+              </div>
+            </div>
             <.ink_button variant="ghost" size="md" type="button" phx-click="close_identify_dialog">
               Cancel
             </.ink_button>

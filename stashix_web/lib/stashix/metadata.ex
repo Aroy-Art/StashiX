@@ -22,12 +22,12 @@ defmodule Stashix.Metadata do
   Matches a book and applies a confident result, or records a review.
   Returns `{:applied, book}`, `{:review, review}`, `{:snooze, ms}` or `{:error, reason}`.
   """
-  def identify_book(%Book{} = book) do
+  def identify_book(%Book{} = book, opts \\ []) do
     settings = Settings.metadata()
 
     case Matcher.match_book(book, settings) do
       {:matched, source, %Candidate{id: id}} ->
-        case apply_issue(book, source.module.key(), id, settings) do
+        case apply_issue(book, source.module.key(), id, settings, opts) do
           {:ok, book} -> {:applied, book}
           {:error, {:rate_limited, ms}} -> {:snooze, ms}
           {:error, reason} -> {:error, reason}
@@ -85,9 +85,29 @@ defmodule Stashix.Metadata do
 
   ## Apply a specific result (manual pick or auto match)
 
-  def apply_issue(%Book{} = book, source_key, issue_id, settings \\ Settings.metadata()) do
+  def apply_issue(%Book{} = book, source_key, issue_id, settings \\ Settings.metadata(), opts \\ []) do
     with {:ok, metadata} <- fetch_issue(source_key, issue_id) do
-      apply_issue_metadata(book, source_key, metadata, settings)
+      apply_issue_metadata(book, source_key, metadata, settings, opts)
+    end
+  end
+
+  @doc """
+  Applies issue metadata found by looking up the book's issue number within a
+  source series whose id is already known. Bypasses the confidence threshold —
+  use only when the caller has already confirmed which series this is.
+  """
+  def apply_issue_in_series(%Book{} = book, source_key, series_source_id, opts \\ []) do
+    settings = Settings.metadata()
+
+    with {:ok, source} <- fetch_source(source_key) do
+      number = Matcher.format_number(book.issue_number)
+      query = %{series_id: series_source_id, number: number}
+
+      case source.module.search_issues(query, HTTP.context(source)) do
+        {:ok, [top | _]} -> apply_issue(book, source_key, top.id, settings, opts)
+        {:ok, []} -> {:error, :not_found}
+        {:error, _} = err -> err
+      end
     end
   end
 
@@ -106,6 +126,13 @@ defmodule Stashix.Metadata do
 
   @doc "Applies already fetched issue metadata (avoids a second request after a preview)."
   def apply_issue_metadata(%Book{} = book, source_key, metadata, settings \\ Settings.metadata(), opts \\ []) do
+    # When a source has no issue-level title, fall back to the series/volume name so the
+    # book gets a real title instead of the filename stem.
+    metadata =
+      if is_nil(metadata[:title]) and is_binary(metadata[:series]),
+        do: Map.put(metadata, :title, metadata[:series]),
+        else: metadata
+
     with {:ok, source} <- fetch_source(source_key),
          {:ok, updated} <- Apply.apply_book(book, source.module, metadata, settings, opts) do
       resolve_reviews(book_id: book.id)
@@ -146,7 +173,18 @@ defmodule Stashix.Metadata do
   ## Jobs
 
   def enqueue_book(book_id, opts \\ []) do
-    %{book_id: book_id} |> MatchBookWorker.new(opts) |> Oban.insert()
+    {overwrite_title, opts} = Keyword.pop(opts, :overwrite_title, false)
+    {source_key, opts} = Keyword.pop(opts, :source_key, nil)
+    {series_source_id, oban_opts} = Keyword.pop(opts, :series_source_id, nil)
+
+    args =
+      %{book_id: book_id}
+      |> then(&if overwrite_title, do: Map.put(&1, :overwrite_title, true), else: &1)
+      |> then(
+        &if source_key, do: Map.merge(&1, %{source_key: source_key, series_source_id: series_source_id}), else: &1
+      )
+
+    args |> MatchBookWorker.new(oban_opts) |> Oban.insert()
   end
 
   @doc "Match a series record and then each of its books. `skip_matched: true` skips already matched books."
