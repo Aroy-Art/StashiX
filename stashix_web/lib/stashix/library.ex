@@ -1269,7 +1269,7 @@ defmodule Stashix.Library do
   end
 
   def list_all_publishers do
-    from(p in Publisher, order_by: [asc: p.name])
+    from(p in Publisher, where: is_nil(p.canonical_publisher_id) and not p.hidden, order_by: [asc: p.name])
     |> Repo.all()
   end
 
@@ -1505,7 +1505,7 @@ defmodule Stashix.Library do
     :ok
   end
 
-  @doc "Unique publishers across all non-deleted books in a series, ordered by name."
+  @doc "Unique publishers across all non-deleted books in a series, ordered by name. Aliases are resolved to their canonical."
   def series_book_publishers(series_id) do
     from(p in Publisher,
       join: bp in "book_publishers",
@@ -1513,10 +1513,30 @@ defmodule Stashix.Library do
       join: b in Book,
       on: b.id == bp.book_id,
       where: b.series_id == ^series_id and is_nil(b.deleted_at),
-      order_by: p.name,
       distinct: true
     )
     |> Repo.all()
+    |> resolve_publisher_aliases()
+  end
+
+  # Replaces any alias publishers with their canonical. Deduplicates and sorts by name.
+  defp resolve_publisher_aliases([]), do: []
+
+  defp resolve_publisher_aliases(publishers) do
+    alias_ids =
+      publishers |> Enum.map(& &1.canonical_publisher_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    canonicals =
+      if alias_ids == [],
+        do: %{},
+        else: from(p in Publisher, where: p.id in ^alias_ids) |> Repo.all() |> Map.new(&{&1.id, &1})
+
+    publishers
+    |> Enum.map(fn p ->
+      if p.canonical_publisher_id, do: Map.get(canonicals, p.canonical_publisher_id, p), else: p
+    end)
+    |> Enum.uniq_by(& &1.id)
+    |> Enum.sort_by(& &1.name)
   end
 
   @doc """
@@ -1563,7 +1583,7 @@ defmodule Stashix.Library do
   """
   def push_publishers_preview(series_id, publisher_ids, mode) when mode in [:replace, :merge, :fill] do
     target_pubs =
-      from(p in Publisher, where: p.id in ^publisher_ids, order_by: p.name) |> Repo.all()
+      from(p in Publisher, where: p.id in ^publisher_ids) |> Repo.all() |> resolve_publisher_aliases()
 
     target_pub_ids = MapSet.new(target_pubs, & &1.id)
 
@@ -1577,24 +1597,24 @@ defmodule Stashix.Library do
 
     affected =
       Enum.flat_map(books, fn book ->
-        book_pub_ids = MapSet.new(book.publishers, & &1.id)
-        sorted_from = Enum.sort_by(book.publishers, & &1.name)
+        resolved_from = resolve_publisher_aliases(book.publishers)
+        book_pub_ids = MapSet.new(resolved_from, & &1.id)
 
         case mode do
           :replace ->
             if book_pub_ids == target_pub_ids,
               do: [],
-              else: [%{book: book, from: sorted_from, to: target_pubs}]
+              else: [%{book: book, from: resolved_from, to: target_pubs}]
 
           :merge ->
             missing = Enum.reject(target_pubs, &MapSet.member?(book_pub_ids, &1.id))
 
             if missing == [],
               do: [],
-              else: [%{book: book, from: sorted_from, to: Enum.sort_by(book.publishers ++ missing, & &1.name)}]
+              else: [%{book: book, from: resolved_from, to: Enum.sort_by(resolved_from ++ missing, & &1.name)}]
 
           :fill ->
-            if book.publishers == [],
+            if resolved_from == [],
               do: [%{book: book, from: [], to: target_pubs}],
               else: []
         end
@@ -1617,7 +1637,12 @@ defmodule Stashix.Library do
   Returns `{:ok, count}` where `count` is the number of books affected.
   """
   def push_publishers_to_books(series_id, publisher_ids, mode) when mode in [:replace, :merge, :fill] do
-    publisher_bins = Enum.map(publisher_ids, &Ecto.UUID.dump!/1)
+    publisher_bins =
+      from(p in Publisher, where: p.id in ^publisher_ids)
+      |> Repo.all()
+      |> resolve_publisher_aliases()
+      |> Enum.map(&Ecto.UUID.dump!(&1.id))
+
     series_bin = Ecto.UUID.dump!(series_id)
 
     if publisher_bins == [] do

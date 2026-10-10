@@ -945,7 +945,9 @@ defmodule StashixWeb.SeriesLive do
                 phx-hook="PublisherSearch"
                 class="relative"
                 data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
-                data-selected-ids={Jason.encode!(Enum.map(@series.publishers, & &1.id))}
+                data-selected-ids={
+                  Jason.encode!(Enum.map(@series.publishers, fn p -> p.canonical_publisher_id || p.id end) |> Enum.uniq())
+                }
                 data-input-name="series[publisher_ids][]"
               >
                 <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
