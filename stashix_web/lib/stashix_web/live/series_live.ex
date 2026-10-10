@@ -271,13 +271,17 @@ defmodule StashixWeb.SeriesLive do
     mode = socket.assigns.push_publishers_mode
 
     case Library.push_publishers_to_books(series.id, socket.assigns.push_publisher_ids, mode) do
-      {:ok, 0} ->
+      {:ok, []} ->
         {:noreply,
          socket
          |> put_flash(:info, "No issues were updated.")
          |> assign(show_push_publishers_dialog: false)}
 
-      {:ok, count} ->
+      {:ok, ids} ->
+        if Stashix.Settings.metadata()["write_to_files"],
+          do: Enum.each(ids, &Metadata.enqueue_write/1)
+
+        count = length(ids)
         label = if count == 1, do: "1 issue", else: "#{count} issues"
         series = Library.get_series_with_books(socket.assigns.access, series.id)
         books = sort_books(series.books, socket.assigns.sort)

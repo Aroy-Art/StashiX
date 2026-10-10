@@ -1646,39 +1646,47 @@ defmodule Stashix.Library do
     series_bin = Ecto.UUID.dump!(series_id)
 
     if publisher_bins == [] do
-      {:ok, 0}
+      {:ok, []}
     else
-      Repo.transaction(fn ->
-        # Sync the series record to match what's being pushed.
-        from(sp in "series_publishers", where: sp.series_id == ^series_bin) |> Repo.delete_all()
+      result =
+        Repo.transaction(fn ->
+          # Sync the series record to match what's being pushed.
+          from(sp in "series_publishers", where: sp.series_id == ^series_bin) |> Repo.delete_all()
 
-        Repo.insert_all("series_publishers", Enum.map(publisher_bins, &%{series_id: series_bin, publisher_id: &1}),
-          on_conflict: :nothing
-        )
+          Repo.insert_all(
+            "series_publishers",
+            Enum.map(publisher_bins, &%{series_id: series_bin, publisher_id: &1}),
+            on_conflict: :nothing
+          )
 
-        book_bins =
-          from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
-          |> Repo.all()
-          |> Enum.map(&Ecto.UUID.dump!/1)
+          book_bins =
+            from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
+            |> Repo.all()
+            |> Enum.map(&Ecto.UUID.dump!/1)
 
-        do_push_publishers(book_bins, publisher_bins, mode)
-      end)
+          do_push_publishers(book_bins, publisher_bins, mode)
+        end)
+
+      case result do
+        {:ok, affected_bins} -> {:ok, Enum.map(affected_bins, &Ecto.UUID.load!/1)}
+        err -> err
+      end
     end
   end
 
-  defp do_push_publishers([], _pub_bins, _mode), do: 0
+  defp do_push_publishers([], _pub_bins, _mode), do: []
 
   defp do_push_publishers(book_bins, pub_bins, :replace) do
     from(bp in "book_publishers", where: bp.book_id in ^book_bins) |> Repo.delete_all()
     pairs = for b <- book_bins, p <- pub_bins, do: %{book_id: b, publisher_id: p}
     Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
-    length(book_bins)
+    book_bins
   end
 
   defp do_push_publishers(book_bins, pub_bins, :merge) do
     pairs = for b <- book_bins, p <- pub_bins, do: %{book_id: b, publisher_id: p}
     Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
-    length(book_bins)
+    book_bins
   end
 
   defp do_push_publishers(book_bins, pub_bins, :fill) do
@@ -1694,7 +1702,7 @@ defmodule Stashix.Library do
       Repo.insert_all("book_publishers", pairs, on_conflict: :nothing)
     end
 
-    length(empty_bins)
+    empty_bins
   end
 
   def update_book(book, attrs) do
