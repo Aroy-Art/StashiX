@@ -1353,17 +1353,41 @@ defmodule Stashix.Library do
     end)
   end
 
+  # Canonical, non-hidden publishers with at least one live book `access` can
+  # see, credited directly or through an alias.
+  defp listed_publishers(access) do
+    with_books =
+      from(bp in "book_publishers",
+        join: b in ^Access.books(access),
+        on: b.id == bp.book_id and is_nil(b.deleted_at),
+        select: type(bp.publisher_id, :binary_id)
+      )
+
+    masters =
+      from(p in Publisher,
+        where: p.id in subquery(with_books) and not is_nil(p.canonical_publisher_id),
+        select: p.canonical_publisher_id
+      )
+
+    from(p in Publisher,
+      where: is_nil(p.canonical_publisher_id) and not p.hidden,
+      where: p.id in subquery(with_books) or p.id in subquery(masters)
+    )
+  end
+
+  def list_publishers_with_books(access) do
+    from(p in listed_publishers(access), order_by: [asc: p.name]) |> Repo.all()
+  end
+
   def count_publishers(access) do
-    from(p in visible_publishers(access), where: is_nil(p.canonical_publisher_id) and not p.hidden)
-    |> Repo.aggregate(:count, :id)
+    listed_publishers(access) |> Repo.aggregate(:count, :id)
   end
 
   def list_publishers_paginated(opts \\ []) do
     limit = Keyword.get(opts, :limit, 24)
     offset = Keyword.get(opts, :offset, 0)
 
-    from(p in visible_publishers(access!(opts)),
-      where: is_nil(p.canonical_publisher_id) and not p.hidden,
+    from(p in listed_publishers(access!(opts)),
       order_by: [asc: p.name],
       limit: ^limit,
       offset: ^offset

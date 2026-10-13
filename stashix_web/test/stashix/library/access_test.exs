@@ -137,6 +137,25 @@ defmodule Stashix.Library.AccessTest do
     assert Library.count_publishers(Access.all()) == 2
   end
 
+  test "paginated publisher list skips publishers without books", ctx do
+    {:ok, used} = Library.get_or_create_publisher("Used Press")
+    {:ok, _empty} = Library.get_or_create_publisher("Empty Press")
+    {:ok, trashed} = Library.get_or_create_publisher("Trashed Press")
+    {:ok, series_only} = Library.get_or_create_publisher("Series Only Press")
+    {:ok, _} = Library.update_series(Repo.preload(ctx.kids, :publishers), %{"publisher_ids" => [series_only.id]})
+
+    Library.link_publisher_to_book(ctx.books.everyone.id, used.id)
+    Library.link_publisher_to_book(ctx.books.mature.id, trashed.id)
+
+    Repo.update_all(from(b in Stashix.Library.Book, where: b.id == ^ctx.books.mature.id),
+      set: [deleted_at: ~N[2026-01-01 00:00:00]]
+    )
+
+    assert Enum.map(Library.list_publishers_paginated(access: Access.all()), & &1.name) == ["Used Press"]
+    assert Enum.map(Library.list_publishers_with_books(Access.all()), & &1.name) == ["Used Press"]
+    assert Library.count_publishers(Access.all()) == 1
+  end
+
   test "progress can only be saved on visible books", %{user: user, lib: lib} = ctx do
     access = permit(user, lib, %{max_age_rating: :teen_plus})
 

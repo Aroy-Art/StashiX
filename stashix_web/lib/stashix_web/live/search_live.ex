@@ -76,7 +76,7 @@ defmodule StashixWeb.SearchLive do
        series_total: 0,
        total_pages: 1,
        progress_map: %{},
-       publishers: Library.list_publishers(socket.assigns.access),
+       publishers: Library.list_publishers_with_books(socket.assigns.access),
        facets: @facets,
        # Facets nothing in the library uses stay out of the sidebar.
        facets_present: Enum.filter(@facet_keys, &Library.facet_any?(String.to_existing_atom(&1))),
