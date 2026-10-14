@@ -45,19 +45,13 @@ defmodule StashixWeb.LibraryLive do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library_id}")
     end
 
-    access = socket.assigns.access
-    library = Library.get_readable_library!(access, library_id)
-    series_count = Library.count_series(access, library_id)
-    books_count = Library.count_books(access, library_id)
-    issues_count = Library.count_issues(access, library_id)
+    library = Library.get_readable_library!(socket.assigns.access, library_id)
 
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        page_title: library.name,
        library: library,
-       series_count: series_count,
-       books_count: books_count,
-       issues_count: issues_count,
        items: [],
        total: 0,
        total_pages: 1,
@@ -67,7 +61,19 @@ defmodule StashixWeb.LibraryLive do
        progress_map: %{},
        refresh_scheduled: false,
        loading: true
-     )}
+     )
+     |> assign_counts()}
+  end
+
+  defp assign_counts(socket) do
+    access = socket.assigns.access
+    lib_id = socket.assigns.library.id
+
+    assign(socket,
+      series_count: Library.count_series(access, lib_id),
+      books_count: Library.count_books(access, lib_id),
+      issues_count: Library.count_issues(access, lib_id)
+    )
   end
 
   @impl true
@@ -165,25 +171,29 @@ defmodule StashixWeb.LibraryLive do
     {:noreply, push_patch(socket, to: sub_path(socket, page, socket.assigns.sort))}
   end
 
+  # A finished scan may also have removed books, which sends no :book_added.
   @impl true
+  def handle_info({:scan_progress, %{done: true}}, socket), do: {:noreply, schedule_refresh(socket)}
   def handle_info({:scan_progress, _progress}, socket), do: {:noreply, socket}
 
   # One message per imported book during a scan; refresh at most once per
   # @refresh_ms instead of re-running the page's queries for each.
-  def handle_info({:book_added, _book}, %{assigns: %{refresh_scheduled: true}} = socket),
-    do: {:noreply, socket}
+  def handle_info({:book_added, _book}, socket), do: {:noreply, schedule_refresh(socket)}
 
-  def handle_info({:book_added, _book}, socket) do
-    Process.send_after(self(), :refresh_after_scan, @refresh_ms)
-    {:noreply, assign(socket, refresh_scheduled: true)}
-  end
-
+  # Reload the totals and the page the user is on, without moving them.
   def handle_info(:refresh_after_scan, socket) do
-    socket = assign(socket, refresh_scheduled: false)
-    {:noreply, push_patch(socket, to: sub_path(socket, 1, socket.assigns.sort))}
+    socket = socket |> assign(refresh_scheduled: false) |> assign_counts()
+    {:noreply, push_patch(socket, to: sub_path(socket, socket.assigns.page, socket.assigns.sort))}
   end
 
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
+
+  defp schedule_refresh(%{assigns: %{refresh_scheduled: true}} = socket), do: socket
+
+  defp schedule_refresh(socket) do
+    Process.send_after(self(), :refresh_after_scan, @refresh_ms)
+    assign(socket, refresh_scheduled: true)
+  end
 
   defp sub_path(socket, page, sort) do
     id = socket.assigns.library.id
