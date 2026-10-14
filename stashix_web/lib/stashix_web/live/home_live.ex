@@ -7,6 +7,8 @@ defmodule StashixWeb.HomeLive do
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
+  @refresh_ms 1_000
+
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
@@ -28,6 +30,7 @@ defmodule StashixWeb.HomeLive do
        continue_reading: continue_reading,
        next_issue: next_issue,
        scan_progress: %{},
+       refresh_scheduled: false,
        total_books: total_books,
        total_issues: total_issues,
        total_series: total_series
@@ -163,7 +166,18 @@ defmodule StashixWeb.HomeLive do
     {:noreply, update(socket, :scan_progress, &Map.delete(&1, lib_id))}
   end
 
+  # A scan sends one of these per imported book; reloading for each one reran
+  # every home query thousands of times per scan. Coalesce them into at most
+  # one refresh per @refresh_ms.
+  def handle_info({:book_added, _book}, %{assigns: %{refresh_scheduled: true}} = socket),
+    do: {:noreply, socket}
+
   def handle_info({:book_added, _book}, socket) do
+    Process.send_after(self(), :refresh_after_scan, @refresh_ms)
+    {:noreply, assign(socket, refresh_scheduled: true)}
+  end
+
+  def handle_info(:refresh_after_scan, socket) do
     user = socket.assigns.current_user
     access = socket.assigns.access
     libraries = Library.list_libraries(user)
@@ -172,6 +186,7 @@ defmodule StashixWeb.HomeLive do
 
     {:noreply,
      assign(socket,
+       refresh_scheduled: false,
        libraries_data: libraries_data,
        continue_reading: continue_reading,
        next_issue: Library.next_issue_books(access, user.id, 20),

@@ -45,8 +45,23 @@ defmodule StashixWeb.HomeLiveTest do
     for n <- 1..5 do
       {:ok, book} = Library.create_book(%{library_id: lib.id, type: "standalone", title: "Late Arrival #{n}"})
       send(view.pid, {:book_added, book})
+      send(view.pid, :refresh_after_scan)
       assert hero_title(render(view)) == picked
     end
+  end
+
+  test "books added during a scan show up in one batched refresh", %{conn: conn, lib: lib} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    for n <- 1..3 do
+      {:ok, book} = Library.create_book(%{library_id: lib.id, type: "standalone", title: "Batched Arrival #{n}"})
+      send(view.pid, {:book_added, book})
+    end
+
+    refute render(view) =~ "Batched Arrival"
+
+    send(view.pid, :refresh_after_scan)
+    assert render(view) =~ "Batched Arrival 3"
   end
 
   test "an empty library shows the welcome state once connected", %{conn: conn} do

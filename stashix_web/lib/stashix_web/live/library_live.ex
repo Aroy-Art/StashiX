@@ -8,6 +8,7 @@ defmodule StashixWeb.LibraryLive do
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @page_size 48
+  @refresh_ms 1_000
 
   @series_sort_options [
     {"A → Z", "title_asc"},
@@ -64,6 +65,7 @@ defmodule StashixWeb.LibraryLive do
        sort: "title_asc",
        sort_options: @series_sort_options,
        progress_map: %{},
+       refresh_scheduled: false,
        loading: true
      )}
   end
@@ -166,7 +168,18 @@ defmodule StashixWeb.LibraryLive do
   @impl true
   def handle_info({:scan_progress, _progress}, socket), do: {:noreply, socket}
 
+  # One message per imported book during a scan; refresh at most once per
+  # @refresh_ms instead of re-running the page's queries for each.
+  def handle_info({:book_added, _book}, %{assigns: %{refresh_scheduled: true}} = socket),
+    do: {:noreply, socket}
+
   def handle_info({:book_added, _book}, socket) do
+    Process.send_after(self(), :refresh_after_scan, @refresh_ms)
+    {:noreply, assign(socket, refresh_scheduled: true)}
+  end
+
+  def handle_info(:refresh_after_scan, socket) do
+    socket = assign(socket, refresh_scheduled: false)
     {:noreply, push_patch(socket, to: sub_path(socket, 1, socket.assigns.sort))}
   end
 
