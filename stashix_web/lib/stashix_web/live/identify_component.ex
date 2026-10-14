@@ -485,8 +485,10 @@ defmodule StashixWeb.IdentifyComponent do
 
       {"title", label} ->
         {current_raw, current} = book_current(book, "title")
+        using_series = is_nil(m[:title]) and standalone
         new_raw = m[:title] || if standalone, do: m[:series]
-        row("title", label, current_raw, current, new_raw, display_new("title", new_raw))
+        hint = if using_series, do: "from series name"
+        row("title", label, current_raw, current, new_raw, display_new("title", new_raw), hint)
 
       {"issue_number", label} ->
         {current_raw, current} = book_current(book, "issue_number")
@@ -568,7 +570,7 @@ defmodule StashixWeb.IdentifyComponent do
   defp display_new(key, items) when is_map_key(@child_assocs, key), do: summarize(key, items)
   defp display_new(_key, v), do: fmt(v)
 
-  defp row(key, label, current_raw, current, new_raw, new) do
+  defp row(key, label, current_raw, current, new_raw, new, hint \\ nil) do
     selectable = Apply.present?(new_raw) and new != current
 
     %{
@@ -576,13 +578,14 @@ defmodule StashixWeb.IdentifyComponent do
       label: label,
       current: current,
       new: new,
+      hint: hint,
       selectable: selectable,
       default: selectable and not Apply.present?(current_raw)
     }
   end
 
   defp info_row(label, current, new),
-    do: %{key: nil, label: label, current: fmt(current), new: fmt(new), selectable: false, default: false}
+    do: %{key: nil, label: label, current: fmt(current), new: fmt(new), hint: nil, selectable: false, default: false}
 
   defp selectable_fields(rows), do: rows |> Enum.filter(& &1.selectable) |> MapSet.new(& &1.key)
 
@@ -913,6 +916,9 @@ defmodule StashixWeb.IdentifyComponent do
                           end
                         ]}>
                           {row.new || "—"}
+                          <span :if={row.hint} class="block text-xs text-gray-500 mt-0.5">
+                            {row.hint}
+                          </span>
                         </td>
                       </tr>
                     <% end %>
