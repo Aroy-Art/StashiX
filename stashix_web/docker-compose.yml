@@ -1,14 +1,16 @@
 version: "3.8"
 
+# Secrets come from the environment (or a .env file next to this one); see
+# .env.example at the repository root. There are deliberately no defaults.
 services:
   db:
     image: postgres:18-alpine
     ports:
-      - "5434:5432"
+      - "127.0.0.1:5434:5432"
     environment:
       POSTGRES_DB: stashix
       POSTGRES_USER: stashix
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -22,9 +24,10 @@ services:
     ports:
       - "4000:4000"
     environment:
-      DATABASE_URL: "ecto://stashix:changeme@db:5432/stashix"
-      SECRET_KEY_BASE: "changeme-long-random-string-at-least-64-chars-for-production-use"
-      JWT_SECRET: "changeme-jwt-secret"
+      DATABASE_URL: "ecto://stashix:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/stashix"
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in .env}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      STASHIX_ENCRYPTION_KEY: ${STASHIX_ENCRYPTION_KEY:-}
       PHX_HOST: "localhost"
       LIBRARY_PATH: "/libraries"
       DATA_DIR: "/data"

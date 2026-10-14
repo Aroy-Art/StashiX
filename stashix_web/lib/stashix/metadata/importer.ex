@@ -93,7 +93,7 @@ defmodule Stashix.Metadata.Importer do
 
       if touch?.(:urls),
         do:
-          replace_simple(BookUrl, book_id, metadata[:urls] || [], now, fn u ->
+          replace_simple(BookUrl, book_id, Enum.filter(metadata[:urls] || [], &web_url?(&1.url)), now, fn u ->
             %{url: u.url, is_primary: u[:is_primary] || false}
           end)
 
@@ -216,7 +216,7 @@ defmodule Stashix.Metadata.Importer do
     incoming =
       urls
       |> Enum.map(&Map.update!(&1, :url, fn url -> String.trim(url) end))
-      |> Enum.reject(&(&1.url == ""))
+      |> Enum.filter(&web_url?(&1.url))
       |> Enum.uniq_by(&link_source(&1.url))
       # Unchanged links need no write.
       |> Enum.reject(fn u -> Enum.map(by_source[link_source(u.url)] || [], & &1.url) == [u.url] end)
@@ -247,6 +247,20 @@ defmodule Stashix.Metadata.Importer do
 
     :ok
   end
+
+  @doc """
+  Whether a link from file metadata or a source may be stored and rendered as
+  a link: http(s) with a host. Anything else (`javascript:`, `data:`, junk) is
+  dropped, since links are shown to every user who can see the book.
+  """
+  def web_url?(url) when is_binary(url) do
+    match?(
+      %URI{scheme: s, host: h} when s in ["http", "https"] and is_binary(h) and h != "",
+      URI.parse(String.trim(url))
+    )
+  end
+
+  def web_url?(_), do: false
 
   @doc """
   The source a link belongs to: its host without `www.` (e.g.

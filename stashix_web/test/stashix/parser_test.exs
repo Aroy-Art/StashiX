@@ -475,4 +475,46 @@ defmodule Stashix.Metadata.ParserTest do
       assert Parser.external_ids_from_comicinfo([], "Scanned by someone [Issue ID 2]") == []
     end
   end
+
+  # Metadata in library files is untrusted: whoever can add a file controls it.
+  describe "parse_comicinfo/1 — untrusted XML" do
+    @describetag :tmp_dir
+
+    defp parse_sidecar(dir, xml) do
+      File.write!(Path.join(dir, "book.xml"), xml)
+      Parser.parse_comicinfo(Path.join(dir, "book.cbz"))
+    end
+
+    test "external entities are not resolved", %{tmp_dir: dir} do
+      secret = Path.join(dir, "secret.txt")
+      File.write!(secret, "canary")
+
+      xml = """
+      <?xml version="1.0"?>
+      <!DOCTYPE ComicInfo [<!ENTITY x SYSTEM "#{secret}">]>
+      <ComicInfo><Title>t</Title><Summary>&x;</Summary></ComicInfo>
+      """
+
+      refute inspect(parse_sidecar(dir, xml)) =~ "canary"
+    end
+
+    test "a DOCTYPE without entities still parses", %{tmp_dir: dir} do
+      xml = ~s(<?xml version="1.0"?><!DOCTYPE ComicInfo><ComicInfo><Title>Hello</Title></ComicInfo>)
+      assert parse_sidecar(dir, xml)[:title] == "Hello"
+    end
+
+    test "MetronInfo links keep only http(s) urls", %{tmp_dir: dir} do
+      xml = """
+      <MetronInfo>
+        <URLs>
+          <URL primary="true">javascript:alert(1)</URL>
+          <URL>https://metron.cloud/issue/1/</URL>
+          <URL>data:text/html,x</URL>
+        </URLs>
+      </MetronInfo>
+      """
+
+      assert [%{url: "https://metron.cloud/issue/1/"}] = parse_sidecar(dir, xml)[:urls]
+    end
+  end
 end

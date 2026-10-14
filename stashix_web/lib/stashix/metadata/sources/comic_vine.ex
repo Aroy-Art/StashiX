@@ -47,7 +47,9 @@ defmodule Stashix.Metadata.Sources.ComicVine do
   @format_label_patterns [
     ~r/^(trade\s+paperback|hard\s*cover|graphic\s+novel|omnibus|special\s+edition)$/i,
     ~r/^(vol\.?|volume|book)\s*\d+$/i,
-    ~r/^(part|chapter)\s*\d+$/i
+    ~r/^(part|chapter)\s*\d+$/i,
+    ~r/^(hc|tpb|gn|sc|hb)(\s*[\/&]\s*(hc|tpb|gn|sc|hb))+$/i,
+    ~r/^\[image\s*#\d+\]$/i
   ]
 
   @doc "Unique string key identifying this source."

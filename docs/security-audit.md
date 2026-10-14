@@ -115,3 +115,109 @@ per node.
 - The metadata image proxy is host-allowlisted.
 - Channel join checks the user id; progress updates are access-checked.
 - Setup endpoints refuse once a user exists.
+
+# Input handling and deployment audit
+
+Date: 2026-10-14. Scope: what the first audit did not cover — parsing of
+library files (ComicInfo/MetronInfo XML, archives), client-side JS, the image
+proxy, cover and page serving, Docker setup and dependencies — plus the admin
+events added since 2026-10-01. Read-through of the code, with `mix hex.audit`
+and a local check of XML entity handling.
+
+Threat model: anyone who can put a file into a library controls its embedded
+metadata, so everything parsed from library files is untrusted.
+
+Status: findings 1–4 fixed; the Low items are open.
+
+## High
+
+### 1. Stored XSS in the publisher picker — fixed
+
+The `PublisherSearch` hook (`assets/js/app.js`) built its badges and dropdown
+with template strings assigned to `innerHTML`, interpolating publisher names
+unescaped. Publisher names come from the `<Publisher>` element of files in a
+library or from metadata sources. A file with a crafted publisher name ran
+script in an admin's browser when they opened the Edit dialog of a book or
+series, with the admin's LiveView session (create users, change roles).
+
+Fix: every interpolated value (name and id) goes through `escapeHTML`.
+
+## Medium
+
+### 2. Book links were stored with any scheme — fixed
+
+ComicInfo `<Web>` links were limited to http(s), but MetronInfo `<URLs>` and
+links from metadata sources were stored as is. `<.link>` refuses a
+`javascript:` destination, so this was not XSS, but the book page crashed for
+everyone. The Identify dialog rendered source links with a plain `<a>`, which
+does not check the scheme.
+
+Fix: the parser keeps only http(s) MetronInfo links, and
+`Importer.web_url?/1` filters links in both write paths (`replace` and
+`merge_urls`). The Identify dialog only links candidates that pass it.
+
+### 3. `stashix_web/docker-compose.yml` had hardcoded secrets — fixed
+
+A leftover compose file set `JWT_SECRET: "changeme-jwt-secret"`, a fixed
+`SECRET_KEY_BASE` and Postgres password `changeme`, and published Postgres on
+host port 5434. Anyone deploying with it was back at finding 1 of the first
+audit.
+
+Fix: secrets are required from the environment (`${VAR:?}`) and Postgres is
+published on `127.0.0.1` only. The root `docker-compose.yml` remains the
+documented one; this file could be removed.
+
+### 4. Untrusted XML parsed with DTDs enabled — fixed
+
+`Parser` called SweetXml `parse/1`, whose default is `dtd: :all`. On the OTP in
+use (29, pinned by the Docker image) xmerl refuses entities by default
+(`:entities_not_allowed`), so XXE was not exploitable, but that rested on the
+OTP default.
+
+Fix: both XML parse calls pass `dtd: :none`. Tests cover an external entity
+pointing at a local file.
+
+Still open: xmerl turns element names into atoms, so files with many distinct
+made-up element names can fill the atom table over many scans (a VM crash, not
+a data leak). Fixing it means replacing xmerl with a parser that keeps names as
+binaries (e.g. Saxy).
+
+## Low — open
+
+- Dependency advisories from `mix hex.audit`: cloak 1.1.4
+  (EEF-CVE-2026-95105, AES-CTR), cloak_ecto 1.3.0 (EEF-CVE-2026-94206, PBKDF2
+  field), decimal 3.1.1 (EEF-CVE-2026-97853, `Decimal.round/3` places). None
+  is reachable as used (AES-GCM cipher, no PBKDF2 fields, `round/1` only);
+  bump anyway.
+- Option injection into 7z/unrar: `Extractor` and the `unrar` shim in the
+  Dockerfile pass archive entry names as arguments. A name starting with `-`
+  is read as a switch. Pass `--` before file names.
+- `Plug.RewriteOn [:x_forwarded_for]` trusts the header from any client, so
+  the IP shown in the sessions list can be spoofed. Login throttling is keyed
+  by login name and is unaffected. Rewrite only behind a trusted proxy.
+- Session cookie has no `secure: true`; no `force_ssl`/HSTS and no CSP.
+  Acceptable behind a TLS-terminating proxy.
+- Book and series covers are access-checked but sent with
+  `cache-control: public`, so a shared cache could hand an age-restricted cover
+  to another user. Use `private`, as pages do.
+- The container runs as root (no `USER` in the Dockerfile). The library mount
+  is read-only.
+- Refresh tokens are not single-use: refreshing issues a new one, the old one
+  stays valid until expiry. Revoking the session ends both.
+- `inspect(reason)` in `BookController.pages/page` and `AuthController`
+  returns tool stderr and server paths to the client.
+
+## Checked, no issue found
+
+- Admin events added since the first audit (series push publishers / age
+  rating) are in `@admin_events`.
+- `Accounts.revoke_session/2` only touches the caller's sessions.
+- The image proxy re-checks scheme and host on every redirect and allowlists
+  content types.
+- The zip-slip guard in `FileWriter` rejects unsafe entry paths.
+- CORS `*` is sent with credentials, which browsers refuse for credentialed
+  reads, so cookie-authenticated media is not readable cross-origin.
+- Covers are always stored as `.jpg`; nothing from an archive is served as
+  HTML or SVG.
+- No `raw`/`{:safe, …}` on user data, no SQL built by interpolation, no
+  `String.to_atom` on request input.

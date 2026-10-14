@@ -100,6 +100,11 @@ Hooks.Chart = {
   }
 }
 
+// Publisher names come from file metadata, so they are escaped before going
+// into innerHTML.
+const escapeHTML = (s) =>
+  String(s).replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"})[c])
+
 Hooks.PublisherSearch = {
   mounted() {
     this.publishers = JSON.parse(this.el.dataset.publishers || "[]")
@@ -178,8 +183,8 @@ Hooks.PublisherSearch = {
       const p = pub(id)
       if (!p) return ""
       return `<span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-violet-900/50 border border-violet-700/50 text-violet-300 text-xs">
-        ${p.name}
-        <button type="button" data-remove-id="${id}" class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5">
+        ${escapeHTML(p.name)}
+        <button type="button" data-remove-id="${escapeHTML(id)}" class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </span>`
@@ -224,7 +229,7 @@ Hooks.PublisherSearch = {
         `<div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>`
     } else {
       this.dropdownEl.innerHTML = results.map((p, i) =>
-        `<button type="button" data-pub-id="${p.id}" class="w-full text-left px-3 py-2 text-sm transition-colors ${i === 0 ? "bg-gray-700/60 text-white hover:bg-gray-700" : "text-gray-300 hover:bg-gray-700 hover:text-white"}">${p.name}</button>`
+        `<button type="button" data-pub-id="${escapeHTML(p.id)}" class="w-full text-left px-3 py-2 text-sm transition-colors ${i === 0 ? "bg-gray-700/60 text-white hover:bg-gray-700" : "text-gray-300 hover:bg-gray-700 hover:text-white"}">${escapeHTML(p.name)}</button>`
       ).join("")
       this.dropdownEl.querySelectorAll("button[data-pub-id]").forEach(btn => {
         btn.addEventListener("mousedown", (e) => e.preventDefault())

@@ -483,6 +483,11 @@ defmodule StashixWeb.IdentifyComponent do
       {nil, label} ->
         info_row(label, book.series && book.series.name, m[:series])
 
+      {"title", label} ->
+        {current_raw, current} = book_current(book, "title")
+        new_raw = m[:title] || if standalone, do: m[:series]
+        row("title", label, current_raw, current, new_raw, display_new("title", new_raw))
+
       {"issue_number", label} ->
         {current_raw, current} = book_current(book, "issue_number")
         new_raw = m[:issue_number]
@@ -828,7 +833,7 @@ defmodule StashixWeb.IdentifyComponent do
                     {round(c.score * 100)}%
                   </span>
                   <a
-                    :if={c.url}
+                    :if={Importer.web_url?(c.url)}
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"

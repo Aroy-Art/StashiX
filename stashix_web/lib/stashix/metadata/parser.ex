@@ -131,7 +131,7 @@ defmodule Stashix.Metadata.Parser do
 
   defp parse_comicinfo_xml(data) when is_binary(data) do
     try do
-      doc = data |> sanitize_xml() |> parse()
+      doc = data |> sanitize_xml() |> parse(dtd: :none)
 
       age_rating_raw = xpath(doc, ~x"//ComicInfo/AgeRating/text()"s)
       notes = xpath(doc, ~x"//ComicInfo/Notes/text()"os)
@@ -174,7 +174,7 @@ defmodule Stashix.Metadata.Parser do
 
   defp parse_metroninfo_xml(data) when is_binary(data) do
     try do
-      doc = data |> sanitize_xml() |> parse()
+      doc = data |> sanitize_xml() |> parse(dtd: :none)
 
       age_rating_raw = xpath(doc, ~x"//MetronInfo/AgeRating/text()"s)
       cover_date = parse_date(xpath(doc, ~x"//MetronInfo/CoverDate/text()"os))
@@ -259,7 +259,7 @@ defmodule Stashix.Metadata.Parser do
           url: ~x"./text()"s,
           is_primary: ~x"./@primary"os
         )
-        |> Enum.reject(&(&1.url == ""))
+        |> Enum.filter(&String.starts_with?(&1.url, ["http://", "https://"]))
         |> Enum.map(&%{url: &1.url, is_primary: &1.is_primary == "true"})
 
       prices =
