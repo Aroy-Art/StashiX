@@ -375,6 +375,7 @@ defmodule Stashix.Scanner do
           {:ok, b} ->
             link_publisher(b, series, enrich_publisher(metadata, file_path, library))
             Importer.replace_book_metadata(b, comicinfo)
+            Library.SummaryCache.clear()
             Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, b})
             b
 
@@ -980,6 +981,9 @@ defmodule Stashix.Scanner do
   end
 
   defp broadcast_progress(library_id, scanned, total, done \\ false, phase \\ :scan, error \\ nil) do
+    # A finished scan may have added, moved or soft-deleted books.
+    if done, do: Library.SummaryCache.clear()
+
     Phoenix.PubSub.broadcast(
       Stashix.PubSub,
       "scan:#{library_id}",

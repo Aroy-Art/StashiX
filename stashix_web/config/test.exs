@@ -32,5 +32,8 @@ config :phoenix_live_view,
 
 config :stashix, Oban, testing: :manual
 
+# Sandboxed tests must not share cached summary numbers
+config :stashix, Stashix.Library.SummaryCache, ttl_ms: 0
+
 # Metadata source HTTP calls are stubbed with Req.Test in tests
 config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}

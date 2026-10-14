@@ -11,7 +11,8 @@ defmodule Stashix.Library do
     BookCover,
     LibraryPermission,
     ReadingProgress,
-    Publisher
+    Publisher,
+    SummaryCache
   }
 
   def list_libraries(user) do
@@ -1905,31 +1906,37 @@ defmodule Stashix.Library do
   end
 
   def count_books(access, library_id) do
-    Repo.aggregate(
-      from(b in Access.books(access),
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
-      ),
-      :count,
-      :id
-    )
+    SummaryCache.fetch({:count_books, access, library_id}, fn ->
+      Repo.aggregate(
+        from(b in Access.books(access),
+          where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "standalone"
+        ),
+        :count,
+        :id
+      )
+    end)
   end
 
   def count_series(access, library_id) do
-    Repo.aggregate(
-      from(s in Access.series(access), where: s.library_id == ^library_id and is_nil(s.deleted_at)),
-      :count,
-      :id
-    )
+    SummaryCache.fetch({:count_series, access, library_id}, fn ->
+      Repo.aggregate(
+        from(s in Access.series(access), where: s.library_id == ^library_id and is_nil(s.deleted_at)),
+        :count,
+        :id
+      )
+    end)
   end
 
   def count_issues(access, library_id) do
-    Repo.aggregate(
-      from(b in Access.books(access),
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
-      ),
-      :count,
-      :id
-    )
+    SummaryCache.fetch({:count_issues, access, library_id}, fn ->
+      Repo.aggregate(
+        from(b in Access.books(access),
+          where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue"
+        ),
+        :count,
+        :id
+      )
+    end)
   end
 
   def total_size_for_series(access, series_id) do
@@ -1949,19 +1956,21 @@ defmodule Stashix.Library do
   end
 
   def total_size(access, library_id) do
-    result =
-      from(bf in BookFile,
-        join: b in ^Access.books(access),
-        on: b.id == bf.book_id,
-        where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
-      )
-      |> Repo.aggregate(:sum, :file_size)
+    SummaryCache.fetch({:total_size, access, library_id}, fn ->
+      result =
+        from(bf in BookFile,
+          join: b in ^Access.books(access),
+          on: b.id == bf.book_id,
+          where: b.library_id == ^library_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
+        )
+        |> Repo.aggregate(:sum, :file_size)
 
-    case result do
-      nil -> 0
-      %Decimal{} = d -> Decimal.to_integer(d)
-      n -> n
-    end
+      case result do
+        nil -> 0
+        %Decimal{} = d -> Decimal.to_integer(d)
+        n -> n
+      end
+    end)
   end
 
   def recent_books(access, library_id, limit \\ 10, type \\ nil) do
@@ -2282,12 +2291,15 @@ defmodule Stashix.Library do
   def count_all_books(opts \\ []) do
     type = Keyword.get(opts, :type)
     library_id = Keyword.get(opts, :library_id)
+    access = access!(opts)
 
-    query = from b in Access.books(access!(opts)), where: is_nil(b.deleted_at)
-    query = if type, do: where(query, [b], b.type == ^type), else: query
-    query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
+    SummaryCache.fetch({:count_all_books, access, type, library_id}, fn ->
+      query = from b in Access.books(access), where: is_nil(b.deleted_at)
+      query = if type, do: where(query, [b], b.type == ^type), else: query
+      query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 
-    Repo.aggregate(query, :count, :id)
+      Repo.aggregate(query, :count, :id)
+    end)
   end
 
   def list_all_series(opts \\ []) do
@@ -2324,11 +2336,14 @@ defmodule Stashix.Library do
 
   def count_all_series(opts \\ []) do
     library_id = Keyword.get(opts, :library_id)
+    access = access!(opts)
 
-    query = from s in Access.series(access!(opts)), where: is_nil(s.deleted_at)
-    query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
+    SummaryCache.fetch({:count_all_series, access, library_id}, fn ->
+      query = from s in Access.series(access), where: is_nil(s.deleted_at)
+      query = if library_id, do: where(query, [s], s.library_id == ^library_id), else: query
 
-    Repo.aggregate(query, :count, :id)
+      Repo.aggregate(query, :count, :id)
+    end)
   end
 
   def list_all_deleted_books do
@@ -2358,6 +2373,7 @@ defmodule Stashix.Library do
 
       book |> Book.changeset(%{deleted_at: nil}) |> Repo.update!()
     end)
+    |> tap(fn _ -> SummaryCache.clear() end)
   end
 
   def restore_series(series) do
@@ -2373,6 +2389,7 @@ defmodule Stashix.Library do
 
       series |> Series.changeset(%{deleted_at: nil}) |> Repo.update!()
     end)
+    |> tap(fn _ -> SummaryCache.clear() end)
   end
 
   def purge_book(book) do
@@ -2412,6 +2429,7 @@ defmodule Stashix.Library do
 
     from(b in Book, where: b.id in ^ids)
     |> Repo.update_all(set: [deleted_at: nil])
+    |> tap(fn _ -> SummaryCache.clear() end)
   end
 
   def batch_purge_books(ids) do
@@ -2440,6 +2458,7 @@ defmodule Stashix.Library do
       from(s in Series, where: s.id in ^ids)
       |> Repo.update_all(set: [deleted_at: nil])
     end)
+    |> tap(fn _ -> SummaryCache.clear() end)
   end
 
   def batch_purge_series(ids) do
