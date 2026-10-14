@@ -471,10 +471,12 @@ defmodule StashixWeb.IdentifyComponent do
         credits: :creator
       ])
 
-    # Standalone when the series already has issue_count 1, OR when the CV volume
-    # name matches the current book title (series IS the title — typical TPB pattern).
+    # Standalone when the series already has issue_count 1, when the source signals
+    # a format-label title (TPB/HC etc.), or when the CV volume name matches the
+    # current book title (series IS the title — typical TPB pattern).
     standalone =
       match?(%{series: %{issue_count: 1}}, book) or
+        m[:standalone_hint] == true or
         (is_binary(m[:series]) and is_binary(book.title) and
            normalize_title(m[:series]) == normalize_title(book.title))
 
@@ -589,7 +591,8 @@ defmodule StashixWeb.IdentifyComponent do
 
   defp selectable_fields(rows), do: rows |> Enum.filter(& &1.selectable) |> MapSet.new(& &1.key)
 
-  defp normalize_title(s), do: s |> String.downcase() |> String.replace(~r/[^a-z0-9]/, "")
+  defp normalize_title(s),
+    do: s |> String.downcase() |> String.replace(~r/\band\b|\bthe\b|\ba\b|[^a-z0-9]/, "")
 
   # Child lists from the DB (structs) or from a source (maps) → short text.
   defp summarize(_key, items) when items in [nil, []], do: nil

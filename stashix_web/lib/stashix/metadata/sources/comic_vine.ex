@@ -264,12 +264,14 @@ defmodule Stashix.Metadata.Sources.ComicVine do
     store_date = date(i["store_date"])
     volume = i["volume"] || %{}
 
-    issue_name = if format_label?(i["name"]), do: nil, else: i["name"]
+    format_label = format_label?(i["name"])
+    issue_name = if format_label, do: nil, else: i["name"]
 
     %{}
     |> put(:series, volume["name"])
     |> put(:issue_number, decimal(i["issue_number"]))
     |> put(:title, issue_name)
+    |> put(:standalone_hint, format_label || nil)
     |> put(:stories, if(blank?(issue_name), do: [], else: [%{name: issue_name, external_id: nil}]))
     |> put(:cover_date, cover_date)
     |> put(:store_date, store_date)
