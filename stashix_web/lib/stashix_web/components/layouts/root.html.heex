@@ -66,5 +66,43 @@
       }, 10000);
     </script>
     {@inner_content}
+
+    <%!-- WebSocket offline banner: shown by JS when the LiveSocket drops --%>
+    <div
+      id="ws-offline-banner"
+      hidden
+      role="alert"
+      aria-live="assertive"
+      class="fixed bottom-0 left-0 right-0 z-[9998] flex items-center gap-3 h-9 px-4 bg-orange-500 border-t border-orange-400 overflow-hidden"
+    >
+      <div class="ws-hazard-stripes absolute inset-0 pointer-events-none"></div>
+      <svg
+        class="relative shrink-0 w-4 h-4 text-orange-950 animate-pulse"
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <line x1="1" y1="1" x2="23" y2="23" />
+        <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
+        <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
+        <path d="M10.71 5.05A16 16 0 0 1 22.56 9" />
+        <path d="M1.42 9a16 16 0 0 1 4.7-2.88" />
+        <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
+        <line x1="12" y1="20" x2="12.01" y2="20" />
+      </svg>
+      <span class="relative font-display font-black uppercase tracking-[0.07em] text-orange-950 text-sm leading-none flex-1 min-w-0 truncate">
+        No signal — connection lost
+      </span>
+      <button
+        id="ws-reconnect-btn"
+        class="ws-reconnect-btn relative shrink-0 font-display font-black uppercase tracking-[0.06em] text-xs px-3 py-1 bg-orange-950 text-orange-300 rounded-sm hover:text-white transition-colors"
+      >
+        Reconnect
+      </button>
+    </div>
   </body>
 </html>

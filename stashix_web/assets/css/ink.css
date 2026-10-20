@@ -627,6 +627,33 @@
   outline-offset: 2px;
 }
 
+/* WebSocket offline banner */
+.ws-hazard-stripes {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(0 0 0 / 0.12) 0,
+    rgb(0 0 0 / 0.12) 7px,
+    transparent 7px,
+    transparent 16px
+  );
+}
+
+.ws-reconnect-btn {
+  box-shadow: 3px 3px 0 0 oklch(0.42 0.17 55);
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    color 120ms ease;
+}
+.ws-reconnect-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 0 oklch(0.42 0.17 55);
+}
+.ws-reconnect-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 0 oklch(0.42 0.17 55);
+}
+
 /* Reduced motion: every transition and animation ends at once, including the
    ones that come from utility classes. Spinners keep turning, because a frozen
    spinner reads as a hang. */

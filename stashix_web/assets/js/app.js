@@ -1275,7 +1275,7 @@ if (window.__stashixBooted) {
 
   let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
   let liveSocket = new LiveSocket("/live", Socket, {
-    longPollFallbackMs: 2500,
+    longPollFallbackMs: 10000,
     params: {_csrf_token: csrfToken},
     hooks: Hooks
   })
@@ -1318,6 +1318,29 @@ if (window.__stashixBooted) {
   })
 
   initImagePrefetch()
+
+  // Offline banner: show when the WebSocket drops, hide on reconnect.
+  const wsBanner = document.getElementById("ws-offline-banner")
+  const wsReconnectBtn = document.getElementById("ws-reconnect-btn")
+  if (wsBanner) {
+    let offlineTimer = null
+    let everConnected = false
+
+    liveSocket.socket.onOpen(() => {
+      everConnected = true
+      clearTimeout(offlineTimer)
+      wsBanner.hidden = true
+    })
+
+    liveSocket.socket.onClose(() => {
+      if (!everConnected) return
+      clearTimeout(offlineTimer)
+      // Short delay avoids flashing the banner during normal reconnects.
+      offlineTimer = setTimeout(() => { wsBanner.hidden = false }, 1500)
+    })
+
+    wsReconnectBtn?.addEventListener("click", () => window.location.reload())
+  }
 
   // connect if there are any LiveViews on the page
   liveSocket.connect()
