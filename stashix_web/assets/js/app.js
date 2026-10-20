@@ -655,6 +655,14 @@ Hooks.ReaderKeyboard = {
     })
     this.handleKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return
+      // Webtoon strip: up/down scroll by a screen, left/right still jump a page.
+      const strip = document.getElementById("webtoon-area")
+      const scrollKeys = {ArrowDown: 1, PageDown: 1, " ": e.shiftKey ? -1 : 1, ArrowUp: -1, PageUp: -1}
+      if (strip && e.key in scrollKeys) {
+        e.preventDefault()
+        strip.scrollBy({top: scrollKeys[e.key] * strip.clientHeight * 0.85, behavior: "smooth"})
+        return
+      }
       if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
         e.preventDefault()
         this.pushEvent("next_page", {})
@@ -675,6 +683,105 @@ Hooks.ReaderKeyboard = {
   },
   destroyed() {
     window.removeEventListener("keydown", this.handleKey)
+  }
+}
+
+// Webtoon strip: one long column of pages scrolled natively.
+//
+// The server only learns where the reader is from here: the page crossing the
+// reading line goes out as "scroll_page" (it drives the counter, scrubber and
+// saved progress), the end spacer coming into view as "scroll_end". Page jumps
+// (scrubber, arrow keys) come back the other way as "reader:scroll-to".
+const READING_LINE = 0.4   // fraction of the viewport height that "is" the page
+const SCROLL_REPORT_MS = 150
+const BAR_HIDE_PX = 48     // scrolled down this far in one go tucks the bars away
+
+Hooks.ReaderScroll = {
+  mounted() {
+    this.strip = this.el.querySelector("#webtoon-strip")
+    this.endEl = this.el.querySelector("#webtoon-end")
+    this.page = Number(this.el.dataset.start) || 0
+    this.reportTimer = null
+    this.frame = null
+    this.lastTop = 0
+    this.travel = 0
+
+    this.handleEvent("reader:scroll-to", ({page}) => this.scrollToPage(page))
+
+    this.onScroll = () => {
+      if (this.frame === null) this.frame = requestAnimationFrame(() => this.scrolled())
+    }
+    this.onClick = (e) => {
+      if (e.target.closest("button, a, input")) return
+      this.pushEvent("toggle_overlay", {})
+    }
+    this.el.addEventListener("scroll", this.onScroll, {passive: true})
+    this.el.addEventListener("click", this.onClick)
+
+    // Shown once the spacer is mostly on screen, i.e. the last page is behind us.
+    this.endObserver = new IntersectionObserver(([entry]) => {
+      this.pushEvent("scroll_end", {visible: entry.isIntersecting})
+    }, {root: this.el, threshold: 0.6})
+    this.endObserver.observe(this.endEl)
+
+    this.scrollToPage(this.page)
+  },
+
+  destroyed() {
+    this.el.removeEventListener("scroll", this.onScroll)
+    this.el.removeEventListener("click", this.onClick)
+    this.endObserver.disconnect()
+    clearTimeout(this.reportTimer)
+    if (this.frame !== null) cancelAnimationFrame(this.frame)
+  },
+
+  pages() {
+    return this.strip.children
+  },
+
+  scrollToPage(page) {
+    const target = page === "end" ? this.endEl : this.pages()[page]
+    if (!target) return
+    this.el.scrollTop = target.offsetTop
+    // A jump is not the reader scrolling down: keep the bars where they are.
+    this.lastTop = this.el.scrollTop
+  },
+
+  scrolled() {
+    this.frame = null
+    const top = this.el.scrollTop
+
+    // Bars hide on a deliberate scroll down and come back on any scroll up.
+    const delta = top - this.lastTop
+    this.lastTop = top
+    this.travel = delta > 0 ? Math.max(this.travel, 0) + delta : 0
+    const barsShown = this.el.dataset.overlay === "true"
+    if (barsShown && this.travel > BAR_HIDE_PX) {
+      this.pushEvent("set_overlay", {visible: false})
+      this.el.dataset.overlay = "false"
+    } else if (!barsShown && delta < -8) {
+      this.pushEvent("set_overlay", {visible: true})
+      this.el.dataset.overlay = "true"
+    }
+
+    const page = this.pageAt(top + this.el.clientHeight * READING_LINE)
+    if (page !== this.page) {
+      this.page = page
+      clearTimeout(this.reportTimer)
+      this.reportTimer = setTimeout(() => this.pushEvent("scroll_page", {page: this.page}), SCROLL_REPORT_MS)
+    }
+  },
+
+  // Last page whose top edge sits above y (binary search: the strip is sorted).
+  pageAt(y) {
+    const pages = this.pages()
+    let lo = 0, hi = pages.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (pages[mid].offsetTop <= y) lo = mid
+      else hi = mid - 1
+    }
+    return lo
   }
 }
 

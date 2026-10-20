@@ -82,6 +82,33 @@ defmodule StashixWeb.ReaderLiveTest do
     assert render_hook(view, "next_page", %{}) =~ "The End"
   end
 
+  test "webtoon layout shows every page in one strip and tracks the scrolled page", ctx do
+    %{conn: conn, user: user, first: first, second: second} = ctx
+    {:ok, view, _html} = live(conn, ~p"/read/#{first.id}")
+
+    render_click(view, "set_layout", %{"layout" => "webtoon"})
+    assert has_element?(view, ~s|#webtoon-strip img[data-page="0"]|)
+    assert has_element?(view, ~s|#webtoon-strip img[data-page="1"]|)
+    refute has_element?(view, "#reading-area")
+    assert Accounts.get_user!(user.id).reader_settings["page_layout"] == "webtoon"
+
+    render_hook(view, "scroll_page", %{"page" => 1})
+    assert render(view) =~ ~s|value="1"|
+
+    # Paging keys become scroll jumps for the strip to carry out.
+    render_hook(view, "prev_page", %{})
+    assert_push_event(view, "reader:scroll-to", %{page: 0})
+    render_hook(view, "next_page", %{})
+    assert_push_event(view, "reader:scroll-to", %{page: :end})
+
+    render_hook(view, "scroll_end", %{"visible" => true})
+    assert has_element?(view, ~s|#webtoon-end #reader-end a[href="/read/#{second.id}"]|)
+    assert Library.get_progress(user.id, first.id).current_page == 1
+
+    render_hook(view, "scroll_end", %{"visible" => false})
+    refute has_element?(view, "#reader-end")
+  end
+
   defp write_cbz(dir, filename, pages) do
     files = for i <- 1..pages, do: {String.to_charlist("page#{i}.jpg"), "fake jpeg #{filename} #{i}"}
     {:ok, {_, data}} = :zip.create(String.to_charlist(Path.join(dir, filename)), files, [:memory])

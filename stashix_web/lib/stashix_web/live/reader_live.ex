@@ -64,7 +64,17 @@ defmodule StashixWeb.ReaderLive do
   @impl true
   # The end card sits one step past the last page; stepping back just closes it.
   def handle_event("prev_page", _params, %{assigns: %{at_end: true}} = socket) do
-    {:noreply, assign(socket, :at_end, false)}
+    socket = assign(socket, :at_end, false)
+
+    if webtoon?(socket.assigns),
+      do: {:noreply, scroll_to(socket, socket.assigns.current_page)},
+      else: {:noreply, socket}
+  end
+
+  # The webtoon strip scrolls natively, so page steps become scroll jumps; the
+  # strip's scroll handler then reports the page back through "scroll_page".
+  def handle_event("prev_page", _params, %{assigns: %{page_layout: "webtoon"}} = socket) do
+    {:noreply, scroll_to(socket, max(socket.assigns.current_page - 1, 0))}
   end
 
   def handle_event("prev_page", _params, socket) do
@@ -76,6 +86,11 @@ defmodule StashixWeb.ReaderLive do
   # Paging forward again from the end card carries straight on into the next issue.
   def handle_event("next_page", _params, %{assigns: %{at_end: true, next_href: href}} = socket) do
     if href, do: {:noreply, push_navigate(socket, to: href, replace: true)}, else: {:noreply, socket}
+  end
+
+  def handle_event("next_page", _params, %{assigns: %{page_layout: "webtoon"}} = socket) do
+    %{current_page: page, page_count: count} = socket.assigns
+    {:noreply, scroll_to(socket, if(page >= count - 1, do: :end, else: page + 1))}
   end
 
   def handle_event("next_page", _params, socket) do
@@ -91,7 +106,36 @@ defmodule StashixWeb.ReaderLive do
   def handle_event("goto_page", %{"page" => page_str}, socket) do
     page = String.to_integer(page_str)
     new_page = max(0, min(page, socket.assigns.page_count - 1))
-    {:noreply, socket |> assign(current_page: new_page, at_end: false) |> schedule_progress_save()}
+    socket = socket |> assign(current_page: new_page, at_end: false) |> schedule_progress_save()
+    if webtoon?(socket.assigns), do: {:noreply, scroll_to(socket, new_page)}, else: {:noreply, socket}
+  end
+
+  # Webtoon strip: the page under the reading line changed while scrolling.
+  def handle_event("scroll_page", %{"page" => page}, socket) when is_integer(page) do
+    new_page = max(0, min(page, socket.assigns.page_count - 1))
+
+    if new_page == socket.assigns.current_page do
+      {:noreply, socket}
+    else
+      {:noreply, socket |> assign(:current_page, new_page) |> schedule_progress_save()}
+    end
+  end
+
+  # Webtoon strip: the space below the last page scrolled into or out of view.
+  def handle_event("scroll_end", %{"visible" => true}, %{assigns: %{at_end: false, page_count: count}} = socket)
+      when count > 0 do
+    {:noreply, show_end(socket)}
+  end
+
+  def handle_event("scroll_end", %{"visible" => false}, socket) do
+    {:noreply, assign(socket, :at_end, false)}
+  end
+
+  def handle_event("scroll_end", _params, socket), do: {:noreply, socket}
+
+  # Scrolling down the strip tucks the bars away, like turning a page does not.
+  def handle_event("set_overlay", %{"visible" => visible}, socket) when is_boolean(visible) do
+    {:noreply, assign(socket, :overlay_visible, visible)}
   end
 
   # Leaving is an event rather than a plain link so the pending save lands before
@@ -109,8 +153,8 @@ defmodule StashixWeb.ReaderLive do
   end
 
   def handle_event("set_layout", %{"layout" => layout}, socket)
-      when layout in ["single", "double", "cover"] do
-    socket = assign(socket, page_layout: layout)
+      when layout in ["single", "double", "cover", "webtoon"] do
+    socket = assign(socket, page_layout: layout, at_end: false)
     save_reader_settings(socket)
     {:noreply, socket}
   end
@@ -170,6 +214,11 @@ defmodule StashixWeb.ReaderLive do
   end
 
   defp sync_page_count(book, _count), do: book
+
+  defp webtoon?(%{page_layout: layout}), do: layout == "webtoon"
+
+  # Asks the strip's ReaderScroll hook to jump; `:end` lands on the end card.
+  defp scroll_to(socket, page), do: push_event(socket, "reader:scroll-to", %{page: page})
 
   defp spread?(%{page_layout: layout, current_page: page, page_count: count}),
     do: (layout == "double" or (layout == "cover" and page > 0)) and page + 1 < count
@@ -237,6 +286,13 @@ defmodule StashixWeb.ReaderLive do
 
   defp img_fit_style(_page), do: "max-height: 100%; max-width: 100%; width: auto; height: auto;"
 
+  # The strip always fills its column; "fit width" widens the column to the screen.
+  defp webtoon_column_class("width"), do: "w-full"
+  defp webtoon_column_class(_fit), do: "w-full max-w-3xl"
+
+  defp page_src(book, page, nil), do: "/api/books/#{book.id}/page/#{page}"
+  defp page_src(book, page, format), do: "/api/books/#{book.id}/page/#{page}?format=#{format}"
+
   defp fit_modes do
     [
       {"page", "Fit page", "lucide-scan"},
@@ -247,6 +303,7 @@ defmodule StashixWeb.ReaderLive do
 
   defp layout_icon("double"), do: "lucide-columns-2"
   defp layout_icon("cover"), do: "lucide-layout-panel-top"
+  defp layout_icon("webtoon"), do: "lucide-gallery-vertical-end"
   defp layout_icon(_single), do: "lucide-rectangle-vertical"
 
   defp slider_fill(_page, count) when count <= 1, do: 100
@@ -380,6 +437,10 @@ defmodule StashixWeb.ReaderLive do
       #reading-area { touch-action: none; }
       .reader-zone-left { cursor: w-resize; }
       .reader-zone-right { cursor: e-resize; }
+      /* Unloaded pages hold some height, so lazy loading does not see the
+         whole strip in view at once and the resume jump lands near its page. */
+      .webtoon-page { display: block; width: 100%; height: auto; min-height: 60vh; background: rgb(24 24 27); }
+      .webtoon-page[data-loaded] { min-height: 0; background: none; }
     </style>
     <div
       class="relative bg-black"
@@ -440,7 +501,8 @@ defmodule StashixWeb.ReaderLive do
                 {layout, label} <- [
                   {"single", "Single page"},
                   {"double", "Facing pages"},
-                  {"cover", "Facing, cover first"}
+                  {"cover", "Facing, cover first"},
+                  {"webtoon", "Webtoon (scroll)"}
                 ]
               }
               icon={layout_icon(layout)}
@@ -463,13 +525,15 @@ defmodule StashixWeb.ReaderLive do
                 {label}
               </.menu_item>
 
-              <.menu_label class="mt-2">Direction</.menu_label>
-              <.menu_item
-                icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
-                phx-click="toggle_direction"
-              >
-                {if @direction == "ltr", do: "Left to right", else: "Right to left"}
-              </.menu_item>
+              <div :if={@page_layout != "webtoon"}>
+                <.menu_label class="mt-2">Direction</.menu_label>
+                <.menu_item
+                  icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
+                  phx-click="toggle_direction"
+                >
+                  {if @direction == "ltr", do: "Left to right", else: "Right to left"}
+                </.menu_item>
+              </div>
             </div>
           </.ink_menu>
 
@@ -485,8 +549,8 @@ defmodule StashixWeb.ReaderLive do
             />
           </.segmented>
 
-          <%!-- Direction toggle --%>
-          <.segmented class="hidden sm:flex">
+          <%!-- Direction toggle; the webtoon strip only runs top to bottom --%>
+          <.segmented :if={@page_layout != "webtoon"} class="hidden sm:flex">
             <.segment
               title="Toggle reading direction (LTR/RTL)"
               phx-click="toggle_direction"
@@ -512,8 +576,43 @@ defmodule StashixWeb.ReaderLive do
         </div>
       </div>
 
+      <%!-- Webtoon: every page in one vertical strip, scrolled natively. The
+           ReaderScroll hook reports the page under the reading line, flags
+           the end card scrolling into view, and turns taps into the overlay
+           toggle. The strip itself is phx-update="ignore" so patches leave
+           the loaded images (and their data-loaded flags) alone. --%>
+      <div
+        :if={@page_layout == "webtoon"}
+        id="webtoon-area"
+        class="absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-contain select-none"
+        phx-hook="ReaderScroll"
+        data-start={@current_page}
+        data-overlay={to_string(@overlay_visible)}
+      >
+        <div class={["mx-auto", webtoon_column_class(@fit_mode)]}>
+          <div id="webtoon-strip" phx-update="ignore">
+            <img
+              :for={page <- 0..(@page_count - 1)//1}
+              class="webtoon-page"
+              data-page={page}
+              src={page_src(@book, page, @book_format)}
+              alt={"Page #{page + 1}"}
+              loading="lazy"
+              decoding="async"
+              draggable="false"
+              onload="this.dataset.loaded=''"
+              onerror="this.dataset.loaded=''"
+            />
+          </div>
+        </div>
+        <div id="webtoon-end" class="relative" style="height: 100dvh;">
+          <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} />
+        </div>
+      </div>
+
       <%!-- Reading area (full viewport) --%>
       <div
+        :if={@page_layout != "webtoon"}
         class="absolute inset-0 overflow-hidden select-none"
         id="reading-area"
         phx-hook="ReaderZoom"
@@ -645,31 +744,31 @@ defmodule StashixWeb.ReaderLive do
             <% end %>
           <% end %>
         </div>
+      </div>
 
-        <%!-- Bottom bar: scrubber --%>
-        <div class={[
-          "reader-bar reader-bar-bottom absolute bottom-0 left-0 right-0 z-30 px-4 py-2.5 transition-transform duration-200",
-          if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
-        ]}>
-          <div class="flex items-center gap-4">
-            <span class="w-8 text-right font-display font-black text-xl leading-none text-white tabular-nums">
-              {@current_page + 1}
-            </span>
-            <input
-              id="page-slider"
-              type="range"
-              min="0"
-              max={@page_count - 1}
-              value={@current_page}
-              phx-hook="PageSlider"
-              aria-label="Page"
-              class="reader-slider flex-1"
-              style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
-            />
-            <span class="w-8 font-display font-bold text-base leading-none text-gray-400 tabular-nums">
-              {@page_count}
-            </span>
-          </div>
+      <%!-- Bottom bar: scrubber --%>
+      <div class={[
+        "reader-bar reader-bar-bottom absolute bottom-0 left-0 right-0 z-30 px-4 py-2.5 transition-transform duration-200",
+        if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
+      ]}>
+        <div class="flex items-center gap-4">
+          <span class="w-8 text-right font-display font-black text-xl leading-none text-white tabular-nums">
+            {@current_page + 1}
+          </span>
+          <input
+            id="page-slider"
+            type="range"
+            min="0"
+            max={@page_count - 1}
+            value={@current_page}
+            phx-hook="PageSlider"
+            aria-label="Page"
+            class="reader-slider flex-1"
+            style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
+          />
+          <span class="w-8 font-display font-bold text-base leading-none text-gray-400 tabular-nums">
+            {@page_count}
+          </span>
         </div>
       </div>
     </div>
