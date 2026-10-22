@@ -1,3 +1,4 @@
+---
 services:
   phoenix:
     build:
@@ -13,6 +14,8 @@ services:
       PHX_HOST: ${PHX_HOST:-localhost}
       PORT: 4000
       DATA_DIR: /data
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
     volumes:
       - ${LIBRARY_PATH:-./libraries}:/libraries:ro
       - phoenix_data:/data

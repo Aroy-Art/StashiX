@@ -20,7 +20,7 @@ RUN MIX_ENV=prod mix release
 
 FROM alpine:3.24
 
-RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips \
+RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips su-exec \
     && printf '#!/bin/sh\ncase "$1" in\n  lb) 7z l -ba "$2" | awk '"'"'{print $NF}'"'"' ;;\n  p) archive="$3"; file="$4"; 7z x -so "$archive" "$file" ;;\n  *) echo "unsupported: $1" >&2; exit 1 ;;\nesac\n' > /usr/local/bin/unrar \
     && chmod +x /usr/local/bin/unrar
 
@@ -30,7 +30,10 @@ COPY --from=build /app/_build/prod/rel/stashix ./
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-ENV PHX_HOST=localhost PORT=4000 MIX_ENV=prod DATA_DIR=/data
+# RELEASE_TMP: the release writes its runtime config there on boot, and /app
+# is root-owned and not writable by the PUID user.
+ENV PHX_HOST=localhost PORT=4000 MIX_ENV=prod DATA_DIR=/data \
+    PUID=1000 PGID=1000 RELEASE_TMP=/tmp
 VOLUME /data
 
 EXPOSE 4000
