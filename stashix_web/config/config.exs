@@ -12,11 +12,12 @@ repo_tmp = Path.expand("../../tmp/data", __DIR__)
 config :stashix,
   ecto_repos: [Stashix.Repo],
   generators: [timestamp_type: :utc_datetime],
-  data_dir: System.get_env("DATA_DIR") || "/tmp/stashix",
-  thumbnail_dir: System.get_env("THUMBNAIL_DIR") || Path.join(repo_tmp, "thumbnails"),
-  image_cache_dir: System.get_env("IMAGE_CACHE_DIR") || Path.join(repo_tmp, "cache/images/resized"),
-  metadata_image_dir: System.get_env("METADATA_IMAGE_DIR") || Path.join(repo_tmp, "cache/images/metadata"),
-  library_path: System.get_env("LIBRARY_PATH") || "/libraries"
+  # Defaults only; env var overrides are applied in config/runtime.exs.
+  data_dir: "/tmp/stashix",
+  thumbnail_dir: Path.join(repo_tmp, "thumbnails"),
+  image_cache_dir: Path.join(repo_tmp, "cache/images/resized"),
+  metadata_image_dir: Path.join(repo_tmp, "cache/images/metadata"),
+  library_path: "/libraries"
 
 config :stashix, Oban,
   engine: Oban.Engines.Basic,

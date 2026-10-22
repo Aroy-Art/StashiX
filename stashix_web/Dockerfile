@@ -30,7 +30,8 @@ COPY --from=build /app/_build/prod/rel/stashix ./
 COPY entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
-ENV PHX_HOST=localhost PORT=4000 MIX_ENV=prod
+ENV PHX_HOST=localhost PORT=4000 MIX_ENV=prod DATA_DIR=/data
+VOLUME /data
 
 EXPOSE 4000
 

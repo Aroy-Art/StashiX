@@ -51,6 +51,34 @@ config :stashix, Stashix.Vault,
     default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: vault_key, iv_length: 12}
   ]
 
+# Storage paths. Read here rather than in config.exs so releases pick them up
+# at boot instead of baking in whatever was set at build time. When DATA_DIR
+# is set, the storage dirs default to subdirectories of it; the specific env
+# vars still take precedence.
+env_path = fn var ->
+  case System.get_env(var) do
+    value when is_binary(value) and value != "" -> value
+    _ -> nil
+  end
+end
+
+data_dir = env_path.("DATA_DIR")
+under_data_dir = fn sub -> data_dir && Path.join(data_dir, sub) end
+
+path_overrides =
+  [
+    data_dir: data_dir,
+    thumbnail_dir: env_path.("THUMBNAIL_DIR") || under_data_dir.("thumbnails"),
+    image_cache_dir: env_path.("IMAGE_CACHE_DIR") || under_data_dir.("cache/images/resized"),
+    metadata_image_dir: env_path.("METADATA_IMAGE_DIR") || under_data_dir.("cache/images/metadata"),
+    library_path: env_path.("LIBRARY_PATH")
+  ]
+  |> Enum.reject(fn {_key, value} -> is_nil(value) end)
+
+if path_overrides != [] do
+  config :stashix, path_overrides
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||
