@@ -21,7 +21,6 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import "../vendor/blurhash"
-import * as echarts from "../vendor/echarts.min"
 import InkMenu from "./hooks/ink_menu.js"
 import InkDialog from "./hooks/ink_dialog.js"
 import Shelf from "./hooks/shelf.js"
@@ -55,11 +54,21 @@ Hooks.Sidebar = {
   }
 }
 
-const echartsLib = echarts.init ? echarts : echarts.default
+// ECharts is ~1 MB and only the stats page draws charts, so it is split into
+// its own chunk and fetched the first time a Chart hook mounts.
+let echartsPromise = null
+const loadECharts = () => {
+  echartsPromise ||= import("../vendor/echarts.min").then((mod) => {
+    const echartsLib = mod.init ? mod : mod.default
+    registerInkTheme(echartsLib)
+    return echartsLib
+  })
+  return echartsPromise
+}
 
 // Chart chrome in the display face; series colours come with each option.
 const chartFont = { fontFamily: '"Big Shoulders Display", "Arial Narrow", sans-serif', fontWeight: 600, fontSize: 13 }
-echartsLib.registerTheme("ink", {
+const registerInkTheme = (echartsLib) => echartsLib.registerTheme("ink", {
   textStyle: { fontFamily: "ui-sans-serif, system-ui, sans-serif" },
   categoryAxis: { axisLabel: chartFont, axisLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } } },
   valueAxis: { axisLabel: chartFont },
@@ -74,7 +83,8 @@ echartsLib.registerTheme("ink", {
 
 Hooks.Chart = {
   mounted() {
-    requestAnimationFrame(() => {
+    loadECharts().then((echartsLib) => requestAnimationFrame(() => {
+      if (this.destroyedAt) return
       const chart = echartsLib.init(this.el, "ink", {renderer: "canvas"})
       this.chart = chart
 
@@ -91,10 +101,11 @@ Hooks.Chart = {
         const link = params.data?.link
         if (link) window.liveSocket.pushHistoryState ? window.liveSocket.navigate(link) : (window.location.href = link)
       })
-    })
+    }))
   },
 
   destroyed() {
+    this.destroyedAt = Date.now()
     if (this.ro) this.ro.disconnect()
     if (this.chart) this.chart.dispose()
   }
