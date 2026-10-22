@@ -12,6 +12,10 @@ on:
       - "stashix_web/**"
       - ".forgejo/workflows/build.yaml"
 
+env:
+  REGISTRY: git.aroy-art.com
+  IMAGE: git.aroy-art.com/aroy/stashix
+
 jobs:
   build:
     runs-on: act-ubuntu-24.04-amd64
@@ -23,9 +27,17 @@ jobs:
       - name: set up docker buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: build docker image
+      - name: log in to registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ forgejo.actor }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: build and push docker image
         uses: docker/build-push-action@v7
         with:
           context: stashix_web
-          push: false
-          tags: stashix:latest
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ env.IMAGE }}:dev
