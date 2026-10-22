@@ -5,12 +5,16 @@ on:
     branches: [main]
     paths:
       - "stashix_web/lib/**"
+      - "stashix_web/config/**"
+      - "stashix_web/test/**"
       - "stashix_web/mix.exs"
       - "stashix_web/.formatter.exs"
       - ".forgejo/workflows/format.yaml"
   pull_request:
     paths:
       - "stashix_web/lib/**"
+      - "stashix_web/config/**"
+      - "stashix_web/test/**"
       - "stashix_web/mix.exs"
       - "stashix_web/.formatter.exs"
       - ".forgejo/workflows/format.yaml"
