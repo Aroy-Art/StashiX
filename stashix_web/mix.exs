@@ -31,6 +31,7 @@ defmodule Stashix.MixProject do
           .sidebar-projectVersion { text-align: left; }
           </style>
           """
+
         _ ->
           ""
       end,
