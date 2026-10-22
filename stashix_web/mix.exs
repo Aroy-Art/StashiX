@@ -18,6 +18,22 @@ defmodule Stashix.MixProject do
   defp docs do
     [
       main: "Stashix",
+      logo: "priv/static/images/logo.png",
+      api_reference: false,
+      before_closing_head_tag: fn
+        :html ->
+          """
+          <style>
+          .sidebar-projectInfo { flex-direction: column !important; align-items: flex-start !important; gap: 4px; }
+          .sidebar-projectName { display: none !important; }
+          .sidebar-projectImage { display: block !important; width: 100%; margin-bottom: 0; }
+          .sidebar-projectImage img { max-width: 100% !important; max-height: none !important; width: 100%; height: auto; }
+          .sidebar-projectVersion { text-align: left; }
+          </style>
+          """
+        _ ->
+          ""
+      end,
       extras: [
         "../docs/scanner-layout.md": [title: "Scanner: Library Layout"],
         "../docs/metadata-workflow.md": [title: "Metadata: Source → File Workflow"],
