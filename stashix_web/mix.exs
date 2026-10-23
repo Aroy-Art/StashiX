@@ -11,7 +11,14 @@ defmodule Stashix.MixProject do
       aliases: aliases(),
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
-      docs: docs()
+      docs: docs(),
+      package: package()
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["AGPL-3.0-or-later"]
     ]
   end
 

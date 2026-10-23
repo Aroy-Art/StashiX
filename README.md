@@ -77,6 +77,10 @@ GET http://<host>:9568/metrics
 
 The `phoenix_socket_connected_count` counter (labelled by `transport`) tracks WebSocket vs long-poll fallback connections. See [docs/metrics.md](docs/metrics.md) for the full metric list and example Grafana queries.
 
+## License
+
+Stashix is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE).
+
 ---
 
 ## TODO
