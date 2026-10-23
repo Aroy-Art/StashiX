@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 [
   import_deps: [:ecto, :ecto_sql, :phoenix, :open_api_spex],
   subdirectories: ["priv/*/migrations"],

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Metadata.Matcher do
   @moduledoc """
   Finds the best external match for a book or series.

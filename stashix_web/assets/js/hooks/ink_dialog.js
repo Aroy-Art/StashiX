@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // InkDialog: opens a <.dialog> as a native modal and turns every way of
 // dismissing it (Escape, the close button, a click on the backdrop) into the
 // JS command in data-on-close. The server closes it by removing the element.

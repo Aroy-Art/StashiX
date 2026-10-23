@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.CollectionComponents do
   @moduledoc """
   Page layout shared by the things that hold series, books and issues: a

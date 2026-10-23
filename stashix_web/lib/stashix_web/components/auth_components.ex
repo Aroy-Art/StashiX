@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.AuthComponents do
   @moduledoc """
   The signed-out pages (login, first-run setup), laid out like the cover of a

@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // Shelf: marks a <.shelf> with data-overflow while its row has more than fits,
 // so the arrow buttons only show when there is somewhere to scroll to.
 const Shelf = {

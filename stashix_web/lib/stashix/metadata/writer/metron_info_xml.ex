@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Metadata.Writer.MetronInfoXml do
   @moduledoc """
   Builds a MetronInfo.xml document (see docs/MetronInfo.schema.xml) from a book

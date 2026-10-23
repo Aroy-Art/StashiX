@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.AdminLive.Cleanup do
   @moduledoc """
   Cleanup tab: restore or purge soft-deleted series and books.

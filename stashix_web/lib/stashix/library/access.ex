@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Library.Access do
   @moduledoc """
   What a user may see: which libraries they can read and, per library, the

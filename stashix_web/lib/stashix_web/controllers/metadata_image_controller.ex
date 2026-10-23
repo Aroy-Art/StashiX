@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.MetadataImageController do
   @moduledoc "Serves metadata source images (e.g. Identify dialog covers) through `Stashix.Metadata.ImageProxy`."
   use StashixWeb, :controller

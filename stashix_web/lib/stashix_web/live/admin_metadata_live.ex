@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.AdminMetadataLive do
   @moduledoc "Admin · Metadata: source plugins, match settings, review queue and jobs."
   use StashixWeb, :live_view

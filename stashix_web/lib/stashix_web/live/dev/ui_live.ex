@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.Dev.UiLive do
   @moduledoc """
   Style guide for the "ink" design language, mounted at `/dev/ui` when

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.UI.Data do
   @moduledoc """
   Tables and tab bars of the "ink" design language. Specimens live at `/dev/ui`.

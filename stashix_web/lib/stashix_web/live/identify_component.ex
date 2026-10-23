@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.IdentifyComponent do
   @moduledoc """
   "Identify" dialog: search a metadata source for a book (issue) or series,

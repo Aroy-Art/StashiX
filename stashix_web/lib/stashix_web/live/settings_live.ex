@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule StashixWeb.SettingsLive do
   @moduledoc """
   A user's own settings, in three tabs: UI (appearance), Personal (name and

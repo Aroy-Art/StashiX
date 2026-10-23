@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Health.Workers.IntegrityLibraryWorker do
   @moduledoc "Fans out IntegrityFileWorker jobs for every active file in a library."
   use Oban.Worker,

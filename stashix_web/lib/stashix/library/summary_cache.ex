@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Library.SummaryCache do
   @moduledoc """
   Short-lived cache for the library summary numbers (book, issue and series

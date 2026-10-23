@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Accounts.Session do
   @moduledoc """
   One sign-in of a user: a browser, or an app using the API. Kept so the user

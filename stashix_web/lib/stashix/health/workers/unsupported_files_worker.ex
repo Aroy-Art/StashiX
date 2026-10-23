@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 defmodule Stashix.Health.Workers.UnsupportedFilesWorker do
   @moduledoc "Walks a library root path and records files with unsupported extensions."
   use Oban.Worker,

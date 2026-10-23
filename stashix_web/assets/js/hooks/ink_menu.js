@@ -1,3 +1,8 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
 // InkMenu: the behaviour behind <.ink_menu> and <.ink_select>.
 //
 // The panel is a manual popover, so it sits in the browser's top layer (no
