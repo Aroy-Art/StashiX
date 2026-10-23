@@ -3,8 +3,9 @@
 
 defmodule StashixWeb.SettingsLive do
   @moduledoc """
-  A user's own settings, in three tabs: UI (appearance), Personal (name and
-  birth date) and Security (email, password, sessions).
+  A user's own settings, in tabs: UI (appearance), Personal (name and birth
+  date), Security (email, password, sessions) and About (version, license and
+  the source link the AGPL asks for).
 
   The Security forms post to `StashixWeb.SettingsController`, because they
   have to rewrite the session cookie; everything else is handled here.
@@ -144,6 +145,7 @@ defmodule StashixWeb.SettingsLive do
         <:tab patch={~p"/settings"} active={@live_action == :ui}>UI</:tab>
         <:tab patch={~p"/settings/personal"} active={@live_action == :personal}>Personal</:tab>
         <:tab patch={~p"/settings/security"} active={@live_action == :security}>Security</:tab>
+        <:tab patch={~p"/settings/about"} active={@live_action == :about}>About</:tab>
       </.tabs>
 
       <.ui_tab :if={@live_action == :ui} current_user={@current_user} preview_covers={@preview_covers} />
@@ -154,6 +156,7 @@ defmodule StashixWeb.SettingsLive do
         sessions={@sessions}
         current_session_id={@current_session_id}
       />
+      <.about_tab :if={@live_action == :about} />
     </.page>
     """
   end
@@ -394,6 +397,40 @@ defmodule StashixWeb.SettingsLive do
         </.panel>
       </div>
     </div>
+    """
+  end
+
+  defp about_tab(assigns) do
+    assigns =
+      assign(assigns,
+        version: Application.spec(:stashix, :vsn),
+        source_url: Application.fetch_env!(:stashix, :source_url)
+      )
+
+    ~H"""
+    <.panel variant="indicia">
+      <.stat_list class="px-6 py-5">
+        <.stat label="Version">{@version}</.stat>
+        <.stat label="License">AGPL-3.0-or-later</.stat>
+      </.stat_list>
+    </.panel>
+
+    <.section title="Source code">
+      <p class="max-w-xl -mt-1 text-sm text-gray-400">
+        Stashix is free software: you can redistribute and modify it under the terms of the <a
+          href="https://www.gnu.org/licenses/agpl-3.0.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline underline-offset-4 hover:text-white"
+        >GNU Affero General Public License</a>, version 3 or later. The source code for this server is at <a
+          id="source-link"
+          href={@source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline underline-offset-4 hover:text-white"
+        >{@source_url}</a>.
+      </p>
+    </.section>
     """
   end
 end

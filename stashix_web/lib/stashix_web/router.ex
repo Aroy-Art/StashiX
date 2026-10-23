@@ -155,6 +155,7 @@ defmodule StashixWeb.Router do
     live "/settings", SettingsLive, :ui
     live "/settings/personal", SettingsLive, :personal
     live "/settings/security", SettingsLive, :security
+    live "/settings/about", SettingsLive, :about
 
     post "/settings/password", SettingsController, :update_password
     post "/settings/email", SettingsController, :update_email

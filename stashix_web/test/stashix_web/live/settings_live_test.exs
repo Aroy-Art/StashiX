@@ -40,6 +40,13 @@ defmodule StashixWeb.SettingsLiveTest do
     assert User.ui_setting(Accounts.get_user!(user.id), "read_mark") == "stamp"
   end
 
+  test "the About tab shows the version, license and source link", %{conn: conn} do
+    {:ok, view, html} = live(conn, ~p"/settings/about")
+    assert html =~ to_string(Application.spec(:stashix, :vsn))
+    assert html =~ "AGPL-3.0-or-later"
+    assert has_element?(view, ~s(#source-link[href="#{Application.fetch_env!(:stashix, :source_url)}"]))
+  end
+
   test "the Personal tab saves the profile and shows validation errors", %{conn: conn, user: user} do
     {:ok, _} = Accounts.create_user(%{email: "taken@example.com", username: "taken", password: "password1234"})
     {:ok, view, _html} = live(conn, ~p"/settings/personal")

@@ -20,7 +20,10 @@ config :stashix,
   thumbnail_dir: Path.join(repo_tmp, "thumbnails"),
   image_cache_dir: Path.join(repo_tmp, "cache/images/resized"),
   metadata_image_dir: Path.join(repo_tmp, "cache/images/metadata"),
-  library_path: "/libraries"
+  library_path: "/libraries",
+  # Shown on Settings → About. AGPL section 13: point this at your own source
+  # if you run a modified version.
+  source_url: "https://git.aroy-art.com/Aroy/Stashix"
 
 config :stashix, Oban,
   engine: Oban.Engines.Basic,
