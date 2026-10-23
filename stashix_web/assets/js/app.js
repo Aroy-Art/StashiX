@@ -1349,7 +1349,8 @@ if (window.__stashixBooted) {
     })
 
     liveSocket.socket.onClose(() => {
-      if (!everConnected) return
+      // Intentional disconnects (phx-trigger-action submit, page unload) aren't outages.
+      if (!everConnected || liveSocket.isUnloaded()) return
       clearTimeout(offlineTimer)
       // Short delay avoids flashing the banner during normal reconnects.
       offlineTimer = setTimeout(() => { wsBanner.hidden = false }, 1500)
