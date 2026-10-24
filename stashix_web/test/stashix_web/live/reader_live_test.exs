@@ -57,6 +57,17 @@ defmodule StashixWeb.ReaderLiveTest do
     assert_redirect(view, ~p"/read/#{second.id}")
   end
 
+  test "half issues render on the series, book and reader pages", %{conn: conn, second: second} do
+    second |> Ecto.Changeset.change(issue_number: Decimal.new("1.5")) |> Stashix.Repo.update!()
+
+    {:ok, _view, html} = live(conn, ~p"/series/#{second.series_id}")
+    assert html =~ "#1.5"
+    {:ok, _view, html} = live(conn, ~p"/book/#{second.id}")
+    assert html =~ "#1.5"
+    {:ok, _view, html} = live(conn, ~p"/read/#{second.id}")
+    assert html =~ "#1.5"
+  end
+
   test "closing saves the pending page and returns to the book page", ctx do
     %{conn: conn, user: user, first: first} = ctx
     {:ok, view, _html} = live(conn, ~p"/read/#{first.id}")

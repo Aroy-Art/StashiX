@@ -491,7 +491,7 @@ defmodule StashixWeb.SeriesLive do
       book ->
         %{
           text: book.summary,
-          source: book.issue_number && "##{Decimal.to_integer(book.issue_number)}"
+          source: book.issue_number && "##{Formatters.format_issue_number(book.issue_number)}"
         }
     end
   end
@@ -536,7 +536,7 @@ defmodule StashixWeb.SeriesLive do
   end
 
   defp issue_label(%{issue_number: nil}), do: nil
-  defp issue_label(%{issue_number: n}), do: "##{Decimal.to_integer(n)}"
+  defp issue_label(%{issue_number: n}), do: "##{Formatters.format_issue_number(n)}"
 
   defp sort_books(books, "title_asc"), do: Enum.sort_by(books, & &1.title)
   defp sort_books(books, "title_desc"), do: Enum.sort_by(books, & &1.title, :desc)

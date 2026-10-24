@@ -333,7 +333,7 @@ defmodule StashixWeb.BookLive do
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
         </.eyebrow>
         <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-white mt-1 tabular-nums">
-          #{Decimal.to_integer(@book.issue_number)}
+          #{Formatters.format_issue_number(@book.issue_number)}
         </p>
         <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors mt-1">
           {@book.title}
@@ -352,7 +352,7 @@ defmodule StashixWeb.BookLive do
   def render(assigns) do
     ~H"""
     <% numbered = @book.issue_number && !standalone_volume?(@book) %>
-    <% issue_no = numbered && Decimal.to_integer(@book.issue_number) %>
+    <% issue_no = numbered && Formatters.format_issue_number(@book.issue_number) %>
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={

@@ -248,7 +248,7 @@ defmodule StashixWeb.ReaderLive do
   end
 
   defp issue_label(%{issue_number: nil}), do: nil
-  defp issue_label(%{issue_number: n}), do: "##{Decimal.to_integer(n)}"
+  defp issue_label(%{issue_number: n}), do: "##{Stashix.Formatters.format_issue_number(n)}"
 
   defp schedule_progress_save(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)

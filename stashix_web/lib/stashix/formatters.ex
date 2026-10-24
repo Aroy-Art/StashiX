@@ -165,6 +165,13 @@ defmodule Stashix.Formatters do
     "#{formatted} #{suffix}"
   end
 
+  @doc """
+  An issue number for display: "3", "1.5", "0.1". Issue numbers are decimals
+  (half issues, point-one issues), so they are never forced to an integer.
+  """
+  def format_issue_number(nil), do: nil
+  def format_issue_number(%Decimal{} = n), do: n |> Decimal.normalize() |> Decimal.to_string(:normal)
+
   @doc "Years a series ran: \"2019\", \"2019–2021\", \"2019–\" while ongoing, nil when unknown."
   def series_years(%{start_year: nil}), do: nil
   def series_years(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"
