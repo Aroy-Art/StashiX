@@ -24,14 +24,18 @@
   --backdrop-opacity: 0.38;
   --backdrop-saturate: 1.5;
 }
+/* On paper the wash is printed, not lit: multiplied into the cream so the
+   cover's colours tint the page instead of fogging it grey. */
 :root[data-theme="light"] .detail-backdrop {
-  --backdrop-opacity: 0.1;
-  --backdrop-saturate: 1;
+  --backdrop-opacity: 0.38;
+  --backdrop-saturate: 1.6;
+  mix-blend-mode: multiply;
 }
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] .detail-backdrop {
-    --backdrop-opacity: 0.1;
-  --backdrop-saturate: 1;
+    --backdrop-opacity: 0.38;
+    --backdrop-saturate: 1.6;
+    mix-blend-mode: multiply;
   }
 }
 .detail-backdrop > img {
