@@ -593,6 +593,28 @@ defmodule Stashix.Metadata.Parser do
         end
       end
 
+    # "Series - Title - Issue N" — e.g. "Ghost in the Shell 1.5 - Human Error Processor - Issue 02".
+    # An explicit trailing "Issue N" beats a number embedded in the series name.
+    result =
+      if map_size(result) > 0 do
+        result
+      else
+        case Regex.run(
+               ~r/^(.+?)\s*(?:-|–)\s*(?:(.+?)\s*(?:-|–)\s*)?(?:Issue|Iss\.?)\s+(\d+(?:\.\d+)?)(?:\s*\((\d{4})\))?\s*$/i,
+               clean
+             ) do
+          [_, series, title, issue | rest] ->
+            result
+            |> Map.put(:series, String.trim(series))
+            |> Map.put(:issue_number, parse_decimal(issue))
+            |> then(&if(title != "", do: Map.put(&1, :title, String.trim(title)), else: &1))
+            |> maybe_put(:year, parse_int(Enum.at(rest, 0)))
+
+          nil ->
+            result
+        end
+      end
+
     # "Series NN - Title (Publisher YEAR) ..." e.g. "The Bank 01 - The Waterloo Insider (Cinebook 2025)"
     result =
       if map_size(result) > 0 do

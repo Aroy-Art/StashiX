@@ -8,6 +8,21 @@ defmodule Stashix.Metadata.ParserTest do
 
   defp d(n), do: Decimal.new(n)
 
+  describe "parse_filename/1 — trailing \"Issue N\"" do
+    test "beats a decimal number in the series name" do
+      r = Parser.parse_filename("Ghost in the Shell 1.5 - Human Error Processor - Issue 02")
+      assert r.series == "Ghost in the Shell 1.5"
+      assert Decimal.equal?(r.issue_number, Decimal.new("2"))
+      assert r.title == "Human Error Processor"
+    end
+
+    test "without a title" do
+      r = Parser.parse_filename("Ghost in the Shell 1.5 - Issue 03")
+      assert r.series == "Ghost in the Shell 1.5"
+      assert Decimal.equal?(r.issue_number, Decimal.new("3"))
+    end
+  end
+
   describe "parse_filename/1 — yearless paren tags after the issue number" do
     test "story-arc tag is ignored" do
       r = Parser.parse_filename("Dark Horse Comics 008 (Coyote)")
