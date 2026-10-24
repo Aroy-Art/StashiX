@@ -223,6 +223,20 @@ defmodule Stashix.Metadata do
     |> Enum.reduce(%{}, fn {q, s, c}, acc -> Map.update(acc, q, %{s => c}, &Map.put(&1, s, c)) end)
   end
 
+  @doc "States of the given job ids that are no longer queued or running. Pruned jobs count as `\"completed\"`."
+  def finished_jobs(ids) do
+    active =
+      from(j in Oban.Job, where: j.id in ^ids, select: {j.id, j.state})
+      |> Repo.all()
+      |> Map.new()
+
+    for id <- ids,
+        state = Map.get(active, id, "completed"),
+        state not in ~w(available scheduled executing),
+        into: %{},
+        do: {id, state}
+  end
+
   def retry_failed_jobs do
     from(j in Oban.Job, where: j.queue in ["metadata", "metadata_write"] and j.state in ["discarded", "retryable"])
     |> Oban.retry_all_jobs()

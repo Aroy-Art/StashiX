@@ -93,22 +93,7 @@ defmodule StashixWeb.AdminMetadataLiveTest do
     book = book_fixture(lib, series)
     enable_metron!()
 
-    Req.Test.stub(Stashix.Metadata.HTTP, fn conn ->
-      case conn.request_path do
-        "/api/series/" ->
-          Req.Test.json(
-            conn,
-            metron_series_list([metron_series_item(55, "Batman", 2016), metron_series_item(56, "Batman", 2016)])
-          )
-
-        "/api/issue/" ->
-          sid = String.to_integer(conn.query_params["series_id"])
-          Req.Test.json(conn, metron_series_list([metron_issue_item(100 + sid, sid, "Batman", "1", "2016-08-01")]))
-
-        "/api/issue/" <> _ ->
-          Req.Test.json(conn, metron_issue())
-      end
-    end)
+    stub_metron_batman!()
 
     {:review, review} = Stashix.Metadata.identify_book(book)
 
@@ -137,6 +122,30 @@ defmodule StashixWeb.AdminMetadataLiveTest do
     assert book.summary == "Keep me"
     assert book.upc == "76194134182900111"
     assert Stashix.Metadata.count_reviews() == 0
+  end
+
+  test "retry shows a busy state until the match job finishes", %{conn: conn} do
+    tmp = Path.join(System.tmp_dir!(), "stashix_lv_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(tmp)
+    on_exit(fn -> File.rm_rf!(tmp) end)
+
+    lib = library_fixture(tmp)
+    book = book_fixture(lib, series_fixture(lib))
+    enable_metron!()
+    stub_metron_batman!()
+    {:review, review} = Stashix.Metadata.identify_book(book)
+
+    {:ok, view, _} = live(conn, ~p"/admin/metadata/review")
+    html = view |> element("button[phx-click=retry_review][phx-value-id='#{review.id}']") |> render_click()
+    assert html =~ "Matching…"
+
+    # testing: :manual leaves the job queued; finish it by hand
+    Stashix.Repo.update_all(Oban.Job, set: [state: "completed"])
+    send(view.pid, :check_retries)
+
+    html = render(view)
+    refute html =~ "Matching…"
+    assert html =~ "still no confident match"
   end
 
   test "jobs tab previews and runs the summary cleanup", %{conn: conn} do
@@ -169,5 +178,24 @@ defmodule StashixWeb.AdminMetadataLiveTest do
 
     html = view |> element("button[phx-click=preview_summary_cleanup]") |> render_click()
     assert html =~ "Nothing to clean up"
+  end
+
+  defp stub_metron_batman! do
+    Req.Test.stub(Stashix.Metadata.HTTP, fn conn ->
+      case conn.request_path do
+        "/api/series/" ->
+          Req.Test.json(
+            conn,
+            metron_series_list([metron_series_item(55, "Batman", 2016), metron_series_item(56, "Batman", 2016)])
+          )
+
+        "/api/issue/" ->
+          sid = String.to_integer(conn.query_params["series_id"])
+          Req.Test.json(conn, metron_series_list([metron_issue_item(100 + sid, sid, "Batman", "1", "2016-08-01")]))
+
+        "/api/issue/" <> _ ->
+          Req.Test.json(conn, metron_issue())
+      end
+    end)
   end
 end

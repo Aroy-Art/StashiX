@@ -12,6 +12,8 @@ defmodule StashixWeb.AdminMetadataLive do
   on_mount {StashixWeb.Live.Hooks, :require_admin}
 
   @job_refresh_ms 3_000
+  @retry_check_ms 1_500
+  @retry_note_ms 6_000
 
   @impl true
   def mount(_params, _session, socket) do
@@ -30,6 +32,9 @@ defmodule StashixWeb.AdminMetadataLive do
        reviews: [],
        review_count: Metadata.count_reviews(),
        identify_review: nil,
+       retrying: %{},
+       retried: %{},
+       retry_timer: nil,
        job_counts: %{},
        libraries: [],
        summary_cleanup: nil,
@@ -89,6 +94,11 @@ defmodule StashixWeb.AdminMetadataLive do
 
     assign(socket, job_counts: Metadata.job_counts(), cache_count: Metadata.cache_count(), refresh_timer: timer)
   end
+
+  defp schedule_retry_check(%{assigns: %{retrying: retrying, retry_timer: nil}} = socket) when retrying != %{},
+    do: assign(socket, retry_timer: Process.send_after(self(), :check_retries, @retry_check_ms))
+
+  defp schedule_retry_check(socket), do: socket
 
   defp source_row(socket, key), do: Enum.find(socket.assigns.sources, &(&1.config.source_key == key))
 
@@ -183,14 +193,23 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   def handle_event("retry_review", %{"id" => id}, socket) do
-    review = Metadata.get_review!(id)
+    if Map.has_key?(socket.assigns.retrying, id) do
+      {:noreply, socket}
+    else
+      review = Metadata.get_review!(id)
 
-    cond do
-      review.book_id -> Metadata.enqueue_book(review.book_id)
-      review.series_id -> Metadata.enqueue_series(review.series_id)
+      {:ok, job} =
+        cond do
+          review.book_id -> Metadata.enqueue_book(review.book_id)
+          review.series_id -> Metadata.enqueue_series(review.series_id)
+        end
+
+      {:noreply,
+       socket
+       |> update(:retrying, &Map.put(&1, id, job.id))
+       |> update(:retried, &Map.delete(&1, id))
+       |> schedule_retry_check()}
     end
-
-    {:noreply, put_flash(socket, :info, "Queued for another automatic match")}
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
@@ -285,6 +304,36 @@ defmodule StashixWeb.AdminMetadataLive do
     {:noreply, socket |> put_flash(:info, "Metadata applied") |> close_dialog(~p"/admin/metadata/review")}
   end
 
+  # Poll the retried match jobs rather than wait on review events: a job that
+  # fails, or rewrites an unchanged review, would otherwise spin forever.
+  def handle_info(:check_retries, socket) do
+    %{retrying: retrying} = socket.assigns
+    finished = retrying |> Map.values() |> Metadata.finished_jobs()
+    done = for {review_id, job_id} <- retrying, state = finished[job_id], into: %{}, do: {review_id, state}
+
+    socket = assign(socket, retry_timer: nil, retrying: Map.drop(retrying, Map.keys(done)))
+
+    socket =
+      if done == %{} do
+        socket
+      else
+        socket = load_reviews(socket)
+        pending = MapSet.new(socket.assigns.reviews, & &1.id)
+
+        notes =
+          for {id, state} <- done, MapSet.member?(pending, id), into: %{} do
+            Process.send_after(self(), {:clear_retried, id}, @retry_note_ms)
+            {id, if(state in ~w(retryable discarded cancelled), do: :failed, else: :unmatched)}
+          end
+
+        update(socket, :retried, &Map.merge(&1, notes))
+      end
+
+    {:noreply, schedule_retry_check(socket)}
+  end
+
+  def handle_info({:clear_retried, id}, socket), do: {:noreply, update(socket, :retried, &Map.delete(&1, id))}
+
   def handle_info(:refresh_jobs, socket) do
     if socket.assigns.live_action == :metadata_jobs,
       do: {:noreply, load_jobs(socket)},
@@ -322,7 +371,7 @@ defmodule StashixWeb.AdminMetadataLive do
       <% end %>
 
       <%= if @live_action == :metadata_review do %>
-        <.review_tab reviews={@reviews} />
+        <.review_tab reviews={@reviews} retrying={@retrying} retried={@retried} />
         <%= if @identify_review do %>
           <.live_component
             module={StashixWeb.IdentifyComponent}
@@ -700,6 +749,8 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   attr :reviews, :list
+  attr :retrying, :map
+  attr :retried, :map
 
   defp review_tab(assigns) do
     ~H"""
@@ -739,6 +790,13 @@ defmodule StashixWeb.AdminMetadataLive do
                   No candidates found
               <% end %>
             </p>
+            <%= case @retried[review.id] do %>
+              <% :unmatched -> %>
+                <p class="text-xs text-warn">Retried — still no confident match</p>
+              <% :failed -> %>
+                <p class="text-xs text-danger">Match job failed — see the Jobs tab</p>
+              <% nil -> %>
+            <% end %>
             <%= if review.book && review.book.files != [] do %>
               <p class="text-[11px] text-muted font-mono truncate mt-0.5">
                 {review.book.library.name <>
@@ -753,8 +811,19 @@ defmodule StashixWeb.AdminMetadataLive do
             >
               Identify
             </.link>
-            <.ink_button variant="ghost" size="md" phx-click="retry_review" phx-value-id={review.id}>
-              Retry
+            <.ink_button
+              variant="ghost"
+              size="md"
+              phx-click="retry_review"
+              phx-value-id={review.id}
+              aria-busy={to_string(Map.has_key?(@retrying, review.id))}
+              class={Map.has_key?(@retrying, review.id) && "cursor-wait gap-1.5"}
+            >
+              <%= if Map.has_key?(@retrying, review.id) do %>
+                <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 animate-spin" /> Matching…
+              <% else %>
+                Retry
+              <% end %>
             </.ink_button>
             <.ink_button variant="ghost" size="md" phx-click="skip_review" phx-value-id={review.id}>
               Skip
