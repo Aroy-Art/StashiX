@@ -507,7 +507,7 @@ defmodule StashixWeb.SeriesLive do
           "background: #7c3aed;"
 
         prog > 0.0 ->
-          "background: repeating-linear-gradient(-45deg, #7c3aed 0, #7c3aed 6px, #1e1b4b 6px, #1e1b4b 12px);"
+          "background: repeating-linear-gradient(-45deg, #7c3aed 0, #7c3aed 6px, light-dark(#ddd6fe, #1e1b4b) 6px, light-dark(#ddd6fe, #1e1b4b) 12px);"
 
         true ->
           ""
@@ -579,7 +579,7 @@ defmodule StashixWeb.SeriesLive do
       ]}>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="series-admin-menu">
-            <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
+            <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg backdrop-blur-sm transition-colors">
               <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
@@ -653,8 +653,8 @@ defmodule StashixWeb.SeriesLive do
         <div class="relative min-w-0 flex-1 text-center sm:text-left sm:pb-2">
           <.eyebrow :if={@book_publishers != []} class="rise mb-3" style="--i:1">
             <%= for {pub, idx} <- Enum.with_index(@book_publishers) do %>
-              <span :if={idx > 0} class="text-white/25"> / </span>
-              <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-white transition-colors">{pub.name}</.link>
+              <span :if={idx > 0} class="text-fg/25"> / </span>
+              <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-fg transition-colors">{pub.name}</.link>
             <% end %>
           </.eyebrow>
 
@@ -663,17 +663,17 @@ defmodule StashixWeb.SeriesLive do
           </.display_heading>
 
           <div
-            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300"
+            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-fg-soft"
             style="--i:3"
           >
             <span :if={yr = year_range(@series)} class="tabular-nums">{yr}</span>
             <%= if @series.ongoing do %>
-              <span class="inline-flex items-center gap-1.5 text-emerald-300">
+              <span class="inline-flex items-center gap-1.5 text-success">
                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ongoing
               </span>
             <% else %>
-              <span class="inline-flex items-center gap-1.5 text-gray-400">
-                <span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span> Completed
+              <span class="inline-flex items-center gap-1.5 text-muted">
+                <span class="w-1.5 h-1.5 rounded-full bg-faint"></span> Completed
               </span>
             <% end %>
             <span class="tabular-nums">
@@ -707,8 +707,8 @@ defmodule StashixWeb.SeriesLive do
         <div class="flex items-baseline justify-between mb-3">
           <.eyebrow tag="h2" size="sm" tone="muted">The Run</.eyebrow>
           <p class="tabular-nums leading-none">
-            <span class="font-display font-black text-3xl text-white">{read_count}</span>
-            <span class="text-gray-400 text-sm"> / {issue_count} read</span>
+            <span class="font-display font-black text-3xl text-fg">{read_count}</span>
+            <span class="text-muted text-sm"> / {issue_count} read</span>
           </p>
         </div>
         <div class={["flex items-stretch h-5", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
@@ -716,7 +716,7 @@ defmodule StashixWeb.SeriesLive do
             :for={b <- issue_sorted}
             navigate={~p"/book/#{b.id}"}
             title={run_segment_title(b, @progress_map)}
-            class="flex-1 min-w-0 rounded-[2px] overflow-hidden bg-white/[0.07] transition-[filter] duration-100 hover:brightness-125"
+            class="flex-1 min-w-0 rounded-[2px] overflow-hidden bg-fg/[0.07] transition-[filter] duration-100 hover:brightness-125"
           >
             <span class="block h-full" style={run_fill_style(b, @progress_map)} />
           </.link>
@@ -725,8 +725,8 @@ defmodule StashixWeb.SeriesLive do
 
       <%!-- Summary --%>
       <section :if={@summary_info} class="max-w-3xl">
-        <p class="text-[15px] text-gray-300 leading-7 whitespace-pre-line">{@summary_info.text}</p>
-        <p :if={@summary_info.source} class="mt-2 text-xs text-gray-400 italic">
+        <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@summary_info.text}</p>
+        <p :if={@summary_info.source} class="mt-2 text-xs text-muted italic">
           From issue {@summary_info.source}
         </p>
       </section>
@@ -755,7 +755,7 @@ defmodule StashixWeb.SeriesLive do
           {Formatters.language_name(@series.language)}
         </:item>
         <:item label="Metadata" show={@series.metadata_locked}>
-          <span class="inline-flex items-center gap-1 text-amber-300/90">
+          <span class="inline-flex items-center gap-1 text-warn/90">
             <.icon name="lucide-lock" class="w-3 h-3" /> Locked
           </span>
         </:item>
@@ -824,9 +824,9 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Folder path --%>
       <div
         :if={@current_user.role == :admin && @series.path}
-        class="flex items-start gap-1.5 text-[11px] font-mono text-gray-400 break-all leading-snug"
+        class="flex items-start gap-1.5 text-[11px] font-mono text-muted break-all leading-snug"
       >
-        <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+        <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0 mt-0.5 text-line" />
         {relative_folder(@series, @library)}
       </div>
     </.page>
@@ -842,7 +842,7 @@ defmodule StashixWeb.SeriesLive do
         <:description>
           Override metadata for this series. Changes persist until the next rescan.
           <%= if @series.path do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-400 mt-1 break-all">
+            <p class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
               <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
               {relative_folder(@series, @library)}
             </p>
@@ -881,7 +881,7 @@ defmodule StashixWeb.SeriesLive do
             </.field>
 
             <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Age Rating</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Age Rating</label>
               <% current_rating = common_age_rating(@series.books) %>
               <.ink_select
                 id="edit-series-age-rating"
@@ -912,11 +912,11 @@ defmodule StashixWeb.SeriesLive do
                   checked
                   class="ink-check"
                 />
-                <label for="age_rating_only_unknown" class="text-sm text-gray-300 cursor-pointer">
+                <label for="age_rating_only_unknown" class="text-sm text-fg-soft cursor-pointer">
                   Only update issues rated Unknown ({unknown_count})
                 </label>
               </div>
-              <p class="flex items-start gap-1.5 text-xs text-amber-400/80 mt-1.5">
+              <p class="flex items-start gap-1.5 text-xs text-warn/80 mt-1.5">
                 <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
                 <%= if mixed do %>
                   Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
@@ -942,11 +942,11 @@ defmodule StashixWeb.SeriesLive do
                 checked={@edit_form[:ongoing].value}
                 class="ink-check"
               />
-              <label for="series_ongoing" class="text-sm text-gray-300 cursor-pointer">Ongoing series</label>
+              <label for="series_ongoing" class="text-sm text-fg-soft cursor-pointer">Ongoing series</label>
             </div>
 
             <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Publisher</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Publisher</label>
               <div
                 id={"pub-picker-series-#{@series.id}"}
                 phx-hook="PublisherSearch"
@@ -962,7 +962,7 @@ defmodule StashixWeb.SeriesLive do
                   type="text"
                   placeholder="Search publishers…"
                   autocomplete="off"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
               </div>
               <.ink_button
@@ -1007,7 +1007,7 @@ defmodule StashixWeb.SeriesLive do
               "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
               if(@push_publishers_mode == mode,
                 do: "border-violet-500 bg-violet-500/10",
-                else: "border-gray-700 hover:border-gray-500"
+                else: "border-line hover:border-line-strong"
               )
             ]}>
               <input
@@ -1020,8 +1020,8 @@ defmodule StashixWeb.SeriesLive do
                 class="mt-0.5 accent-violet-500"
               />
               <div>
-                <p class="text-sm font-medium text-gray-100">{label}</p>
-                <p class="text-xs text-gray-400 mt-0.5">{desc}</p>
+                <p class="text-sm font-medium text-fg">{label}</p>
+                <p class="text-xs text-muted mt-0.5">{desc}</p>
               </div>
             </label>
           <% end %>
@@ -1033,7 +1033,7 @@ defmodule StashixWeb.SeriesLive do
           <div class="mt-4">
             <button
               type="button"
-              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full"
+              class="flex items-center gap-1.5 text-xs text-muted hover:text-fg-soft transition-colors w-full"
               phx-click="toggle_push_preview"
             >
               <.icon
@@ -1041,7 +1041,7 @@ defmodule StashixWeb.SeriesLive do
                 class="w-3.5 h-3.5"
               />
               <span>Preview</span>
-              <span class={["ml-1 font-medium", if(affected_count > 0, do: "text-violet-400", else: "text-gray-500")]}>
+              <span class={["ml-1 font-medium", if(affected_count > 0, do: "text-accent", else: "text-faint")]}>
                 <%= if affected_count == 0 do %>
                   no changes
                 <% else %>
@@ -1050,35 +1050,35 @@ defmodule StashixWeb.SeriesLive do
               </span>
             </button>
 
-            <div :if={@show_push_preview} class="mt-2 rounded-md border border-gray-700 overflow-hidden">
+            <div :if={@show_push_preview} class="mt-2 rounded-md border border-line overflow-hidden">
               <%= if affected_count == 0 do %>
-                <p class="px-3 py-4 text-sm text-gray-400 text-center">All issues already match — no changes needed.</p>
+                <p class="px-3 py-4 text-sm text-muted text-center">All issues already match — no changes needed.</p>
               <% else %>
                 <%!-- header row --%>
-                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-raised/60 border-b border-line text-[10px] font-semibold uppercase tracking-wider text-faint">
                   <span></span>
                   <span class="col-span-1">Before</span>
                   <span></span>
                   <span>After</span>
                 </div>
-                <div class="max-h-52 overflow-y-auto divide-y divide-gray-800/80">
+                <div class="max-h-52 overflow-y-auto divide-y divide-line/80">
                   <%= for entry <- @push_publishers_preview.affected do %>
                     <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-2 text-xs">
-                      <span class="text-gray-500 tabular-nums">
+                      <span class="text-faint tabular-nums">
                         {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
                       </span>
-                      <span class="text-gray-500 italic truncate">
+                      <span class="text-faint italic truncate">
                         {if entry.from == [], do: "none", else: Enum.map_join(entry.from, ", ", & &1.name)}
                       </span>
-                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-gray-600 shrink-0" />
-                      <span class="text-gray-100 truncate">
+                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
+                      <span class="text-fg truncate">
                         {Enum.map_join(entry.to, ", ", & &1.name)}
                       </span>
                     </div>
                   <% end %>
                 </div>
                 <%= if @push_publishers_preview.unchanged > 0 do %>
-                  <p class="px-3 py-1.5 text-xs text-gray-500 border-t border-gray-800">
+                  <p class="px-3 py-1.5 text-xs text-faint border-t border-line">
                     {@push_publishers_preview.unchanged} {if @push_publishers_preview.unchanged == 1,
                       do: "issue",
                       else: "issues"} already up to date
@@ -1112,7 +1112,7 @@ defmodule StashixWeb.SeriesLive do
 
         <div class="space-y-4 mt-3">
           <div>
-            <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">
+            <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">
               Rating to apply
             </label>
             <form phx-change="set_push_age_rating_target">
@@ -1136,7 +1136,7 @@ defmodule StashixWeb.SeriesLive do
                 "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
                 if(@push_age_rating_mode == mode,
                   do: "border-violet-500 bg-violet-500/10",
-                  else: "border-gray-700 hover:border-gray-500"
+                  else: "border-line hover:border-line-strong"
                 )
               ]}>
                 <input
@@ -1149,8 +1149,8 @@ defmodule StashixWeb.SeriesLive do
                   class="mt-0.5 accent-violet-500"
                 />
                 <div>
-                  <p class="text-sm font-medium text-gray-100">{label}</p>
-                  <p class="text-xs text-gray-400 mt-0.5">{desc}</p>
+                  <p class="text-sm font-medium text-fg">{label}</p>
+                  <p class="text-xs text-muted mt-0.5">{desc}</p>
                 </div>
               </label>
             <% end %>
@@ -1163,7 +1163,7 @@ defmodule StashixWeb.SeriesLive do
           <div class="mt-4">
             <button
               type="button"
-              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-200 transition-colors w-full"
+              class="flex items-center gap-1.5 text-xs text-muted hover:text-fg-soft transition-colors w-full"
               phx-click="toggle_push_age_rating_preview"
             >
               <.icon
@@ -1173,7 +1173,7 @@ defmodule StashixWeb.SeriesLive do
               <span>Preview</span>
               <span class={[
                 "ml-1 font-medium",
-                if(ar_affected > 0, do: "text-violet-400", else: "text-gray-500")
+                if(ar_affected > 0, do: "text-accent", else: "text-faint")
               ]}>
                 <%= if ar_affected == 0 do %>
                   no changes
@@ -1183,36 +1183,36 @@ defmodule StashixWeb.SeriesLive do
               </span>
             </button>
 
-            <div :if={@show_push_age_rating_preview} class="mt-2 rounded-md border border-gray-700 overflow-hidden">
+            <div :if={@show_push_age_rating_preview} class="mt-2 rounded-md border border-line overflow-hidden">
               <%= if ar_affected == 0 do %>
-                <p class="px-3 py-4 text-sm text-gray-400 text-center">
+                <p class="px-3 py-4 text-sm text-muted text-center">
                   All issues already match — no changes needed.
                 </p>
               <% else %>
-                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-gray-800/60 border-b border-gray-700 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-raised/60 border-b border-line text-[10px] font-semibold uppercase tracking-wider text-faint">
                   <span></span>
                   <span>Before</span>
                   <span></span>
                   <span>After</span>
                 </div>
-                <div class="max-h-52 overflow-y-auto divide-y divide-gray-800/80">
+                <div class="max-h-52 overflow-y-auto divide-y divide-line/80">
                   <%= for entry <- @push_age_rating_preview.affected do %>
                     <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-2 text-xs">
-                      <span class="text-gray-500 tabular-nums">
+                      <span class="text-faint tabular-nums">
                         {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
                       </span>
-                      <span class="text-gray-500 italic truncate">
+                      <span class="text-faint italic truncate">
                         {short_age_label(entry.from)}
                       </span>
-                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-gray-600 shrink-0" />
-                      <span class="text-gray-100 truncate">
+                      <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
+                      <span class="text-fg truncate">
                         {short_age_label(entry.to)}
                       </span>
                     </div>
                   <% end %>
                 </div>
                 <%= if @push_age_rating_preview.unchanged > 0 do %>
-                  <p class="px-3 py-1.5 text-xs text-gray-500 border-t border-gray-800">
+                  <p class="px-3 py-1.5 text-xs text-faint border-t border-line">
                     {@push_age_rating_preview.unchanged} {if @push_age_rating_preview.unchanged == 1,
                       do: "issue",
                       else: "issues"} already up to date

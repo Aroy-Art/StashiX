@@ -314,11 +314,11 @@ defmodule StashixWeb.BookLive do
     <.link
       navigate={~p"/book/#{@book.id}"}
       class={[
-        "group flex items-center gap-4 min-w-0 p-2 rounded-md bg-white/[0.03] hover:bg-white/[0.08] ring-1 ring-white/10 hover:ring-white/25 transition-colors",
+        "group flex items-center gap-4 min-w-0 p-2 rounded-md bg-fg/[0.03] hover:bg-fg/[0.08] ring-1 ring-edge hover:ring-edge-hover transition-colors",
         @dir == :next && "flex-row-reverse text-right"
       ]}
     >
-      <div class="relative w-12 md:w-16 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-gray-900">
+      <div class="relative w-12 md:w-16 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-surface">
         <.blurhash_image
           id={"nav-#{@dir}-#{@book.id}"}
           src={~p"/api/books/#{@book.id}/cover?s=s"}
@@ -332,13 +332,13 @@ defmodule StashixWeb.BookLive do
           {if @dir == :prev, do: "Previous", else: "Next"}
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
         </.eyebrow>
-        <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-white mt-1 tabular-nums">
+        <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-fg mt-1 tabular-nums">
           #{Formatters.format_issue_number(@book.issue_number)}
         </p>
-        <p class="text-xs text-gray-400 truncate group-hover:text-gray-200 transition-colors mt-1">
+        <p class="text-xs text-muted truncate group-hover:text-fg-soft transition-colors mt-1">
           {@book.title}
         </p>
-        <p class="text-[10px] text-gray-400 mt-0.5 tabular-nums">
+        <p class="text-[10px] text-muted mt-0.5 tabular-nums">
           {[@book.year, @book.page_count > 0 && "#{@book.page_count} pp"]
           |> Enum.filter(& &1)
           |> Enum.join(" · ")}
@@ -362,7 +362,7 @@ defmodule StashixWeb.BookLive do
       }>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="book-admin-menu">
-            <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors">
+            <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg backdrop-blur-sm transition-colors">
               <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
@@ -414,10 +414,10 @@ defmodule StashixWeb.BookLive do
           >
             <.sticker :if={numbered} size="lg">#{issue_no}</.sticker>
             <.eyebrow :if={@book.series && !standalone_volume?(@book)}>
-              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-white transition-colors">
+              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-fg transition-colors">
                 {@book.series.name}
               </.link>
-              <span :if={@book.series.start_year} class="text-gray-400 tracking-normal font-normal ml-1">
+              <span :if={@book.series.start_year} class="text-muted tracking-normal font-normal ml-1">
                 ({@book.series.start_year}{cond do
                   @book.series.end_year -> "–#{@book.series.end_year}"
                   @book.series.ongoing -> "–"
@@ -432,15 +432,15 @@ defmodule StashixWeb.BookLive do
           </.display_heading>
 
           <div
-            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+            class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-fg-soft tabular-nums"
             style="--i:3"
           >
             <span :if={@book.year}>{@book.year}</span>
             <span :if={@book.page_count > 0}>{@book.page_count} pages</span>
-            <span :if={@fully_read} class="inline-flex items-center gap-1 text-emerald-300">
+            <span :if={@fully_read} class="inline-flex items-center gap-1 text-success">
               <.icon name="lucide-check" class="w-3.5 h-3.5" /> Read
             </span>
-            <span :if={in_progress} class="text-violet-300">
+            <span :if={in_progress} class="text-accent">
               Page {@progress + 1} of {@book.page_count}
             </span>
           </div>
@@ -463,14 +463,14 @@ defmodule StashixWeb.BookLive do
             <.eyebrow tag="span" size="sm" tone="muted" class="mr-1">Format</.eyebrow>
             <%= for f <- @book.files do %>
               <%= if @selected_file && f.id == @selected_file.id do %>
-                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-white text-gray-950">
+                <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-fg text-canvas">
                   {String.upcase(to_string(f.format))}
                 </span>
               <% else %>
                 <button
                   phx-click="select_format"
                   phx-value-format={to_string(f.format)}
-                  class="px-2.5 py-1 text-xs font-semibold rounded-full border border-white/15 text-gray-300 hover:border-white/50 hover:text-white transition-colors"
+                  class="px-2.5 py-1 text-xs font-semibold rounded-full border border-edge text-fg-soft hover:border-edge-hover hover:text-fg transition-colors"
                 >
                   {String.upcase(to_string(f.format))}
                 </button>
@@ -518,14 +518,14 @@ defmodule StashixWeb.BookLive do
 
       <%!-- Summary --%>
       <section :if={@book.summary && @book.summary != ""} class="max-w-3xl">
-        <p class="text-[15px] text-gray-300 leading-7 whitespace-pre-line">{@book.summary}</p>
+        <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@book.summary}</p>
       </section>
 
       <.indicia>
         <:item label="Publisher" show={@book.publishers != []}>
           <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
-            <span :if={idx > 0} class="text-gray-400"> / </span>
-            <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-violet-300 transition-colors">{pub.name}</.link>
+            <span :if={idx > 0} class="text-muted"> / </span>
+            <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-accent transition-colors">{pub.name}</.link>
           <% end %>
         </:item>
         <:item label="Format" show={User.ui_setting(@current_user, "extended_book_info") == "on"}>
@@ -575,9 +575,9 @@ defmodule StashixWeb.BookLive do
       <%!-- Metadata source + file path --%>
       <footer class="space-y-2">
         <%= if @book.metadata_locked || @book.metadata_matched_at do %>
-          <div class="flex flex-wrap items-center gap-2 text-xs text-gray-400">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
             <%= if @book.metadata_locked do %>
-              <span class="inline-flex items-center gap-1 text-amber-400/80" title="Excluded from automatic matching">
+              <span class="inline-flex items-center gap-1 text-warn/80" title="Excluded from automatic matching">
                 <.icon name="lucide-lock" class="w-3 h-3" /> Locked
               </span>
             <% end %>
@@ -592,9 +592,9 @@ defmodule StashixWeb.BookLive do
         <% end %>
         <div
           :if={@current_user.role == :admin && @selected_file}
-          class="flex items-start gap-1.5 text-[11px] font-mono text-gray-400 break-all leading-snug"
+          class="flex items-start gap-1.5 text-[11px] font-mono text-muted break-all leading-snug"
         >
-          <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-gray-700" />
+          <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0 mt-0.5 text-line" />
           {relative_path(@selected_file.path, @library)}
         </div>
       </footer>
@@ -611,7 +611,7 @@ defmodule StashixWeb.BookLive do
         <:description>
           Override metadata for this book. Changes persist until the next rescan.
           <%= if @selected_file do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-gray-400 mt-1 break-all">
+            <p class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
               <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
               {relative_path(@selected_file.path, @library)}
             </p>
@@ -668,7 +668,7 @@ defmodule StashixWeb.BookLive do
             </.field>
 
             <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Publisher</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Publisher</label>
               <div
                 id={"pub-picker-book-#{@book.id}"}
                 phx-hook="PublisherSearch"
@@ -682,7 +682,7 @@ defmodule StashixWeb.BookLive do
                   type="text"
                   placeholder="Search publishers…"
                   autocomplete="off"
-                  class="w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 text-sm px-3 py-2 placeholder:text-gray-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
+                  class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
                 />
               </div>
             </div>

@@ -607,7 +607,7 @@ defmodule StashixWeb.SearchLive do
                 placeholder="Title or creator"
                 aria-label="Search"
                 autocomplete="off"
-                class="search-headline w-full pt-1 pb-2 pl-10 sm:pl-12 md:pl-14 pr-12 sm:pr-14 text-4xl sm:text-5xl md:text-6xl text-white"
+                class="search-headline w-full pt-1 pb-2 pl-10 sm:pl-12 md:pl-14 pr-12 sm:pr-14 text-4xl sm:text-5xl md:text-6xl text-fg"
                 autofocus
               />
               <button
@@ -615,18 +615,18 @@ defmodule StashixWeb.SearchLive do
                 type="button"
                 phx-click={JS.push("clear_query") |> JS.dispatch("stashix:clear-input", to: "#search-q")}
                 aria-label="Clear search"
-                class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-800 hover:bg-ink text-gray-200 hover:text-gray-950 transition-colors"
+                class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-raised hover:bg-ink text-fg-soft hover:text-gray-950 transition-colors"
               >
                 <.icon name="lucide-x" class="w-5 h-5" />
               </button>
             </div>
 
             <p
-              class="rise relative flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+              class="rise relative flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-fg-soft tabular-nums"
               style="--i:3"
             >
               <span>
-                <span class="text-white font-semibold">{delimit(@count)}</span>
+                <span class="text-fg font-semibold">{delimit(@count)}</span>
                 {if @count == 1, do: "result", else: "results"}
               </span>
               <%= if @params["type"] == "all" do %>
@@ -650,9 +650,9 @@ defmodule StashixWeb.SearchLive do
             <.panel
               variant="rail"
               class="min-h-full lg:min-h-0 lg:rounded-lg"
-              inner_class="lg:rounded-lg lg:ring-1 lg:ring-white/10 divide-y divide-gray-800"
+              inner_class="lg:rounded-lg lg:ring-1 lg:ring-edge divide-y divide-line"
             >
-              <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-gray-900 lg:static lg:bg-transparent">
+              <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-surface lg:static lg:bg-transparent">
                 <.display_heading size="panel" count={@filter_count > 0 && @filter_count} count_tone="ink">
                   Filters
                 </.display_heading>
@@ -664,7 +664,7 @@ defmodule StashixWeb.SearchLive do
                   phx-click={close_filters()}
                   aria-label="Close filters"
                   class={[
-                    "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-colors",
+                    "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-raised hover:bg-strong text-fg-soft hover:text-fg transition-colors",
                     @filter_count == 0 && "ml-auto"
                   ]}
                 >
@@ -785,7 +785,7 @@ defmodule StashixWeb.SearchLive do
                 />
               </.filter_section>
 
-              <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-gray-900">
+              <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-surface">
                 <.ink_button type="button" phx-click={close_filters()} class="w-full">
                   Show {delimit(@count)} {if @count == 1, do: "result", else: "results"}
                 </.ink_button>
@@ -805,7 +805,7 @@ defmodule StashixWeb.SearchLive do
         </div>
 
         <%!-- Type tabs, filter toggle and sort --%>
-        <div class="lg:col-start-1 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-white/15">
+        <div class="lg:col-start-1 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-fg/15">
           <div class="flex items-center gap-1 sm:gap-2" role="tablist" aria-label="Result type">
             <%= for {label, value} <- @types do %>
               <button
@@ -818,7 +818,7 @@ defmodule StashixWeb.SearchLive do
                   "px-2.5 sm:px-3 pt-1 pb-0.5 font-display font-black uppercase text-2xl sm:text-3xl leading-none rounded-sm transition-colors",
                   if(@params["type"] == value,
                     do: "bg-ink text-gray-950 -rotate-2",
-                    else: "text-gray-300 hover:text-white hover:bg-white/10"
+                    else: "text-fg-soft hover:text-fg hover:bg-fg/10"
                   )
                 ]}
               >
@@ -830,7 +830,7 @@ defmodule StashixWeb.SearchLive do
             <button
               type="button"
               phx-click={open_filters()}
-              class="lg:hidden inline-flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 transition-colors"
+              class="lg:hidden inline-flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-full border bg-surface border-line-strong text-fg hover:border-line-strong transition-colors"
             >
               <.icon name="lucide-sliders-horizontal" class="w-3.5 h-3.5" /> Filters
               <span
@@ -861,7 +861,7 @@ defmodule StashixWeb.SearchLive do
                 phx-click="remove_filter"
                 phx-value-key={key}
                 phx-value-value={value}
-                class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 text-xs font-semibold rounded-sm bg-gray-900 border border-ink/70 text-ink hover:bg-ink hover:text-gray-950 transition-colors"
+                class="inline-flex items-center gap-1.5 pl-2.5 pr-1.5 py-1 text-xs font-semibold rounded-sm bg-surface border border-ink/70 text-ink hover:bg-ink hover:text-gray-950 transition-colors"
               >
                 {label}
                 <.icon name="lucide-x" class="w-3 h-3" />
@@ -1014,7 +1014,7 @@ defmodule StashixWeb.SearchLive do
       phx-value-type={@type}
       class={[
         visible,
-        "group items-center justify-center gap-2.5 w-full mt-4 px-5 py-3 rounded-md border border-gray-600 bg-gray-900 text-white font-display font-extrabold uppercase text-xl leading-none tracking-wide hover:border-ink hover:bg-gray-800 transition-colors"
+        "group items-center justify-center gap-2.5 w-full mt-4 px-5 py-3 rounded-md border border-line-strong bg-surface text-fg font-display font-extrabold uppercase text-xl leading-none tracking-wide hover:border-ink hover:bg-raised transition-colors"
       ]}
     >
       Show <span class="text-ink tabular-nums">{delimit(@total - shown)}</span>
@@ -1091,11 +1091,11 @@ defmodule StashixWeb.SearchLive do
       <div class="flex items-baseline justify-between">
         <span
           data-label
-          class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums"
+          class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-fg tabular-nums"
         >
           {if @lo == @first and @hi == @last, do: "Any year", else: "#{@lo} – #{@hi}"}
         </span>
-        <span data-total class="text-xs text-gray-400 tabular-nums">{@total} books</span>
+        <span data-total class="text-xs text-muted tabular-nums">{@total} books</span>
       </div>
 
       <%!-- Inset by half a thumb so bar centres line up with handle centres --%>
@@ -1106,13 +1106,13 @@ defmodule StashixWeb.SearchLive do
           data-year={b.year}
           data-active={b.active}
           title={"#{b.year}: #{b.count} #{if b.count == 1, do: "book", else: "books"}"}
-          class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-gray-600 data-[active]:bg-violet-500 transition-colors"
+          class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-line-strong data-[active]:bg-violet-500 transition-colors"
           style={"left: #{b.left}%; width: max(#{@bar_width}%, 1px); height: #{b.height}%;"}
         />
       </div>
 
       <div class="relative h-4">
-        <div class="absolute inset-x-[7px] top-1/2 -translate-y-1/2 h-1 rounded-full bg-gray-800">
+        <div class="absolute inset-x-[7px] top-1/2 -translate-y-1/2 h-1 rounded-full bg-raised">
           <div
             data-track
             class="absolute inset-y-0 rounded-full bg-violet-500"
@@ -1139,7 +1139,7 @@ defmodule StashixWeb.SearchLive do
         />
       </div>
 
-      <div class="flex justify-between text-[10px] text-gray-400 tabular-nums">
+      <div class="flex justify-between text-[10px] text-muted tabular-nums">
         <span>{@first}</span>
         <span>{@last}</span>
       </div>
@@ -1211,9 +1211,9 @@ defmodule StashixWeb.SearchLive do
           class={option_class()}
         >
           <span class="truncate">{c.name}</span>
-          <span class="shrink-0 text-xs text-gray-400 tabular-nums">{c.credits}</span>
+          <span class="shrink-0 text-xs text-muted tabular-nums">{c.credits}</span>
         </button>
-        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-400">
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-muted">
           No creators found
         </div>
       </div>
@@ -1263,9 +1263,9 @@ defmodule StashixWeb.SearchLive do
           class={option_class()}
         >
           <span class="truncate">{s.name}</span>
-          <span class="shrink-0 text-xs text-gray-400 tabular-nums">{s.books}</span>
+          <span class="shrink-0 text-xs text-muted tabular-nums">{s.books}</span>
         </button>
-        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-gray-400">
+        <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-muted">
           No {@plural} found
         </div>
       </div>
@@ -1281,7 +1281,7 @@ defmodule StashixWeb.SearchLive do
   # A picked creator/facet value: carries the value in the form, removable.
   defp picked(assigns) do
     ~H"""
-    <span class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-sm bg-gray-950 border border-ink/70 text-xs font-semibold text-ink">
+    <span class="inline-flex max-w-full items-center gap-1 pl-2.5 pr-1 py-0.5 rounded-sm bg-canvas border border-ink/70 text-xs font-semibold text-ink">
       <input type="hidden" name={@name} value={@value} />
       <span class="truncate">{@label}</span>
       <button
@@ -1300,13 +1300,13 @@ defmodule StashixWeb.SearchLive do
 
   defp field_class,
     do:
-      "w-full bg-gray-800 border border-gray-600 rounded-md px-2.5 py-1.5 text-sm text-white placeholder-gray-400 hover:border-gray-400 focus:outline-none focus:border-ink transition-colors"
+      "w-full bg-raised border border-line-strong rounded-md px-2.5 py-1.5 text-sm text-fg placeholder-muted hover:border-line-strong focus:outline-none focus:border-ink transition-colors"
 
   defp listbox_class,
     do:
-      "absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-gray-800 border border-gray-700 rounded-lg shadow-2xl"
+      "absolute z-30 top-full left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-raised border border-line rounded-lg shadow-2xl"
 
   defp option_class,
     do:
-      "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700 hover:text-white data-[active]:bg-ink data-[active]:text-gray-950"
+      "w-full flex items-center justify-between gap-2 px-3 py-2 text-left text-sm text-fg-soft hover:bg-strong hover:text-fg data-[active]:bg-ink data-[active]:text-gray-950"
 end

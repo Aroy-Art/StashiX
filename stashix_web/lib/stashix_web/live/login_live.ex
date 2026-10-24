@@ -55,7 +55,7 @@ defmodule StashixWeb.LoginLive do
       <p
         :if={@error}
         role="alert"
-        class="mb-4 px-3 py-2 border-l-4 border-red-500 bg-red-500/10 text-sm font-medium text-red-200"
+        class="mb-4 px-3 py-2 border-l-4 border-red-500 bg-red-500/10 text-sm font-medium text-danger"
       >
         {@error}
       </p>

@@ -92,7 +92,7 @@ defmodule StashixWeb.SetupLive do
     >
       <:steps>
         <.cover_step number={1} current={@step == :account} done={@step == :library}>Account</.cover_step>
-        <span class="w-6 h-px bg-white/20"></span>
+        <span class="w-6 h-px bg-fg/20"></span>
         <.cover_step number={2} current={@step == :library}>Library</.cover_step>
       </:steps>
 

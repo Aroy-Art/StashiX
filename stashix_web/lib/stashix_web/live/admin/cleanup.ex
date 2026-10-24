@@ -27,12 +27,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <%!-- Series section --%>
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
-            Deleted Series <span class="ml-2 text-sm font-normal text-gray-400">({length(@deleted_series)})</span>
+          <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
+            Deleted Series <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_series)})</span>
           </h2>
           <%= if series_sel_count > 0 do %>
             <div class="flex items-center gap-3">
-              <span class="text-sm text-gray-400">{series_sel_count} selected</span>
+              <span class="text-sm text-muted">{series_sel_count} selected</span>
               <.ink_button
                 size="md"
                 phx-click="batch_restore_series"
@@ -54,12 +54,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
           <% end %>
         </div>
         <%= if @deleted_series == [] do %>
-          <p class="text-gray-400 text-sm">No deleted series.</p>
+          <p class="text-muted text-sm">No deleted series.</p>
         <% else %>
-          <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
+          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-white/10">
+                <tr class="border-b border-fg/10">
                   <th class="px-4 py-3 w-8">
                     <input
                       type="checkbox"
@@ -68,13 +68,13 @@ defmodule StashixWeb.AdminLive.Cleanup do
                       class="ink-check"
                     />
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Series
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Library
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Deleted
                   </th>
                   <th class="px-4 py-3"></th>
@@ -83,8 +83,8 @@ defmodule StashixWeb.AdminLive.Cleanup do
               <tbody>
                 <%= for s <- @deleted_series do %>
                   <tr class={[
-                    "border-b border-white/10 last:border-0 transition-colors",
-                    if(MapSet.member?(@selected_series, s.id), do: "bg-violet-950/30", else: "")
+                    "border-b border-fg/10 last:border-0 transition-colors",
+                    if(MapSet.member?(@selected_series, s.id), do: "bg-accent/10", else: "")
                   ]}>
                     <td class="px-4 py-3">
                       <input
@@ -95,9 +95,9 @@ defmodule StashixWeb.AdminLive.Cleanup do
                         class="ink-check"
                       />
                     </td>
-                    <td class="px-4 py-3 text-white">{s.name}</td>
-                    <td class="px-4 py-3 text-gray-400">{s.library.name}</td>
-                    <td class="px-4 py-3 text-gray-400 text-xs">
+                    <td class="px-4 py-3 text-fg">{s.name}</td>
+                    <td class="px-4 py-3 text-muted">{s.library.name}</td>
+                    <td class="px-4 py-3 text-muted text-xs">
                       {Calendar.strftime(s.deleted_at, "%Y-%m-%d %H:%M")}
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
@@ -128,12 +128,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <%!-- Books section --%>
       <div class="space-y-3">
         <div class="flex items-center justify-between">
-          <h2 class="font-display font-black uppercase text-2xl leading-none text-white">
-            Deleted Books <span class="ml-2 text-sm font-normal text-gray-400">({length(@deleted_books)})</span>
+          <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
+            Deleted Books <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_books)})</span>
           </h2>
           <%= if books_sel_count > 0 do %>
             <div class="flex items-center gap-3">
-              <span class="text-sm text-gray-400">{books_sel_count} selected</span>
+              <span class="text-sm text-muted">{books_sel_count} selected</span>
               <.ink_button
                 size="md"
                 phx-click="batch_restore_books"
@@ -155,12 +155,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
           <% end %>
         </div>
         <%= if @deleted_books == [] do %>
-          <p class="text-gray-400 text-sm">No deleted books.</p>
+          <p class="text-muted text-sm">No deleted books.</p>
         <% else %>
-          <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
+          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
               <thead>
-                <tr class="border-b border-white/10">
+                <tr class="border-b border-fg/10">
                   <th class="px-4 py-3 w-8">
                     <input
                       type="checkbox"
@@ -169,19 +169,19 @@ defmodule StashixWeb.AdminLive.Cleanup do
                       class="ink-check"
                     />
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Title
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Series
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Library
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Path
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     Deleted
                   </th>
                   <th class="px-4 py-3"></th>
@@ -190,8 +190,8 @@ defmodule StashixWeb.AdminLive.Cleanup do
               <tbody>
                 <%= for b <- @deleted_books do %>
                   <tr class={[
-                    "border-b border-white/10 last:border-0 transition-colors",
-                    if(MapSet.member?(@selected_books, b.id), do: "bg-violet-950/30", else: "")
+                    "border-b border-fg/10 last:border-0 transition-colors",
+                    if(MapSet.member?(@selected_books, b.id), do: "bg-accent/10", else: "")
                   ]}>
                     <td class="px-4 py-3">
                       <input
@@ -202,18 +202,18 @@ defmodule StashixWeb.AdminLive.Cleanup do
                         class="ink-check"
                       />
                     </td>
-                    <td class="px-4 py-3 text-white">{b.title}</td>
-                    <td class="px-4 py-3 text-gray-400">
+                    <td class="px-4 py-3 text-fg">{b.title}</td>
+                    <td class="px-4 py-3 text-muted">
                       {if b.series, do: b.series.name, else: "—"}
                     </td>
-                    <td class="px-4 py-3 text-gray-400">{b.library.name}</td>
+                    <td class="px-4 py-3 text-muted">{b.library.name}</td>
                     <td
-                      class="px-4 py-3 text-gray-400 text-xs font-mono truncate max-w-xs"
+                      class="px-4 py-3 text-muted text-xs font-mono truncate max-w-xs"
                       title={b.files |> List.first() |> then(&(&1 && &1.path))}
                     >
                       {b.files |> List.first() |> then(&(&1 && &1.path))}
                     </td>
-                    <td class="px-4 py-3 text-gray-400 text-xs">
+                    <td class="px-4 py-3 text-muted text-xs">
                       {Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">

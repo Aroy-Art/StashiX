@@ -15,12 +15,15 @@ defmodule StashixWeb.Dev.UiLive do
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @colors [
-    {"background", "bg-gray-950", "gray-950 — page"},
-    {"panel", "bg-gray-900", "gray-900 — panels"},
-    {"menu", "bg-zinc-950", "zinc-950 — menus, reader bars"},
+    {"canvas", "bg-canvas", "bg-canvas — page"},
+    {"surface", "bg-surface", "bg-surface — cards, panels"},
+    {"raised", "bg-raised", "bg-raised — inputs, menus"},
+    {"band", "bg-band", "bg-band — top bar"},
+    {"edge", "bg-edge", "ring-edge — outlines"},
+    {"pop", "bg-pop", "var(--color-pop) — hard shadows"},
     {"action", "bg-violet-600", "violet-600 — primary action"},
     {"ink", "bg-ink", "ink — second highlight"},
-    {"eyebrow", "bg-violet-300", "violet-300 — eyebrows"}
+    {"accent", "bg-accent", "text-accent — eyebrows"}
   ]
 
   @impl true
@@ -61,9 +64,9 @@ defmodule StashixWeb.Dev.UiLive do
   defp specimen(assigns) do
     ~H"""
     <section class="space-y-4">
-      <div class="flex items-baseline gap-4 border-b border-white/10 pb-2">
-        <h2 class="font-display font-black uppercase text-3xl leading-none text-white">{@title}</h2>
-        <p :if={@note} class="text-xs text-gray-400">{@note}</p>
+      <div class="flex items-baseline gap-4 border-b border-fg/10 pb-2">
+        <h2 class="font-display font-black uppercase text-3xl leading-none text-fg">{@title}</h2>
+        <p :if={@note} class="text-xs text-muted">{@note}</p>
       </div>
       <div class="flex flex-wrap items-center gap-6">
         {render_slot(@inner_block)}
@@ -86,17 +89,19 @@ defmodule StashixWeb.Dev.UiLive do
         </:meta>
       </.page_hero>
 
-      <.specimen title="Logo" note="logo — scales with the text size">
-        <.logo id="ui-logo-sm" class="text-[1.75rem] mr-16" />
-        <.logo id="ui-logo-lg" class="text-6xl mr-32" />
-        <.logo id="ui-logo-xl" class="text-9xl mr-40" />
+      <.specimen title="Logo" note="logo — scales with the text size; sits on the dark band">
+        <div class="scheme-dark flex flex-wrap items-center gap-6 w-full px-8 py-6 rounded-md bg-band">
+          <.logo id="ui-logo-sm" class="text-[1.75rem] mr-16" />
+          <.logo id="ui-logo-lg" class="text-6xl mr-32" />
+          <.logo id="ui-logo-xl" class="text-9xl mr-40" />
+        </div>
       </.specimen>
 
       <.specimen title="Colour">
         <div :for={{name, class, note} <- @colors} class="w-40">
-          <div class={["h-14 rounded-md ring-1 ring-white/15", class]}></div>
+          <div class={["h-14 rounded-md ring-1 ring-edge", class]}></div>
           <.eyebrow size="sm" tone="ink" class="mt-2">{name}</.eyebrow>
-          <p class="text-xs text-gray-400">{note}</p>
+          <p class="text-xs text-muted">{note}</p>
         </div>
       </.specimen>
 
@@ -112,7 +117,7 @@ defmodule StashixWeb.Dev.UiLive do
           <.display_heading size="hero">Hero headline</.display_heading>
           <.display_heading count={12}>Section heading</.display_heading>
           <.display_heading size="panel" level={3} count={2} count_tone="ink">Panel heading</.display_heading>
-          <p class="text-[15px] text-gray-300 leading-7 max-w-xl">
+          <p class="text-[15px] text-fg-soft leading-7 max-w-xl">
             Body copy sits in the system sans at 15px on a relaxed leading, gray-300 on the page background.
           </p>
           <div class="flex items-center gap-6">
@@ -199,7 +204,7 @@ defmodule StashixWeb.Dev.UiLive do
 
       <.specimen title="Menu" note="ink_menu, menu_label, menu_item, menu_separator">
         <.ink_menu id="ui-menu-choice" align="start" panel_class="w-60">
-          <:trigger class="ink-segmented h-8 items-center gap-1.5 px-2.5 text-gray-300 hover:text-white font-display font-bold uppercase tracking-wide text-sm">
+          <:trigger class="ink-segmented h-8 items-center gap-1.5 px-2.5 text-fg-soft hover:text-fg font-display font-bold uppercase tracking-wide text-sm">
             <.icon name="lucide-rectangle-vertical" class="w-4 h-4" /> View
             <.icon name="lucide-chevron-down" class="w-3 h-3" />
           </:trigger>
@@ -222,7 +227,7 @@ defmodule StashixWeb.Dev.UiLive do
         </.ink_menu>
 
         <.ink_menu id="ui-menu-actions">
-          <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white transition-colors">
+          <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg transition-colors">
             <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Actions
             <.icon name="lucide-chevron-down" class="w-3 h-3" />
           </:trigger>
@@ -237,7 +242,7 @@ defmodule StashixWeb.Dev.UiLive do
         <.ink_menu id="ui-menu-icon" modal>
           <:trigger
             label="More"
-            class="p-1.5 rounded text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            class="p-1.5 rounded text-muted hover:text-fg hover:bg-fg/10 transition-colors"
           >
             <.icon name="lucide-ellipsis-vertical" class="w-4 h-4" />
           </:trigger>
@@ -274,7 +279,7 @@ defmodule StashixWeb.Dev.UiLive do
               options={[{"User", "user"}, {"Admin", "admin"}]}
             />
           </div>
-          <code id="ui-select-state" class="text-xs text-gray-400">{inspect(@select)}</code>
+          <code id="ui-select-state" class="text-xs text-muted">{inspect(@select)}</code>
         </form>
       </.specimen>
 
@@ -309,7 +314,7 @@ defmodule StashixWeb.Dev.UiLive do
             <:tab patch="/dev/ui" count={3}>Review</:tab>
           </.tabs>
           <.data_table id="ui-table" rows={[%{name: "ada", role: "admin"}, %{name: "sam", role: "user"}]}>
-            <:col :let={row} label="Username"><span class="font-semibold text-white">{row.name}</span></:col>
+            <:col :let={row} label="Username"><span class="font-semibold text-fg">{row.name}</span></:col>
             <:col :let={row} label="Role">{row.role}</:col>
             <:action :let={_row}>
               <.ink_button size="md" variant="danger">Delete</.ink_button>

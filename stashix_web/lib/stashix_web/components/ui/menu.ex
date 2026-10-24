@@ -16,7 +16,7 @@ defmodule StashixWeb.UI.Menu do
 
   @link_attrs ~w(navigate patch href replace method download target rel)
 
-  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-gray-800 text-gray-100 ring-1 ring-white/15 overflow-y-auto overscroll-contain"
+  @panel_class "ink-menu m-0 p-1.5 rounded-md bg-raised text-fg ring-1 ring-edge overflow-y-auto overscroll-contain"
 
   @doc """
   Dropdown menu. The `:trigger` slot is the content of the button that opens
@@ -156,7 +156,7 @@ defmodule StashixWeb.UI.Menu do
     <.icon
       :if={@icon}
       name={@icon}
-      class={"ink-menu-icon w-4 h-4 flex-shrink-0 #{if @tone == "default", do: "text-gray-400"} #{@icon_class}"}
+      class={"ink-menu-icon w-4 h-4 flex-shrink-0 #{if @tone == "default", do: "text-muted"} #{@icon_class}"}
     />
     <span class="flex-1 min-w-0 truncate font-display font-bold uppercase tracking-wide">
       {render_slot(@inner_block)}
@@ -171,13 +171,13 @@ defmodule StashixWeb.UI.Menu do
       active && "is-active",
       case tone do
         "default" ->
-          "text-gray-300 hover:text-white focus:text-white hover:bg-white/[0.05] focus:bg-white/[0.07]"
+          "text-fg-soft hover:text-fg focus:text-fg hover:bg-fg/[0.05] focus:bg-fg/[0.07]"
 
         "warning" ->
-          "text-amber-300 hover:text-amber-200 focus:text-amber-200 hover:bg-amber-400/10 focus:bg-amber-400/10"
+          "text-warn hover:text-warn focus:text-warn hover:bg-amber-400/10 focus:bg-amber-400/10"
 
         "danger" ->
-          "text-red-300 hover:text-red-200 focus:text-red-200 hover:bg-red-500/10 focus:bg-red-500/15"
+          "text-danger hover:text-danger focus:text-danger hover:bg-red-500/10 focus:bg-red-500/15"
       end
     ]
   end
@@ -185,7 +185,7 @@ defmodule StashixWeb.UI.Menu do
   @doc "Hairline between groups of menu items."
   def menu_separator(assigns) do
     ~H"""
-    <div role="separator" class="my-1.5 -mx-1.5 h-px bg-white/10"></div>
+    <div role="separator" class="my-1.5 -mx-1.5 h-px bg-fg/10"></div>
     """
   end
 
@@ -261,7 +261,7 @@ defmodule StashixWeb.UI.Menu do
         data-align={if @variant == "field", do: "start", else: @align}
         class={[@base, "max-w-[min(24rem,calc(100vw-1rem))]"]}
       >
-        <div :if={@searchable} class="sticky -top-1.5 z-10 -mt-1.5 -mx-1.5 mb-1.5 p-1.5 bg-gray-800">
+        <div :if={@searchable} class="sticky -top-1.5 z-10 -mt-1.5 -mx-1.5 mb-1.5 p-1.5 bg-raised">
           <%!-- form="" detaches the box from the surrounding form, so typing
                in it neither submits nor fires phx-change. --%>
           <input
@@ -271,7 +271,7 @@ defmodule StashixWeb.UI.Menu do
             placeholder="Type to filter"
             aria-label="Filter options"
             autocomplete="off"
-            class="w-full bg-gray-900 border border-gray-700 rounded-sm px-2.5 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-ink"
+            class="w-full bg-surface border border-line rounded-sm px-2.5 py-1.5 text-sm text-fg placeholder-faint focus:outline-none focus:border-ink"
           />
         </div>
         <button
@@ -283,14 +283,14 @@ defmodule StashixWeb.UI.Menu do
           data-value={option_value}
           data-label={label}
           class={[
-            "ink-menu-item w-full flex items-center gap-3 px-2 py-1.5 rounded-sm text-sm text-left text-gray-300 hover:text-white focus:text-white hover:bg-white/[0.05] focus:bg-white/[0.07] outline-none transition-colors",
+            "ink-menu-item w-full flex items-center gap-3 px-2 py-1.5 rounded-sm text-sm text-left text-fg-soft hover:text-fg focus:text-fg hover:bg-fg/[0.05] focus:bg-fg/[0.07] outline-none transition-colors",
             option_value == @value && "is-active"
           ]}
         >
           <span class="flex-1 min-w-0 truncate">{label}</span>
           <.icon name="lucide-check" class="ink-menu-check w-3.5 h-3.5 flex-shrink-0 text-ink" />
         </button>
-        <p :if={@searchable} data-menu-empty hidden class="px-2 py-2 text-sm text-gray-400">No matches</p>
+        <p :if={@searchable} data-menu-empty hidden class="px-2 py-2 text-sm text-muted">No matches</p>
       </div>
     </div>
     """
@@ -298,13 +298,13 @@ defmodule StashixWeb.UI.Menu do
 
   defp select_trigger_class("pill", size),
     do: [
-      "inline-flex items-center max-w-full font-medium rounded-full border bg-gray-900 border-gray-600 text-gray-100 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
+      "inline-flex items-center max-w-full font-medium rounded-full border bg-surface border-line-strong text-fg hover:border-line-strong focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
       if(size == "sm", do: "gap-1.5 h-8 pl-3 pr-2.5 text-xs", else: "gap-2 h-9 pl-4 pr-3 text-sm")
     ]
 
   defp select_trigger_class("field", size),
     do: [
-      "flex items-center w-full bg-gray-800 border border-gray-600 rounded-md text-gray-200 hover:border-gray-400 focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
+      "flex items-center w-full bg-raised border border-line-strong rounded-md text-fg-soft hover:border-line-strong focus-visible:outline-none focus-visible:border-ink cursor-pointer transition-colors",
       if(size == "sm", do: "gap-1.5 pl-2 pr-1.5 py-1 text-xs", else: "gap-2 pl-2.5 pr-2 py-1.5 text-sm")
     ]
 
@@ -321,7 +321,7 @@ defmodule StashixWeb.UI.Menu do
     <div
       class={[
         "ink-segmented",
-        if(@vertical, do: "flex-col divide-y divide-white/10", else: "divide-x divide-white/10"),
+        if(@vertical, do: "flex-col divide-y divide-fg/10", else: "divide-x divide-fg/10"),
         @class
       ]}
       {@rest}
@@ -359,7 +359,7 @@ defmodule StashixWeb.UI.Menu do
   def segment_class(active) do
     [
       "flex items-center justify-center h-8 min-w-8 px-2 transition-colors",
-      if(active, do: "bg-violet-600 text-white", else: "text-gray-300 hover:text-white hover:bg-white/10")
+      if(active, do: "bg-violet-600 text-white", else: "text-fg-soft hover:text-fg hover:bg-fg/10")
     ]
   end
 end

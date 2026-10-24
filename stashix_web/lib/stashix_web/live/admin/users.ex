@@ -32,8 +32,8 @@ defmodule StashixWeb.AdminLive.Users do
       </div>
 
       <%= if @show_user_form do %>
-        <div class="bg-gray-900 border border-white/15 rounded-lg p-6">
-          <h3 class="font-display font-black uppercase text-2xl leading-none text-white mb-4">Create User</h3>
+        <div class="bg-surface border border-edge rounded-lg p-6">
+          <h3 class="font-display font-black uppercase text-2xl leading-none text-fg mb-4">Create User</h3>
           <form phx-submit="create_user" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <.field label="Email">
               <.text_input type="email" name="email" required />
@@ -63,15 +63,15 @@ defmodule StashixWeb.AdminLive.Users do
       <% end %>
 
       <%!-- Mobile card list — hidden on sm+ --%>
-      <div class="sm:hidden bg-gray-900 rounded-lg ring-1 ring-white/10 divide-y divide-white/10 overflow-hidden">
+      <div class="sm:hidden bg-surface rounded-lg ring-1 ring-edge divide-y divide-fg/10 overflow-hidden">
         <%= for user <- @users do %>
           <% perm_open = @selected_perm_user_id == user.id %>
           <div class="px-4 py-3">
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <p class="text-white font-medium truncate">{user.username}</p>
-                <p class="text-xs text-gray-400 truncate">{user.email}</p>
-                <p class="text-xs text-gray-500 mt-0.5">
+                <p class="text-fg font-medium truncate">{user.username}</p>
+                <p class="text-xs text-muted truncate">{user.email}</p>
+                <p class="text-xs text-faint mt-0.5">
                   {if user.last_seen_at,
                     do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
                     else: "Never seen"}
@@ -81,8 +81,8 @@ defmodule StashixWeb.AdminLive.Users do
                 <span class={[
                   "px-2 py-0.5 rounded text-xs font-medium",
                   if(user.role == :admin,
-                    do: "bg-violet-900 text-violet-300",
-                    else: "bg-gray-800 text-gray-400"
+                    do: "bg-accent/15 text-accent",
+                    else: "bg-raised text-muted"
                   )
                 ]}>
                   {user.role}
@@ -94,8 +94,8 @@ defmodule StashixWeb.AdminLive.Users do
                     class={[
                       "text-xs transition-colors",
                       if(perm_open,
-                        do: "text-violet-400 hover:text-violet-300",
-                        else: "text-gray-400 hover:text-white"
+                        do: "text-accent hover:text-accent",
+                        else: "text-muted hover:text-fg"
                       )
                     ]}
                   >
@@ -119,7 +119,7 @@ defmodule StashixWeb.AdminLive.Users do
               </div>
             </div>
             <%= if perm_open do %>
-              <div class="mt-3 pt-3 border-t border-white/10">
+              <div class="mt-3 pt-3 border-t border-fg/10">
                 <.permissions_panel
                   user={user}
                   libraries={@libraries}
@@ -133,14 +133,14 @@ defmodule StashixWeb.AdminLive.Users do
       </div>
 
       <%!-- Desktop table — hidden below sm --%>
-      <div class="hidden sm:block bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
+      <div class="hidden sm:block bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
         <table class="w-full text-sm">
           <thead>
-            <tr class="border-b border-white/10">
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Username</th>
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Email</th>
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Role</th>
-              <th class="hidden md:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">
+            <tr class="border-b border-fg/10">
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Username</th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Email</th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Role</th>
+              <th class="hidden md:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                 Last seen
               </th>
               <th class="px-4 py-3"></th>
@@ -149,21 +149,21 @@ defmodule StashixWeb.AdminLive.Users do
           <tbody>
             <%= for user <- @users do %>
               <% perm_open = @selected_perm_user_id == user.id %>
-              <tr class="border-b border-white/10">
-                <td class="px-4 py-3 text-white">{user.username}</td>
-                <td class="px-4 py-3 text-gray-400">{user.email}</td>
+              <tr class="border-b border-fg/10">
+                <td class="px-4 py-3 text-fg">{user.username}</td>
+                <td class="px-4 py-3 text-muted">{user.email}</td>
                 <td class="px-4 py-3">
                   <span class={[
                     "px-2 py-0.5 rounded text-xs font-medium",
                     if(user.role == :admin,
-                      do: "bg-violet-900 text-violet-300",
-                      else: "bg-gray-800 text-gray-400"
+                      do: "bg-accent/15 text-accent",
+                      else: "bg-raised text-muted"
                     )
                   ]}>
                     {user.role}
                   </span>
                 </td>
-                <td class="hidden md:table-cell px-4 py-3 text-gray-400 text-xs">
+                <td class="hidden md:table-cell px-4 py-3 text-muted text-xs">
                   {if user.last_seen_at,
                     do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
                     else: "Never"}
@@ -177,8 +177,8 @@ defmodule StashixWeb.AdminLive.Users do
                         class={[
                           "text-xs transition-colors",
                           if(perm_open,
-                            do: "text-violet-400 hover:text-violet-300",
-                            else: "text-gray-400 hover:text-white"
+                            do: "text-accent hover:text-accent",
+                            else: "text-muted hover:text-fg"
                           )
                         ]}
                       >
@@ -203,7 +203,7 @@ defmodule StashixWeb.AdminLive.Users do
                 </td>
               </tr>
               <%= if perm_open do %>
-                <tr class="border-b border-white/10 bg-gray-950">
+                <tr class="border-b border-fg/10 bg-canvas">
                   <td colspan="99" class="px-4 py-4">
                     <.permissions_panel
                       user={user}
@@ -232,11 +232,11 @@ defmodule StashixWeb.AdminLive.Users do
 
     ~H"""
     <div class="space-y-2">
-      <p class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">
+      <p class="text-xs font-medium text-muted uppercase tracking-wide mb-3">
         Library Access for {@user.username}
       </p>
       <%= if @libraries == [] do %>
-        <p class="text-sm text-gray-400">No libraries configured.</p>
+        <p class="text-sm text-muted">No libraries configured.</p>
       <% else %>
         <%= for lib <- @libraries do %>
           <% perm = Map.get(@user_permissions, lib.id)
@@ -246,19 +246,19 @@ defmodule StashixWeb.AdminLive.Users do
           <form
             id={"permission-form-#{@user.id}-#{lib.id}"}
             phx-change="set_permission"
-            class="flex flex-wrap items-center gap-3 justify-between py-2 px-3 rounded-lg bg-gray-900 border border-white/10"
+            class="flex flex-wrap items-center gap-3 justify-between py-2 px-3 rounded-lg bg-surface border border-edge"
           >
             <input type="hidden" name="user_id" value={@user.id} />
             <input type="hidden" name="library_id" value={lib.id} />
             <div class="min-w-0">
-              <p class="text-sm text-white">{lib.name}</p>
-              <p class="text-xs text-gray-400 truncate">{lib.root_path}</p>
+              <p class="text-sm text-fg">{lib.name}</p>
+              <p class="text-xs text-muted truncate">{lib.root_path}</p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
               <%= if saved do %>
-                <span class="text-xs text-emerald-400 font-medium">✓ Saved</span>
+                <span class="text-xs text-success font-medium">✓ Saved</span>
               <% end %>
-              <label class="flex items-center gap-2 cursor-pointer text-xs text-gray-400">
+              <label class="flex items-center gap-2 cursor-pointer text-xs text-muted">
                 <input
                   type="checkbox"
                   name="can_read"
@@ -282,8 +282,8 @@ defmodule StashixWeb.AdminLive.Users do
                 class={[
                   "flex items-center gap-2 text-xs",
                   if(current_rating == :unknown,
-                    do: "text-gray-400 cursor-not-allowed",
-                    else: "text-gray-400 cursor-pointer"
+                    do: "text-muted cursor-not-allowed",
+                    else: "text-muted cursor-pointer"
                   )
                 ]}
                 title="Unrated books are shown under an age limit unless this is checked"

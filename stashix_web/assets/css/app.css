@@ -10,8 +10,6 @@
 @import "./reader.css";
 @import "./search.css";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 @custom-variant phx-click-loading (&:where(.phx-click-loading, .phx-click-loading *));
 @custom-variant phx-submit-loading (&:where(.phx-submit-loading, .phx-submit-loading *));
 @custom-variant phx-change-loading (&:where(.phx-change-loading, .phx-change-loading *));

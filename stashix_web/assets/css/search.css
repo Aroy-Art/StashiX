@@ -28,7 +28,7 @@
   height: 14px;
   border-radius: 9999px;
   background: var(--color-ink);
-  border: 2px solid #030712;
+  border: 2px solid var(--color-canvas);
   cursor: grab;
 }
 .year-range-input::-moz-range-thumb {
@@ -37,7 +37,7 @@
   height: 14px;
   border-radius: 9999px;
   background: var(--color-ink);
-  border: 2px solid #030712;
+  border: 2px solid var(--color-canvas);
   cursor: grab;
 }
 .year-range-input:active::-webkit-slider-thumb {
@@ -62,17 +62,17 @@
   caret-color: var(--color-ink);
   background: transparent;
   border: 0;
-  border-bottom: 4px solid rgb(255 255 255 / 0.3);
+  border-bottom: 4px solid --alpha(var(--color-fg) / 30%);
   border-radius: 0;
   box-shadow: none;
   transition: border-color 160ms ease;
 }
 .search-headline::placeholder {
-  color: rgb(255 255 255 / 0.42);
+  color: --alpha(var(--color-fg) / 42%);
   opacity: 1;
 }
 .search-headline:hover {
-  border-bottom-color: rgb(255 255 255 / 0.55);
+  border-bottom-color: --alpha(var(--color-fg) / 55%);
 }
 .search-headline:focus {
   outline: none;

@@ -98,7 +98,7 @@ defmodule StashixWeb.CollectionComponents do
 
       <.page_hero title={@section} eyebrow={@name} count={@total > 0 && @total}>
         <:meta>
-          <span><span class="text-white font-semibold">{@total}</span> {String.downcase(@section)}</span>
+          <span><span class="text-fg font-semibold">{@total}</span> {String.downcase(@section)}</span>
           <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
         </:meta>
       </.page_hero>
@@ -147,7 +147,7 @@ defmodule StashixWeb.CollectionComponents do
     <%!-- A plain panel with the ink left edge and the halftone dots of an
          indicia, without its colour wash, and a strip of covers across the top. --%>
     <div class={[
-      "collection-card group relative overflow-hidden rounded-lg bg-gray-900 border-l-4 border-ink ring-1 ring-white/10 hover:ring-ink/60 transition-shadow",
+      "collection-card group relative overflow-hidden rounded-lg bg-surface border-l-4 border-ink ring-1 ring-edge hover:ring-ink/60 transition-shadow",
       @class
     ]}>
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
@@ -155,9 +155,9 @@ defmodule StashixWeb.CollectionComponents do
         <span class="sr-only">{@name}</span>
       </.link>
       <div class="relative pointer-events-none">
-        <div class="relative flex h-24 bg-gray-950 overflow-hidden border-b border-white/10">
+        <div class="relative flex h-24 bg-canvas overflow-hidden border-b border-fg/10">
           <div :if={@covers == []} class="flex-1 flex items-center justify-center">
-            <.icon name={@icon} class="w-8 h-8 text-gray-600" />
+            <.icon name={@icon} class="w-8 h-8 text-faint" />
           </div>
           <img
             :for={url <- @covers}
@@ -172,12 +172,12 @@ defmodule StashixWeb.CollectionComponents do
         </div>
         <div class="px-4 pt-3 pb-4">
           <div class="flex items-start justify-between gap-2">
-            <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-white truncate group-hover:text-ink transition-colors">
+            <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-fg truncate group-hover:text-ink transition-colors">
               {@name}
             </p>
             <div
               :if={@menu != []}
-              class="pointer-events-auto flex-shrink-0 -mt-0.5 -mr-1.5 rounded-full bg-white/5 ring-1 ring-white/10 [box-shadow:0_0_8px_5px_rgb(3_7_18/0.9)] transition-opacity md:opacity-0 md:group-hover:opacity-100"
+              class="pointer-events-auto flex-shrink-0 -mt-0.5 -mr-1.5 rounded-full bg-fg/5 ring-1 ring-edge [box-shadow:0_0_8px_5px_color-mix(in_oklab,var(--color-canvas)_90%,transparent)] transition-opacity md:opacity-0 md:group-hover:opacity-100"
             >
               {render_slot(@menu)}
             </div>
@@ -185,7 +185,7 @@ defmodule StashixWeb.CollectionComponents do
           <dl :if={@stats != []} class="flex flex-wrap gap-x-6 gap-y-2 mt-3">
             <.stat :for={{label, count} <- @stats} label={label}>{count}</.stat>
           </dl>
-          <p :if={@stats == [] and @note} class="mt-2 text-xs text-gray-400">{@note}</p>
+          <p :if={@stats == [] and @note} class="mt-2 text-xs text-muted">{@note}</p>
           <div :if={@inner_block != []} class="pointer-events-auto mt-2.5">{render_slot(@inner_block)}</div>
         </div>
       </div>
@@ -206,12 +206,12 @@ defmodule StashixWeb.CollectionComponents do
     assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
 
     ~H"""
-    <div class="group relative overflow-hidden rounded-lg bg-gray-900 ring-1 ring-white/10 hover:ring-ink/40 transition-all duration-200">
+    <div class="group relative overflow-hidden rounded-lg bg-surface ring-1 ring-edge hover:ring-ink/40 transition-all duration-200">
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
       <.link navigate={@navigate} class="relative flex h-36 focus-visible:outline-2 focus-visible:outline-ink">
-        <div class="relative w-24 flex-shrink-0 overflow-hidden bg-gray-950">
+        <div class="relative w-24 flex-shrink-0 overflow-hidden bg-canvas">
           <div :if={@covers == []} class="flex h-full items-center justify-center">
-            <.icon name="lucide-building" class="w-6 h-6 text-gray-700" />
+            <.icon name="lucide-building" class="w-6 h-6 text-line" />
           </div>
           <div :if={@covers != []} class="flex flex-col h-full">
             <div
@@ -226,20 +226,20 @@ defmodule StashixWeb.CollectionComponents do
               />
             </div>
           </div>
-          <div class="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-gray-900/80 pointer-events-none">
+          <div class="absolute inset-y-0 right-0 w-6 bg-gradient-to-r from-transparent to-surface/80 pointer-events-none">
           </div>
         </div>
-        <div class="flex-1 min-w-0 flex flex-col justify-center px-4 py-5 border-l border-white/5">
-          <p class="font-display font-black uppercase leading-tight tracking-wide text-white group-hover:text-ink transition-colors line-clamp-2 text-lg">
+        <div class="flex-1 min-w-0 flex flex-col justify-center px-4 py-5 border-l border-fg/5">
+          <p class="font-display font-black uppercase leading-tight tracking-wide text-fg group-hover:text-ink transition-colors line-clamp-2 text-lg">
             {@name}
           </p>
           <dl :if={@stats != []} class="flex flex-col gap-0.5 mt-2.5">
             <div :for={{label, count} <- @stats} class="flex items-baseline gap-2">
-              <span class="text-sm font-bold text-white tabular-nums">{count}</span>
+              <span class="text-sm font-bold text-fg tabular-nums">{count}</span>
               <span class="text-[10px] uppercase tracking-widest text-ink/80 font-semibold">{label}</span>
             </div>
           </dl>
-          <p :if={@stats == []} class="mt-1 text-xs text-gray-500">No content</p>
+          <p :if={@stats == []} class="mt-1 text-xs text-faint">No content</p>
         </div>
       </.link>
     </div>

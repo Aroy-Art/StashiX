@@ -26,7 +26,7 @@ defmodule StashixWeb.DetailComponents do
     <div class="cover-stack rise relative w-44 sm:w-52 md:w-60 aspect-[2/3] flex-shrink-0">
       <div
         :for={{url, depth} <- @stack |> Enum.with_index(1) |> Enum.reverse()}
-        class="cover-stack-card absolute inset-0 rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10 shadow-2xl"
+        class="cover-stack-card absolute inset-0 rounded-md overflow-hidden bg-raised ring-1 ring-edge shadow-2xl"
         data-depth={depth}
         aria-hidden="true"
       >
@@ -38,7 +38,7 @@ defmodule StashixWeb.DetailComponents do
           onerror="this.style.display='none'"
         />
       </div>
-      <div class="cover-stack-top group absolute inset-0 rounded-md overflow-hidden ring-1 ring-white/15 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)]">
+      <div class="cover-stack-top group absolute inset-0 rounded-md overflow-hidden ring-1 ring-edge shadow-[0_24px_60px_-12px_light-dark(rgba(0,0,0,0.3),rgba(0,0,0,0.9))]">
         <%= if @src do %>
           <.blurhash_image id={@id} src={@src} alt={@alt} blurhash={@blurhash} />
           <button
@@ -48,11 +48,11 @@ defmodule StashixWeb.DetailComponents do
           >
             <.icon
               name="lucide-zoom-in"
-              class="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
+              class="w-8 h-8 text-fg opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
             />
           </button>
         <% else %>
-          <div class="w-full h-full flex items-center justify-center bg-gray-800 text-gray-400">
+          <div class="w-full h-full flex items-center justify-center bg-raised text-muted">
             <.icon name="lucide-layers" class="w-14 h-14" />
           </div>
         <% end %>
@@ -67,7 +67,7 @@ defmodule StashixWeb.DetailComponents do
       phx-mounted={JS.ignore_attributes(["open"])}
       phx-click={JS.dispatch("stashix:close-modal")}
       aria-label={"#{@alt} cover"}
-      class="lightbox"
+      class="lightbox scheme-dark"
     >
       <img src={@full_src || @src} alt={@alt} loading="lazy" class="max-h-[90vh] max-w-[90vw] object-contain rounded-md" />
       <.icon_button icon="lucide-x" label="Close" class="fixed top-4 right-4" />

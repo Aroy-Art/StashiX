@@ -109,7 +109,7 @@ defmodule StashixWeb.AllIssuesLive do
       <.page_hero title="Issues" eyebrow="Browse" count={@total > 0 && @total}>
         <:meta>
           <span>
-            <span class="text-white font-semibold">{@total}</span>
+            <span class="text-fg font-semibold">{@total}</span>
             {if @total == 1, do: "issue", else: "issues"}
           </span>
           <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>

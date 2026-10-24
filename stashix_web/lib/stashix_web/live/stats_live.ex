@@ -80,19 +80,19 @@ defmodule StashixWeb.StatsLive do
       "data" => data,
       "itemStyle" => %{
         "borderRadius" => 4,
-        "borderColor" => "#030712",
+        "borderColor" => "var(--color-canvas)",
         "borderWidth" => 2
       },
-      "label" => %{"color" => "#9ca3af"},
+      "label" => %{"color" => "var(--color-muted)"},
       "color" => colors
     }
   end
 
   defp default_colors,
-    do: ["#7c3aed", "#4fe8eb", "#c4b5fd", "#f59e0b", "#f43f5e", "#34d399", "#60a5fa", "#94a3b8"]
+    do: ["#7c3aed", "var(--color-ink)", "#c4b5fd", "#f59e0b", "#f43f5e", "#34d399", "#60a5fa", "#94a3b8"]
 
   defp legend_opts do
-    %{"orient" => "horizontal", "bottom" => 0, "textStyle" => %{"color" => "#9ca3af"}}
+    %{"orient" => "horizontal", "bottom" => 0, "textStyle" => %{"color" => "var(--color-muted)"}}
   end
 
   defp build_by_year([]) do
@@ -109,11 +109,11 @@ defmodule StashixWeb.StatsLive do
       "xAxis" => %{
         "type" => "category",
         "data" => years,
-        "axisLabel" => %{"color" => "#6b7280", "rotate" => 45}
+        "axisLabel" => %{"color" => "var(--color-faint)", "rotate" => 45}
       },
       "yAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "series" => [
         %{
@@ -163,17 +163,17 @@ defmodule StashixWeb.StatsLive do
       "xAxis" => %{
         "type" => "category",
         "data" => months,
-        "axisLabel" => %{"color" => "#6b7280", "rotate" => 45}
+        "axisLabel" => %{"color" => "var(--color-faint)", "rotate" => 45}
       },
       "yAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "series" => [
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [3, 3, 0, 0]}
+          "itemStyle" => %{"color" => "var(--color-ink)", "borderRadius" => [3, 3, 0, 0]}
         }
       ]
     }
@@ -193,7 +193,7 @@ defmodule StashixWeb.StatsLive do
     %{
       "tooltip" => %{"trigger" => "item"},
       "legend" => legend_opts(),
-      "series" => [pie_series(data, ["#4b5563", "#7c3aed", "#22c55e"])]
+      "series" => [pie_series(data, ["var(--color-line-strong)", "#7c3aed", "#22c55e"])]
     }
   end
 
@@ -210,12 +210,12 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "yAxis" => %{
         "type" => "category",
         "data" => names,
-        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+        "axisLabel" => %{"color" => "var(--color-muted)", "fontSize" => 11}
       },
       "series" => [
         %{
@@ -289,12 +289,12 @@ defmodule StashixWeb.StatsLive do
             "overflow" => "truncate"
           },
           "upperLabel" => %{"show" => false},
-          "itemStyle" => %{"borderColor" => "#030712", "borderWidth" => 2, "gapWidth" => 2},
+          "itemStyle" => %{"borderColor" => "var(--color-canvas)", "borderWidth" => 2, "gapWidth" => 2},
           "colorMappingBy" => "index",
           "levels" => [
             %{
               "itemStyle" => %{
-                "borderColor" => "#1f2937",
+                "borderColor" => "var(--color-raised)",
                 "borderWidth" => 0,
                 "gapWidth" => 3
               },
@@ -358,7 +358,7 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "item"},
       "legend" => legend_opts(),
       "series" => [
-        pie_series(data, ["#4b5563", "#10b981", "#2563eb", "#7c3aed", "#f59e0b", "#ef4444", "#dc2626"])
+        pie_series(data, ["var(--color-line-strong)", "#10b981", "#2563eb", "#7c3aed", "#f59e0b", "#ef4444", "#dc2626"])
       ]
     }
   end
@@ -376,18 +376,18 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "yAxis" => %{
         "type" => "category",
         "data" => names,
-        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+        "axisLabel" => %{"color" => "var(--color-muted)", "fontSize" => 11}
       },
       "series" => [
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "var(--color-ink)", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -406,12 +406,12 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "yAxis" => %{
         "type" => "category",
         "data" => names,
-        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+        "axisLabel" => %{"color" => "var(--color-muted)", "fontSize" => 11}
       },
       "series" => [
         %{
@@ -519,18 +519,18 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "yAxis" => %{
         "type" => "category",
         "data" => names,
-        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+        "axisLabel" => %{"color" => "var(--color-muted)", "fontSize" => 11}
       },
       "series" => [
         %{
           "type" => "bar",
           "data" => counts,
-          "itemStyle" => %{"color" => "#4fe8eb", "borderRadius" => [0, 3, 3, 0]}
+          "itemStyle" => %{"color" => "var(--color-ink)", "borderRadius" => [0, 3, 3, 0]}
         }
       ]
     }
@@ -549,12 +549,12 @@ defmodule StashixWeb.StatsLive do
       "tooltip" => %{"trigger" => "axis", "axisPointer" => %{"type" => "shadow"}},
       "xAxis" => %{
         "type" => "value",
-        "splitLine" => %{"lineStyle" => %{"color" => "rgba(255,255,255,0.08)"}}
+        "splitLine" => %{"lineStyle" => %{"color" => "color-mix(in oklab, var(--color-fg) 8%, transparent)"}}
       },
       "yAxis" => %{
         "type" => "category",
         "data" => names,
-        "axisLabel" => %{"color" => "#9ca3af", "fontSize" => 11}
+        "axisLabel" => %{"color" => "var(--color-muted)", "fontSize" => 11}
       },
       "series" => [
         %{
@@ -595,7 +595,7 @@ defmodule StashixWeb.StatsLive do
 
   attr :label, :string, required: true
   attr :note, :string, default: nil
-  attr :tone, :string, default: "text-white"
+  attr :tone, :string, default: "text-fg"
   slot :inner_block, required: true
 
   defp figure(assigns) do
@@ -603,7 +603,7 @@ defmodule StashixWeb.StatsLive do
     <div class="min-w-0">
       <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1">{@label}</.eyebrow>
       <dd class={["font-display font-black text-4xl leading-none tabular-nums", @tone]}>{render_slot(@inner_block)}</dd>
-      <p :if={@note} class="mt-1 text-xs text-gray-400 tabular-nums">{@note}</p>
+      <p :if={@note} class="mt-1 text-xs text-muted tabular-nums">{@note}</p>
     </div>
     """
   end
@@ -617,13 +617,13 @@ defmodule StashixWeb.StatsLive do
       <.panel variant="indicia">
         <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-6 px-6 py-6">
           <.figure label="Total" note="books & issues">{format_number(@stats.total_books)}</.figure>
-          <.figure label="Unread" note={pct(@stats.unread, @stats.total_books)} tone="text-gray-300">
+          <.figure label="Unread" note={pct(@stats.unread, @stats.total_books)} tone="text-fg-soft">
             {format_number(@stats.unread)}
           </.figure>
-          <.figure label="In progress" note={pct(@stats.in_progress, @stats.total_books)} tone="text-violet-300">
+          <.figure label="In progress" note={pct(@stats.in_progress, @stats.total_books)} tone="text-accent">
             {format_number(@stats.in_progress)}
           </.figure>
-          <.figure label="Completed" note={pct(@stats.completed, @stats.total_books)} tone="text-green-400">
+          <.figure label="Completed" note={pct(@stats.completed, @stats.total_books)} tone="text-success">
             {format_number(@stats.completed)}
           </.figure>
           <.figure label="Pages" note="across all files">{format_number(@stats.total_pages)}</.figure>
@@ -640,7 +640,7 @@ defmodule StashixWeb.StatsLive do
           <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
           sheets weighing <span class="font-display font-black text-xl">{@stats.paper_weight}</span>.
         </p>
-        <p class="mt-3 text-xs text-gray-400 tabular-nums">
+        <p class="mt-3 text-xs text-muted tabular-nums">
           {format_number(@stats.total_pages)} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)
         </p>
       </div>
@@ -660,14 +660,14 @@ defmodule StashixWeb.StatsLive do
               class="min-w-0"
             >
               <.eyebrow tag="dt" size="sm" tone="muted" class="mb-1">{label}</.eyebrow>
-              <dd class="font-display font-black text-3xl leading-none text-white tabular-nums">
+              <dd class="font-display font-black text-3xl leading-none text-fg tabular-nums">
                 {pct(count, @stats.metadata.total)}
               </dd>
               <.progress_bar
                 value={if @stats.metadata.total > 0, do: count / @stats.metadata.total, else: 0.0}
                 class="h-1 mt-2"
               />
-              <p class="mt-1.5 text-xs text-gray-400 tabular-nums">{count} of {@stats.metadata.total}</p>
+              <p class="mt-1.5 text-xs text-muted tabular-nums">{count} of {@stats.metadata.total}</p>
             </div>
           </dl>
         </.panel>

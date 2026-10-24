@@ -19,6 +19,15 @@ defmodule StashixWeb.Layouts do
   embed_templates "layouts/*"
 
   @doc """
+  The theme for `<html data-theme>` on the first paint. The account's choice is
+  stored in `ui_settings`; the browser keeps a copy in the `stashix_theme`
+  cookie (written by app.js on every `phx:set-theme`) so the page is drawn in
+  the right colours before the LiveView connects, and on the login page.
+  """
+  def theme_attr(%Plug.Conn{cookies: %{"stashix_theme" => theme}}) when theme in ~w(dark light), do: theme
+  def theme_attr(_conn), do: "system"
+
+  @doc """
   Sidebar link. The current page carries the same ink bar as the active item
   of a menu, with its icon in violet.
   """
@@ -36,13 +45,13 @@ defmodule StashixWeb.Layouts do
       aria-current={@active && "page"}
       class={[
         "nav-item ink-menu-item group flex items-center gap-3 min-w-0 px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-lg lg:text-base leading-6 transition-colors",
-        if(@active, do: "is-active", else: "text-gray-200 hover:text-white hover:bg-white/[0.06]"),
+        if(@active, do: "is-active", else: "text-fg-soft hover:text-fg hover:bg-fg/[0.06]"),
         @class
       ]}
     >
       <.icon
         name={@icon}
-        class={"ink-menu-icon w-[18px] h-[18px] shrink-0 #{@icon_class || "text-gray-400 group-hover:text-gray-200"}"}
+        class={"ink-menu-icon w-[18px] h-[18px] shrink-0 #{@icon_class || "text-muted group-hover:text-fg-soft"}"}
       />
       {render_slot(@inner_block)}
     </.link>

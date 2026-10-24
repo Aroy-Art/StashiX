@@ -64,53 +64,104 @@ Hooks.Sidebar = {
 let echartsPromise = null
 const loadECharts = () => {
   echartsPromise ||= import("../vendor/echarts.min").then((mod) => {
-    const echartsLib = mod.init ? mod : mod.default
-    registerInkTheme(echartsLib)
-    return echartsLib
+    return mod.init ? mod : mod.default
   })
   return echartsPromise
 }
 
 // Chart chrome in the display face; series colours come with each option.
+// Colours may be CSS (`var(--color-muted)`, `color-mix(...)`) so charts follow
+// the theme; resolveColors turns them into rgba before ECharts sees them.
 const chartFont = { fontFamily: '"Big Shoulders Display", "Arial Narrow", sans-serif', fontWeight: 600, fontSize: 13 }
-const registerInkTheme = (echartsLib) => echartsLib.registerTheme("ink", {
+const inkTheme = () => ({
   textStyle: { fontFamily: "ui-sans-serif, system-ui, sans-serif" },
-  categoryAxis: { axisLabel: chartFont, axisLine: { lineStyle: { color: "rgba(255,255,255,0.2)" } } },
+  categoryAxis: { axisLabel: chartFont, axisLine: { lineStyle: { color: "color-mix(in oklab, var(--color-fg) 20%, transparent)" } } },
   valueAxis: { axisLabel: chartFont },
-  legend: { textStyle: { ...chartFont, color: "#d1d5db" } },
+  legend: { textStyle: { ...chartFont, color: "var(--color-fg-soft)" } },
   tooltip: {
-    backgroundColor: "#09090b",
-    borderColor: "rgba(255,255,255,0.15)",
-    textStyle: { color: "#f3f4f6" },
-    extraCssText: "box-shadow: 4px 4px 0 0 #4fe8eb; border-radius: 6px;",
+    backgroundColor: "var(--color-surface)",
+    borderColor: "color-mix(in oklab, var(--color-fg) 15%, transparent)",
+    textStyle: { color: "var(--color-fg)" },
+    extraCssText: "box-shadow: 4px 4px 0 0 var(--color-ink); border-radius: 6px;",
   },
 })
 
+// The computed value of a token can be oklch(), which zrender cannot parse, so
+// paint it on a 1px canvas and read the pixel back as rgba.
+let colorProbe = null
+const cssColor = (value) => {
+  if (!colorProbe) {
+    const span = document.createElement("span")
+    span.hidden = true
+    const canvas = document.createElement("canvas")
+    canvas.width = canvas.height = 1
+    colorProbe = { span, ctx: canvas.getContext("2d", { willReadFrequently: true }) }
+  }
+  const { span, ctx } = colorProbe
+  document.body.appendChild(span)
+  span.style.color = value
+  const computed = getComputedStyle(span).color
+  span.remove()
+  ctx.clearRect(0, 0, 1, 1)
+  ctx.fillStyle = computed
+  ctx.fillRect(0, 0, 1, 1)
+  const [r, g, b, a] = ctx.getImageData(0, 0, 1, 1).data
+  return `rgba(${r}, ${g}, ${b}, ${(a / 255).toFixed(3)})`
+}
+
+const resolveColors = (value) => {
+  if (typeof value === "string") return /^(var|color-mix)\(/.test(value) ? cssColor(value) : value
+  if (Array.isArray(value)) return value.map(resolveColors)
+  if (value && typeof value === "object")
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, resolveColors(v)]))
+  return value
+}
+
 Hooks.Chart = {
   mounted() {
+    // Redraw when the theme changes, by choice or (on "system") by the OS.
+    this.redraw = () => this.echartsLib && this.draw()
+    this.media = window.matchMedia("(prefers-color-scheme: dark)")
+    this.media.addEventListener("change", this.redraw)
+    this.themeObserver = new MutationObserver(this.redraw)
+    this.themeObserver.observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]})
+
     loadECharts().then((echartsLib) => requestAnimationFrame(() => {
       if (this.destroyedAt) return
-      const chart = echartsLib.init(this.el, "ink", {renderer: "canvas"})
-      this.chart = chart
+      this.echartsLib = echartsLib
 
-      const ro = new ResizeObserver(() => chart.resize())
+      const ro = new ResizeObserver(() => this.chart?.resize())
       ro.observe(this.el)
       this.ro = ro
 
+      this.draw()
+    }))
+  },
+
+  draw() {
+    requestAnimationFrame(() => {
+      if (this.destroyedAt) return
+      if (this.chart) this.chart.dispose()
+      this.echartsLib.registerTheme("ink", resolveColors(inkTheme()))
+      const chart = this.echartsLib.init(this.el, "ink", {renderer: "canvas"})
+      this.chart = chart
+
       try {
         const option = JSON.parse(this.el.dataset.option || "{}")
-        if (Object.keys(option).length > 0) chart.setOption(option)
+        if (Object.keys(option).length > 0) chart.setOption(resolveColors(option))
       } catch (_) {}
 
       chart.on("click", (params) => {
         const link = params.data?.link
         if (link) window.liveSocket.pushHistoryState ? window.liveSocket.navigate(link) : (window.location.href = link)
       })
-    }))
+    })
   },
 
   destroyed() {
     this.destroyedAt = Date.now()
+    this.media.removeEventListener("change", this.redraw)
+    this.themeObserver.disconnect()
     if (this.ro) this.ro.disconnect()
     if (this.chart) this.chart.dispose()
   }
@@ -1300,6 +1351,14 @@ if (window.__stashixBooted) {
   topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
   window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
   window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
+
+  // Theme: the server pushes the account's choice on connect and on change.
+  // The cookie lets the root layout draw the next full page load in the same
+  // theme before the socket is up (Layouts.theme_attr/1).
+  window.addEventListener("phx:set-theme", ({detail: {theme}}) => {
+    document.documentElement.dataset.theme = theme
+    document.cookie = `stashix_theme=${theme}; path=/; max-age=31536000; samesite=lax`
+  })
 
   // Closing a URL-driven dialog pops the history entry that opened it (see
   // StashixWeb.DialogHistory), so "back" does not reopen it.

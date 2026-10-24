@@ -33,8 +33,8 @@ defmodule StashixWeb.AdminLive.Libraries do
       </div>
 
       <%= if @show_library_form do %>
-        <div class="bg-gray-900 border border-white/15 rounded-lg p-6">
-          <h3 class="font-display font-black uppercase text-2xl leading-none text-white mb-4">Create Library</h3>
+        <div class="bg-surface border border-edge rounded-lg p-6">
+          <h3 class="font-display font-black uppercase text-2xl leading-none text-fg mb-4">Create Library</h3>
           <form phx-submit="create_library" class="space-y-4">
             <.field label="Name">
               <.text_input name="name" required placeholder="My Comics" />
@@ -55,13 +55,13 @@ defmodule StashixWeb.AdminLive.Libraries do
 
       <div class="space-y-3">
         <%= for lib <- @libraries do %>
-          <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
+          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <div class="p-4 flex items-center justify-between">
               <div>
-                <p class="text-white font-medium">{lib.name}</p>
-                <p class="text-gray-400 text-sm">{lib.root_path}</p>
+                <p class="text-fg font-medium">{lib.name}</p>
+                <p class="text-muted text-sm">{lib.root_path}</p>
                 <%= if lib.standalone_folders != [] do %>
-                  <p class="text-xs text-gray-400 mt-1">
+                  <p class="text-xs text-muted mt-1">
                     Standalone folders: {Enum.join(lib.standalone_folders, ", ")}
                   </p>
                 <% end %>
@@ -115,13 +115,13 @@ defmodule StashixWeb.AdminLive.Libraries do
             </div>
 
             <%= if @editing_library_id == lib.id do %>
-              <div class="border-t border-white/10 p-4 bg-gray-950">
+              <div class="border-t border-fg/10 p-4 bg-canvas">
                 <form phx-submit="save_standalone_folders" class="space-y-3">
                   <input type="hidden" name="_id" value={lib.id} />
                   <div>
-                    <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">
+                    <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">
                       Standalone folder names
-                      <span class="text-gray-400 font-normal ml-1">(one per line — case insensitive)</span>
+                      <span class="text-muted font-normal ml-1">(one per line — case insensitive)</span>
                     </label>
                     <textarea
                       name="standalone_folders"
@@ -129,8 +129,8 @@ defmodule StashixWeb.AdminLive.Libraries do
                       class={input_class()}
                       placeholder="Default built-in: one-shot, one shot, oneshot\nAdd extras here, e.g.:\nAnnuals\nSpecials"
                     >{Enum.join(lib.standalone_folders, "\n")}</textarea>
-                    <p class="text-xs text-gray-400 mt-1">
-                      Built-in defaults (always active): <span class="text-gray-400">one-shot, one shot, oneshot</span>
+                    <p class="text-xs text-muted mt-1">
+                      Built-in defaults (always active): <span class="text-muted">one-shot, one shot, oneshot</span>
                     </p>
                   </div>
                   <div class="flex gap-2 justify-end">

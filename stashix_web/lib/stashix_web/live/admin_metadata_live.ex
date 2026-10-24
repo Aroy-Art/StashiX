@@ -353,7 +353,7 @@ defmodule StashixWeb.AdminMetadataLive do
   defp sources_tab(assigns) do
     ~H"""
     <div class="space-y-4 max-w-3xl">
-      <p class="text-sm text-gray-400">
+      <p class="text-sm text-muted">
         Sources are searched in priority order when matching automatically. Changes save automatically; credentials and cookies are stored encrypted.
         A source can be enabled once its connection test succeeds.
       </p>
@@ -364,7 +364,7 @@ defmodule StashixWeb.AdminMetadataLive do
         {default_n, default_ms} = mod.default_rate_limit() %>
         <div class={[
           "rounded-lg border p-5 space-y-4",
-          if(row.enabled, do: "border-violet-700/50 bg-gray-900", else: "border-white/10 bg-gray-900/60")
+          if(row.enabled, do: "border-accent/40 bg-surface", else: "border-fg/10 bg-surface/60")
         ]}>
           <div class="flex items-start gap-3">
             <div class="flex flex-col gap-1 pt-0.5">
@@ -373,7 +373,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-key={row.source_key}
                 phx-value-dir="up"
                 disabled={idx == 0}
-                class="text-gray-400 hover:text-white disabled:opacity-30"
+                class="text-muted hover:text-fg disabled:opacity-30"
                 title="Higher priority"
               >
                 <.icon name="lucide-chevron-up" class="w-4 h-4" />
@@ -383,7 +383,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-key={row.source_key}
                 phx-value-dir="down"
                 disabled={idx == length(@sources) - 1}
-                class="text-gray-400 hover:text-white disabled:opacity-30"
+                class="text-muted hover:text-fg disabled:opacity-30"
                 title="Lower priority"
               >
                 <.icon name="lucide-chevron-down" class="w-4 h-4" />
@@ -391,36 +391,36 @@ defmodule StashixWeb.AdminMetadataLive do
             </div>
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <h2 class="font-display font-black uppercase text-2xl leading-none text-white">{mod.name()}</h2>
+                <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">{mod.name()}</h2>
                 <a
                   href={mod.homepage()}
                   target="_blank"
                   rel="noopener noreferrer"
-                  class="text-gray-400 hover:text-gray-300"
+                  class="text-muted hover:text-fg-soft"
                 >
                   <.icon name="lucide-external-link" class="w-3.5 h-3.5" />
                 </a>
                 <%= if not configured do %>
-                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300">
+                  <span class="text-[10px] px-1.5 py-0.5 rounded bg-warn/15 text-warn">
                     Needs configuration
                   </span>
                 <% end %>
                 <%= case row.last_test_status do %>
                   <% "ok" -> %>
                     <span
-                      class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300"
+                      class="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success"
                       title={to_string(row.last_tested_at)}
                     >
                       Connection OK
                     </span>
                   <% "error" -> %>
-                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-red-900/40 text-red-300" title={row.last_test_message}>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded bg-danger/15 text-danger" title={row.last_test_message}>
                       {row.last_test_message}
                     </span>
                   <% _ -> %>
                 <% end %>
               </div>
-              <p class="text-sm text-gray-400 mt-0.5">{mod.description()}</p>
+              <p class="text-sm text-muted mt-0.5">{mod.description()}</p>
             </div>
             <div class="flex flex-col items-end gap-2">
               <.source_toggle
@@ -449,8 +449,8 @@ defmodule StashixWeb.AdminMetadataLive do
               <% value = Map.get(values, field.key)
               has_value = value not in [nil, ""] %>
               <div class={if field.type == :cookies, do: "sm:col-span-2", else: ""}>
-                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">
-                  {field.label}<span :if={Map.get(field, :required)} class="text-violet-400">*</span>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">
+                  {field.label}<span :if={Map.get(field, :required)} class="text-accent">*</span>
                 </label>
                 <%= case field.type do %>
                   <% :secret -> %>
@@ -489,11 +489,11 @@ defmodule StashixWeb.AdminMetadataLive do
                       class={input_class()}
                     />
                 <% end %>
-                <p :if={Map.get(field, :help)} class="text-xs text-gray-400 mt-1">{field.help}</p>
+                <p :if={Map.get(field, :help)} class="text-xs text-muted mt-1">{field.help}</p>
               </div>
             <% end %>
             <div :if={Sources.spaced?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Min. seconds between requests</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Min. seconds between requests</label>
               <input
                 type="number"
                 min="0.1"
@@ -504,10 +504,10 @@ defmodule StashixWeb.AdminMetadataLive do
                 placeholder={"Default: #{default_ms / 1000}"}
                 class={input_class()}
               />
-              <p class="text-xs text-gray-400 mt-1">Requests closer together than this risk a temporary block.</p>
+              <p class="text-xs text-muted mt-1">Requests closer together than this risk a temporary block.</p>
             </div>
             <div :if={not Sources.spaced?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Rate limit (requests / minute)</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Rate limit (requests / minute)</label>
               <input
                 type="number"
                 min="1"
@@ -519,7 +519,7 @@ defmodule StashixWeb.AdminMetadataLive do
               />
             </div>
             <div :if={Sources.endpoint_limits?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Requests per hour, per endpoint</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Requests per hour, per endpoint</label>
               <input
                 type="number"
                 min="1"
@@ -529,16 +529,16 @@ defmodule StashixWeb.AdminMetadataLive do
                 placeholder={"Default: #{mod.default_endpoint_limit_per_hour()}"}
                 class={input_class()}
               />
-              <p class="text-xs text-gray-400 mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
+              <p class="text-xs text-muted mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
             </div>
             <div class="sm:col-span-2 flex items-center justify-end gap-3">
               <span
                 :if={MapSet.member?(@saved, row.source_key)}
-                class="inline-flex items-center gap-1 text-xs text-emerald-400"
+                class="inline-flex items-center gap-1 text-xs text-success"
               >
                 <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
               </span>
-              <span :if={not row.enabled and row.last_test_status != "ok"} class="text-xs text-gray-400">
+              <span :if={not row.enabled and row.last_test_status != "ok"} class="text-xs text-muted">
                 Test the connection to enable
               </span>
               <.ink_button
@@ -652,14 +652,14 @@ defmodule StashixWeb.AdminMetadataLive do
             phx-debounce="600"
           />
         </.field>
-        <p class="col-span-2 text-xs text-gray-400 -mt-2">
+        <p class="col-span-2 text-xs text-muted -mt-2">
           Source responses are cached to save API requests. 0 disables caching.
         </p>
       </div>
 
       <div class="space-y-2">
         <input type="hidden" name="settings[write_to_files]" value="false" />
-        <label class="flex items-start gap-2 text-sm text-gray-300">
+        <label class="flex items-start gap-2 text-sm text-fg-soft">
           <input
             type="checkbox"
             name="settings[write_to_files]"
@@ -669,13 +669,13 @@ defmodule StashixWeb.AdminMetadataLive do
           />
           <span>
             Write metadata to files
-            <span class="block text-xs text-gray-400">
+            <span class="block text-xs text-muted">
               CBZ files get MetronInfo.xml embedded; other formats get a <code>&lt;book name&gt;.xml</code> sidecar.
             </span>
           </span>
         </label>
         <input type="hidden" name="settings[write_comicinfo]" value="false" />
-        <label class="flex items-start gap-2 text-sm text-gray-300">
+        <label class="flex items-start gap-2 text-sm text-fg-soft">
           <input
             type="checkbox"
             name="settings[write_comicinfo]"
@@ -685,12 +685,12 @@ defmodule StashixWeb.AdminMetadataLive do
           />
           <span>
             Also write ComicInfo.xml into CBZ files
-            <span class="block text-xs text-gray-400">For readers that don't understand MetronInfo.</span>
+            <span class="block text-xs text-muted">For readers that don't understand MetronInfo.</span>
           </span>
         </label>
       </div>
 
-      <p class="h-5 text-xs text-emerald-400">
+      <p class="h-5 text-xs text-success">
         <span :if={@saved} class="inline-flex items-center gap-1">
           <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
         </span>
@@ -705,32 +705,32 @@ defmodule StashixWeb.AdminMetadataLive do
     ~H"""
     <div class="space-y-3">
       <%= if @reviews == [] do %>
-        <p class="text-sm text-gray-400 py-10 text-center">Nothing to review.</p>
+        <p class="text-sm text-muted py-10 text-center">Nothing to review.</p>
       <% end %>
       <%= for review <- @reviews do %>
         <% top = List.first(review.candidates) %>
-        <div class="flex items-center gap-4 rounded-lg border border-white/10 bg-gray-900 px-4 py-3">
-          <div class="w-10 aspect-[2/3] rounded bg-gray-800 overflow-hidden flex-shrink-0">
+        <div class="flex items-center gap-4 rounded-lg border border-edge bg-surface px-4 py-3">
+          <div class="w-10 aspect-[2/3] rounded bg-raised overflow-hidden flex-shrink-0">
             <%= if review.book && review.book.cover do %>
               <img src={~p"/api/books/#{review.book.id}/cover?s=s"} alt="" class="w-full h-full object-cover" />
             <% end %>
           </div>
           <div class="min-w-0 flex-1">
             <%= if review.book do %>
-              <.link navigate={~p"/book/#{review.book.id}"} class="text-sm text-white hover:underline truncate block">
+              <.link navigate={~p"/book/#{review.book.id}"} class="text-sm text-fg hover:underline truncate block">
                 {(review.book.series && "#{review.book.series.name} ") || ""}{if review.book.issue_number,
                   do: "##{Stashix.Metadata.Matcher.format_number(review.book.issue_number)}",
                   else: review.book.title}
               </.link>
             <% else %>
-              <.link navigate={~p"/series/#{review.series.id}"} class="text-sm text-white hover:underline truncate block">
-                {review.series.name} <span class="text-xs text-gray-400">(series)</span>
+              <.link navigate={~p"/series/#{review.series.id}"} class="text-sm text-fg hover:underline truncate block">
+                {review.series.name} <span class="text-xs text-muted">(series)</span>
               </.link>
             <% end %>
-            <p class="text-xs text-gray-400 truncate">
+            <p class="text-xs text-muted truncate">
               <%= cond do %>
                 <% review.error -> %>
-                  <span class="text-red-400">{review.error}</span>
+                  <span class="text-danger">{review.error}</span>
                 <% top -> %>
                   Best: {top["title"] || top["series_name"]} · {round((top["score"] || 0) * 100)}% · {length(
                     review.candidates
@@ -740,7 +740,7 @@ defmodule StashixWeb.AdminMetadataLive do
               <% end %>
             </p>
             <%= if review.book && review.book.files != [] do %>
-              <p class="text-[11px] text-gray-400 font-mono truncate mt-0.5">
+              <p class="text-[11px] text-muted font-mono truncate mt-0.5">
                 {review.book.library.name <>
                   "/" <> Path.relative_to(List.first(review.book.files).path, review.book.library.root_path)}
               </p>
@@ -778,20 +778,20 @@ defmodule StashixWeb.AdminMetadataLive do
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <%= for {queue, label} <- [{"metadata", "Matching"}, {"metadata_write", "File writes"}] do %>
           <% counts = Map.get(@job_counts, queue, %{}) %>
-          <div class="rounded-lg border border-white/10 bg-gray-900 p-4">
-            <h3 class="text-sm font-semibold text-white mb-3">{label}</h3>
+          <div class="rounded-lg border border-edge bg-surface p-4">
+            <h3 class="text-sm font-semibold text-fg mb-3">{label}</h3>
             <dl class="grid grid-cols-3 gap-2 text-center">
               <%= for {state, name, color} <- [
-                    {"available", "Queued", "text-gray-300"},
-                    {"executing", "Running", "text-violet-300"},
-                    {"scheduled", "Waiting", "text-gray-400"},
-                    {"completed", "Done", "text-emerald-300"},
-                    {"retryable", "Retrying", "text-amber-300"},
-                    {"discarded", "Failed", "text-red-300"}
+                    {"available", "Queued", "text-fg-soft"},
+                    {"executing", "Running", "text-accent"},
+                    {"scheduled", "Waiting", "text-muted"},
+                    {"completed", "Done", "text-success"},
+                    {"retryable", "Retrying", "text-warn"},
+                    {"discarded", "Failed", "text-danger"}
                   ] do %>
-                <div class="rounded-lg bg-gray-800/50 py-2">
+                <div class="rounded-lg bg-raised/50 py-2">
                   <dd class={["text-lg font-semibold", color]}>{Map.get(counts, state, 0)}</dd>
-                  <dt class="text-[11px] text-gray-400">{name}</dt>
+                  <dt class="text-[11px] text-muted">{name}</dt>
                 </div>
               <% end %>
             </dl>
@@ -812,12 +812,12 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <div class="space-y-3">
-        <h2 class="font-display font-black uppercase text-2xl leading-none text-white">Match a library</h2>
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">Match a library</h2>
         <%= for lib <- @libraries do %>
-          <div class="flex items-center justify-between rounded-lg border border-white/10 bg-gray-900 px-4 py-3">
+          <div class="flex items-center justify-between rounded-lg border border-edge bg-surface px-4 py-3">
             <div>
-              <p class="text-white text-sm font-medium">{lib.name}</p>
-              <p class="text-gray-400 text-xs">{lib.root_path}</p>
+              <p class="text-fg text-sm font-medium">{lib.name}</p>
+              <p class="text-muted text-xs">{lib.root_path}</p>
             </div>
             <div class="flex gap-2">
               <.ink_button
@@ -837,12 +837,12 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <div class="space-y-3">
-        <h2 class="font-display font-black uppercase text-2xl leading-none text-white">Maintenance</h2>
-        <div class="rounded-lg border border-white/10 bg-gray-900 px-4 py-3 space-y-3">
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">Maintenance</h2>
+        <div class="rounded-lg border border-edge bg-surface px-4 py-3 space-y-3">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <p class="text-white text-sm font-medium">Clean up summaries</p>
-              <p class="text-gray-400 text-xs">
+              <p class="text-fg text-sm font-medium">Clean up summaries</p>
+              <p class="text-muted text-xs">
                 Remove the "List of covers and their creators" table that older Comic Vine imports left at the end of summaries.
               </p>
             </div>
@@ -851,40 +851,40 @@ defmodule StashixWeb.AdminMetadataLive do
             </.ink_button>
           </div>
 
-          <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-white/10 pt-3">
+          <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-fg/10 pt-3">
             <%= if @summary_cleanup.books + @summary_cleanup.series == 0 do %>
-              <p class="text-sm text-gray-400">Nothing to clean up. No summaries contain a cover table.</p>
+              <p class="text-sm text-muted">Nothing to clean up. No summaries contain a cover table.</p>
               <.ink_button variant="ghost" size="md" phx-click="cancel_summary_cleanup">
                 Close
               </.ink_button>
             <% else %>
-              <p class="text-sm text-gray-300">
-                This will rewrite the summary of <span class="font-semibold text-white">{@summary_cleanup.books}</span>
-                books and <span class="font-semibold text-white">{@summary_cleanup.series}</span>
+              <p class="text-sm text-fg-soft">
+                This will rewrite the summary of <span class="font-semibold text-fg">{@summary_cleanup.books}</span>
+                books and <span class="font-semibold text-fg">{@summary_cleanup.series}</span>
                 series. Only the cover table at the end is removed; the rest of each summary is kept.
               </p>
-              <p :if={@write_to_files and @summary_cleanup.books > 0} class="text-xs text-amber-400">
+              <p :if={@write_to_files and @summary_cleanup.books > 0} class="text-xs text-warn">
                 Writing metadata to files is on, so {@summary_cleanup.books} file writes will be queued.
               </p>
-              <p :if={!@write_to_files} class="text-xs text-gray-400">
+              <p :if={!@write_to_files} class="text-xs text-muted">
                 Writing metadata to files is off, so book files are not touched.
               </p>
 
               <div class="space-y-2">
                 <%= for sample <- @summary_cleanup.samples do %>
-                  <div class="rounded-lg bg-gray-800/50 p-3 text-xs space-y-1">
-                    <p class="text-gray-400">
-                      <span class="text-gray-400">{sample.kind}</span> · {sample.label || "Untitled"}
+                  <div class="rounded-lg bg-raised/50 p-3 text-xs space-y-1">
+                    <p class="text-muted">
+                      <span class="text-muted">{sample.kind}</span> · {sample.label || "Untitled"}
                     </p>
-                    <p class="text-gray-300 line-clamp-2">
+                    <p class="text-fg-soft line-clamp-2">
                       {if sample.kept == "", do: "(summary becomes empty)", else: sample.kept}
                     </p>
-                    <p class="text-red-400 line-through line-clamp-3">{sample.removed}</p>
+                    <p class="text-danger line-through line-clamp-3">{sample.removed}</p>
                   </div>
                 <% end %>
                 <p
                   :if={@summary_cleanup.books + @summary_cleanup.series > length(@summary_cleanup.samples)}
-                  class="text-xs text-gray-400"
+                  class="text-xs text-muted"
                 >
                   Showing {length(@summary_cleanup.samples)} examples.
                 </p>

@@ -57,19 +57,19 @@ defmodule StashixWeb.UI.Ink do
 
   defp button_class("ghost", size),
     do: [
-      "inline-flex items-center justify-center rounded-md ring-1 ring-white/15 bg-white/[0.04] hover:bg-white/[0.1] hover:ring-white/30 text-gray-200 hover:text-white font-display font-bold uppercase tracking-wide transition-colors",
+      "inline-flex items-center justify-center rounded-md ring-1 ring-edge bg-fg/[0.04] hover:bg-fg/[0.1] hover:ring-edge-hover text-fg-soft hover:text-fg font-display font-bold uppercase tracking-wide transition-colors",
       quiet_size(size)
     ]
 
   defp button_class("warning", size),
     do: [
-      "inline-flex items-center justify-center rounded-md ring-1 ring-amber-400/40 bg-amber-400/[0.06] hover:bg-amber-400/15 hover:ring-amber-300 text-amber-300 hover:text-amber-100 font-display font-bold uppercase tracking-wide transition-colors",
+      "inline-flex items-center justify-center rounded-md ring-1 ring-amber-400/40 bg-amber-400/[0.06] hover:bg-amber-400/15 hover:ring-amber-300 text-warn hover:text-warn font-display font-bold uppercase tracking-wide transition-colors",
       quiet_size(size)
     ]
 
   defp button_class("danger", size),
     do: [
-      "inline-flex items-center justify-center rounded-md ring-1 ring-red-500/50 bg-red-500/10 hover:bg-red-500/25 hover:ring-red-400 text-red-300 hover:text-red-100 font-display font-bold uppercase tracking-wide transition-colors",
+      "inline-flex items-center justify-center rounded-md ring-1 ring-red-500/50 bg-red-500/10 hover:bg-red-500/25 hover:ring-red-400 text-danger hover:text-danger font-display font-bold uppercase tracking-wide transition-colors",
       quiet_size(size)
     ]
 
@@ -118,7 +118,7 @@ defmodule StashixWeb.UI.Ink do
     <.clickable
       aria-label={@label}
       class={[
-        "flex items-center justify-center w-8 h-8 rounded-full bg-white/5 hover:bg-white/15 text-gray-300 hover:text-white backdrop-blur-sm transition-colors flex-shrink-0",
+        "flex items-center justify-center w-8 h-8 rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg backdrop-blur-sm transition-colors flex-shrink-0",
         @class
       ]}
       {@rest}
@@ -141,10 +141,10 @@ defmodule StashixWeb.UI.Ink do
     ~H"""
     <.clickable
       class={[
-        "inline-flex items-center font-medium hover:text-white underline underline-offset-4 transition-colors",
+        "inline-flex items-center font-medium hover:text-fg underline underline-offset-4 transition-colors",
         if(@tone == "accent",
-          do: "gap-1.5 text-sm md:text-base text-gray-200 decoration-2 decoration-violet-500 hover:decoration-violet-300",
-          else: "gap-2 text-sm text-gray-300 decoration-white/25 hover:decoration-white"
+          do: "gap-1.5 text-sm md:text-base text-fg-soft decoration-2 decoration-accent hover:decoration-accent",
+          else: "gap-2 text-sm text-fg-soft decoration-fg/25 hover:decoration-fg"
         ),
         @class
       ]}
@@ -188,10 +188,10 @@ defmodule StashixWeb.UI.Ink do
   defp eyebrow_size("sm"), do: "text-[10px] tracking-[0.18em]"
   defp eyebrow_size("xs"), do: "text-[9px] tracking-[0.14em]"
 
-  defp eyebrow_tone("violet"), do: "text-violet-300"
-  defp eyebrow_tone("muted"), do: "text-gray-400"
+  defp eyebrow_tone("violet"), do: "text-accent"
+  defp eyebrow_tone("muted"), do: "text-muted"
   defp eyebrow_tone("ink"), do: "text-ink/80"
-  defp eyebrow_tone("light"), do: "text-gray-300"
+  defp eyebrow_tone("light"), do: "text-fg-soft"
 
   @doc """
   Heading in the display face. `hero` is the page title, `section` heads a
@@ -209,13 +209,13 @@ defmodule StashixWeb.UI.Ink do
     ~H"""
     <.dynamic_tag
       tag_name={"h#{@level}"}
-      class={["font-display font-black uppercase text-white", heading_size(@size), @class]}
+      class={["font-display font-black uppercase text-fg", heading_size(@size), @class]}
       {@rest}
     >
       {render_slot(@inner_block)}
       <span
         :if={@count}
-        class={["tabular-nums", if(@count_tone == "ink", do: "text-ink", else: "text-gray-400")]}
+        class={["tabular-nums", if(@count_tone == "ink", do: "text-ink", else: "text-muted")]}
       >
         {@count}
       </span>
@@ -279,7 +279,7 @@ defmodule StashixWeb.UI.Ink do
     <kbd class={["inline-flex items-center gap-1 pointer-events-none", @class]}>
       <span
         :for={key <- @keys}
-        class="text-[10px] font-semibold text-gray-300 bg-gray-900/80 border border-white/20 rounded px-1.5 py-0.5 leading-none"
+        class="text-[10px] font-semibold text-fg-soft bg-surface/80 border border-fg/20 rounded px-1.5 py-0.5 leading-none"
       >
         {key}
       </span>
@@ -310,11 +310,11 @@ defmodule StashixWeb.UI.Ink do
       class={[
         "px-2.5 py-1 text-xs rounded-full border",
         !@static &&
-          "cursor-pointer select-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-white",
+          "cursor-pointer select-none transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-fg",
         cond do
           @active -> "bg-ink border-ink text-gray-950 font-semibold"
-          @static -> "inline-block bg-gray-800 border-gray-600 text-gray-200 tabular-nums"
-          true -> "bg-gray-800 border-gray-600 text-gray-200 hover:border-gray-400 hover:text-white"
+          @static -> "inline-block bg-raised border-line-strong text-fg-soft tabular-nums"
+          true -> "bg-raised border-line-strong text-fg-soft hover:border-line-strong hover:text-fg"
         end,
         @class
       ]}
@@ -342,24 +342,24 @@ defmodule StashixWeb.UI.Ink do
     <.link
       :if={@link?}
       class={[
-        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/15 text-xs text-gray-200 hover:bg-ink/15 hover:border-ink hover:text-white transition-colors",
+        "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-fg/5 border border-edge text-xs text-fg-soft hover:bg-ink/15 hover:border-ink hover:text-fg transition-colors",
         @class
       ]}
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span :if={@count} class="text-gray-400">{@count}</span>
+      <span :if={@count} class="text-muted">{@count}</span>
     </.link>
     <span
       :if={!@link?}
       class={[
-        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-gray-800/70 border border-gray-800 text-xs text-gray-300",
+        "inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-raised/70 border border-line text-xs text-fg-soft",
         @class
       ]}
       {@rest}
     >
       {render_slot(@inner_block)}
-      <span :if={@count} class="text-gray-400">{@count}</span>
+      <span :if={@count} class="text-muted">{@count}</span>
     </span>
     """
   end
@@ -378,14 +378,14 @@ defmodule StashixWeb.UI.Ink do
   """
   attr :variant, :string, default: "plain", values: ~w(plain indicia rail)
   attr :class, :any, default: nil
-  attr :inner_class, :any, default: "rounded-lg ring-1 ring-white/10"
+  attr :inner_class, :any, default: "rounded-lg ring-1 ring-edge"
   attr :rest, :global
   slot :inner_block, required: true
 
   def panel(%{variant: "indicia"} = assigns) do
     ~H"""
     <div
-      class={["indicia relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-white/10", @class]}
+      class={["indicia relative overflow-hidden rounded-lg border-l-4 border-ink ring-1 ring-edge", @class]}
       {@rest}
     >
       <div class="halftone absolute inset-0" aria-hidden="true"></div>
@@ -397,7 +397,7 @@ defmodule StashixWeb.UI.Ink do
   def panel(%{variant: "rail"} = assigns) do
     ~H"""
     <div class={["ink-rail flex", @class || "rounded-lg"]} {@rest}>
-      <div class={["relative flex-1 min-w-0 bg-gray-900", @inner_class]}>
+      <div class={["relative flex-1 min-w-0 bg-surface", @inner_class]}>
         {render_slot(@inner_block)}
       </div>
     </div>
@@ -406,7 +406,7 @@ defmodule StashixWeb.UI.Ink do
 
   def panel(assigns) do
     ~H"""
-    <div class={["bg-gray-900 rounded-lg ring-1 ring-white/10", @class]} {@rest}>
+    <div class={["bg-surface rounded-lg ring-1 ring-edge", @class]} {@rest}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -445,7 +445,7 @@ defmodule StashixWeb.UI.Ink do
       @class
     ]}>
       <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1 lg:group-data-[inline]/stats:mb-0">{@label}</.eyebrow>
-      <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-white tabular-nums">
+      <dd class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-fg tabular-nums">
         <.link :if={@navigate} navigate={@navigate} class="hover:text-ink transition-colors">
           {render_slot(@inner_block)}
         </.link>
@@ -462,7 +462,7 @@ defmodule StashixWeb.UI.Ink do
   attr :value, :float, required: true
   attr :label, :string, default: nil, doc: "accessible name; the bar is decorative without one"
   attr :rounded, :boolean, default: true
-  attr :track, :string, default: "bg-white/10"
+  attr :track, :string, default: "bg-fg/10"
   attr :class, :any, default: nil
   attr :rest, :global
 
@@ -524,7 +524,7 @@ defmodule StashixWeb.UI.Ink do
             is_nil(@value) -> "bg-ink/25 animate-pulse"
             i <= @filled -> "bg-ink"
             i == @filled + 1 and @filled < @segments -> "bg-ink/40 animate-pulse"
-            true -> "bg-white/10"
+            true -> "bg-fg/10"
           end
         ]}
       ></span>

@@ -3,8 +3,72 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
 
-/* Design tokens: radii, the default border colour, fonts and the ink accent.
-   The app is dark only (<html class="dark"> is fixed), so there is one set. */
+/* Design tokens: radii, the default border colour, fonts and the colours.
+
+   Themes. <html data-theme> is "dark", "light" or "system" (from the account's
+   ui_settings, see Layouts.theme_attr/1) and only sets color-scheme. Every
+   colour token is a light-dark() pair, so it follows the color-scheme of the
+   element it is used on: `scheme-dark` on a subtree (the reader, the cover
+   lightbox, the top bar) pins that subtree dark whatever the page theme is.
+
+   Markup uses these names, not the gray scale:
+     bg-canvas   page             bg-surface  cards, panels, menus
+     bg-raised   inputs, hovers   bg-strong   tracks, pressed fills
+     text-fg     headings, body   text-fg-soft  secondary copy
+     text-muted  captions, icons  text-faint  hints, placeholders
+     border-line / border-line-strong   dividers
+     ring-edge / border-edge            outlines of cards, covers, inputs
+     shadow colour var(--color-pop)     hard offset shadows
+     fg/N (ring-fg/10, bg-fg/5 …)       tints that read on either canvas
+     text-accent, text-danger, text-success, text-warn   status colour as text */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+  }
+  :root[data-theme="system"] {
+    color-scheme: light dark;
+  }
+}
+
+@theme {
+  /* The dark band across the top (sidebar logo block and top bar): the same
+     blue-black in both themes. */
+  --color-band: var(--color-gray-950);
+  /* Light is "newsprint": a comic printed on cream paper. Blue-black ink
+     (the dark theme's gray-950) for type and outlines, hard black offset shadows where dark has aqua ones. */
+  --color-paper-ink: var(--color-gray-950);
+
+  --color-canvas: light-dark(oklch(0.955 0.018 85), var(--color-gray-950));
+  --color-surface: light-dark(oklch(0.985 0.008 85), var(--color-gray-900));
+  --color-raised: light-dark(oklch(0.92 0.024 85), var(--color-gray-800));
+  --color-strong: light-dark(oklch(0.85 0.03 85), var(--color-gray-700));
+
+  --color-fg: light-dark(var(--color-paper-ink), var(--color-white));
+  --color-fg-soft: light-dark(var(--color-gray-700), var(--color-gray-300));
+  --color-muted: light-dark(var(--color-gray-600), var(--color-gray-400));
+  --color-faint: light-dark(var(--color-gray-500), var(--color-gray-500));
+
+  --color-line: light-dark(oklch(0.8 0.025 80), var(--color-gray-700));
+  --color-line-strong: light-dark(oklch(0.6 0.02 70), var(--color-gray-600));
+
+  /* Outlines of cards, covers, inputs and chips: printed ink on paper, a
+     faint hairline on dark. */
+  --color-edge: light-dark(var(--color-paper-ink), rgb(255 255 255 / 0.12));
+  --color-edge-hover: light-dark(var(--color-violet-700), rgb(255 255 255 / 0.3));
+  /* Hard offset shadows (.ink-btn, menus, dialogs, hovered covers). */
+  --color-pop: light-dark(var(--color-paper-ink), oklch(0.87 0.13 195));
+  /* The ink border round a chunky button; only drawn on paper. */
+  --color-btn-edge: light-dark(var(--color-paper-ink), transparent);
+
+  --color-accent: light-dark(var(--color-violet-700), var(--color-violet-300));
+  --color-danger: light-dark(var(--color-red-700), var(--color-red-400));
+  --color-success: light-dark(var(--color-emerald-700), var(--color-emerald-300));
+  --color-warn: light-dark(var(--color-amber-700), var(--color-amber-300));
+}
 
 @theme {
   /* Slightly tighter than Tailwind's defaults; every rounded-* class uses these. */
@@ -15,13 +79,13 @@
 }
 
 @layer base {
-  /* A bare `border` class draws in gray-700 unless it names a colour. */
+  /* A bare `border` class draws in the line colour unless it names one. */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-700);
+    border-color: var(--color-line);
   }
 }
 
@@ -49,5 +113,5 @@
 @theme {
   --font-display: "Big Shoulders Display", "Haettenschweiler", "Impact", "Arial Narrow", ui-sans-serif, sans-serif;
   /* Secondary highlight on detail pages: sticker, button shadow, "you are here". */
-  --color-ink: oklch(0.87 0.13 195);
+  --color-ink: light-dark(oklch(0.6 0.12 215), oklch(0.87 0.13 195));
 }

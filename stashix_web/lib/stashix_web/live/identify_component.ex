@@ -653,13 +653,13 @@ defmodule StashixWeb.IdentifyComponent do
       >
         <:description>
           Search a metadata source and pick the matching entry.
-          <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-gray-400 font-mono truncate">
+          <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-muted font-mono truncate">
             {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
           </p>
         </:description>
         <div class="relative">
           <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-            <span class="text-gray-400">Linked IDs:</span>
+            <span class="text-muted">Linked IDs:</span>
             <button
               :for={{key, id} <- @known_ids}
               type="button"
@@ -667,18 +667,18 @@ defmodule StashixWeb.IdentifyComponent do
               phx-value-source={key}
               phx-target={@myself}
               title="Look up this entry directly"
-              class="inline-flex items-center gap-1.5 rounded-md border border-white/15 bg-gray-800/60 px-2 py-1 text-gray-300 hover:border-violet-500 hover:text-white transition-colors"
+              class="inline-flex items-center gap-1.5 rounded-md border border-edge bg-raised/60 px-2 py-1 text-fg-soft hover:border-violet-500 hover:text-fg transition-colors"
             >
               <.icon name="lucide-link" class="w-3 h-3" />
-              {source_name(@sources, key)} <span class="font-mono text-gray-400">{"##{id}"}</span>
+              {source_name(@sources, key)} <span class="font-mono text-muted">{"##{id}"}</span>
             </button>
           </div>
 
           <%= if @sources == [] do %>
-            <div class="rounded-lg border border-amber-700/50 bg-amber-900/20 p-4 text-sm text-amber-200">
+            <div class="rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
               No metadata source is enabled and configured. <.link
                 navigate={~p"/admin/metadata"}
-                class="underline hover:text-white"
+                class="underline hover:text-fg"
               >
                 Set one up in Admin · Metadata
               </.link>.
@@ -702,7 +702,7 @@ defmodule StashixWeb.IdentifyComponent do
                 />
               </.field>
               <div class={if @kind == :series, do: "col-span-2 sm:col-span-3", else: "col-span-2 sm:col-span-2"}>
-                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-300">Series</label>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Series</label>
                 <input type="text" name="q[series_name]" value={@form[:series_name].value} class={input_class()} />
               </div>
               <%= if @kind == :issue do %>
@@ -714,7 +714,7 @@ defmodule StashixWeb.IdentifyComponent do
                 <.text_input name="q[year]" value={@form[:year].value} />
               </.field>
               <div class="col-span-2 sm:col-span-6 flex items-center justify-end gap-4">
-                <label class="flex items-center gap-2 text-xs text-gray-400" title="Ignore cached responses">
+                <label class="flex items-center gap-2 text-xs text-muted" title="Ignore cached responses">
                   <input type="hidden" name="refresh" value="false" />
                   <input
                     type="checkbox"
@@ -739,15 +739,15 @@ defmodule StashixWeb.IdentifyComponent do
 
             <div
               :if={@linked_lookup}
-              class="mt-3 flex items-start gap-2 rounded-lg border border-violet-800/50 bg-violet-900/20 px-3 py-2 text-sm text-violet-200"
+              class="mt-3 flex items-start gap-2 rounded-lg border border-accent/40 bg-accent/10 px-3 py-2 text-sm text-accent"
             >
               <.icon name="lucide-link" class="w-4 h-4 mt-0.5 flex-shrink-0" />
               <p>
                 <% {key, id} = @linked_lookup %> This {if @kind == :series, do: "series", else: "issue"} is already linked to
-                <span class="font-medium text-white">{source_name(@sources, key)}</span>
+                <span class="font-medium text-fg">{source_name(@sources, key)}</span>
                 <span class="font-mono">{"##{id}"}</span>
                 (from its file tags or an earlier match), so that entry was loaded directly — no search needed.
-                <span class="text-violet-300/70">Not the right match? Search above to pick a different one.</span>
+                <span class="text-accent/70">Not the right match? Search above to pick a different one.</span>
               </p>
             </div>
 
@@ -760,7 +760,7 @@ defmodule StashixWeb.IdentifyComponent do
 
             <div
               :if={@error}
-              class="mt-3 rounded-lg border border-red-800/60 bg-red-900/20 px-3 py-2 text-sm text-red-300"
+              class="mt-3 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger"
             >
               {@error}
             </div>
@@ -772,13 +772,13 @@ defmodule StashixWeb.IdentifyComponent do
                 @searching && "opacity-50"
               ]}
             >
-              <p :if={@candidates == [] and not @searching} class="text-sm text-gray-400 py-6 text-center">
+              <p :if={@candidates == [] and not @searching} class="text-sm text-muted py-6 text-center">
                 No results yet.
               </p>
               <p
                 :if={@candidates == [] and @searching}
                 role="status"
-                class="flex items-center justify-center gap-2 text-sm text-gray-400 py-6"
+                class="flex items-center justify-center gap-2 text-sm text-muted py-6"
               >
                 <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
                 Searching {source_name(@sources, @source_key)}…
@@ -793,12 +793,12 @@ defmodule StashixWeb.IdentifyComponent do
                   class={[
                     "w-full flex items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors",
                     if(@selected && @selected.id == c.id && @selected.source_key == c.source_key,
-                      do: "border-violet-500 bg-violet-900/20",
-                      else: "border-white/10 bg-gray-800/40 hover:border-gray-600"
+                      do: "border-violet-500 bg-accent/10",
+                      else: "border-fg/10 bg-raised/40 hover:border-line-strong"
                     )
                   ]}
                 >
-                  <div class="w-10 aspect-[2/3] flex-shrink-0 rounded bg-gray-800 overflow-hidden">
+                  <div class="w-10 aspect-[2/3] flex-shrink-0 rounded bg-raised overflow-hidden">
                     <img
                       :if={c.cover_url}
                       id={"#{@id}-cover-#{c.source_key}-#{c.id}"}
@@ -809,8 +809,8 @@ defmodule StashixWeb.IdentifyComponent do
                     />
                   </div>
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm text-white truncate">{c.title || c.series_name}</p>
-                    <p class="text-xs text-gray-400 truncate">
+                    <p class="text-sm text-fg truncate">{c.title || c.series_name}</p>
+                    <p class="text-xs text-muted truncate">
                       {[
                         c.series_name,
                         c.number && "##{c.number}",
@@ -824,19 +824,19 @@ defmodule StashixWeb.IdentifyComponent do
                   </div>
                   <span
                     :if={linked?(@known_ids, c)}
-                    class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-violet-300 flex-shrink-0"
+                    class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-accent flex-shrink-0"
                   >
                     <.icon name="lucide-link" class="w-3 h-3" /> Linked
                   </span>
-                  <span class="text-[10px] uppercase tracking-wide text-gray-400 flex-shrink-0">
+                  <span class="text-[10px] uppercase tracking-wide text-muted flex-shrink-0">
                     {source_name(@sources, c.source_key)}
                   </span>
                   <span class={[
                     "text-xs font-mono px-1.5 py-0.5 rounded flex-shrink-0",
                     cond do
-                      c.score >= 0.9 -> "bg-emerald-900/40 text-emerald-300"
-                      c.score >= 0.7 -> "bg-amber-900/40 text-amber-300"
-                      true -> "bg-gray-800 text-gray-400"
+                      c.score >= 0.9 -> "bg-success/15 text-success"
+                      c.score >= 0.7 -> "bg-warn/15 text-warn"
+                      true -> "bg-raised text-muted"
                     end
                   ]}>
                     {round(c.score * 100)}%
@@ -846,7 +846,7 @@ defmodule StashixWeb.IdentifyComponent do
                     href={c.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    class="text-gray-400 hover:text-white flex-shrink-0"
+                    class="text-muted hover:text-fg flex-shrink-0"
                     title="Open on source site"
                   >
                     <.icon name="lucide-external-link" class="w-4 h-4" />
@@ -858,7 +858,7 @@ defmodule StashixWeb.IdentifyComponent do
             <div id={"#{@id}-preview"} class="mt-4">
               <p
                 :if={@loading_preview and wait_remaining(@wait_until) == 0}
-                class="flex items-center gap-2 text-sm text-gray-400 py-4"
+                class="flex items-center gap-2 text-sm text-muted py-4"
               >
                 <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" /> Loading details…
               </p>
@@ -869,9 +869,9 @@ defmodule StashixWeb.IdentifyComponent do
                 limit={@wait_limit}
               />
 
-              <div :if={@preview} class="rounded-lg border border-white/10 overflow-x-auto">
+              <div :if={@preview} class="rounded-lg border border-edge overflow-x-auto">
                 <table class="w-full text-sm">
-                  <thead class="bg-gray-800/60 text-xs text-gray-400">
+                  <thead class="bg-raised/60 text-xs text-muted">
                     <tr>
                       <th class="w-8 px-3 py-2">
                         <input
@@ -891,7 +891,7 @@ defmodule StashixWeb.IdentifyComponent do
                       <th class="text-left font-medium px-3 py-2">New</th>
                     </tr>
                   </thead>
-                  <tbody class="divide-y divide-white/10">
+                  <tbody class="divide-y divide-fg/10">
                     <%= for row <- @rows do %>
                       <% checked = row.key != nil and MapSet.member?(@selected_fields, row.key) %>
                       <tr id={"#{@id}-row-#{row.key || row.label}"}>
@@ -906,23 +906,23 @@ defmodule StashixWeb.IdentifyComponent do
                             class="ink-check"
                           />
                         </td>
-                        <td class="px-3 py-1.5 text-gray-400 align-top">{row.label}</td>
+                        <td class="px-3 py-1.5 text-muted align-top">{row.label}</td>
                         <td class={[
                           "px-3 py-1.5 align-top",
-                          if(checked && row.current, do: "text-gray-400 line-through", else: "text-gray-400")
+                          if(checked && row.current, do: "text-muted line-through", else: "text-muted")
                         ]}>
                           {row.current || "—"}
                         </td>
                         <td class={[
                           "px-3 py-1.5 align-top",
                           cond do
-                            checked -> "text-emerald-300"
-                            row.selectable -> "text-gray-400"
-                            true -> "text-gray-400"
+                            checked -> "text-success"
+                            row.selectable -> "text-muted"
+                            true -> "text-muted"
                           end
                         ]}>
                           {row.new || "—"}
-                          <span :if={row.hint} class="block text-xs text-gray-500 mt-0.5">
+                          <span :if={row.hint} class="block text-xs text-faint mt-0.5">
                             {row.hint}
                           </span>
                         </td>
@@ -931,7 +931,7 @@ defmodule StashixWeb.IdentifyComponent do
                   </tbody>
                 </table>
               </div>
-              <p :if={@preview} class="mt-2 text-xs text-gray-400">
+              <p :if={@preview} class="mt-2 text-xs text-muted">
                 Checked fields are written. Empty fields are selected by default; tick a filled field to overwrite it.
               </p>
             </div>
@@ -939,7 +939,7 @@ defmodule StashixWeb.IdentifyComponent do
 
           <div class="pt-5 flex flex-wrap items-center justify-end gap-3">
             <div :if={@kind == :series} class="mr-auto flex flex-col gap-1.5">
-              <label class="flex items-center gap-2 text-sm text-gray-400">
+              <label class="flex items-center gap-2 text-sm text-muted">
                 <input
                   type="checkbox"
                   checked={@queue_issues}
@@ -950,9 +950,9 @@ defmodule StashixWeb.IdentifyComponent do
               </label>
               <div
                 :if={@queue_issues}
-                class="relative ml-[7px] pl-3 before:content-[''] before:absolute before:left-0 before:-top-1.5 before:bottom-1/2 before:border-l before:border-gray-600/60 after:content-[''] after:absolute after:left-0 after:top-1/2 after:w-3 after:border-t after:border-gray-600/60"
+                class="relative ml-[7px] pl-3 before:content-[''] before:absolute before:left-0 before:-top-1.5 before:bottom-1/2 before:border-l before:border-line-strong/60 after:content-[''] after:absolute after:left-0 after:top-1/2 after:w-3 after:border-t after:border-line-strong/60"
               >
-                <label class="flex items-center gap-2 text-sm text-gray-400">
+                <label class="flex items-center gap-2 text-sm text-muted">
                   <input
                     type="checkbox"
                     checked={@overwrite_issue_titles}
@@ -986,11 +986,11 @@ defmodule StashixWeb.IdentifyComponent do
             :if={@applying}
             id={"#{@id}-applying"}
             role="status"
-            class="absolute -inset-2 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-gray-900/85 text-sm text-gray-200"
+            class="absolute -inset-2 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-surface/85 text-sm text-fg-soft"
           >
             <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-ink" />
             <p>Applying metadata…</p>
-            <p :if={@kind == :series and @queue_issues} class="text-xs text-gray-400">
+            <p :if={@kind == :series and @queue_issues} class="text-xs text-muted">
               Issues are queued for matching afterwards.
             </p>
           </div>
@@ -1010,12 +1010,12 @@ defmodule StashixWeb.IdentifyComponent do
     ~H"""
     <div
       :if={@secs > 0}
-      class="mt-3 flex items-start gap-2 rounded-lg border border-amber-700/50 bg-amber-900/20 px-3 py-2 text-sm text-amber-200"
+      class="mt-3 flex items-start gap-2 rounded-lg border border-warn/40 bg-warn/10 px-3 py-2 text-sm text-warn"
     >
       <.icon name="lucide-hourglass" class="w-4 h-4 mt-0.5 flex-shrink-0 animate-pulse" />
       <div>
         <p>Waiting for {@source}'s rate limit, next request in {@secs}s…</p>
-        <p :if={@limit} class="text-xs text-amber-300/70">
+        <p :if={@limit} class="text-xs text-warn/70">
           {@source} allows {rate_text(@limit)}. Searches can take several requests; cached results skip the wait.
         </p>
       </div>

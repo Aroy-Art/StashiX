@@ -131,7 +131,7 @@ defmodule StashixWeb.CoreComponents do
       title={@confirm.title}
       on_close={JS.push("cancel_confirm")}
     >
-      <p class="text-sm text-gray-300">{@confirm.message}</p>
+      <p class="text-sm text-fg-soft">{@confirm.message}</p>
       <.dialog_footer>
         <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_confirm">Cancel</.ink_button>
         <.ink_button type="button" variant="danger" size="md" phx-click="confirm_action">
@@ -252,7 +252,7 @@ defmodule StashixWeb.CoreComponents do
           style={"--src: url('#{url}')"}
           aria-hidden="true"
         ></span>
-        <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/10">
+        <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-raised ring-1 ring-edge">
           <%= if @img_src do %>
             <.blurhash_image
               id={@cover_id}
@@ -262,18 +262,18 @@ defmodule StashixWeb.CoreComponents do
               class="w-full h-full object-cover"
               onerror="this.style.display='none';this.nextElementSibling?.style.setProperty('display','flex')"
             />
-            <div class="w-full h-full hidden items-center justify-center text-gray-400">
+            <div class="w-full h-full hidden items-center justify-center text-muted">
               <.icon name={@fallback_icon} class="w-8 h-8" />
             </div>
           <% else %>
-            <div class="w-full h-full flex items-center justify-center text-gray-400">
+            <div class="w-full h-full flex items-center justify-center text-muted">
               <.icon name={@fallback_icon} class="w-8 h-8" />
             </div>
           <% end %>
 
           <div
             :if={@read}
-            class="read-mark-stamp absolute inset-0 bg-gray-950/45 pointer-events-none"
+            class="read-mark-stamp absolute inset-0 bg-canvas/45 pointer-events-none"
             aria-hidden="true"
           >
           </div>
@@ -286,7 +286,7 @@ defmodule StashixWeb.CoreComponents do
           <span
             :if={@type == :book && @page_count && @page_count > 0}
             class={[
-              "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-gray-950/70 text-[10px] font-semibold text-gray-200 tabular-nums",
+              "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-canvas/70 text-[10px] font-semibold text-fg-soft tabular-nums",
               if(@badge, do: "top-2", else: "bottom-2")
             ]}
             title={"#{@page_count} pages"}
@@ -297,7 +297,7 @@ defmodule StashixWeb.CoreComponents do
 
           <span
             :if={@read}
-            class="read-mark-check absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-gray-950/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
+            class="read-mark-check absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-canvas/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
             title="Read"
           >
             <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
@@ -305,7 +305,7 @@ defmodule StashixWeb.CoreComponents do
           </span>
           <span
             :if={@read}
-            class="read-mark-stamp read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-gray-950/60 text-ink font-display font-black uppercase text-xl leading-none"
+            class="read-mark-stamp read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-canvas/60 text-ink font-display font-black uppercase text-xl leading-none"
           >
             Read
           </span>
@@ -314,16 +314,16 @@ defmodule StashixWeb.CoreComponents do
             :if={@progress}
             value={@progress}
             rounded={false}
-            track="bg-gray-950/70"
+            track="bg-canvas/70"
             class="absolute bottom-0 inset-x-0 h-1"
           />
         </div>
       </div>
       <div class="pt-2 px-0.5">
-        <p class="text-[13px] leading-snug font-semibold text-gray-200 group-hover:text-white transition-colors line-clamp-2">
+        <p class="text-[13px] leading-snug font-semibold text-fg-soft group-hover:text-fg transition-colors line-clamp-2">
           {@title}
         </p>
-        <p :if={@subtitle} class="mt-0.5 text-xs text-gray-400 tabular-nums">{@subtitle}</p>
+        <p :if={@subtitle} class="mt-0.5 text-xs text-muted tabular-nums">{@subtitle}</p>
       </div>
     </.link>
     """
@@ -424,11 +424,11 @@ defmodule StashixWeb.CoreComponents do
     <.link
       navigate={@navigate}
       class={[
-        "group flex items-center gap-3 min-w-0 p-2.5 rounded-md bg-white/[0.03] ring-1 ring-white/10 hover:bg-white/[0.07] hover:ring-ink/60 transition-colors",
+        "group flex items-center gap-3 min-w-0 p-2.5 rounded-md bg-fg/[0.03] ring-1 ring-edge hover:bg-fg/[0.07] hover:ring-ink/60 transition-colors",
         @class
       ]}
     >
-      <div class="w-12 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-gray-800">
+      <div class="w-12 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-raised">
         <img
           src={"#{@cover_url}?s=s"}
           alt=""
@@ -439,12 +439,12 @@ defmodule StashixWeb.CoreComponents do
       </div>
       <div class="flex-1 min-w-0">
         <.eyebrow :if={@eyebrow} size="sm" class="truncate mb-0.5">{@eyebrow}</.eyebrow>
-        <p class="text-sm font-semibold leading-snug text-gray-100 group-hover:text-white line-clamp-2">{@title}</p>
+        <p class="text-sm font-semibold leading-snug text-fg group-hover:text-fg line-clamp-2">{@title}</p>
         <div :if={@progress} class="flex items-center gap-2 mt-1.5">
           <.progress_bar value={@progress} class="flex-1 h-1" />
-          <span class="text-[10px] font-semibold text-gray-400 tabular-nums">{round(min(@progress, 1.0) * 100)}%</span>
+          <span class="text-[10px] font-semibold text-muted tabular-nums">{round(min(@progress, 1.0) * 100)}%</span>
         </div>
-        <p :if={!@progress && @detail} class="mt-0.5 text-xs text-gray-400 tabular-nums">{@detail}</p>
+        <p :if={!@progress && @detail} class="mt-0.5 text-xs text-muted tabular-nums">{@detail}</p>
       </div>
     </.link>
     """
@@ -496,7 +496,7 @@ defmodule StashixWeb.CoreComponents do
     <.ink_menu id={@id} class={@class}>
       <:trigger
         label="Library actions"
-        class="p-1 text-white/30 hover:text-ink transition-colors"
+        class="p-1 text-fg/30 hover:text-ink transition-colors"
       >
         <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
       </:trigger>
@@ -527,7 +527,7 @@ defmodule StashixWeb.CoreComponents do
 
   def browse_toolbar(assigns) do
     ~H"""
-    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4 border-b border-white/15">
+    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 pb-4 border-b border-fg/15">
       <div class="flex flex-wrap items-center gap-1.5">
         <.library_filter :if={length(@libraries) > 1} libraries={@libraries} selected_id={@library_id} />
       </div>
@@ -609,7 +609,7 @@ defmodule StashixWeb.CoreComponents do
           if(i > 5 and p != @page, do: "hidden sm:flex", else: "flex"),
           if(p == @page,
             do: "sticker bg-ink text-zinc-950",
-            else: "text-gray-400 hover:text-white hover:bg-white/10"
+            else: "text-muted hover:text-fg hover:bg-fg/10"
           )
         ]}
       >
@@ -644,7 +644,7 @@ defmodule StashixWeb.CoreComponents do
       phx-click={@click}
       disabled={@disabled}
       aria-label={@label}
-      class="flex items-center justify-center w-9 h-9 rounded-sm text-gray-400 hover:text-white hover:bg-white/10 disabled:opacity-25 disabled:pointer-events-none transition-colors"
+      class="flex items-center justify-center w-9 h-9 rounded-sm text-muted hover:text-fg hover:bg-fg/10 disabled:opacity-25 disabled:pointer-events-none transition-colors"
     >
       <.icon name={@icon} class="w-4 h-4" />
     </button>

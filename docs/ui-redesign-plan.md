@@ -41,8 +41,11 @@ cards with gray-800 borders, `text-2xl font-bold` sans headings, native
 `indigo-*` buttons (admin, login, setup), violet "pip" section headings
 (`w-1 h-5 bg-violet-500`), duplicated breadcrumb markup.
 
-Dark only. `<html class="dark">` is fixed and the new language hard-codes
-white-on-black, so no light theme work is planned.
+Dark and light (2026-10-25). Markup uses semantic colour tokens (`bg-canvas`,
+`text-fg`, `ring-fg/10`, `text-accent` …, listed in `assets/css/tokens.css`),
+each a `light-dark()` pair, never the gray scale. `<html data-theme>` is
+`system`, `dark` or `light` from `ui_settings["theme"]`; the reader and the
+cover lightbox are pinned dark with `scheme-dark`.
 
 ---
 

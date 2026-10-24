@@ -100,7 +100,7 @@ defmodule StashixWeb.MetadataComponents do
         </.detail_section>
 
         <.detail_section label="Notes" show={@notes != ""}>
-          <p class="text-sm text-gray-400 leading-relaxed whitespace-pre-line break-words">{@notes}</p>
+          <p class="text-sm text-muted leading-relaxed whitespace-pre-line break-words">{@notes}</p>
         </.detail_section>
       </.expander>
     </div>
@@ -117,17 +117,17 @@ defmodule StashixWeb.MetadataComponents do
   def credits_line(assigns) do
     ~H"""
     <dl :if={@groups != []} class="grid grid-cols-3 gap-x-4 gap-y-5 sm:gap-x-10">
-      <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-white/10 pl-3 sm:pl-4">
+      <div :for={{label, names} <- @groups} class="min-w-0 border-l-2 border-fg/10 pl-3 sm:pl-4">
         <.eyebrow tag="dt" size="sm" tone="ink" class="mb-1.5">{label}</.eyebrow>
-        <dd class="text-sm text-gray-200 leading-6">
+        <dd class="text-sm text-fg-soft leading-6">
           <.link
             :for={n <- Enum.take(names, @limit)}
             navigate={"/search?creator=#{entry_id(n)}"}
-            class="block truncate hover:text-white hover:underline underline-offset-4 transition-colors"
+            class="block truncate hover:text-fg hover:underline underline-offset-4 transition-colors"
           >
             {String.trim(entry_name(n))}
           </.link>
-          <span :if={length(names) > @limit} class="block text-xs text-gray-400">
+          <span :if={length(names) > @limit} class="block text-xs text-muted">
             +{length(names) - @limit} more
           </span>
         </dd>
@@ -144,7 +144,7 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <div>
       <div class="flex items-center gap-4">
-        <span class="h-px flex-1 bg-white/10"></span>
+        <span class="h-px flex-1 bg-fg/10"></span>
         <button
           type="button"
           phx-click={
@@ -153,7 +153,7 @@ defmodule StashixWeb.MetadataComponents do
             |> JS.toggle(to: "##{@id}-more", display: "inline")
             |> JS.toggle(to: "##{@id}-less", display: "inline")
           }
-          class="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full border border-white/15 bg-white/5 text-xs font-bold tracking-[0.16em] uppercase text-gray-100 hover:border-ink hover:bg-ink/10 hover:text-white transition-colors"
+          class="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full border border-edge bg-fg/5 text-xs font-bold tracking-[0.16em] uppercase text-fg hover:border-ink hover:bg-ink/10 hover:text-fg transition-colors"
           aria-controls={@id}
         >
           <span id={"#{@id}-more"}>More info</span>
@@ -162,7 +162,7 @@ defmodule StashixWeb.MetadataComponents do
             <.icon name="lucide-chevron-down" class="w-4 h-4" />
           </span>
         </button>
-        <span class="h-px flex-1 bg-white/10"></span>
+        <span class="h-px flex-1 bg-fg/10"></span>
       </div>
       <div id={@id} class="hidden mt-6 space-y-6">
         {render_slot(@inner_block)}
@@ -180,7 +180,7 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <div class="flex items-center gap-3 min-w-0">
       <div class={[
-        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white select-none",
+        "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-fg select-none",
         creator_avatar_color(@name)
       ]}>
         {creator_initials(@name)}
@@ -189,10 +189,10 @@ defmodule StashixWeb.MetadataComponents do
         <.link
           :if={@creator_id}
           navigate={"/search?creator=#{@creator_id}"}
-          class="text-sm text-gray-200 leading-tight truncate hover:text-white hover:underline transition-colors block"
+          class="text-sm text-fg-soft leading-tight truncate hover:text-fg hover:underline transition-colors block"
         >{@name}</.link>
-        <p :if={!@creator_id} class="text-sm text-gray-200 leading-tight truncate">{@name}</p>
-        <p class="text-[10px] text-gray-400 uppercase tracking-[0.1em] mt-0.5">{@role}</p>
+        <p :if={!@creator_id} class="text-sm text-fg-soft leading-tight truncate">{@name}</p>
+        <p class="text-[10px] text-muted uppercase tracking-[0.1em] mt-0.5">{@role}</p>
       </div>
     </div>
     """
@@ -241,7 +241,7 @@ defmodule StashixWeb.MetadataComponents do
     <dl :if={@entries != []} class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 text-sm">
       <div :for={{label, value} <- @entries} class="min-w-0">
         <.eyebrow tag="dt" size="xs" tone="muted" class="mb-0.5">{label}</.eyebrow>
-        <dd class="text-gray-300 break-words">{value}</dd>
+        <dd class="text-fg-soft break-words">{value}</dd>
       </div>
     </dl>
     """
@@ -271,7 +271,7 @@ defmodule StashixWeb.MetadataComponents do
         </.chip>
         <.chip :if={!@search_param} count={entry_count(item)}>{entry_name(item)}</.chip>
       <% end %>
-      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-gray-400">+{@rest} more</span>
+      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-muted">+{@rest} more</span>
     </div>
     """
   end

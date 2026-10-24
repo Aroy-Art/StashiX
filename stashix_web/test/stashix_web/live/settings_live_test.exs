@@ -40,6 +40,41 @@ defmodule StashixWeb.SettingsLiveTest do
     assert User.ui_setting(Accounts.get_user!(user.id), "read_mark") == "stamp"
   end
 
+  test "the theme is saved to the account and pushed to the browser", %{conn: conn, user: user} do
+    {:ok, view, _html} = live(conn, ~p"/settings")
+    assert_push_event(view, "set-theme", %{theme: "system"})
+
+    view |> element("#ui-settings-theme") |> render_change(%{"theme" => "light"})
+    assert_push_event(view, "set-theme", %{theme: "light"})
+    assert User.ui_setting(Accounts.get_user!(user.id), "theme") == "light"
+
+    view |> element("#ui-settings-theme") |> render_change(%{"theme" => "sepia"})
+    assert User.ui_setting(Accounts.get_user!(user.id), "theme") == "light"
+  end
+
+  test "the sidebar theme menu saves the choice", %{conn: conn, user: user} do
+    {:ok, view, _html} = live(conn, ~p"/settings")
+
+    for theme <- ~w(light dark system) do
+      assert view |> element("#theme-#{theme}") |> render_click() =~ "Theme: #{String.capitalize(theme)}"
+      assert_push_event(view, "set-theme", %{theme: ^theme})
+      assert User.ui_setting(Accounts.get_user!(user.id), "theme") == theme
+    end
+
+    view |> render_hook("set_theme", %{"theme" => "sepia"})
+    assert User.ui_setting(Accounts.get_user!(user.id), "theme") == "system"
+  end
+
+  test "the first paint uses the theme cookie", %{conn: conn} do
+    assert build_conn() |> get(~p"/login") |> html_response(200) =~ ~s(data-theme="system")
+
+    conn = conn |> put_req_cookie("stashix_theme", "light") |> get(~p"/settings")
+    assert html_response(conn, 200) =~ ~s(data-theme="light")
+
+    conn = build_conn() |> put_req_cookie("stashix_theme", "<script>") |> get(~p"/login")
+    assert html_response(conn, 200) =~ ~s(data-theme="system")
+  end
+
   test "the About tab shows the version, license and source link", %{conn: conn} do
     {:ok, view, html} = live(conn, ~p"/settings/about")
     assert html =~ to_string(Application.spec(:stashix, :vsn))

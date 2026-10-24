@@ -45,10 +45,10 @@ defmodule StashixWeb.UI.Dialog do
       class={["ink-dialog", dialog_size(@size), @class]}
     >
       <div class="ink-dialog-panel">
-        <header class="flex items-start gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-white/10">
+        <header class="flex items-start gap-4 px-5 sm:px-6 pt-5 pb-4 border-b border-fg/10">
           <div class="flex-1 min-w-0">
             <.display_heading id={"#{@id}-title"} size="panel">{@title}</.display_heading>
-            <div :if={@description != []} id={"#{@id}-description"} class="mt-2 text-sm text-gray-400">
+            <div :if={@description != []} id={"#{@id}-description"} class="mt-2 text-sm text-muted">
               {render_slot(@description)}
             </div>
           </div>

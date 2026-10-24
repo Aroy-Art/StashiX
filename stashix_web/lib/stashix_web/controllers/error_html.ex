@@ -36,7 +36,7 @@ defmodule StashixWeb.ErrorHTML do
   defp error_page(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" class="dark">
+    <html lang="en" data-theme="system">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -45,7 +45,7 @@ defmodule StashixWeb.ErrorHTML do
         <link rel="icon" type="image/png" href={~p"/favicon.png"} />
         <link rel="stylesheet" href={~p"/assets/app.css"} />
       </head>
-      <body class="bg-gray-950 text-gray-100 antialiased">
+      <body class="bg-canvas text-fg antialiased">
         <main class="reader-end relative min-h-dvh flex items-center justify-center px-6 py-16 overflow-hidden">
           <div class="halftone absolute inset-0" aria-hidden="true"></div>
           <span
@@ -80,9 +80,9 @@ defmodule StashixWeb.ErrorHTML do
                 <span class="sticker inline-block px-2 pt-0.5 bg-ink text-zinc-950 font-display font-black text-2xl leading-none rounded-sm tabular-nums">
                   {@status}
                 </span>
-                <span class="text-[11px] font-bold tracking-[0.2em] uppercase text-violet-300">Error</span>
+                <span class="text-[11px] font-bold tracking-[0.2em] uppercase text-accent">Error</span>
               </p>
-              <h1 class="mt-3 font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-white text-balance">
+              <h1 class="mt-3 font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-fg text-balance">
                 {@title}
               </h1>
               <p class="reader-end-caption inline-block mt-5 px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold">

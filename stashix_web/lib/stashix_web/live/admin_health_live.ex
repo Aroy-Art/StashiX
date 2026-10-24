@@ -163,12 +163,12 @@ defmodule StashixWeb.AdminHealthLive do
           <% summary = Map.get(@summaries, lib.id, %{}) %>
           <% integrity_running = MapSet.member?(@integrity_jobs, lib.id) %>
 
-          <div class="bg-gray-900 rounded-lg ring-1 ring-white/10 overflow-hidden">
+          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <%!-- Library header --%>
-            <div class="p-4 border-b border-white/10 flex items-center justify-between">
+            <div class="p-4 border-b border-fg/10 flex items-center justify-between">
               <div>
-                <p class="text-white font-medium">{lib.name}</p>
-                <p class="text-gray-400 text-sm">{lib.root_path}</p>
+                <p class="text-fg font-medium">{lib.name}</p>
+                <p class="text-muted text-sm">{lib.root_path}</p>
               </div>
               <div class="flex gap-2">
                 <.ink_button
@@ -193,7 +193,7 @@ defmodule StashixWeb.AdminHealthLive do
             </div>
 
             <%!-- Health metric grid --%>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-white/5">
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 divide-x divide-fg/5">
               <.health_stat
                 library_id={lib.id}
                 section="missing_files"
@@ -243,20 +243,20 @@ defmodule StashixWeb.AdminHealthLive do
             <%= if active_key && elem(active_key, 0) == lib.id do %>
               <% {_lib_id, section} = active_key %>
               <% data = Map.get(@section_data, active_key, []) %>
-              <div class="border-t border-white/10 bg-gray-950 p-4 space-y-3">
+              <div class="border-t border-fg/10 bg-canvas p-4 space-y-3">
                 <div class="flex items-center justify-between">
-                  <h3 class="text-sm font-bold tracking-widest uppercase text-gray-300">
+                  <h3 class="text-sm font-bold tracking-widest uppercase text-fg-soft">
                     {section_label(section)}
                   </h3>
                   <button
                     phx-click="hide_section"
-                    class="text-gray-400 hover:text-white text-xs"
+                    class="text-muted hover:text-fg text-xs"
                   >
                     Close
                   </button>
                 </div>
                 <%= if data == [] do %>
-                  <p class="text-gray-400 text-sm">All clear.</p>
+                  <p class="text-muted text-sm">All clear.</p>
                 <% else %>
                   <.section_table section={section} data={data} />
                 <% end %>
@@ -286,14 +286,14 @@ defmodule StashixWeb.AdminHealthLive do
       phx-value-section={@section}
       class={[
         "p-4 text-left transition-colors",
-        if(active, do: "bg-gray-800", else: "hover:bg-gray-800/50"),
+        if(active, do: "bg-raised", else: "hover:bg-raised/50"),
         if(@count > 0, do: "cursor-pointer", else: "cursor-default")
       ]}
     >
-      <p class={["text-2xl font-black font-display", if(@count > 0, do: "text-red-400", else: "text-green-400")]}>
+      <p class={["text-2xl font-black font-display", if(@count > 0, do: "text-danger", else: "text-success")]}>
         {@count}
       </p>
-      <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400 mt-0.5">{@label}</p>
+      <p class="text-[10px] font-bold tracking-[0.18em] uppercase text-muted mt-0.5">{@label}</p>
     </button>
     """
   end
@@ -305,19 +305,19 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-white/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Title</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Path</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Missing since</th>
+        <tr class="border-b border-fg/10 text-left">
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Path</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Missing since</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @data} class="border-b border-white/5 last:border-0">
-          <td class="py-2 pr-4 text-white">
+        <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
+          <td class="py-2 pr-4 text-fg">
             <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
           </td>
-          <td class="py-2 pr-4 text-gray-400 font-mono text-xs truncate max-w-xs">{row.path}</td>
-          <td class="py-2 text-gray-400 text-xs">{format_dt(row.deleted_at)}</td>
+          <td class="py-2 pr-4 text-muted font-mono text-xs truncate max-w-xs">{row.path}</td>
+          <td class="py-2 text-muted text-xs">{format_dt(row.deleted_at)}</td>
         </tr>
       </tbody>
     </table>
@@ -328,13 +328,13 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-white/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Title</th>
+        <tr class="border-b border-fg/10 text-left">
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @data} class="border-b border-white/5 last:border-0">
-          <td class="py-2 text-white">
+        <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
+          <td class="py-2 text-fg">
             <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
           </td>
         </tr>
@@ -347,13 +347,13 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-white/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Title</th>
+        <tr class="border-b border-fg/10 text-left">
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @data} class="border-b border-white/5 last:border-0">
-          <td class="py-2 text-white">
+        <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
+          <td class="py-2 text-fg">
             <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
           </td>
         </tr>
@@ -366,17 +366,17 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-white/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Series</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Expected path</th>
+        <tr class="border-b border-fg/10 text-left">
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Series</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Expected path</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @data} class="border-b border-white/5 last:border-0">
-          <td class="py-2 pr-4 text-white">
+        <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
+          <td class="py-2 pr-4 text-fg">
             <.link navigate={~p"/series/#{row.series_id}"} class="hover:underline">{row.name}</.link>
           </td>
-          <td class="py-2 text-gray-400 font-mono text-xs truncate max-w-sm">{row.path}</td>
+          <td class="py-2 text-muted font-mono text-xs truncate max-w-sm">{row.path}</td>
         </tr>
       </tbody>
     </table>
@@ -388,27 +388,27 @@ defmodule StashixWeb.AdminHealthLive do
     <div class="space-y-2">
       <div
         :for={row <- @data}
-        class="rounded-md bg-gray-900 ring-1 ring-white/5 p-3 space-y-1"
+        class="rounded-md bg-surface ring-1 ring-fg/5 p-3 space-y-1"
       >
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <.link navigate={~p"/book/#{row.book_id}"} class="text-white font-medium hover:underline text-sm">
+            <.link navigate={~p"/book/#{row.book_id}"} class="text-fg font-medium hover:underline text-sm">
               {row.title}
             </.link>
             <details class="mt-0.5 group">
-              <summary class="text-gray-400 font-mono text-xs cursor-pointer list-none hover:text-gray-200">
+              <summary class="text-muted font-mono text-xs cursor-pointer list-none hover:text-fg-soft">
                 {Path.basename(row.file_path)}
               </summary>
-              <p class="text-gray-500 font-mono text-xs mt-1 break-all">{row.file_path}</p>
+              <p class="text-faint font-mono text-xs mt-1 break-all">{row.file_path}</p>
             </details>
           </div>
-          <span class="text-gray-500 text-xs whitespace-nowrap shrink-0 pt-0.5">{format_dt(row.checked_at)}</span>
+          <span class="text-faint text-xs whitespace-nowrap shrink-0 pt-0.5">{format_dt(row.checked_at)}</span>
         </div>
         <div class="flex items-start gap-2 pt-1">
-          <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 text-red-400 shrink-0 mt-0.5" />
+          <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 text-danger shrink-0 mt-0.5" />
           <div class="min-w-0">
-            <p class="text-red-400 text-xs font-mono">{row.error_message}</p>
-            <p :if={error_detail(row.error_message)} class="text-gray-400 text-xs mt-1">
+            <p class="text-danger text-xs font-mono">{row.error_message}</p>
+            <p :if={error_detail(row.error_message)} class="text-muted text-xs mt-1">
               {error_detail(row.error_message)}
             </p>
           </div>
@@ -422,17 +422,17 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <table class="w-full text-sm">
       <thead>
-        <tr class="border-b border-white/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">File path</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Extension</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400">Scanned</th>
+        <tr class="border-b border-fg/10 text-left">
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">File path</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Extension</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Scanned</th>
         </tr>
       </thead>
       <tbody>
-        <tr :for={row <- @data} class="border-b border-white/5 last:border-0">
-          <td class="py-2 pr-4 text-gray-300 font-mono text-xs truncate max-w-sm">{row.file_path}</td>
-          <td class="py-2 pr-4 text-yellow-400 text-xs font-mono">{Path.extname(row.file_path)}</td>
-          <td class="py-2 text-gray-400 text-xs">{format_dt(row.checked_at)}</td>
+        <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
+          <td class="py-2 pr-4 text-fg-soft font-mono text-xs truncate max-w-sm">{row.file_path}</td>
+          <td class="py-2 pr-4 text-warn text-xs font-mono">{Path.extname(row.file_path)}</td>
+          <td class="py-2 text-muted text-xs">{format_dt(row.checked_at)}</td>
         </tr>
       </tbody>
     </table>

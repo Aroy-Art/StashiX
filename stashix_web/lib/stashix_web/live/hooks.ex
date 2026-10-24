@@ -38,6 +38,8 @@ defmodule StashixWeb.Live.Hooks do
           )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
+          |> attach_hook(:theme, :handle_event, &handle_theme/3)
+          |> push_theme()
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
           |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
             # current_path lets the sidebar mark the page we are on.
@@ -85,6 +87,8 @@ defmodule StashixWeb.Live.Hooks do
           )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
+          |> attach_hook(:theme, :handle_event, &handle_theme/3)
+          |> push_theme()
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
           |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
             # current_path lets the sidebar mark the page we are on.
@@ -188,6 +192,26 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_navbar_search(_event, _params, socket), do: {:cont, socket}
+
+  # The sidebar theme menu.
+  defp handle_theme("set_theme", %{"theme" => theme}, %{assigns: %{current_user: user}} = socket) do
+    case Accounts.update_ui_settings(user, %{"theme" => theme}) do
+      {:ok, user} -> {:halt, socket |> assign(current_user: user) |> push_theme()}
+      {:error, _} -> {:halt, socket}
+    end
+  end
+
+  defp handle_theme(_event, _params, socket), do: {:cont, socket}
+
+  @doc """
+  Sends the account's theme to the browser (app.js `phx:set-theme`), which sets
+  `<html data-theme>` and the cookie the root layout reads on the next load.
+  """
+  def push_theme(%{assigns: %{current_user: user}} = socket) do
+    if connected?(socket),
+      do: push_event(socket, "set-theme", %{theme: Accounts.User.ui_setting(user, "theme")}),
+      else: socket
+  end
 
   defp handle_sidebar_scan(event, _params, %{assigns: %{current_user: %{role: role}}} = socket)
        when event in ["sidebar_scan", "sidebar_force_scan"] and role != :admin do

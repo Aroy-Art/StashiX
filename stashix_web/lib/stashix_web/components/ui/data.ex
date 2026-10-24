@@ -34,15 +34,15 @@ defmodule StashixWeb.UI.Data do
 
   def data_table(assigns) do
     ~H"""
-    <div class={["rounded-lg bg-gray-900 ring-1 ring-white/10 overflow-x-auto", @class]}>
+    <div class={["rounded-lg bg-surface ring-1 ring-edge overflow-x-auto", @class]}>
       <table id={@id} class="w-full text-sm text-left">
         <thead>
-          <tr class="border-b border-white/10">
+          <tr class="border-b border-fg/10">
             <th
               :for={col <- @col}
               scope="col"
               class={[
-                "px-4 py-3 text-[10px] font-bold tracking-[0.18em] uppercase text-gray-400 whitespace-nowrap",
+                "px-4 py-3 text-[10px] font-bold tracking-[0.18em] uppercase text-muted whitespace-nowrap",
                 col[:align] == "right" && "text-right"
               ]}
             >
@@ -51,11 +51,11 @@ defmodule StashixWeb.UI.Data do
             <th :if={@action != []} scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-white/[0.06]">
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="hover:bg-white/[0.03] transition-colors">
+        <tbody class="divide-y divide-fg/[0.06]">
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="hover:bg-fg/[0.03] transition-colors">
             <td
               :for={col <- @col}
-              class={["px-4 py-3 text-gray-200", col[:align] == "right" && "text-right tabular-nums", col[:class]]}
+              class={["px-4 py-3 text-fg-soft", col[:align] == "right" && "text-right tabular-nums", col[:class]]}
             >
               {render_slot(col, row)}
             </td>
@@ -64,7 +64,7 @@ defmodule StashixWeb.UI.Data do
             </td>
           </tr>
           <tr :if={@rows == [] and @empty != []}>
-            <td colspan={length(@col) + if(@action != [], do: 1, else: 0)} class="px-4 py-8 text-center text-gray-400">
+            <td colspan={length(@col) + if(@action != [], do: 1, else: 0)} class="px-4 py-8 text-center text-muted">
               {render_slot(@empty)}
             </td>
           </tr>
@@ -92,7 +92,7 @@ defmodule StashixWeb.UI.Data do
     ~H"""
     <nav
       aria-label={@label}
-      class={["flex items-center gap-1 sm:gap-2 pb-3 border-b border-white/15 overflow-x-auto", @class]}
+      class={["flex items-center gap-1 sm:gap-2 pb-3 border-b border-fg/15 overflow-x-auto", @class]}
     >
       <.link
         :for={tab <- @tab}
@@ -103,7 +103,7 @@ defmodule StashixWeb.UI.Data do
           "inline-flex items-center gap-2 px-2.5 pt-1 pb-0.5 rounded-sm font-display font-black uppercase text-2xl leading-none whitespace-nowrap transition-colors",
           if(tab[:active],
             do: "bg-ink text-gray-950 -rotate-1",
-            else: "text-gray-300 hover:text-white hover:bg-white/10"
+            else: "text-fg-soft hover:text-fg hover:bg-fg/10"
           )
         ]}
       >
@@ -112,7 +112,7 @@ defmodule StashixWeb.UI.Data do
           :if={tab[:count] && tab[:count] > 0}
           size="xs"
           tilt={false}
-          class={tab[:active] && "bg-gray-950! text-ink!"}
+          class={tab[:active] && "bg-canvas! text-ink!"}
         >
           {tab[:count]}
         </.sticker>

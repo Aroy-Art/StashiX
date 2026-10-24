@@ -285,7 +285,7 @@ defmodule StashixWeb.HomeLive do
       <.link
         navigate={@hero.to}
         aria-label={@hero.title}
-        class="rise relative block w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md overflow-hidden bg-gray-800 ring-1 ring-white/15 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.9)] -rotate-2 hover:rotate-0 transition-transform duration-300"
+        class="rise relative block w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md overflow-hidden bg-raised ring-1 ring-edge shadow-[0_24px_60px_-12px_light-dark(rgba(0,0,0,0.3),rgba(0,0,0,0.9))] -rotate-2 hover:rotate-0 transition-transform duration-300"
       >
         <img
           src={"#{@hero.cover}?s=l"}
@@ -301,11 +301,11 @@ defmodule StashixWeb.HomeLive do
           <.sticker :if={@hero.sticker} size="lg">{@hero.sticker}</.sticker>
           <.eyebrow>
             {@hero.eyebrow}
-            <span :if={@hero.series} class="text-white/25"> / </span>
+            <span :if={@hero.series} class="text-fg/25"> / </span>
             <.link
               :if={@hero.series}
               navigate={~p"/series/#{@hero.series.id}"}
-              class="hover:text-white transition-colors"
+              class="hover:text-fg transition-colors"
             >
               {@hero.series.name}
             </.link>
@@ -316,7 +316,7 @@ defmodule StashixWeb.HomeLive do
 
         <p
           :if={@hero.meta != []}
-          class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+          class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-fg-soft tabular-nums"
           style="--i:3"
         >
           <span :for={part <- @hero.meta}>{part}</span>
@@ -349,13 +349,13 @@ defmodule StashixWeb.HomeLive do
       class="relative flex flex-col items-center sm:flex-row sm:items-end gap-7 sm:gap-12 pt-2"
       aria-hidden="true"
     >
-      <div class="w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md bg-white/[0.06] ring-1 ring-white/10 -rotate-2 animate-pulse">
+      <div class="w-36 sm:w-44 flex-shrink-0 aspect-[2/3] rounded-md bg-fg/[0.06] ring-1 ring-edge -rotate-2 animate-pulse">
       </div>
       <div class="flex-1 w-full sm:pb-1 space-y-4">
-        <div class="h-3 w-32 mx-auto sm:mx-0 rounded-sm bg-white/[0.06]"></div>
-        <div class="h-12 md:h-16 w-3/4 max-w-md mx-auto sm:mx-0 rounded-sm bg-white/[0.06] animate-pulse"></div>
-        <div class="h-4 w-40 mx-auto sm:mx-0 rounded-sm bg-white/[0.06]"></div>
-        <div class="h-12 w-44 mx-auto sm:mx-0 mt-7 rounded-md bg-white/[0.06]"></div>
+        <div class="h-3 w-32 mx-auto sm:mx-0 rounded-sm bg-fg/[0.06]"></div>
+        <div class="h-12 md:h-16 w-3/4 max-w-md mx-auto sm:mx-0 rounded-sm bg-fg/[0.06] animate-pulse"></div>
+        <div class="h-4 w-40 mx-auto sm:mx-0 rounded-sm bg-fg/[0.06]"></div>
+        <div class="h-12 w-44 mx-auto sm:mx-0 mt-7 rounded-md bg-fg/[0.06]"></div>
       </div>
     </div>
     """
@@ -530,11 +530,11 @@ defmodule StashixWeb.HomeLive do
     <div class={["mt-2.5 transition-opacity duration-1000", if(@progress.done, do: "opacity-0", else: "opacity-100")]}>
       <p class={[
         "mb-1 text-[10px] font-bold tracking-[0.14em] uppercase tabular-nums",
-        if(@failed, do: "text-red-500", else: "text-ink/80")
+        if(@failed, do: "text-danger", else: "text-ink/80")
       ]}>
         {@label}
       </p>
-      <p :if={@failed && @progress[:error]} class="mt-0.5 text-[10px] text-red-400 leading-tight break-words">
+      <p :if={@failed && @progress[:error]} class="mt-0.5 text-[10px] text-danger leading-tight break-words">
         {@progress[:error]}
       </p>
       <.run_bar :if={not @failed} value={@value} label={"#{@name} scan progress"} />

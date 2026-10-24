@@ -38,8 +38,8 @@ defmodule StashixWeb.UI.Forms do
         </.eyebrow>
         {render_slot(@inner_block)}
       </label>
-      <p :if={@hint && !@error} class="mt-1.5 text-xs text-gray-400">{@hint}</p>
-      <p :if={@error} class="mt-1.5 text-xs font-medium text-red-300">{@error}</p>
+      <p :if={@hint && !@error} class="mt-1.5 text-xs text-muted">{@hint}</p>
+      <p :if={@error} class="mt-1.5 text-xs font-medium text-danger">{@error}</p>
     </div>
     """
   end
@@ -72,7 +72,7 @@ defmodule StashixWeb.UI.Forms do
   @doc "Class of a text control, for the rare control that cannot be one of the components."
   def input_class(size \\ "md") do
     [
-      "block w-full rounded-md bg-gray-800 border border-gray-600 text-gray-100 placeholder:text-gray-500 hover:border-gray-400 focus:outline-none focus:border-ink disabled:opacity-50 transition-colors",
+      "block w-full rounded-md bg-raised border border-line-strong text-fg placeholder:text-faint hover:border-line-strong focus:outline-none focus:border-ink disabled:opacity-50 transition-colors",
       if(size == "sm", do: "px-2 py-1 text-xs", else: "px-3 py-2 text-sm")
     ]
   end
@@ -91,7 +91,7 @@ defmodule StashixWeb.UI.Forms do
 
   def checkbox(assigns) do
     ~H"""
-    <label class={["inline-flex items-center gap-2 text-sm text-gray-200 cursor-pointer select-none", @class]}>
+    <label class={["inline-flex items-center gap-2 text-sm text-fg-soft cursor-pointer select-none", @class]}>
       <input :if={@unchecked_value} type="hidden" name={@name} value={@unchecked_value} />
       <input type="checkbox" name={@name} value={@value} checked={@checked} class="ink-check" {@rest} />
       <span :if={@inner_block != []}>{render_slot(@inner_block)}</span>
@@ -115,7 +115,7 @@ defmodule StashixWeb.UI.Forms do
       role="switch"
       aria-checked={to_string(@on)}
       class={[
-        "group inline-flex items-center gap-2 text-xs font-medium text-gray-300 hover:text-white disabled:opacity-40 disabled:pointer-events-none transition-colors",
+        "group inline-flex items-center gap-2 text-xs font-medium text-fg-soft hover:text-fg disabled:opacity-40 disabled:pointer-events-none transition-colors",
         @class
       ]}
       {@rest}
@@ -123,11 +123,11 @@ defmodule StashixWeb.UI.Forms do
       {render_slot(@inner_block)}
       <span class={[
         "relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full ring-1 transition-colors",
-        if(@on, do: "bg-violet-600 ring-violet-400/60", else: "bg-gray-800 ring-white/20")
+        if(@on, do: "bg-violet-600 ring-violet-400/60", else: "bg-raised ring-fg/20")
       ]}>
         <span class={[
           "inline-block h-3.5 w-3.5 rounded-full transition-transform",
-          if(@on, do: "translate-x-[1.125rem] bg-ink", else: "translate-x-[0.1875rem] bg-gray-400")
+          if(@on, do: "translate-x-[1.125rem] bg-ink", else: "translate-x-[0.1875rem] bg-muted")
         ]}></span>
       </span>
     </button>

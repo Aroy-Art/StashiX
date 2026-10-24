@@ -42,22 +42,22 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Set alias --%>
           <div class="space-y-4">
             <div>
-              <h2 class="text-base font-semibold text-white mb-1">Link Publisher Alias</h2>
-              <p class="text-sm text-gray-400">
+              <h2 class="text-base font-semibold text-fg mb-1">Link Publisher Alias</h2>
+              <p class="text-sm text-muted">
                 Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.
               </p>
             </div>
 
             <%!-- Alias source picker --%>
             <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Alias (will be hidden)</label>
+              <label class="text-xs font-medium text-muted uppercase tracking-wide">Alias (will be hidden)</label>
               <%= if @alias_source_id do %>
                 <% src = Enum.find(@publishers, &(&1.id == @alias_source_id)) %>
-                <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
-                  <span class="text-white">{src && src.name}</span>
+                <div class="flex items-center justify-between bg-surface border border-accent/40 rounded-lg px-3 py-2 text-sm">
+                  <span class="text-fg">{src && src.name}</span>
                   <button
                     phx-click="clear_alias_source"
-                    class="text-gray-400 hover:text-white ml-2 flex-shrink-0"
+                    class="text-muted hover:text-fg ml-2 flex-shrink-0"
                   >
                     <.icon name="lucide-x" class="w-4 h-4" />
                   </button>
@@ -70,7 +70,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                     placeholder="Search publishers…"
                     phx-keyup="alias_source_input"
                     autocomplete="off"
-                    class="w-full bg-gray-900 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                    class="w-full bg-surface border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-faint focus:outline-none focus:border-violet-500"
                   />
                   <%= if @alias_source_query != "" do %>
                     <% src_results =
@@ -83,11 +83,11 @@ defmodule StashixWeb.AdminLive.Publishers do
                       )
                       |> Enum.take(8) %>
                     <div
-                      class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-white/15 rounded-lg overflow-hidden shadow-xl"
+                      class="absolute z-20 top-full left-0 right-0 mt-1 bg-raised border border-edge rounded-lg overflow-hidden shadow-xl"
                       onmousedown="event.preventDefault()"
                     >
                       <%= if src_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-gray-400">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-muted">No publishers found</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(src_results) do %>
                           <button
@@ -96,8 +96,8 @@ defmodule StashixWeb.AdminLive.Publishers do
                             class={[
                               "w-full text-left px-3 py-2 text-sm transition-colors",
                               if(i == 0,
-                                do: "bg-gray-700/60 text-white hover:bg-gray-700",
-                                else: "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                do: "bg-strong/60 text-fg hover:bg-strong",
+                                else: "text-fg-soft hover:bg-strong hover:text-fg"
                               )
                             ]}
                           >{p.name}</button>
@@ -111,14 +111,14 @@ defmodule StashixWeb.AdminLive.Publishers do
 
             <%!-- Alias target picker --%>
             <div class="space-y-1.5">
-              <label class="text-xs font-medium text-gray-400 uppercase tracking-wide">Master (kept, shown in listings)</label>
+              <label class="text-xs font-medium text-muted uppercase tracking-wide">Master (kept, shown in listings)</label>
               <%= if @alias_target_id do %>
                 <% tgt = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
-                <div class="flex items-center justify-between bg-gray-900 border border-violet-600/50 rounded-lg px-3 py-2 text-sm">
-                  <span class="text-white">{tgt && tgt.name}</span>
+                <div class="flex items-center justify-between bg-surface border border-accent/40 rounded-lg px-3 py-2 text-sm">
+                  <span class="text-fg">{tgt && tgt.name}</span>
                   <button
                     phx-click="clear_alias_target"
-                    class="text-gray-400 hover:text-white ml-2 flex-shrink-0"
+                    class="text-muted hover:text-fg ml-2 flex-shrink-0"
                   >
                     <.icon name="lucide-x" class="w-4 h-4" />
                   </button>
@@ -131,7 +131,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                     placeholder="Search publishers…"
                     phx-keyup="alias_target_input"
                     autocomplete="off"
-                    class="w-full bg-gray-900 border border-white/15 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500"
+                    class="w-full bg-surface border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-faint focus:outline-none focus:border-violet-500"
                   />
                   <%= if @alias_target_query != "" do %>
                     <% tgt_results =
@@ -145,11 +145,11 @@ defmodule StashixWeb.AdminLive.Publishers do
                       )
                       |> Enum.take(8) %>
                     <div
-                      class="absolute z-20 top-full left-0 right-0 mt-1 bg-gray-800 border border-white/15 rounded-lg overflow-hidden shadow-xl"
+                      class="absolute z-20 top-full left-0 right-0 mt-1 bg-raised border border-edge rounded-lg overflow-hidden shadow-xl"
                       onmousedown="event.preventDefault()"
                     >
                       <%= if tgt_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-gray-400">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-muted">No publishers found</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(tgt_results) do %>
                           <button
@@ -158,8 +158,8 @@ defmodule StashixWeb.AdminLive.Publishers do
                             class={[
                               "w-full text-left px-3 py-2 text-sm transition-colors",
                               if(i == 0,
-                                do: "bg-gray-700/60 text-white hover:bg-gray-700",
-                                else: "text-gray-300 hover:bg-gray-700 hover:text-white"
+                                do: "bg-strong/60 text-fg hover:bg-strong",
+                                else: "text-fg-soft hover:bg-strong hover:text-fg"
                               )
                             ]}
                           >{p.name}</button>
@@ -180,11 +180,11 @@ defmodule StashixWeb.AdminLive.Publishers do
                 Link as Alias
               </.ink_button>
             <% else %>
-              <div class="rounded-lg border border-violet-800/60 bg-violet-950/30 p-4 space-y-3">
-                <p class="text-sm text-violet-300 font-medium">Confirm alias link</p>
-                <p class="text-sm text-gray-400">
-                  <span class="text-white font-medium">"{alias_pub && alias_pub.name}"</span>
-                  will become an alias of <span class="text-white font-medium">"{master_pub && master_pub.name}"</span>.
+              <div class="rounded-lg border border-accent/40 bg-accent/10 p-4 space-y-3">
+                <p class="text-sm text-accent font-medium">Confirm alias link</p>
+                <p class="text-sm text-muted">
+                  <span class="text-fg font-medium">"{alias_pub && alias_pub.name}"</span>
+                  will become an alias of <span class="text-fg font-medium">"{master_pub && master_pub.name}"</span>.
                   No data is deleted — this can be undone.
                 </p>
                 <div class="flex gap-2">
@@ -204,10 +204,10 @@ defmodule StashixWeb.AdminLive.Publishers do
 
           <%!-- Current aliases --%>
           <div>
-            <h3 class="text-sm font-medium text-gray-400 mb-2">
+            <h3 class="text-sm font-medium text-muted mb-2">
               Current aliases
               <%= if @publishers_with_aliases != [] do %>
-                <span class="text-gray-400">({length(@publishers_with_aliases)})</span>
+                <span class="text-muted">({length(@publishers_with_aliases)})</span>
               <% end %>
             </h3>
             <.data_table id="publisher-aliases" rows={@publishers_with_aliases}>
@@ -216,7 +216,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                   {p.canonical && p.canonical.name}
                 </.link>
               </:col>
-              <:col :let={p} label="Alias" class="text-gray-400">{p.name}</:col>
+              <:col :let={p} label="Alias" class="text-muted">{p.name}</:col>
               <:action :let={p}>
                 <.ink_button variant="danger" size="md" phx-click="remove_alias" phx-value-id={p.id}>Remove</.ink_button>
               </:action>
@@ -236,7 +236,7 @@ defmodule StashixWeb.AdminLive.Publishers do
             <div class="relative">
               <.icon
                 name="lucide-search"
-                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none"
               />
               <input
                 type="search"
@@ -246,17 +246,17 @@ defmodule StashixWeb.AdminLive.Publishers do
                 autocomplete="off"
                 phx-change="pub_vis_search"
                 phx-debounce="200"
-                class="w-full bg-gray-900 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500/70"
+                class="w-full bg-surface border border-edge rounded-lg pl-9 pr-4 py-2 text-sm text-fg placeholder-faint focus:outline-none focus:border-violet-500/70"
               />
             </div>
           </form>
 
           <%!-- Count + top pagination --%>
           <div class="flex items-center justify-between">
-            <p class="text-xs text-gray-400">
+            <p class="text-xs text-muted">
               {@pub_vis_total} publisher{if @pub_vis_total == 1, do: "", else: "s"}
               <%= if @pub_vis_search != "" do %>
-                matching <span class="text-gray-400">"{@pub_vis_search}"</span>
+                matching <span class="text-muted">"{@pub_vis_search}"</span>
               <% end %>
             </p>
             <%= if total_pages > 1 do %>
@@ -276,7 +276,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       "px-2.5 py-1 rounded text-sm border transition-colors",
                       if(pg == @pub_vis_page,
                         do: "bg-violet-600 border-violet-500 text-white",
-                        else: "bg-gray-800 border-white/15 text-gray-400 hover:bg-gray-700"
+                        else: "bg-raised border-fg/15 text-muted hover:bg-strong"
                       )
                     ]}
                   >{pg}</button>
@@ -299,7 +299,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                 navigate={~p"/publisher/#{p.id}"}
                 class={[
                   "hover:text-ink transition-colors",
-                  (p.hidden || (p.canonical && p.canonical.hidden)) && "text-gray-400 line-through"
+                  (p.hidden || (p.canonical && p.canonical.hidden)) && "text-muted line-through"
                 ]}
               >
                 {p.name}
@@ -319,13 +319,13 @@ defmodule StashixWeb.AdminLive.Publishers do
                   </span>
               <% end %>
             </:col>
-            <:col :let={p} label="Series" align="right" class="text-gray-400">
+            <:col :let={p} label="Series" align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).series_count}
             </:col>
-            <:col :let={p} label="Books" align="right" class="text-gray-400">
+            <:col :let={p} label="Books" align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).books_count}
             </:col>
-            <:col :let={p} label="Issues" align="right" class="text-gray-400">
+            <:col :let={p} label="Issues" align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).issues_count}
             </:col>
             <:action :let={p}>
@@ -345,7 +345,7 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Bottom pagination --%>
           <%= if total_pages > 1 do %>
             <div class="flex items-center justify-between pt-1">
-              <p class="text-xs text-gray-400">Page {@pub_vis_page} of {total_pages}</p>
+              <p class="text-xs text-muted">Page {@pub_vis_page} of {total_pages}</p>
               <div class="flex gap-1">
                 <.ink_button
                   variant="ghost"
@@ -362,7 +362,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       "px-2.5 py-1 rounded text-sm border transition-colors",
                       if(pg == @pub_vis_page,
                         do: "bg-violet-600 border-violet-500 text-white",
-                        else: "bg-gray-800 border-white/15 text-gray-400 hover:bg-gray-700"
+                        else: "bg-raised border-fg/15 text-muted hover:bg-strong"
                       )
                     ]}
                   >{pg}</button>

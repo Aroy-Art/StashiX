@@ -45,7 +45,7 @@ defmodule StashixWeb.SettingsLive do
     attrs = Map.take(params, Map.keys(User.ui_choices()))
 
     case Accounts.update_ui_settings(socket.assigns.current_user, attrs) do
-      {:ok, user} -> {:noreply, assign(socket, current_user: user)}
+      {:ok, user} -> {:noreply, socket |> assign(current_user: user) |> StashixWeb.Live.Hooks.push_theme()}
       {:error, _changeset} -> {:noreply, put_flash(socket, :error, "That is not one of the choices.")}
     end
   end
@@ -167,13 +167,46 @@ defmodule StashixWeb.SettingsLive do
   defp ui_tab(assigns) do
     assigns =
       assign(assigns,
+        theme: User.ui_setting(assigns.current_user, "theme"),
         read_mark: User.ui_setting(assigns.current_user, "read_mark"),
         extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info")
       )
 
     ~H"""
+    <.section title="Theme">
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
+        System follows your device's light or dark setting. Saved to your account, so it follows you to other devices.
+      </p>
+      <form id="ui-settings-theme" phx-change="set_ui" class="grid grid-cols-3 gap-4 max-w-xl">
+        <label
+          :for={
+            {value, name, icon, scheme} <- [
+              {"system", "System", "lucide-monitor", "scheme-light-dark"},
+              {"light", "Light", "lucide-sun", "scheme-light"},
+              {"dark", "Dark", "lucide-moon", "scheme-dark"}
+            ]
+          }
+          class="choice-card group relative block p-3 rounded-md bg-surface ring-1 ring-edge cursor-pointer transition-shadow"
+        >
+          <input type="radio" name="theme" value={value} checked={@theme == value} class="sr-only" />
+          <%!-- A tiny page in that theme: canvas, a card and two lines of text. --%>
+          <div class={[scheme, "pointer-events-none p-2 rounded-sm bg-canvas ring-1 ring-edge"]} aria-hidden="true">
+            <div class="p-2 rounded-sm bg-surface ring-1 ring-edge space-y-1.5">
+              <div class="h-1.5 w-2/3 rounded-full bg-fg"></div>
+              <div class="h-1.5 w-1/2 rounded-full bg-muted"></div>
+              <div class="h-1.5 w-1/3 rounded-full bg-ink"></div>
+            </div>
+          </div>
+          <p class="mt-2 flex items-center gap-1.5 font-display font-black uppercase text-xl leading-none text-fg">
+            <.icon name={icon} class="w-4 h-4 text-muted" />{name}
+          </p>
+          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">On</.sticker>
+        </label>
+      </form>
+    </.section>
+
     <.section title="Read mark">
-      <p class="max-w-xl -mt-1 mb-5 text-sm text-gray-400">
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
         How a finished book is marked on its cover. Applies everywhere covers are shown, on this account only.
       </p>
       <form id="ui-settings" phx-change="set_ui" class="grid grid-cols-2 gap-4 max-w-md">
@@ -184,7 +217,7 @@ defmodule StashixWeb.SettingsLive do
               {"stamp", "Stamp", "A READ stamp across the cover."}
             ]
           }
-          class="choice-card group relative block p-3 rounded-md bg-gray-900 ring-1 ring-white/10 cursor-pointer transition-shadow"
+          class="choice-card group relative block p-3 rounded-md bg-surface ring-1 ring-edge cursor-pointer transition-shadow"
         >
           <input type="radio" name="read_mark" value={value} checked={@read_mark == value} class="sr-only" />
           <div class="pointer-events-none" aria-hidden="true">
@@ -198,15 +231,15 @@ defmodule StashixWeb.SettingsLive do
               scope={"preview-#{value}"}
             />
           </div>
-          <p class="mt-1 font-display font-black uppercase text-xl leading-none text-white">{name}</p>
-          <p class="mt-1 text-xs text-gray-400">{blurb}</p>
+          <p class="mt-1 font-display font-black uppercase text-xl leading-none text-fg">{name}</p>
+          <p class="mt-1 text-xs text-muted">{blurb}</p>
           <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">On</.sticker>
         </label>
       </form>
     </.section>
 
     <.section title="Book info">
-      <p class="max-w-xl -mt-1 mb-5 text-sm text-gray-400">
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
         Show file size and format on book and series pages. Off by default.
       </p>
       <form id="ui-settings-extended" phx-change="set_ui" class="flex flex-col gap-5 max-w-xl">
@@ -219,8 +252,8 @@ defmodule StashixWeb.SettingsLive do
             checked={@extended_book_info == "on"}
             class="sr-only peer"
           />
-          <span class="relative w-10 h-6 rounded-full bg-gray-700 ring-1 ring-white/10 peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
-          <span class="text-sm text-gray-200">Show extended book info</span>
+          <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+          <span class="text-sm text-fg-soft">Show extended book info</span>
         </label>
         <.indicia>
           <:item label="Publisher">Image Comics</:item>
@@ -262,10 +295,10 @@ defmodule StashixWeb.SettingsLive do
         </.field>
         <div class="sm:col-span-2 flex items-center gap-4 pt-1">
           <.ink_button type="submit" size="md">Save profile</.ink_button>
-          <p class="text-xs text-gray-400">
+          <p class="text-xs text-muted">
             Email and password are under <.link
               patch={~p"/settings/security"}
-              class="underline underline-offset-4 hover:text-white"
+              class="underline underline-offset-4 hover:text-fg"
             >Security</.link>.
           </p>
         </div>
@@ -293,7 +326,7 @@ defmodule StashixWeb.SettingsLive do
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <.panel class="p-5 sm:p-6">
         <.display_heading size="panel" class="mb-1">Password</.display_heading>
-        <p class="mb-5 text-sm text-gray-400">Changing it signs you out on every other device.</p>
+        <p class="mb-5 text-sm text-muted">Changing it signs you out on every other device.</p>
         <form id="password-form" method="post" action={~p"/settings/password"} class="space-y-4">
           <input type="hidden" name="_csrf_token" value={@csrf} />
           <.field label="Current password">
@@ -318,8 +351,8 @@ defmodule StashixWeb.SettingsLive do
       <div class="space-y-6">
         <.panel class="p-5 sm:p-6">
           <.display_heading size="panel" class="mb-1">Email</.display_heading>
-          <p class="mb-5 text-sm text-gray-400">
-            Currently <span class="font-semibold text-gray-200">{@current_user.email}</span>.
+          <p class="mb-5 text-sm text-muted">
+            Currently <span class="font-semibold text-fg-soft">{@current_user.email}</span>.
           </p>
           <form id="email-form" method="post" action={~p"/settings/email"} class="space-y-4">
             <input type="hidden" name="_csrf_token" value={@csrf} />
@@ -335,8 +368,8 @@ defmodule StashixWeb.SettingsLive do
 
         <.panel class="p-5 sm:p-6">
           <.display_heading size="panel" class="mb-1">Sessions</.display_heading>
-          <p class="mb-4 text-sm text-gray-400">Where this account is signed in.</p>
-          <ul :if={@sessions != []} id="sessions" class="mb-5 border-y border-white/10 divide-y divide-white/10">
+          <p class="mb-4 text-sm text-muted">Where this account is signed in.</p>
+          <ul :if={@sessions != []} id="sessions" class="mb-5 border-y border-fg/10 divide-y divide-fg/10">
             <li
               :for={session <- @sessions}
               class={["flex items-center justify-between gap-3 py-3", stale?(session) && "opacity-60"]}
@@ -344,15 +377,15 @@ defmodule StashixWeb.SettingsLive do
               <div class="min-w-0">
                 <p class={[
                   "font-display font-bold uppercase text-lg leading-tight tracking-wide truncate",
-                  stale?(session) && "text-red-400 line-through decoration-red-400/50",
-                  !stale?(session) && "text-white"
+                  stale?(session) && "text-danger line-through decoration-danger/50",
+                  !stale?(session) && "text-fg"
                 ]}>
                   {Session.device(session)}
                 </p>
-                <p class="text-xs text-gray-400">
+                <p class="text-xs text-muted">
                   {last_seen(session)} · signed in {Calendar.strftime(session.inserted_at, "%-d %b %Y")}
                 </p>
-                <p :if={session.ip_address} class="text-xs text-gray-400">
+                <p :if={session.ip_address} class="text-xs text-muted">
                   IP:
                   <span
                     class="relative inline-block font-mono align-baseline cursor-pointer"
@@ -382,10 +415,10 @@ defmodule StashixWeb.SettingsLive do
               </.ink_button>
             </li>
           </ul>
-          <p :if={@sessions == []} id="sessions-empty" class="mb-5 text-sm text-gray-500">
+          <p :if={@sessions == []} id="sessions-empty" class="mb-5 text-sm text-faint">
             None recorded yet. Sign-ins from before this list existed show up once they sign in again.
           </p>
-          <p class="mb-5 text-sm text-gray-400">
+          <p class="mb-5 text-sm text-muted">
             Left a device signed in? This signs the account out of every browser and app except this one.
           </p>
           <form id="sessions-form" method="post" action={~p"/settings/sessions/revoke"}>
@@ -416,18 +449,18 @@ defmodule StashixWeb.SettingsLive do
     </.panel>
 
     <.section title="Source code">
-      <p class="max-w-xl -mt-1 text-sm text-gray-400">
+      <p class="max-w-xl -mt-1 text-sm text-muted">
         Stashix is free software: you can redistribute and modify it under the terms of the <a
           href="https://www.gnu.org/licenses/agpl-3.0.html"
           target="_blank"
           rel="noopener noreferrer"
-          class="underline underline-offset-4 hover:text-white"
+          class="underline underline-offset-4 hover:text-fg"
         >GNU Affero General Public License</a>, version 3 or later. The source code for this server is at <a
           id="source-link"
           href={@source_url}
           target="_blank"
           rel="noopener noreferrer"
-          class="underline underline-offset-4 hover:text-white"
+          class="underline underline-offset-4 hover:text-fg"
         >{@source_url}</a>.
       </p>
     </.section>

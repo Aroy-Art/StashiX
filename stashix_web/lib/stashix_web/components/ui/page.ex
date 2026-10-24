@@ -62,11 +62,11 @@ defmodule StashixWeb.UI.Page do
         class="flex items-center gap-2 flex-1 min-w-0 overflow-hidden font-medium uppercase tracking-[0.12em]"
       >
         <%= for {{label, path}, idx} <- Enum.with_index(@crumbs) do %>
-          <span :if={idx > 0} class="text-white/20 flex-shrink-0">/</span>
-          <.link :if={path} navigate={path} class="text-gray-400 hover:text-white transition-colors flex-shrink-0">
+          <span :if={idx > 0} class="text-fg/20 flex-shrink-0">/</span>
+          <.link :if={path} navigate={path} class="text-muted hover:text-fg transition-colors flex-shrink-0">
             {label}
           </.link>
-          <span :if={!path} class="text-gray-200 truncate min-w-0">{label}</span>
+          <span :if={!path} class="text-fg-soft truncate min-w-0">{label}</span>
         <% end %>
       </nav>
       <div :if={@actions != []} class="ml-auto">{render_slot(@actions)}</div>
@@ -96,7 +96,7 @@ defmodule StashixWeb.UI.Page do
       <.display_heading level={1} size="hero" class="rise relative" style="--i:2">{@title}</.display_heading>
       <div
         :if={@meta != []}
-        class="rise relative flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-gray-300 tabular-nums"
+        class="rise relative flex items-center flex-wrap gap-x-3 gap-y-1 mt-4 text-sm text-fg-soft tabular-nums"
         style="--i:3"
       >
         {render_slot(@meta)}
@@ -220,14 +220,14 @@ defmodule StashixWeb.UI.Page do
     ~H"""
     <div class={["relative flex flex-col items-center text-center py-10 sm:py-14", @class]}>
       <.ghost_numeral :if={@ghost} class="text-[10rem] sm:text-[13rem]">{@ghost}</.ghost_numeral>
-      <.icon :if={!@ghost && @icon} name={@icon} class="w-12 h-12 mb-4 text-gray-700" />
+      <.icon :if={!@ghost && @icon} name={@icon} class="w-12 h-12 mb-4 text-line" />
       <h2 class={[
-        "font-display font-black uppercase text-4xl sm:text-5xl leading-[0.9] text-white text-balance",
+        "font-display font-black uppercase text-4xl sm:text-5xl leading-[0.9] text-fg text-balance",
         @ghost && "-mt-9 sm:-mt-12"
       ]}>
         {@title}
       </h2>
-      <p :if={@inner_block != []} class="mt-3 max-w-sm text-sm text-gray-300">{render_slot(@inner_block)}</p>
+      <p :if={@inner_block != []} class="mt-3 max-w-sm text-sm text-fg-soft">{render_slot(@inner_block)}</p>
       <div :if={@actions != []} class="mt-7">{render_slot(@actions)}</div>
     </div>
     """

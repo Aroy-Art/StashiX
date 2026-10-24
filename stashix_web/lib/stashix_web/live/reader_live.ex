@@ -326,7 +326,7 @@ defmodule StashixWeb.ReaderLive do
     ~H"""
     <div
       id="reader-end"
-      class="reader-end absolute inset-0 z-20 pointer-events-none flex items-center justify-center px-6 py-16 overflow-hidden bg-zinc-950/85 backdrop-blur-md"
+      class="reader-end absolute inset-0 z-20 pointer-events-none flex items-center justify-center px-6 py-16 overflow-hidden bg-canvas/85 backdrop-blur-md"
       role="region"
       aria-label="End of issue"
     >
@@ -341,7 +341,7 @@ defmodule StashixWeb.ReaderLive do
           <.link
             navigate={@next_href}
             replace
-            class="reader-end-page pointer-events-auto relative block w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm bg-zinc-900"
+            class="reader-end-page pointer-events-auto relative block w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm bg-surface"
             aria-label={"Read next issue #{@next_label}"}
           >
             <img
@@ -408,12 +408,12 @@ defmodule StashixWeb.ReaderLive do
           </div>
 
           <p
-            class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-gray-400"
+            class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-muted"
             style="--i:5"
           >
-            <span :if={@next_book}><kbd class="text-gray-300">→</kbd> keep reading</span>
-            <span :if={@next_book} class="text-white/25">/</span>
-            <span><kbd class="text-gray-300">←</kbd> last page</span>
+            <span :if={@next_book}><kbd class="text-fg-soft">→</kbd> keep reading</span>
+            <span :if={@next_book} class="text-fg/25">/</span>
+            <span><kbd class="text-fg-soft">←</kbd> last page</span>
           </p>
         </div>
       </div>
@@ -433,6 +433,8 @@ defmodule StashixWeb.ReaderLive do
          on one element is what kept snapping the zoom back to 1. --%>
     <style>
       html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+      /* The reader is dark in every theme, the reserved scrollbar gutter too. */
+      html { background: #000; }
       .reader-page { cursor: pointer; user-select: none; }
       /* Own the touch gestures: without this the browser runs its native
          pinch-zoom on the same fingers and the page jitters. Must be CSS,
@@ -446,7 +448,7 @@ defmodule StashixWeb.ReaderLive do
       .webtoon-page[data-loaded] { min-height: 0; background: none; }
     </style>
     <div
-      class="relative bg-black"
+      class="scheme-dark relative bg-black text-fg"
       style="height: 100dvh;"
       id="reader-container"
       phx-hook="ReaderKeyboard"
@@ -464,7 +466,7 @@ defmodule StashixWeb.ReaderLive do
           phx-click="exit"
           phx-value-to="book"
           title="Close reader"
-          class="group flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-md text-gray-400 hover:text-white hover:bg-white/10 font-display font-bold uppercase tracking-wide transition-colors whitespace-nowrap"
+          class="group flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-md text-muted hover:text-fg hover:bg-fg/10 font-display font-bold uppercase tracking-wide transition-colors whitespace-nowrap"
         >
           <.icon name="lucide-x" class="w-4 h-4 transition-transform group-hover:rotate-90" />
           <span class="hidden sm:inline">Close</span>
@@ -473,7 +475,7 @@ defmodule StashixWeb.ReaderLive do
         <%!-- Center: issue sticker + series (or book) title --%>
         <div class="flex-1 min-w-0 flex items-center justify-center gap-2.5">
           <.sticker :if={lbl = issue_label(@book)} class="flex-shrink-0">{lbl}</.sticker>
-          <span class="truncate font-display font-extrabold uppercase tracking-wide text-lg leading-none text-white">
+          <span class="truncate font-display font-extrabold uppercase tracking-wide text-lg leading-none text-fg">
             {(@book.series && @book.series.name) || @book.title}
           </span>
         </div>
@@ -572,8 +574,8 @@ defmodule StashixWeb.ReaderLive do
             <%= if @at_end do %>
               <span class="font-display font-black uppercase tracking-wide text-xl text-ink">End</span>
             <% else %>
-              <span class="font-display font-black text-xl text-white">{@current_page + 1}</span>
-              <span class="text-gray-400 text-xs"> / {@page_count}</span>
+              <span class="font-display font-black text-xl text-fg">{@current_page + 1}</span>
+              <span class="text-muted text-xs"> / {@page_count}</span>
             <% end %>
           </p>
         </div>
@@ -672,7 +674,7 @@ defmodule StashixWeb.ReaderLive do
               phx-update="ignore"
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-reset'))"
               title="Reset zoom (0)"
-              class="items-center justify-center h-7 min-w-8 px-1 font-display font-bold text-xs text-ink tabular-nums hover:bg-white/10 transition-colors"
+              class="items-center justify-center h-7 min-w-8 px-1 font-display font-bold text-xs text-ink tabular-nums hover:bg-fg/10 transition-colors"
               style="display: none;"
             ></button>
           </.segmented>
@@ -755,7 +757,7 @@ defmodule StashixWeb.ReaderLive do
         if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
       ]}>
         <div class="flex items-center gap-4">
-          <span class="w-8 text-right font-display font-black text-xl leading-none text-white tabular-nums">
+          <span class="w-8 text-right font-display font-black text-xl leading-none text-fg tabular-nums">
             {@current_page + 1}
           </span>
           <input
@@ -769,7 +771,7 @@ defmodule StashixWeb.ReaderLive do
             class="reader-slider flex-1"
             style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
           />
-          <span class="w-8 font-display font-bold text-base leading-none text-gray-400 tabular-nums">
+          <span class="w-8 font-display font-bold text-base leading-none text-muted tabular-nums">
             {@page_count}
           </span>
         </div>
