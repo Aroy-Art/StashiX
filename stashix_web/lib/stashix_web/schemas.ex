@@ -172,6 +172,78 @@ defmodule StashixWeb.Schemas do
     })
   end
 
+  defmodule Credit do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Credit",
+      description: "One creator in one role on a book.",
+      type: :object,
+      properties: %{
+        creator_id: %Schema{type: :string, format: :uuid},
+        name: %Schema{type: :string},
+        role: %Schema{type: :string, description: ~s(Detailed role, e.g. "Penciller" or "Cover Artist")},
+        role_group: %Schema{
+          type: :string,
+          enum: ~w(Writer Artist Colorist Letterer Cover Editor Translator Other),
+          description: "Heading the role falls under"
+        }
+      },
+      required: [:creator_id, :name, :role, :role_group]
+    })
+  end
+
+  defmodule CreatorWorks do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CreatorWorks",
+      type: :object,
+      properties: %{
+        creator: %Schema{
+          type: :object,
+          properties: %{id: %Schema{type: :string, format: :uuid}, name: %Schema{type: :string}}
+        },
+        book_count: %Schema{type: :integer, description: "Distinct books credited, across all roles"},
+        first_year: %Schema{type: :integer, nullable: true},
+        last_year: %Schema{type: :integer, nullable: true},
+        groups: %Schema{
+          type: :array,
+          description: "Role groups with at least one credit, in display order",
+          items: %Schema{
+            type: :object,
+            properties: %{
+              role_group: %Schema{type: :string},
+              book_count: %Schema{type: :integer},
+              works: %Schema{
+                type: :array,
+                description: "One entry per series, or per book outside a series; most books first",
+                items: %Schema{
+                  type: :object,
+                  properties: %{
+                    series_id: %Schema{type: :string, format: :uuid, nullable: true},
+                    book_id: %Schema{
+                      type: :string,
+                      format: :uuid,
+                      nullable: true,
+                      description: "Set when not in a series"
+                    },
+                    name: %Schema{type: :string},
+                    book_count: %Schema{type: :integer, description: "Books in this series with the credit"},
+                    first_year: %Schema{type: :integer, nullable: true},
+                    last_year: %Schema{type: :integer, nullable: true},
+                    roles: %Schema{type: :array, items: %Schema{type: :string}}
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      required: [:creator, :book_count, :groups]
+    })
+  end
+
   defmodule Book do
     require OpenApiSpex
 
@@ -195,6 +267,7 @@ defmodule StashixWeb.Schemas do
         series_id: %Schema{type: :string, format: :uuid, nullable: true},
         library_id: %Schema{type: :string, format: :uuid},
         has_cover: %Schema{type: :boolean},
+        credits: %Schema{type: :array, items: StashixWeb.Schemas.Credit},
         inserted_at: %Schema{type: :string, format: :"date-time"}
       },
       required: [:id, :title, :format, :library_id]
@@ -292,7 +365,8 @@ defmodule StashixWeb.Schemas do
               issue_number: %Schema{type: :number, nullable: true},
               series_id: %Schema{type: :string, format: :uuid, nullable: true},
               library_id: %Schema{type: :string, format: :uuid},
-              year: %Schema{type: :integer, nullable: true}
+              year: %Schema{type: :integer, nullable: true},
+              credits: %Schema{type: :array, items: StashixWeb.Schemas.Credit}
             }
           }
         }

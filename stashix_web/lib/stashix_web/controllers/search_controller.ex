@@ -6,7 +6,7 @@ defmodule StashixWeb.SearchController do
   use OpenApiSpex.ControllerSpecs
 
   alias Stashix.Library
-  alias StashixWeb.Schemas
+  alias StashixWeb.{CreditJSON, Schemas}
 
   operation :search,
     summary: "Search books",
@@ -29,7 +29,7 @@ defmodule StashixWeb.SearchController do
       offset: parse_int(params["offset"], 0)
     ]
 
-    books = Library.search_books(query, opts)
+    books = query |> Library.search_books(opts) |> CreditJSON.preload()
 
     json(conn, %{
       query: query,
@@ -49,7 +49,8 @@ defmodule StashixWeb.SearchController do
       issue_number: book.issue_number,
       series_id: book.series_id,
       library_id: book.library_id,
-      year: book.year
+      year: book.year,
+      credits: CreditJSON.credits(book)
     }
   end
 

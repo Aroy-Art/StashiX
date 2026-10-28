@@ -93,6 +93,8 @@ defmodule StashixWeb.Router do
 
     get "/series/:id", SeriesController, :show
 
+    get "/creators/:id", CreatorController, :show
+
     get "/search", SearchController, :search
 
     scope "/" do

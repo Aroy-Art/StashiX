@@ -33,6 +33,9 @@ defmodule Stashix.Metadata.Roles do
   @lookup for {label, roles} <- @groups, role <- roles, into: %{}, do: {role, label}
   @order @groups |> Enum.map(&elem(&1, 0)) |> Kernel.++(["Other"])
 
+  @doc "Every heading, in display order."
+  def headings, do: @order
+
   @doc "Heading for a role atom."
   def group_of(role), do: Map.get(@lookup, role, "Other")
 

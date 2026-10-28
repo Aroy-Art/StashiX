@@ -7,7 +7,7 @@ defmodule StashixWeb.BookController do
 
   alias Stashix.Library
   alias Stashix.Media.Extractor
-  alias StashixWeb.Schemas
+  alias StashixWeb.{CreditJSON, Schemas}
 
   import StashixWeb.CoverHelper, only: [serve_cover: 3]
 
@@ -41,7 +41,7 @@ defmodule StashixWeb.BookController do
       type: params["type"]
     ]
 
-    books = Library.list_books(library_id, opts)
+    books = library_id |> Library.list_books(opts) |> CreditJSON.preload()
     json(conn, %{books: Enum.map(books, &book_json/1)})
   end
 
@@ -61,7 +61,7 @@ defmodule StashixWeb.BookController do
     ]
 
   def show(conn, %{"id" => id}) do
-    book = Library.get_book_with_series(conn.assigns.access, id)
+    book = conn.assigns.access |> Library.get_book_with_series(id) |> CreditJSON.preload()
     json(conn, %{book: book_json(book)})
   end
 
@@ -220,6 +220,7 @@ defmodule StashixWeb.BookController do
       library_id: book.library_id,
       has_cover: not is_nil(Map.get(book, :cover)),
       formats: Enum.map(files, & &1.format),
+      credits: CreditJSON.credits(book),
       inserted_at: book.inserted_at
     }
   end
