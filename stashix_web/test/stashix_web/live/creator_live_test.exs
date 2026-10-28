@@ -74,6 +74,27 @@ defmodule StashixWeb.CreatorLiveTest do
     refute html =~ "Cover Artist"
   end
 
+  test "each role tab splits into series, books and issues shelves", %{conn: conn, walt: walt} do
+    {:ok, view, _html} = live(conn, ~p"/creator/#{walt.id}?role=covers")
+
+    assert has_element?(view, "#creator-series-shelf", "Night Watch")
+    assert has_element?(view, "#creator-books-shelf", "Sunny Days")
+    assert has_element?(view, "#creator-issues-shelf", "Dark Roofs")
+    refute has_element?(view, "#creator-books-shelf", "Dark Roofs")
+    refute has_element?(view, "#creator-issues-shelf", "Sunny Days")
+
+    # the written tab has no standalone books, so no books shelf
+    {:ok, view, _html} = live(conn, ~p"/creator/#{walt.id}?role=written")
+    refute has_element?(view, "#creator-books-shelf")
+
+    # view all opens a sortable grid of one kind
+    {:ok, view, html} = live(conn, ~p"/creator/#{walt.id}?role=covers&kind=issues&sort=year_desc")
+    refute has_element?(view, "[id$=-shelf]")
+    assert html =~ "All covers"
+    refute html =~ "Sunny Days"
+    assert html =~ ~r/Dark Roofs.*Dark Alleys.*Dark Streets/s
+  end
+
   test "credit links on a book lead to the creator page", %{conn: conn, walt: walt} do
     book = Repo.get_by!(Stashix.Library.Book, title: "Dark Streets")
 

@@ -564,10 +564,15 @@ defmodule Stashix.Library do
   What a creator worked on among the books `access` can see, split by role
   heading (`Stashix.Metadata.Roles`).
 
-  Returns `%{books: n, first_year: y, last_year: y, groups: %{heading => works}}`
-  where each work is one series (or one book outside a series):
+  Returns `%{books: n, first_year: y, last_year: y, groups: %{heading => works},
+  book_groups: %{heading => books}}`.
+
+  Each work is one series (or one book outside a series):
   `%{series_id, book_id, name, count, first_year, last_year, roles}`. `count`
   is the number of distinct books, `roles` the detailed roles held there.
+
+  Each book is one credited book: `%{id, type, title, series_name,
+  issue_number, year, roles}`.
   """
   def creator_works(access, creator_id) do
     rows =
@@ -577,23 +582,41 @@ defmodule Stashix.Library do
         left_join: s in Series,
         on: s.id == b.series_id,
         where: c.creator_id == ^creator_id,
-        select: %{role: c.role, book_id: b.id, series_id: b.series_id, name: coalesce(s.name, b.title), year: b.year}
+        select: %{
+          role: c.role,
+          book_id: b.id,
+          series_id: b.series_id,
+          name: coalesce(s.name, b.title),
+          series_name: s.name,
+          title: b.title,
+          type: b.type,
+          issue_number: b.issue_number,
+          year: b.year
+        }
       )
       |> Repo.all()
 
     years = rows |> Enum.map(& &1.year) |> Enum.reject(&is_nil/1)
 
-    groups =
-      rows
-      |> Enum.group_by(&Stashix.Metadata.Roles.group_of(&1.role))
-      |> Map.new(fn {heading, rows} -> {heading, works_from_credit_rows(rows)} end)
+    by_heading = Enum.group_by(rows, &Stashix.Metadata.Roles.group_of(&1.role))
 
     %{
       books: rows |> Enum.uniq_by(& &1.book_id) |> length(),
       first_year: Enum.min(years, fn -> nil end),
       last_year: Enum.max(years, fn -> nil end),
-      groups: groups
+      groups: Map.new(by_heading, fn {heading, rows} -> {heading, works_from_credit_rows(rows)} end),
+      book_groups: Map.new(by_heading, fn {heading, rows} -> {heading, books_from_credit_rows(rows)} end)
     }
+  end
+
+  defp books_from_credit_rows(rows) do
+    rows
+    |> Enum.group_by(& &1.book_id)
+    |> Enum.map(fn {id, [first | _] = rows} ->
+      first
+      |> Map.take([:type, :title, :series_name, :issue_number, :year])
+      |> Map.merge(%{id: id, roles: rows |> Enum.map(& &1.role) |> Enum.uniq()})
+    end)
   end
 
   defp works_from_credit_rows(rows) do
