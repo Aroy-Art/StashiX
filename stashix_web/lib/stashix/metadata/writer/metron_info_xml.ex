@@ -109,10 +109,16 @@ defmodule Stashix.Metadata.Writer.MetronInfoXml do
   defp number(nil), do: nil
   defp number(n), do: Stashix.Metadata.Matcher.format_number(n)
 
-  # MetronInfo has no Title element; story names carry the title.
-  defp stories(%{stories: [_ | _] = stories}), do: resources("Story", stories)
-  defp stories(%{title: title}) when is_binary(title) and title != "", do: [el("Story", title)]
-  defp stories(_), do: []
+  # MetronInfo has no Title element; the parser reads the first story as the
+  # title. Lead with the book title so an edited title survives a rescan.
+  defp stories(%{title: title, stories: stories}) when is_binary(title) and title != "" do
+    case Enum.split_with(stories, &(&1.name == title)) do
+      {[story | _], rest} -> resources("Story", [story | rest])
+      {[], rest} -> [el("Story", title) | resources("Story", rest)]
+    end
+  end
+
+  defp stories(%{stories: stories}), do: resources("Story", stories)
 
   defp resources(tag, items), do: Enum.map(items, &el(tag, [{"id", &1.external_id}], &1.name))
 

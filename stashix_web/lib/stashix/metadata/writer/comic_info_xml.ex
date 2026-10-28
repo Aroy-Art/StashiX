@@ -35,7 +35,7 @@ defmodule Stashix.Metadata.Writer.ComicInfoXml do
         {"xmlns:xsd", "http://www.w3.org/2001/XMLSchema"}
       ],
       [
-        el("Title", title(book)),
+        el("Title", book.title),
         el("Series", (series && series.name) || book.title),
         el("Number", book.issue_number && Stashix.Metadata.Matcher.format_number(book.issue_number)),
         el("Count", if(series && (series.issue_count || 0) > 0, do: series.issue_count)),
@@ -68,9 +68,6 @@ defmodule Stashix.Metadata.Writer.ComicInfoXml do
     )
     |> document()
   end
-
-  defp title(%{stories: [_ | _] = stories}), do: stories |> Enum.map(& &1.name) |> Enum.join("; ")
-  defp title(%{title: t}), do: t
 
   defp join(items), do: items |> Enum.map(& &1.name) |> Enum.uniq() |> Enum.join(", ")
 

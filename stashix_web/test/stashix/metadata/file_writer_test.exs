@@ -18,7 +18,14 @@ defmodule Stashix.Metadata.FileWriterTest do
 
     lib = library_fixture(tmp)
     series = series_fixture(lib, %{format: :"Single Issue", volume: 3})
-    book = book_fixture(lib, series, %{summary: "A <b>bold</b> & brave tale", cover_date: ~D[2016-08-01], upc: "123"})
+
+    book =
+      book_fixture(lib, series, %{
+        title: "I Am Gotham, Part One",
+        summary: "A <b>bold</b> & brave tale",
+        cover_date: ~D[2016-08-01],
+        upc: "123"
+      })
 
     {:ok, _} =
       Importer.replace_book_metadata(book, %{
@@ -71,6 +78,30 @@ defmodule Stashix.Metadata.FileWriterTest do
     assert %{creator: "David Finch", roles: roles} = Enum.find(m.credits, &(&1.creator == "David Finch"))
     assert Enum.sort(roles) == ["Cover", "Penciller"]
     assert [%{source: "Metron", source_id: "111"}] = m.external_ids
+  end
+
+  test "edited title leads the stories and survives a round-trip", %{book: book} do
+    {:ok, book} = Library.update_book(book, %{title: "Gotham Rising"})
+
+    xml = MetronInfoXml.build(book)
+    assert xml =~ ~r{<Stories>\s*<Story>Gotham Rising</Story>\s*<Story>I Am Gotham, Part One</Story>}
+    assert ComicInfoXml.build(book) =~ "<Title>Gotham Rising</Title>"
+
+    path = Path.join(System.tmp_dir!(), "rt_#{System.unique_integer([:positive])}.cbz")
+    cbz_fixture(path, [{~c"MetronInfo.xml", xml}])
+    on_exit(fn -> File.rm(path) end)
+
+    assert Parser.parse_comicinfo(path).title == "Gotham Rising"
+  end
+
+  test "title already among the stories is moved first, not duplicated", %{book: book} do
+    {:ok, _} =
+      Importer.replace_book_metadata(book, %{
+        stories: [%{name: "Prologue", external_id: nil}, %{name: "I Am Gotham, Part One", external_id: nil}]
+      })
+
+    xml = book |> Repo.reload!() |> MetronInfoXml.build()
+    assert xml =~ ~r{<Stories>\s*<Story>I Am Gotham, Part One</Story>\s*<Story>Prologue</Story>\s*</Stories>}
   end
 
   test "ComicInfo compat copy maps credits to fields", %{book: book} do

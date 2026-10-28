@@ -534,5 +534,16 @@ defmodule Stashix.Metadata.ParserTest do
 
       assert [%{url: "https://metron.cloud/issue/1/"}] = parse_sidecar(dir, xml)[:urls]
     end
+
+    test "combined format descriptor story falls back to the series name", %{tmp_dir: dir} do
+      xml = """
+      <MetronInfo>
+        <Series><Name>Smoke/Ashes</Name></Series>
+        <Stories><Story>TPB/HC</Story></Stories>
+      </MetronInfo>
+      """
+
+      assert parse_sidecar(dir, xml)[:title] == "Smoke/Ashes"
+    end
   end
 end

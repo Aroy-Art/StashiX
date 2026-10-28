@@ -737,12 +737,20 @@ defmodule Stashix.Metadata.Parser do
   # Format-type labels written by taggers into <Stories> instead of a real title.
   @format_descriptors ~w(tpb hc ogn gn annual special deluxe omnibus compendium digest hardcover paperback)
 
-  # Use the first story name as title unless it's just a format descriptor. Fall
-  # back to the series name for standalones where the series IS the book title.
+  # Use the first story name as title unless it's just a format descriptor
+  # (alone or combined, e.g. "TPB/HC"). Fall back to the series name for
+  # standalones where the series IS the book title.
   defp metroninfo_title([], series_name), do: series_name
 
   defp metroninfo_title([%{name: name} | _], series_name) do
-    if String.downcase(name) in @format_descriptors, do: series_name, else: name
+    if format_descriptor?(name), do: series_name, else: name
+  end
+
+  defp format_descriptor?(name) do
+    name
+    |> String.downcase()
+    |> String.split("/")
+    |> Enum.all?(&(String.trim(&1) in @format_descriptors))
   end
 
   defp maybe_put(map, _key, nil), do: map
