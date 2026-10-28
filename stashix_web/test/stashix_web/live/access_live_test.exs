@@ -52,6 +52,17 @@ defmodule StashixWeb.AccessLiveTest do
     assert_error_sent 404, fn -> get(conn, ~p"/api/books/#{adult.id}/cover") end
   end
 
+  test "creator pages leave out books above the limit", %{conn: conn, teen: teen, adult: adult} do
+    creator = Stashix.Repo.insert!(%Stashix.Library.Creator{name: "Pat Penn"})
+
+    for b <- [teen, adult],
+        do: Stashix.Repo.insert!(%Stashix.Library.BookCredit{book_id: b.id, creator_id: creator.id, role: :Writer})
+
+    {:ok, _view, html} = live(conn, ~p"/creator/#{creator.id}")
+    assert html =~ "Teen Tales"
+    refute html =~ "Grown Up Stories"
+  end
+
   test "metadata edits and rescans from non-admins are ignored", %{conn: conn, teen: teen} do
     {:ok, view, _html} = live(conn, ~p"/book/#{teen.id}")
 

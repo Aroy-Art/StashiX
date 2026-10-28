@@ -122,7 +122,7 @@ defmodule StashixWeb.MetadataComponents do
         <dd class="text-sm text-fg-soft leading-6">
           <.link
             :for={n <- Enum.take(names, @limit)}
-            navigate={"/search?creator=#{entry_id(n)}"}
+            navigate={"/creator/#{entry_id(n)}"}
             class="block truncate hover:text-fg hover:underline underline-offset-4 transition-colors"
           >
             {String.trim(entry_name(n))}
@@ -188,7 +188,7 @@ defmodule StashixWeb.MetadataComponents do
       <div class="min-w-0">
         <.link
           :if={@creator_id}
-          navigate={"/search?creator=#{@creator_id}"}
+          navigate={"/creator/#{@creator_id}"}
           class="text-sm text-fg-soft leading-tight truncate hover:text-fg hover:underline transition-colors block"
         >{@name}</.link>
         <p :if={!@creator_id} class="text-sm text-fg-soft leading-tight truncate">{@name}</p>

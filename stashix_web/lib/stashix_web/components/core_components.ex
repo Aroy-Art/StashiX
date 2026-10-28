@@ -333,6 +333,8 @@ defmodule StashixWeb.CoreComponents do
   attr :series, :map, required: true
   attr :size, :string, default: "m"
   attr :scope, :string, default: nil
+  attr :subtitle, :string, default: nil, doc: "replaces the years"
+  attr :badge, :string, default: nil, doc: "replaces the issue count"
   attr :class, :string, default: ""
 
   def series_card(assigns) do
@@ -342,8 +344,11 @@ defmodule StashixWeb.CoreComponents do
       title={@series.name}
       cover_url={"/api/series/#{@series.id}/cover"}
       size={@size}
-      subtitle={Stashix.Formatters.series_years(@series)}
-      badge={@series.issue_count && "#{@series.issue_count} #{if @series.issue_count == 1, do: "issue", else: "issues"}"}
+      subtitle={@subtitle || Stashix.Formatters.series_years(@series)}
+      badge={
+        @badge ||
+          (@series.issue_count && "#{@series.issue_count} #{if @series.issue_count == 1, do: "issue", else: "issues"}")
+      }
       type={:series}
       blurhash={@series.cover_blurhash}
       stack={Enum.map(Map.get(@series, :stack_book_ids) || [], &"/api/books/#{&1}/cover?s=s")}
@@ -363,6 +368,7 @@ defmodule StashixWeb.CoreComponents do
   attr :read, :integer, default: nil
   attr :size, :string, default: "m"
   attr :scope, :string, default: nil
+  attr :subtitle, :string, default: nil, doc: "replaces the series name or year"
   attr :class, :string, default: ""
 
   def book_card(assigns) do
@@ -374,7 +380,7 @@ defmodule StashixWeb.CoreComponents do
     assigns =
       assign(assigns,
         title: if(issue? and book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title),
-        subtitle: (series && series.name) || year,
+        subtitle: assigns.subtitle || (series && series.name) || year,
         badge:
           cond do
             !issue? or is_nil(book.issue_number) -> nil

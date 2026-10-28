@@ -558,6 +558,79 @@ defmodule Stashix.Library do
     ids |> Enum.map(&by_id[&1]) |> Enum.reject(&is_nil/1)
   end
 
+  def get_creator!(id), do: Repo.get!(Stashix.Library.Creator, id)
+
+  @doc """
+  What a creator worked on among the books `access` can see, split by role
+  heading (`Stashix.Metadata.Roles`).
+
+  Returns `%{books: n, first_year: y, last_year: y, groups: %{heading => works}}`
+  where each work is one series (or one book outside a series):
+  `%{series_id, book_id, name, count, first_year, last_year, roles}`. `count`
+  is the number of distinct books, `roles` the detailed roles held there.
+  """
+  def creator_works(access, creator_id) do
+    rows =
+      from(c in Stashix.Library.BookCredit,
+        join: b in ^Access.books(access),
+        on: b.id == c.book_id and is_nil(b.deleted_at),
+        left_join: s in Series,
+        on: s.id == b.series_id,
+        where: c.creator_id == ^creator_id,
+        select: %{role: c.role, book_id: b.id, series_id: b.series_id, name: coalesce(s.name, b.title), year: b.year}
+      )
+      |> Repo.all()
+
+    years = rows |> Enum.map(& &1.year) |> Enum.reject(&is_nil/1)
+
+    groups =
+      rows
+      |> Enum.group_by(&Stashix.Metadata.Roles.group_of(&1.role))
+      |> Map.new(fn {heading, rows} -> {heading, works_from_credit_rows(rows)} end)
+
+    %{
+      books: rows |> Enum.uniq_by(& &1.book_id) |> length(),
+      first_year: Enum.min(years, fn -> nil end),
+      last_year: Enum.max(years, fn -> nil end),
+      groups: groups
+    }
+  end
+
+  defp works_from_credit_rows(rows) do
+    rows
+    |> Enum.group_by(&(&1.series_id || {:book, &1.book_id}))
+    |> Enum.map(fn {_key, [first | _] = rows} ->
+      years = rows |> Enum.map(& &1.year) |> Enum.reject(&is_nil/1)
+
+      %{
+        series_id: first.series_id,
+        book_id: if(is_nil(first.series_id), do: first.book_id),
+        name: first.name,
+        count: rows |> Enum.uniq_by(& &1.book_id) |> length(),
+        first_year: Enum.min(years, fn -> nil end),
+        last_year: Enum.max(years, fn -> nil end),
+        roles: rows |> Enum.map(& &1.role) |> Enum.uniq()
+      }
+    end)
+  end
+
+  @doc "Series by id that `access` can see, with cover blurhashes and stacks attached; order is not kept."
+  def list_series_by_ids(_access, []), do: []
+
+  def list_series_by_ids(access, ids) do
+    from(s in Access.series(access), where: s.id in ^ids and is_nil(s.deleted_at))
+    |> Repo.all()
+    |> attach_series_blurhashes(access)
+  end
+
+  @doc "Books by id that `access` can see, with cover and series preloaded; order is not kept."
+  def list_books_by_ids(_access, []), do: []
+
+  def list_books_by_ids(access, ids) do
+    from(b in Access.books(access), where: b.id in ^ids and is_nil(b.deleted_at), preload: [:cover, :series])
+    |> Repo.all()
+  end
+
   @book_facets %{
     genre: Stashix.Library.BookGenre,
     tag: Stashix.Library.BookTag,
