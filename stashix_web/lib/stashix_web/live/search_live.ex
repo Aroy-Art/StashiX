@@ -651,15 +651,6 @@ defmodule StashixWeb.SearchLive do
                 <span class="text-fg font-semibold">{delimit(@count)}</span>
                 {if @count == 1, do: "result", else: "results"}
               </span>
-              <%= if @params["type"] == "all" do %>
-                <span :if={@series_total > 0}>{delimit(@series_total)} series</span>
-                <span :if={@standalone_books_total > 0}>
-                  {delimit(@standalone_books_total)} {if @standalone_books_total == 1, do: "book", else: "books"}
-                </span>
-                <span :if={@books_total > 0}>
-                  {delimit(@books_total)} {if @books_total == 1, do: "issue", else: "issues"}
-                </span>
-              <% end %>
             </p>
           </header>
 
@@ -826,10 +817,10 @@ defmodule StashixWeb.SearchLive do
         >
         </div>
 
-        <%!-- Type tabs, filter toggle and sort --%>
+        <%!-- Type tabs (a 4-up grid on phones, count under label), filter toggle and sort --%>
         <div class="lg:col-start-1 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-fg/15">
           <div
-            class="flex items-center gap-1 sm:gap-2 max-w-full overflow-x-auto py-1 -my-1"
+            class="grid grid-cols-4 gap-1 w-full sm:flex sm:items-center sm:gap-2 sm:w-auto"
             role="tablist"
             aria-label="Result type"
           >
@@ -841,7 +832,7 @@ defmodule StashixWeb.SearchLive do
                 phx-click="set_type"
                 phx-value-type={value}
                 class={[
-                  "shrink-0 inline-flex items-center gap-2 px-2.5 sm:px-3 pt-1 pb-0.5 font-display font-black uppercase text-2xl sm:text-3xl leading-none whitespace-nowrap rounded-sm transition-colors",
+                  "flex flex-col items-center gap-1.5 px-1 pt-1.5 pb-1 sm:flex-row sm:gap-2 sm:px-3 sm:pt-1 sm:pb-0.5 font-display font-black uppercase text-xl sm:text-3xl leading-none whitespace-nowrap rounded-sm transition-colors",
                   if(@params["type"] == value,
                     do: "bg-ink text-gray-950 -rotate-2",
                     else: "text-fg-soft hover:text-fg hover:bg-fg/10"
