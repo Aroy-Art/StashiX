@@ -44,6 +44,29 @@ defmodule StashixWeb.SearchLiveTest do
     %{conn: conn, moore: moore, gibbons: gibbons}
   end
 
+  test "type tabs show every type's count, whichever tab is open", %{conn: conn} do
+    tab_counts = fn view ->
+      for label <- ["All", "Issues", "Books", "Series"] do
+        view
+        |> element("[role=tab]", label)
+        |> render()
+        |> Floki.parse_fragment!()
+        |> Floki.text()
+        |> String.split()
+        |> Enum.join(" ")
+      end
+    end
+
+    {:ok, view, _html} = live(conn, ~p"/search")
+    assert tab_counts.(view) == ["All 4", "Issues 2", "Books 1", "Series 1"]
+
+    {:ok, view, _html} = live(conn, ~p"/search?type=series")
+    assert tab_counts.(view) == ["All 4", "Issues 2", "Books 1", "Series 1"]
+
+    {:ok, view, _html} = live(conn, ~p"/search?type=issue&from=2001&to=2001")
+    assert tab_counts.(view) == ["All 1", "Issues", "Books 1", "Series"]
+  end
+
   test "filters by release range, age rating and type via URL params", %{conn: conn} do
     {:ok, _view, html} = live(conn, ~p"/search")
     assert html =~ "Dark Streets"

@@ -498,6 +498,16 @@ defmodule Stashix.Library do
     {series, total}
   end
 
+  @doc "Count of `search_filtered_books/2` matches, without loading them."
+  def count_filtered_books(filters, opts \\ []) do
+    filters |> filtered_books_query(access!(opts)) |> Repo.aggregate(:count, :id)
+  end
+
+  @doc "Count of `search_filtered_series/2` matches, without loading them."
+  def count_filtered_series(filters, opts \\ []) do
+    filters |> filtered_series_query(access!(opts)) |> Repo.aggregate(:count, :id)
+  end
+
   @doc """
   `[{year, book_count}]` for every release year that has books, ascending.
   Year is the book's year, falling back to its cover date.

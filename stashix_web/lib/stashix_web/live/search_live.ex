@@ -77,6 +77,7 @@ defmodule StashixWeb.SearchLive do
        standalone_books_total: 0,
        series: [],
        series_total: 0,
+       type_counts: %{},
        total_pages: 1,
        progress_map: %{},
        publishers: Library.list_publishers_with_books(socket.assigns.access),
@@ -382,7 +383,21 @@ defmodule StashixWeb.SearchLive do
         _ -> books_total
       end
 
+    # Every type tab shows its count; reuse the totals loaded above.
+    loaded =
+      case params["type"] do
+        "all" -> %{"issue" => books_total, "standalone" => standalone_books_total, "series" => series_total}
+        "series" -> %{"series" => series_total}
+        type -> %{type => books_total}
+      end
+
+    type_counts =
+      Map.new(["issue", "standalone", "series"], fn type ->
+        {type, Map.get_lazy(loaded, type, fn -> count_type(type, filters, params, access) end)}
+      end)
+
     assign(socket,
+      type_counts: Map.put(type_counts, "all", Enum.sum(Map.values(type_counts))),
       books: books,
       books_total: books_total,
       standalone_books: standalone_books,
@@ -394,6 +409,13 @@ defmodule StashixWeb.SearchLive do
       loading: false
     )
   end
+
+  # Read status is per-book, so series never match a status filter.
+  defp count_type("series", _filters, %{"status" => status}, _access) when not is_nil(status), do: 0
+  defp count_type("series", filters, _params, access), do: Library.count_filtered_series(filters, access: access)
+
+  defp count_type(type, filters, _params, access),
+    do: Library.count_filtered_books(Map.put(filters, :types, [type]), access: access)
 
   defp build_filters(params, user_id) do
     %{
@@ -806,7 +828,11 @@ defmodule StashixWeb.SearchLive do
 
         <%!-- Type tabs, filter toggle and sort --%>
         <div class="lg:col-start-1 lg:row-start-2 min-w-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-4 pb-4 border-b border-fg/15">
-          <div class="flex items-center gap-1 sm:gap-2" role="tablist" aria-label="Result type">
+          <div
+            class="flex items-center gap-1 sm:gap-2 max-w-full overflow-x-auto py-1 -my-1"
+            role="tablist"
+            aria-label="Result type"
+          >
             <%= for {label, value} <- @types do %>
               <button
                 type="button"
@@ -815,7 +841,7 @@ defmodule StashixWeb.SearchLive do
                 phx-click="set_type"
                 phx-value-type={value}
                 class={[
-                  "px-2.5 sm:px-3 pt-1 pb-0.5 font-display font-black uppercase text-2xl sm:text-3xl leading-none rounded-sm transition-colors",
+                  "shrink-0 inline-flex items-center gap-2 px-2.5 sm:px-3 pt-1 pb-0.5 font-display font-black uppercase text-2xl sm:text-3xl leading-none whitespace-nowrap rounded-sm transition-colors",
                   if(@params["type"] == value,
                     do: "bg-ink text-gray-950 -rotate-2",
                     else: "text-fg-soft hover:text-fg hover:bg-fg/10"
@@ -823,6 +849,14 @@ defmodule StashixWeb.SearchLive do
                 ]}
               >
                 {label}
+                <.sticker
+                  :if={@type_counts[value] && @type_counts[value] > 0}
+                  size="xs"
+                  tilt={false}
+                  class={@params["type"] == value && "bg-canvas! text-ink!"}
+                >
+                  {@type_counts[value]}
+                </.sticker>
               </button>
             <% end %>
           </div>
