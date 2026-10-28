@@ -111,24 +111,12 @@ defmodule StashixWeb.BookLive do
     case Library.update_book(book, params) do
       {:ok, updated_book} ->
         book = Library.get_book_with_series(socket.assigns.access, updated_book.id)
+        Metadata.enqueue_write(updated_book.id)
 
         socket =
           socket
           |> assign(book: book, page_title: book.title)
           |> close_dialog(~p"/book/#{book.id}")
-
-        socket =
-          case Metadata.write_book_files(updated_book) do
-            :ok ->
-              socket
-
-            {:error, reason} ->
-              put_flash(
-                socket,
-                :error,
-                "Metadata saved to database but could not be written to file: #{inspect(reason)}"
-              )
-          end
 
         {:noreply, socket}
 
@@ -690,7 +678,7 @@ defmodule StashixWeb.BookLive do
 
           <.dialog_footer>
             <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
-            <.ink_button type="submit" size="md">Save changes</.ink_button>
+            <.ink_button type="submit" size="md" phx-disable-with="Saving…">Save changes</.ink_button>
           </.dialog_footer>
         </.form>
       </.dialog>
