@@ -112,7 +112,7 @@ round-trip through the reader + scanner.
 | 5 | Language | Writer emits `series.language \|\| book.language` into `Series@lang`; reader sets book language from it. | `metron_info_xml.ex` `series/2` | Fixed |
 | 6 | Series name / years | Series always rebuilt from the folder name; file and DB edits lose. | `scanner.ex` `find_or_create_series_cached` | Open (by design) |
 | 7 | Anything (cbz) | A leftover `<stem>.xml` sidecar overrides freshly embedded XML. The cbz writer never removes it (it even *creates* one on the bad-zip fallback). | `parser.ex` `parse_comicinfo/1`, `file_writer.ex` | Fixed |
-| 8 | Anything | Write-back is an async Oban job (`metadata_write`); a forced scan started before it runs re-reads the old file. Failed writes (e.g. `:ro` mount in `docker-compose.yml`) only log. | `metadata.ex` `enqueue_write/1` | Open |
+| 8 | Anything | Write-back is an async Oban job (`metadata_write`); a forced scan started before it runs re-reads the old file. Failed writes (e.g. `:ro` mount in `docker-compose.yml`) only log. | `metadata.ex` `enqueue_write/1` | Fixed |
 | 9 | Story arcs (ComicInfo-only files) | Writer joins arcs with `", "`; reader stores the whole string as **one** arc. | `comic_info_xml.ex`, `parser.ex` | Fixed |
 | 10 | Age rating `teen_plus` | ComicInfo has no Teen+ value; writer maps it to `Teen`. Reader maps the non-spec `"Teen+"`. Lossy for ComicInfo-only files. | both | Fixed |
 
@@ -218,19 +218,34 @@ The old `Writer.MetronInfoXml`, `Writer.ComicInfoXml` and `Writer.XML` are gone.
   only speaks XSD 1.0; those rules are enforced in `build/2`). The XSDs are not
   vendored, so this is not part of `mix test`.
 
+### Follow-up fixes
+
+- **Write-back race (row 8):** every scan (library, series, single file)
+  first calls `Metadata.flush_pending_writes/1`. It claims the waiting
+  `WriteFileWorker` jobs for the books in scope with a conditional update
+  (so each job is written once, by the queue or by the scan), writes them
+  synchronously, marks them completed (or back to available on failure), then
+  waits up to a minute for writes the queue is already executing.
+- **One scanner mapping:** `create_book_from_meta`, `move_book_file` and
+  `update_book_file_from_meta` now share `book_attrs_from_meta/3`. A rescan
+  refreshes age rating, collection title, alternative number, imprint and
+  publisher too; fields the file doesn't mention keep their DB value. A new
+  book may take its publisher from the filename/folder; a rescan only replaces
+  it with a publisher the file itself states (co-publishers are kept when the
+  file's is among them).
+- **RAR / 7z:** `Stashix.Metadata.Container` reads embedded
+  `ComicInfo.xml` / `MetronInfo.xml` from zip, RAR (`unrar lb` / `p`, also
+  served by the Docker image's 7z shim) and 7z archives. The type is sniffed
+  from magic bytes, so a `.cbr` that is really a zip is read as a zip.
+
 ### Still open
 
 1. **Series stays folder-authoritative** (row 6). `<Series>` and the series
    fields in the file are read into the record but the scanner ignores them.
-2. **Write-back race** (row 8): a forced scan started before the
-   `metadata_write` job runs reads the old file. Failed writes only log.
-3. **The scanner still maps the record onto `Book` in three places**
-   (`create_book_from_meta`, `move_book_file`, `update_book_file_from_meta`)
-   with different field lists. age_rating, publisher, imprint,
-   collection_title and alternative_number are still not refreshed on rescan.
-   A single `Record.to_book_attrs/1` would fix that.
-4. **`.cbr`/`.cb7` embedded XML is not read**; only sidecars are.
-5. **ComicInfo `<Pages>` is dropped** when a CBZ is rewritten (we never write
+2. **Writing into `.cbr`/`.cb7`** still goes to a sidecar (we can't rewrite
+   RAR); the page extractor still picks the tool by extension, so a
+   zip-in-`.cbr` gets metadata but no pages/thumbnail.
+3. **ComicInfo `<Pages>` is dropped** when a CBZ is rewritten (we never write
    it). ComicInfo-only extras (Manga, BlackAndWhite, SeriesGroup, …) have no DB
    column, so they survive a read but not a DB → file write.
-6. `docs/MetronInfo.schema.xml` is still v1.1; replace with v1.2.
+4. `docs/MetronInfo.schema.xml` is still v1.1; replace with v1.2.

@@ -11,6 +11,7 @@ defmodule Stashix.Metadata do
     * `"metadata:<library_id>"` - `{:metadata_updated, :book | :series, id}`
   """
   import Ecto.Query
+  require Logger
 
   alias Stashix.Repo
   alias Stashix.Settings
@@ -211,6 +212,83 @@ defmodule Stashix.Metadata do
 
   @doc "Writes DB metadata into the book's files now (used by WriteFileWorker)."
   def write_book_files(%Book{} = book), do: FileWriter.write_book(book, Settings.metadata())
+
+  @pending_write_states ~w(available scheduled retryable)
+  @executing_wait_ms 60_000
+
+  @doc """
+  Runs queued file writes now, so a scan about to read the files sees what the
+  database says instead of the file from before the edit.
+
+  Claims the waiting `WriteFileWorker` jobs in scope (`library_id: id`,
+  `series_id: id` or `book_ids: [id]`), performs them here, and then waits
+  (up to a minute) for writes the queue is already executing. Claiming is a
+  conditional update, so a job is written exactly once, by the queue or here.
+  """
+  def flush_pending_writes(scope) do
+    jobs = write_jobs(scope)
+    now = DateTime.utc_now()
+
+    {_, claimed} =
+      Repo.update_all(
+        from(j in jobs,
+          where: j.state in @pending_write_states,
+          select: %{id: j.id, book_id: fragment("?->>'book_id'", j.args)}
+        ),
+        set: [state: "executing", attempted_at: now, attempted_by: ["scanner"]],
+        inc: [attempt: 1]
+      )
+
+    Enum.each(claimed, fn %{id: job_id, book_id: book_id} ->
+      result =
+        case Repo.get(Book, book_id) do
+          nil -> :ok
+          book -> write_book_files(book)
+        end
+
+      done =
+        if result == :ok,
+          do: [state: "completed", completed_at: DateTime.utc_now()],
+          else: [state: "available", scheduled_at: DateTime.utc_now()]
+
+      Repo.update_all(from(j in Oban.Job, where: j.id == ^job_id), set: done)
+    end)
+
+    claimed_ids = Enum.map(claimed, & &1.id)
+    wait_for_executing(from(j in jobs, where: j.id not in ^claimed_ids), System.monotonic_time(:millisecond))
+  end
+
+  defp write_jobs(scope) do
+    book_ids =
+      case scope do
+        [library_id: id] -> from(b in Book, where: b.library_id == ^id, select: fragment("?::text", b.id))
+        [series_id: id] -> from(b in Book, where: b.series_id == ^id, select: fragment("?::text", b.id))
+        [book_ids: ids] -> from(b in Book, where: b.id in ^ids, select: fragment("?::text", b.id))
+      end
+
+    from(j in Oban.Job,
+      where: j.queue == "metadata_write" and fragment("?->>'book_id'", j.args) in subquery(book_ids)
+    )
+  end
+
+  # Ignores jobs stuck in "executing" for long (a crashed node); Lifeline rescues those.
+  defp wait_for_executing(jobs, started) do
+    stale = DateTime.add(DateTime.utc_now(), -5, :minute)
+    running = from(j in jobs, where: j.state == "executing" and j.attempted_at > ^stale)
+
+    cond do
+      not Repo.exists?(running) ->
+        :ok
+
+      System.monotonic_time(:millisecond) - started > @executing_wait_ms ->
+        Logger.warning("Scan continuing while metadata writes are still running")
+        :ok
+
+      true ->
+        Process.sleep(200)
+        wait_for_executing(jobs, started)
+    end
+  end
 
   @doc "Counts of metadata jobs by state, for the admin page."
   def job_counts do

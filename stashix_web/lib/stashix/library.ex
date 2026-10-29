@@ -1629,6 +1629,41 @@ defmodule Stashix.Library do
     :ok
   end
 
+  @doc """
+  Makes `publisher_id` the book's publisher as a file states it: a no-op when
+  the book already lists it (keeping any co-publishers), otherwise it replaces
+  the book's publishers.
+  """
+  def set_book_publisher(book_id, publisher_id) do
+    book_bin = Ecto.UUID.dump!(book_id)
+    publisher_bin = Ecto.UUID.dump!(publisher_id)
+    linked = from(bp in "book_publishers", where: bp.book_id == ^book_bin)
+
+    unless Repo.exists?(where(linked, [bp], bp.publisher_id == ^publisher_bin)) do
+      Repo.transaction(fn ->
+        Repo.delete_all(linked)
+        link_publisher_to_book(book_id, publisher_id)
+      end)
+    end
+
+    :ok
+  end
+
+  @doc "The imprint `name` of the named publisher, creating both if needed."
+  def get_or_create_imprint(publisher_name, name) do
+    with {:ok, publisher} <- get_or_create_publisher(publisher_name) do
+      Repo.insert(%Stashix.Library.Imprint{publisher_id: publisher.id, name: name},
+        on_conflict: :nothing,
+        conflict_target: [:publisher_id, :name]
+      )
+
+      case Repo.get_by(Stashix.Library.Imprint, publisher_id: publisher.id, name: name) do
+        nil -> {:error, :not_found}
+        imprint -> {:ok, imprint}
+      end
+    end
+  end
+
   def link_publisher_to_series(series_id, publisher_id) do
     Repo.insert_all(
       "series_publishers",

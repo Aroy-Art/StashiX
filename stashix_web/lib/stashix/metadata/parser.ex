@@ -11,13 +11,14 @@ defmodule Stashix.Metadata.Parser do
   docs/metadata-file-io.md):
 
     1. `<book name>.xml` sidecar next to the file
-    2. embedded `MetronInfo.xml`
+    2. embedded `MetronInfo.xml` (zip, RAR or 7z; see `Stashix.Metadata.Container`)
     3. embedded `ComicInfo.xml` (or the PDF info dict for `.pdf`)
 
   Exception: ComicInfo's `Year` beats the year MetronInfo derives from its
   dates, because MetronInfo has no Year element of its own.
   """
 
+  alias Stashix.Metadata.Container
   alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
 
   @noise_patterns ~w(
@@ -71,17 +72,9 @@ defmodule Stashix.Metadata.Parser do
 
   defp parse_embedded(archive_path) do
     case archive_path |> Path.extname() |> String.downcase() do
-      ext when ext in [".cbz", ".epub"] ->
-        case extract_xml_from_zip(archive_path) do
-          nil -> %{}
-          xmls -> merge_embedded(xmls)
-        end
-
-      ".pdf" ->
-        parse_pdf_metadata(archive_path)
-
-      _ ->
-        %{}
+      ".pdf" -> parse_pdf_metadata(archive_path)
+      ext when ext in [".cbz", ".cbr", ".cb7", ".epub"] -> merge_embedded(Container.read_xml(archive_path))
+      _ -> %{}
     end
   end
 
@@ -102,40 +95,6 @@ defmodule Stashix.Metadata.Parser do
     case format.parse(data) do
       {:ok, record} -> record
       {:error, _} -> %{}
-    end
-  end
-
-  defp extract_xml_from_zip(archive_path) do
-    path_charlist = String.to_charlist(archive_path)
-
-    with {:ok, entries} <- :zip.list_dir(path_charlist) do
-      xml_names =
-        Enum.flat_map(entries, fn
-          {:zip_file, name, _info, _comment, _offset, _comp_size} ->
-            case to_string(name) |> String.downcase() do
-              "comicinfo.xml" -> [{:comicinfo, name}]
-              "metroninfo.xml" -> [{:metroninfo, name}]
-              _ -> []
-            end
-
-          _ ->
-            []
-        end)
-
-      if xml_names == [] do
-        nil
-      else
-        case :zip.extract(path_charlist, [:memory, {:file_list, Enum.map(xml_names, &elem(&1, 1))}]) do
-          {:ok, files} ->
-            by_name = Map.new(files, fn {name, data} -> {to_string(name), data} end)
-            Map.new(xml_names, fn {format, name} -> {format, by_name[to_string(name)]} end)
-
-          _ ->
-            nil
-        end
-      end
-    else
-      _ -> nil
     end
   end
 

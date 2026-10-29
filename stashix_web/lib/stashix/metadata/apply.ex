@@ -215,18 +215,8 @@ defmodule Stashix.Metadata.Apply do
   defp maybe_put_imprint(attrs, %{publisher: pub, imprint: imprint}, current_id, rule)
        when is_binary(pub) and is_binary(imprint) and imprint != "" do
     with true <- write?(rule, :imprint, imprint, current_id),
-         {:ok, publisher} <- Library.get_or_create_publisher(pub) do
-      imprint =
-        Repo.get_by(Imprint, publisher_id: publisher.id, name: imprint) ||
-          Repo.insert!(%Imprint{publisher_id: publisher.id, name: imprint},
-            on_conflict: :nothing,
-            conflict_target: [:publisher_id, :name]
-          )
-
-      case imprint do
-        %Imprint{id: nil} -> attrs
-        %Imprint{id: id} -> Map.put(attrs, :imprint_id, id)
-      end
+         {:ok, %Imprint{id: id}} <- Library.get_or_create_imprint(pub, imprint) do
+      Map.put(attrs, :imprint_id, id)
     else
       _ -> attrs
     end

@@ -385,6 +385,97 @@ defmodule Stashix.ScannerTest do
     end
   end
 
+  # ── file metadata on rescan ───────────────────────────────────────────────
+
+  @tagged_xml """
+  <ComicInfo>
+    <Title>Gotham Rising</Title><Number>7</Number><AlternateNumber>51</AlternateNumber>
+    <Publisher>DC Comics</Publisher><Imprint>Black Label</Imprint><AgeRating>Mature 17+</AgeRating>
+  </ComicInfo>
+  """
+
+  describe "scan_sync/2 file metadata" do
+    test "force rescan refreshes every field the file states", %{lib: lib, tmp: tmp} do
+      write_cbz(mkdir(tmp, "Batman (2016)"), "Batman 001.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+
+      write_cbz(Path.join(tmp, "Batman (2016)"), "Batman 001.cbz", extra: [{~c"ComicInfo.xml", @tagged_xml}])
+      Scanner.scan_sync(lib.id, true)
+
+      book = Book |> Repo.get!(book.id) |> Repo.preload([:publishers, :imprint])
+      assert book.title == "Gotham Rising"
+      assert book.issue_number == Decimal.new("7"), "file number beats the filename's 001"
+      assert book.alternative_number == "51"
+      assert book.age_rating == :mature
+      assert [%{name: "DC Comics"}] = book.publishers
+      assert book.imprint.name == "Black Label"
+    end
+
+    test "rescan keeps fields the file doesn't mention", %{lib: lib, tmp: tmp} do
+      write_cbz(tmp, "My Book.cbz", extra: [{~c"ComicInfo.xml", "<ComicInfo><Title>T</Title></ComicInfo>"}])
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      {:ok, _} = Library.update_book(book, %{age_rating: :teen, collection_title: "Coll"})
+
+      Scanner.scan_sync(lib.id, true)
+      assert %{age_rating: :teen, collection_title: "Coll"} = Repo.get!(Book, book.id)
+    end
+
+    test "a rescan doesn't swap a book's publisher for the folder's", %{lib: lib, tmp: tmp} do
+      write_cbz(mkdir(tmp, "Folder Pub/One-Shot"), "Book.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      {:ok, pub} = Library.get_or_create_publisher("Real Pub")
+      Repo.delete_all(from(bp in "book_publishers", where: bp.book_id == ^Ecto.UUID.dump!(book.id)))
+      Library.link_publisher_to_book(book.id, pub.id)
+
+      Scanner.scan_sync(lib.id, true)
+      assert [%{name: "Real Pub"}] = Book |> Repo.get!(book.id) |> Repo.preload(:publishers) |> Map.get(:publishers)
+    end
+
+    test "a queued write runs before a rescan reads the file", %{lib: lib, tmp: tmp} do
+      write_cbz(tmp, "My Book.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+
+      {:ok, _} = Library.update_book(book, %{title: "Edited"})
+      {:ok, job} = Stashix.Metadata.enqueue_write(book.id)
+
+      Scanner.scan_sync(lib.id, true)
+
+      assert Repo.get!(Book, book.id).title == "Edited"
+      assert Repo.get!(Oban.Job, job.id).state == "completed"
+    end
+  end
+
+  describe "scan_sync/2 RAR and 7z metadata" do
+    @describetag :tmp_dir
+
+    for {ext, tool, args} <- [{"cbr", "rar", ~w(a -ep -inul)}, {"cb7", "7z", ~w(a -bd -bso0)}] do
+      @tag skip: is_nil(System.find_executable(tool)) && "#{tool} not installed"
+      test "reads ComicInfo embedded in .#{ext}", %{lib: lib, tmp: tmp, tmp_dir: src} do
+        File.write!(Path.join(src, "page001.jpg"), "fake")
+        File.write!(Path.join(src, "ComicInfo.xml"), @tagged_xml)
+        archive = Path.join(tmp, "Book.#{unquote(ext)}")
+
+        {_, 0} =
+          System.cmd(unquote(tool), unquote(args) ++ [archive, "page001.jpg", "ComicInfo.xml"], cd: src)
+
+        Scanner.scan_sync(lib.id)
+        assert [%{title: "Gotham Rising"}] = Library.list_books(lib.id, access: Access.all())
+      end
+    end
+
+    test "a .cbr that is really a zip is read as a zip", %{lib: lib, tmp: tmp} do
+      cbz = write_cbz(tmp, "Book.cbz", extra: [{~c"ComicInfo.xml", @tagged_xml}])
+      File.rename!(cbz, Path.join(tmp, "Book.cbr"))
+
+      Scanner.scan_sync(lib.id)
+      assert [%{title: "Gotham Rising"}] = Library.list_books(lib.id, access: Access.all())
+    end
+  end
+
   # ── helpers ───────────────────────────────────────────────────────────────
 
   defp mkdir(parent, name) do

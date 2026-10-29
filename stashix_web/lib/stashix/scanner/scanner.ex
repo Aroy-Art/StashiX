@@ -5,7 +5,7 @@ defmodule Stashix.Scanner do
   use GenServer
   require Logger
 
-  alias Stashix.Library
+  alias Stashix.{Library, Metadata}
   alias Stashix.Media.{Thumbnail, Extractor, ImageResizer}
   alias Stashix.Metadata.{Parser, Importer}
 
@@ -153,6 +153,7 @@ defmodule Stashix.Scanner do
   defp do_scan_safe(library_id, force) do
     library = Library.get_library!(library_id)
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
+    Metadata.flush_pending_writes(library_id: library_id)
 
     update_task_status(library_id, %{scanned: 0, total: 0, done: false, phase: :collecting})
     broadcast_progress(library_id, 0, 0, false, :collecting)
@@ -322,21 +323,8 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp create_book_from_meta(
-         %{
-           file_path: file_path,
-           file_hash: file_hash,
-           last_modified: last_modified,
-           file_size: file_size,
-           parsed: parsed,
-           comicinfo: comicinfo,
-           metadata: metadata
-         },
-         library,
-         cache
-       ) do
+  defp create_book_from_meta(%{file_path: file_path, parsed: parsed} = file_meta, library, cache) do
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
-    filename = Path.basename(file_path, Path.extname(file_path))
 
     format =
       file_path
@@ -353,31 +341,11 @@ defmodule Stashix.Scanner do
       if existing_book do
         existing_book
       else
-        book_attrs = %{
-          library_id: library.id,
-          series_id: series && series.id,
-          title: Map.get(metadata, :title) || filename,
-          type: if(series, do: "issue", else: "standalone"),
-          issue_number: if(series, do: Map.get(comicinfo, :issue_number) || Map.get(parsed, :issue_number)),
-          volume: Map.get(metadata, :volume),
-          year: Map.get(metadata, :year),
-          page_count: resolve_page_count(metadata, file_path, 0),
-          language: Map.get(metadata, :language, "en"),
-          summary: Map.get(metadata, :summary),
-          age_rating: Map.get(metadata, :age_rating),
-          community_rating: Map.get(metadata, :community_rating),
-          community_rating_count: Map.get(comicinfo, :community_rating_count),
-          cover_date: Map.get(comicinfo, :cover_date),
-          store_date: Map.get(comicinfo, :store_date),
-          notes: Map.get(comicinfo, :notes),
-          isbn: Map.get(comicinfo, :isbn),
-          upc: Map.get(comicinfo, :upc)
-        }
+        attrs = file_meta |> book_attrs_from_meta(series, nil) |> Map.put(:library_id, library.id)
 
-        case Library.create_book(book_attrs) do
+        case Library.create_book(attrs) do
           {:ok, b} ->
-            link_publisher(b, series, enrich_publisher(metadata, file_path, library))
-            Importer.replace_book_metadata(b, comicinfo)
+            apply_file_children(b, series, file_meta, library, true)
             Library.SummaryCache.clear()
             Phoenix.PubSub.broadcast(Stashix.PubSub, "scan:#{library.id}", {:book_added, b})
             b
@@ -389,24 +357,22 @@ defmodule Stashix.Scanner do
       end
 
     if book do
+      page_count = resolve_page_count(file_meta.metadata, file_path, 0)
+
       file_attrs = %{
         book_id: book.id,
         path: file_path,
         format: format,
-        file_size: file_size,
-        file_hash: file_hash,
-        last_modified: last_modified,
-        page_count: resolve_page_count(metadata, file_path, 0),
+        file_size: file_meta.file_size,
+        file_hash: file_meta.file_hash,
+        last_modified: file_meta.last_modified,
+        page_count: page_count,
         source_format: Map.get(parsed, :source_format)
       }
 
       case Library.create_book_file(file_attrs) do
         {:ok, _book_file} ->
-          if existing_book do
-            pc = resolve_page_count(metadata, file_path, 0)
-            if pc > 0, do: Library.update_book(book, %{page_count: pc})
-          end
-
+          if existing_book && page_count > 0, do: Library.update_book(book, %{page_count: page_count})
           {{book, file_path}, new_cache}
 
         {:error, reason} ->
@@ -418,121 +384,125 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp move_book_file(
-         book_file,
-         %{
-           file_path: file_path,
-           file_hash: file_hash,
-           last_modified: last_modified,
-           file_size: file_size,
-           parsed: parsed,
-           comicinfo: comicinfo,
-           metadata: metadata
-         },
-         library,
-         cache
-       ) do
-    file_attrs = %{
-      path: file_path,
-      file_hash: file_hash,
-      last_modified: last_modified,
-      file_size: file_size,
-      page_count: resolve_page_count(metadata, file_path, book_file.page_count),
-      source_format: Map.get(parsed, :source_format),
-      deleted_at: nil
-    }
-
-    case Library.update_book_file(book_file, file_attrs) do
+  # A known file showed up at a new path (same hash).
+  defp move_book_file(book_file, file_meta, library, cache) do
+    case Library.update_book_file(book_file, book_file_attrs(book_file, file_meta)) do
       {:ok, _} ->
-        book = Library.get_book!(book_file.book_id)
-        filename = Path.basename(file_path, Path.extname(file_path))
-        {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
-
-        book_attrs = %{
-          title: Map.get(metadata, :title) || filename,
-          issue_number: if(series, do: Map.get(comicinfo, :issue_number) || Map.get(parsed, :issue_number)),
-          volume: Map.get(metadata, :volume),
-          year: Map.get(metadata, :year),
-          series_id: series && series.id,
-          type: if(series, do: "issue", else: "standalone"),
-          deleted_at: nil
-        }
-
-        Library.update_book(book, book_attrs)
-        {{book, file_path}, new_cache}
+        refresh_book_from_meta(Library.get_book!(book_file.book_id), file_meta, library, cache)
 
       {:error, reason} ->
-        Logger.error("Failed to move book_file #{file_path}: #{inspect(reason)}")
+        Logger.error("Failed to move book_file #{file_meta.file_path}: #{inspect(reason)}")
         {nil, cache}
     end
   end
 
-  defp update_book_file_from_meta(
-         book_file,
-         %{
-           file_path: file_path,
-           file_hash: file_hash,
-           last_modified: last_modified,
-           file_size: file_size,
-           parsed: parsed,
-           comicinfo: comicinfo,
-           metadata: metadata
-         },
-         library,
-         cache
-       ) do
-    book = Library.get_book!(book_file.book_id)
-    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
-    filename = Path.basename(file_path, Path.extname(file_path))
+  defp update_book_file_from_meta(book_file, file_meta, library, cache) do
+    case Library.update_book_file(book_file, book_file_attrs(book_file, file_meta)) do
+      {:ok, _} ->
+        refresh_book_from_meta(Library.get_book!(book_file.book_id), file_meta, library, cache)
 
-    book_attrs = %{
-      title: Map.get(metadata, :title) || filename,
-      issue_number: if(series, do: Map.get(comicinfo, :issue_number) || Map.get(parsed, :issue_number)),
+      {:error, reason} ->
+        Logger.error("Failed to update book_file #{file_meta.file_path}: #{inspect(reason)}")
+        {nil, cache}
+    end
+  end
+
+  defp book_file_attrs(book_file, %{file_path: path, parsed: parsed} = file_meta) do
+    %{
+      path: path,
+      file_hash: file_meta.file_hash,
+      last_modified: file_meta.last_modified,
+      file_size: file_meta.file_size,
+      page_count: resolve_page_count(file_meta.metadata, path, book_file.page_count),
+      source_format: Map.get(parsed, :source_format),
+      deleted_at: nil
+    }
+  end
+
+  # Rescan of an existing book: the file's metadata replaces the book's.
+  defp refresh_book_from_meta(book, %{file_path: file_path, comicinfo: file} = file_meta, library, cache) do
+    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
+
+    # Metadata fetched from an external source lives only in the DB when the
+    # file carries none (e.g. write-back disabled); don't reset it from the filename.
+    keep_fetched = book.metadata_matched_at != nil and file == %{}
+
+    attrs =
+      if keep_fetched,
+        do: file_meta |> book_attrs_from_meta(series, book) |> Map.take([:series_id, :type, :page_count, :deleted_at]),
+        else: book_attrs_from_meta(file_meta, series, book)
+
+    case Library.update_book(book, attrs) do
+      {:ok, updated} ->
+        unless keep_fetched, do: apply_file_children(updated, series, file_meta, library, false)
+        {{updated, file_path}, new_cache}
+
+      {:error, reason} ->
+        Logger.error("Failed to update book for #{file_path}: #{inspect(reason)}")
+        {nil, new_cache}
+    end
+  end
+
+  # The one mapping from a file's metadata onto book columns, for new books
+  # (`book` nil) and rescans alike. Title, issue number, volume and year always
+  # follow the file/filename; other fields keep the book's value when the file
+  # doesn't mention them.
+  defp book_attrs_from_meta(%{file_path: path, parsed: parsed, comicinfo: file, metadata: metadata}, series, book) do
+    current = fn field, default -> if book, do: Map.get(book, field), else: default end
+    from_file = fn field, default -> Map.get(file, field, current.(field, default)) end
+
+    %{
+      title: Map.get(metadata, :title) || Path.basename(path, Path.extname(path)),
+      issue_number: if(series, do: Map.get(file, :issue_number) || Map.get(parsed, :issue_number)),
       volume: Map.get(metadata, :volume),
       year: Map.get(metadata, :year),
       series_id: series && series.id,
       type: if(series, do: "issue", else: "standalone"),
-      page_count: resolve_page_count(metadata, file_path, book.page_count),
-      language: Map.get(metadata, :language, book.language),
-      summary: Map.get(metadata, :summary, book.summary),
-      community_rating: Map.get(comicinfo, :community_rating, book.community_rating),
-      community_rating_count: Map.get(comicinfo, :community_rating_count, book.community_rating_count),
-      cover_date: Map.get(comicinfo, :cover_date, book.cover_date),
-      store_date: Map.get(comicinfo, :store_date, book.store_date),
-      notes: Map.get(comicinfo, :notes, book.notes),
-      isbn: Map.get(comicinfo, :isbn, book.isbn),
-      upc: Map.get(comicinfo, :upc, book.upc),
+      page_count: resolve_page_count(metadata, path, current.(:page_count, 0)),
+      language: Map.get(metadata, :language, current.(:language, "en")),
+      summary: Map.get(metadata, :summary, current.(:summary, nil)),
+      age_rating: from_file.(:age_rating, :unknown),
+      community_rating: from_file.(:community_rating, nil),
+      community_rating_count: from_file.(:community_rating_count, nil),
+      cover_date: from_file.(:cover_date, nil),
+      store_date: from_file.(:store_date, nil),
+      notes: from_file.(:notes, nil),
+      isbn: from_file.(:isbn, nil),
+      upc: from_file.(:upc, nil),
+      collection_title: from_file.(:collection_title, nil),
+      alternative_number: from_file.(:alternative_number, nil),
       deleted_at: nil
     }
+    |> put_imprint(file)
+  end
 
-    file_attrs = %{
-      path: file_path,
-      file_hash: file_hash,
-      last_modified: last_modified,
-      file_size: file_size,
-      page_count: resolve_page_count(metadata, file_path, book_file.page_count),
-      source_format: Map.get(parsed, :source_format),
-      deleted_at: nil
-    }
-
-    # Metadata fetched from an external source lives only in the DB when the
-    # file carries none (e.g. write-back disabled); don't reset it from the filename.
-    keep_fetched = book.metadata_matched_at != nil and comicinfo == %{}
-
-    book_attrs =
-      if keep_fetched,
-        do: Map.take(book_attrs, [:series_id, :type, :page_count, :deleted_at]),
-        else: book_attrs
-
-    with {:ok, updated_book} <- Library.update_book(book, book_attrs),
-         {:ok, _updated_file} <- Library.update_book_file(book_file, file_attrs) do
-      unless keep_fetched, do: Importer.replace_book_metadata(updated_book, comicinfo)
-      {{updated_book, file_path}, new_cache}
-    else
-      {:error, reason} ->
-        Logger.error("Failed to update book/file for #{file_path}: #{inspect(reason)}")
-        {nil, new_cache}
+  defp put_imprint(attrs, %{publisher: publisher, imprint: imprint}) when is_binary(publisher) and is_binary(imprint) do
+    case Library.get_or_create_imprint(publisher, imprint) do
+      {:ok, %{id: id}} -> Map.put(attrs, :imprint_id, id)
+      _ -> attrs
     end
+  end
+
+  defp put_imprint(attrs, _file), do: attrs
+
+  # Publisher and the child tables (credits, characters, …) from the file. A
+  # new book may take its publisher from the filename or folder; a rescan only
+  # replaces it with one the file itself states.
+  defp apply_file_children(book, series, %{file_path: path, comicinfo: file, metadata: metadata}, library, new?) do
+    publisher = if new?, do: metadata |> enrich_publisher(path, library) |> Map.get(:publisher), else: file[:publisher]
+
+    case publisher do
+      nil ->
+        :ok
+
+      name ->
+        with {:ok, publisher} <- Library.get_or_create_publisher(name) do
+          Library.set_book_publisher(book.id, publisher.id)
+          if series, do: Library.link_publisher_to_series(series.id, publisher.id)
+        end
+    end
+
+    Importer.replace_book_metadata(book, file)
   end
 
   @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
@@ -611,6 +581,7 @@ defmodule Stashix.Scanner do
     library_id = library.id
 
     Logger.info("Starting series rescan: #{series.name}")
+    Metadata.flush_pending_writes(series_id: series_id)
 
     files = if series.path && File.dir?(series.path), do: collect_files(series.path), else: []
     total = length(files)
@@ -695,6 +666,9 @@ defmodule Stashix.Scanner do
     else
       library = Library.get_library!(library_id)
       Logger.info("Scanning file #{file_path}")
+
+      with %{book_id: book_id} <- Library.get_book_file_by_path(file_path),
+           do: Metadata.flush_pending_writes(book_ids: [book_id])
 
       update_task_status(library_id, %{scanned: 0, total: 1, done: false, collecting: false})
       broadcast_progress(library_id, 0, 1, false, :file)
@@ -930,23 +904,6 @@ defmodule Stashix.Scanner do
       else
         metadata
       end
-    end
-  end
-
-  defp link_publisher(book, series, metadata) do
-    case Map.get(metadata, :publisher) do
-      nil ->
-        :ok
-
-      name ->
-        case Library.get_or_create_publisher(name) do
-          {:ok, publisher} ->
-            Library.link_publisher_to_book(book.id, publisher.id)
-            if series, do: Library.link_publisher_to_series(series.id, publisher.id)
-
-          _ ->
-            :ok
-        end
     end
   end
 
