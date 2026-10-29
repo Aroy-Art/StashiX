@@ -187,8 +187,12 @@ binaries (e.g. Saxy).
 - Dependency advisories from `mix hex.audit`: cloak 1.1.4
   (EEF-CVE-2026-95105, AES-CTR), cloak_ecto 1.3.0 (EEF-CVE-2026-94206, PBKDF2
   field), decimal 3.1.1 (EEF-CVE-2026-97853, `Decimal.round/3` places). None
-  is reachable as used (AES-GCM cipher, no PBKDF2 fields, `round/1` only);
-  bump anyway.
+  is reachable as used (AES-GCM cipher, no PBKDF2 fields, `round/1` only).
+  decimal is bumped to 3.2.0. cloak and cloak_ecto have no fixed release
+  (2026-10-29), so `mix hex.audit` keeps reporting them; accepted for now.
+  Stashix only uses `Cloak.Ciphers.AES.GCM` (`config/runtime.exs`) and one
+  `Cloak.Ecto.Map` field (`Stashix.Encrypted.Map`). Revisit if either changes:
+  an AES-CTR cipher or a `Cloak.Ecto.PBKDF2` field would make them reachable.
 - Option injection into 7z/unrar: `Extractor` and the `unrar` shim in the
   Dockerfile pass archive entry names as arguments. A name starting with `-`
   is read as a switch. Pass `--` before file names.
