@@ -219,13 +219,14 @@ defmodule Stashix.Media.ExtractorTest do
   describe "list_pages/1 — other archive formats" do
     @names ["001.jpg", "002.jpg", "003.jpg", "The Saint.jpg", "zzz - coyoteDHC18.JPG"]
     @z_names ["Zatanna 001.jpg", "Zatanna 002.jpg", "cover.jpg"]
+    @dash_names ["-y.jpg", "-z.jpg"]
 
     defp make_archive(tmp, cmd, args, out, names) do
       src = Path.join(tmp, "src_#{:erlang.unique_integer([:positive])}")
       File.mkdir_p!(src)
-      Enum.each(names, &File.write!(Path.join(src, &1), "x"))
+      Enum.each(names, &File.write!(Path.join(src, &1), &1))
       path = Path.join(tmp, out)
-      {_, 0} = System.cmd(cmd, args ++ [path | names], cd: src, stderr_to_stdout: true)
+      {_, 0} = System.cmd(cmd, args ++ ["--", path | names], cd: src, stderr_to_stdout: true)
       path
     end
 
@@ -241,6 +242,13 @@ defmodule Stashix.Media.ExtractorTest do
 
         assert {:ok, @z_names} = Extractor.list_pages(cbr)
       end
+
+      test "cbr reads entries whose names look like switches", %{tmp: tmp} do
+        cbr = make_archive(tmp, "rar", ["a", "-inul"], "book.cbr", @dash_names)
+
+        assert {:ok, @dash_names} = Extractor.list_pages(cbr)
+        assert {:ok, "-y.jpg"} = Extractor.get_page(cbr, 0)
+      end
     end
 
     if System.find_executable("7z") do
@@ -254,6 +262,13 @@ defmodule Stashix.Media.ExtractorTest do
         cb7 = make_archive(tmp, "7z", ["a", "-t7z"], "book.cb7", @z_names)
 
         assert {:ok, @z_names} = Extractor.list_pages(cb7)
+      end
+
+      test "cb7 reads entries whose names look like switches", %{tmp: tmp} do
+        cb7 = make_archive(tmp, "7z", ["a", "-t7z"], "book.cb7", @dash_names)
+
+        assert {:ok, @dash_names} = Extractor.list_pages(cb7)
+        assert {:ok, "-y.jpg"} = Extractor.get_page(cb7, 0)
       end
     end
 

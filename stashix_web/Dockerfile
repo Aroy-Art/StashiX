@@ -20,9 +20,9 @@ RUN MIX_ENV=prod mix release
 
 FROM alpine:3.24
 
-RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips su-exec \
-    && printf '#!/bin/sh\ncase "$1" in\n  lb) 7z l -ba "$2" | awk '"'"'{print $NF}'"'"' ;;\n  p) archive="$3"; file="$4"; 7z x -so "$archive" "$file" ;;\n  *) echo "unsupported: $1" >&2; exit 1 ;;\nesac\n' > /usr/local/bin/unrar \
-    && chmod +x /usr/local/bin/unrar
+RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips su-exec
+
+COPY --chmod=755 unrar.sh /usr/local/bin/unrar
 
 WORKDIR /app
 

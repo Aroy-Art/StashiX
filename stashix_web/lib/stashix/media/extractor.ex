@@ -88,7 +88,7 @@ defmodule Stashix.Media.Extractor do
 
   defp list_rar_pages(path) do
     try do
-      case System.cmd("unrar", ["lb", path], stderr_to_stdout: true) do
+      case System.cmd("unrar", ["lb", "--", path], stderr_to_stdout: true) do
         {output, 0} ->
           pages =
             output
@@ -111,7 +111,7 @@ defmodule Stashix.Media.Extractor do
 
   defp list_7z_pages(path) do
     try do
-      case System.cmd("7z", ["l", "-ba", "-slt", path], stderr_to_stdout: true) do
+      case System.cmd("7z", ["l", "-ba", "-slt", "--", path], stderr_to_stdout: true) do
         {output, 0} ->
           pages =
             output
@@ -195,7 +195,7 @@ defmodule Stashix.Media.Extractor do
 
   defp extract_rar_page(archive_path, page_name) do
     try do
-      case System.cmd("unrar", ["p", "-inul", archive_path, page_name], stderr_to_stdout: false) do
+      case System.cmd("unrar", ["p", "-inul", "--", archive_path, page_name], stderr_to_stdout: false) do
         {data, 0} -> {:ok, data}
         {error, _} -> {:error, error}
       end
@@ -209,7 +209,7 @@ defmodule Stashix.Media.Extractor do
     File.mkdir_p!(tmp)
 
     try do
-      case System.cmd("7z", ["e", archive_path, page_name, "-o#{tmp}", "-y"], stderr_to_stdout: true) do
+      case System.cmd("7z", ["e", "-o#{tmp}", "-y", "--", archive_path, page_name], stderr_to_stdout: true) do
         {_, 0} ->
           dest = Path.join(tmp, Path.basename(page_name))
 
