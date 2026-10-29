@@ -76,7 +76,9 @@ defmodule StashixWeb.UI.Data do
 
   @doc """
   Row of tabs in display type; the current one is an ink sticker. Each `:tab`
-  links with `patch` or `navigate`; `count` adds a small figure.
+  links with `patch` or `navigate`; `count` adds a small figure. Tabs with
+  counts wrap rather than scroll; on phones each stacks its count under the
+  label and stretches to fill its row. Others scroll sideways.
   """
   attr :label, :string, required: true, doc: "accessible name of the tab bar"
   attr :class, :any, default: nil
@@ -89,10 +91,19 @@ defmodule StashixWeb.UI.Data do
   end
 
   def tabs(assigns) do
+    assigns = assign(assigns, :stacked, Enum.any?(assigns.tab, & &1[:count]))
+
     ~H"""
     <nav
       aria-label={@label}
-      class={["flex items-center gap-1 sm:gap-2 pb-3 border-b border-fg/15 overflow-x-auto", @class]}
+      class={[
+        "pb-3 border-b border-fg/15",
+        if(@stacked,
+          do: "flex flex-wrap gap-1 sm:items-center sm:gap-2",
+          else: "flex items-center gap-1 sm:gap-2 overflow-x-auto"
+        ),
+        @class
+      ]}
     >
       <.link
         :for={tab <- @tab}
@@ -100,7 +111,12 @@ defmodule StashixWeb.UI.Data do
         navigate={tab[:navigate]}
         aria-current={tab[:active] && "page"}
         class={[
-          "inline-flex items-center gap-2 px-2.5 pt-1 pb-0.5 rounded-sm font-display font-black uppercase text-2xl leading-none whitespace-nowrap transition-colors",
+          "rounded-sm font-display font-black uppercase leading-none whitespace-nowrap transition-colors",
+          if(@stacked,
+            do:
+              "flex flex-auto flex-col items-center gap-1.5 px-1.5 pt-1.5 pb-1 text-lg sm:flex-none sm:flex-row sm:gap-2 sm:px-2.5 sm:pt-1 sm:pb-0.5 sm:text-2xl",
+            else: "inline-flex items-center gap-2 px-2.5 pt-1 pb-0.5 text-2xl"
+          ),
           if(tab[:active],
             do: "bg-ink text-gray-950 -rotate-1",
             else: "text-fg-soft hover:text-fg hover:bg-fg/10"
