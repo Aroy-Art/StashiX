@@ -1,8 +1,7 @@
 ---
 services:
   phoenix:
-    build:
-      context: ./stashix_web
+    image: git.aroy-art.com/aroy/stashix:0.0.1
     restart: unless-stopped
     ports:
       - "4000:4000"
