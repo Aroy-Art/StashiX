@@ -9,7 +9,9 @@ defmodule Stashix.Metadata.FileWriterTest do
   alias Stashix.{Library, Repo}
   alias Stashix.Library.BookFile
   alias Stashix.Metadata.{Parser, Importer}
-  alias Stashix.Metadata.Writer.{FileWriter, MetronInfoXml, ComicInfoXml}
+  alias Stashix.Metadata.Record
+  alias Stashix.Metadata.Writer.FileWriter
+  alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
 
   setup do
     tmp = Path.join(System.tmp_dir!(), "stashix_writer_#{System.unique_integer([:positive])}")
@@ -59,7 +61,7 @@ defmodule Stashix.Metadata.FileWriterTest do
   end
 
   test "MetronInfo round-trips through the parser", %{book: book} do
-    xml = MetronInfoXml.build(book)
+    xml = MetronInfo.build(Record.from_book(book))
     assert xml =~ "&lt;b&gt;bold&lt;/b&gt; &amp; brave"
 
     path = Path.join(System.tmp_dir!(), "rt_#{System.unique_integer([:positive])}.cbz")
@@ -83,9 +85,9 @@ defmodule Stashix.Metadata.FileWriterTest do
   test "edited title leads the stories and survives a round-trip", %{book: book} do
     {:ok, book} = Library.update_book(book, %{title: "Gotham Rising"})
 
-    xml = MetronInfoXml.build(book)
+    xml = MetronInfo.build(Record.from_book(book))
     assert xml =~ ~r{<Stories>\s*<Story>Gotham Rising</Story>\s*<Story>I Am Gotham, Part One</Story>}
-    assert ComicInfoXml.build(book) =~ "<Title>Gotham Rising</Title>"
+    assert ComicInfo.build(Record.from_book(book)) =~ "<Title>Gotham Rising</Title>"
 
     path = Path.join(System.tmp_dir!(), "rt_#{System.unique_integer([:positive])}.cbz")
     cbz_fixture(path, [{~c"MetronInfo.xml", xml}])
@@ -100,12 +102,12 @@ defmodule Stashix.Metadata.FileWriterTest do
         stories: [%{name: "Prologue", external_id: nil}, %{name: "I Am Gotham, Part One", external_id: nil}]
       })
 
-    xml = book |> Repo.reload!() |> MetronInfoXml.build()
+    xml = book |> Repo.reload!() |> Record.from_book() |> MetronInfo.build()
     assert xml =~ ~r{<Stories>\s*<Story>I Am Gotham, Part One</Story>\s*<Story>Prologue</Story>\s*</Stories>}
   end
 
   test "ComicInfo compat copy maps credits to fields", %{book: book} do
-    xml = ComicInfoXml.build(book)
+    xml = ComicInfo.build(Record.from_book(book))
     assert xml =~ "<Writer>Tom King</Writer>"
     assert xml =~ "<CoverArtist>David Finch</CoverArtist>"
     assert xml =~ "<Title>I Am Gotham, Part One</Title>"
@@ -148,6 +150,42 @@ defmodule Stashix.Metadata.FileWriterTest do
     assert File.read!(path) == "not really rar"
 
     assert %{title: "I Am Gotham, Part One", series: "Batman"} = Parser.parse_comicinfo(path)
+  end
+
+  test "an existing sidecar next to a CBZ is rewritten so it can't shadow the embed", %{tmp: tmp, book: book} do
+    path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
+    sidecar = Path.join(tmp, "Batman 001.xml")
+    File.write!(sidecar, "<ComicInfo><Title>stale</Title></ComicInfo>")
+    file = add_file(book, path, :cbz)
+
+    {:ok, book} = Library.update_book(book, %{title: "Gotham Rising"})
+    assert :ok = FileWriter.write_file(book, file, %{"write_comicinfo" => true})
+
+    assert File.read!(sidecar) =~ "<MetronInfo"
+    assert %{title: "Gotham Rising"} = Parser.parse_comicinfo(path)
+  end
+
+  test "no sidecar is created next to a CBZ that had none", %{tmp: tmp, book: book} do
+    path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
+    refute File.exists?(Path.join(tmp, "Batman 001.xml"))
+  end
+
+  test "an edited year survives even when the cover date disagrees", %{tmp: tmp, book: book} do
+    path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
+    {:ok, book} = Library.update_book(book, %{year: 2017})
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => true})
+
+    assert %{year: 2017, cover_date: ~D[2016-08-01]} = Parser.parse_comicinfo(path)
+  end
+
+  test "ComicInfo is written in the configured version", %{tmp: tmp, book: book} do
+    path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
+    settings = %{"write_comicinfo" => true, "comicinfo_version" => "2.1"}
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), settings)
+
+    {:ok, [{_, xml}]} = :zip.extract(String.to_charlist(path), [:memory, {:file_list, [~c"ComicInfo.xml"]}])
+    assert ComicInfo.detect_version(xml) == "2.1"
   end
 
   test "rejects archives with unsafe entry names", %{tmp: tmp} do

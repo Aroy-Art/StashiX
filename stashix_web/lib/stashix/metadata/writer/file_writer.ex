@@ -6,7 +6,9 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   Writes a book's database metadata back to its files.
 
     * `.cbz` - the archive is rebuilt with `MetronInfo.xml` (and optionally a
-      `ComicInfo.xml` compat copy) and atomically swapped in.
+      `ComicInfo.xml` compat copy) and atomically swapped in. A sidecar that
+      already sits next to it is rewritten too, since the reader prefers the
+      sidecar and a stale one would shadow the embedded data.
     * everything else (`.cbr`, `.cb7`, `.pdf`, `.epub`) - a MetronInfo sidecar
       `<book file name>.xml` is written next to the file. EPUBs are not
       rewritten because their zip layout (mimetype first, stored) is strict.
@@ -18,7 +20,8 @@ defmodule Stashix.Metadata.Writer.FileWriter do
 
   alias Stashix.{Health, Library}
   alias Stashix.Library.{Book, BookFile}
-  alias Stashix.Metadata.Writer.{MetronInfoXml, ComicInfoXml}
+  alias Stashix.Metadata.Record
+  alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
   alias Stashix.Scanner
 
   @metadata_entries ~w(metroninfo.xml comicinfo.xml)
@@ -33,13 +36,17 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   end
 
   def write_file(%Book{} = book, %BookFile{} = file, settings) do
-    metron = MetronInfoXml.build(book)
-    comic = if settings["write_comicinfo"], do: ComicInfoXml.build(book)
+    record = Record.from_book(book)
+    metron = MetronInfo.build(record)
+    comic = if settings["write_comicinfo"], do: ComicInfo.build(record, version: comicinfo_version(settings))
 
     result =
       case String.downcase(Path.extname(file.path)) do
         ".cbz" ->
           case write_cbz(file.path, metron, comic) do
+            :ok ->
+              sync_existing_sidecar(file.path, metron)
+
             {:error, reason} when reason in [:bad_eocd, :not_a_zip_file, :eocd_not_found] ->
               Logger.warning("CBZ at #{file.path} has bad ZIP structure (#{inspect(reason)}), falling back to sidecar")
               Health.upsert_integrity_result(book.library_id, file.id, file.path, :error, inspect(reason))
@@ -61,6 +68,15 @@ defmodule Stashix.Metadata.Writer.FileWriter do
         Logger.error("Metadata write failed for #{file.path}: #{inspect(reason)}")
         err
     end
+  end
+
+  defp comicinfo_version(settings) do
+    version = settings["comicinfo_version"]
+    if version in ComicInfo.versions(), do: version, else: ComicInfo.default_version()
+  end
+
+  defp sync_existing_sidecar(path, xml) do
+    if File.regular?(sidecar_path(path)), do: write_sidecar(path, xml), else: :ok
   end
 
   @doc "Path of the sidecar metadata file for a book file."

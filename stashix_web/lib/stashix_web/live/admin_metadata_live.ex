@@ -7,6 +7,7 @@ defmodule StashixWeb.AdminMetadataLive do
 
   alias Stashix.{Library, Metadata, Settings}
   alias Stashix.Metadata.Sources
+  alias Stashix.Metadata.Format.ComicInfo
   import StashixWeb.DialogHistory
 
   on_mount {StashixWeb.Live.Hooks, :require_admin}
@@ -177,6 +178,11 @@ defmodule StashixWeb.AdminMetadataLive do
       "overwrite_mode" => if(s["overwrite_mode"] == "fill", do: "fill", else: "replace"),
       "write_to_files" => s["write_to_files"] == "true",
       "write_comicinfo" => s["write_comicinfo"] == "true",
+      "comicinfo_version" =>
+        if(s["comicinfo_version"] in ComicInfo.versions(),
+          do: s["comicinfo_version"],
+          else: ComicInfo.default_version()
+        ),
       "cache_search_hours" => non_neg(s["cache_search_hours"], 24),
       "cache_detail_days" => non_neg(s["cache_detail_days"], 30)
     }
@@ -737,6 +743,26 @@ defmodule StashixWeb.AdminMetadataLive do
             <span class="block text-xs text-muted">For readers that don't understand MetronInfo.</span>
           </span>
         </label>
+        <input
+          :if={!@settings["write_comicinfo"]}
+          type="hidden"
+          name="settings[comicinfo_version]"
+          value={@settings["comicinfo_version"]}
+        />
+        <.field
+          :if={@settings["write_comicinfo"]}
+          label="ComicInfo version"
+          hint="2.1 is a draft that adds Translator, Tags, story arc numbers and GTIN; some readers only accept 2.0."
+        >
+          <.ink_select
+            id="settings-comicinfo-version"
+            name="settings[comicinfo_version]"
+            label="ComicInfo version"
+            variant="field"
+            value={@settings["comicinfo_version"]}
+            options={[{"2.0 (stable)", "2.0"}, {"2.1 (draft)", "2.1"}, {"1.0", "1.0"}]}
+          />
+        </.field>
       </div>
 
       <p class="h-5 text-xs text-success">

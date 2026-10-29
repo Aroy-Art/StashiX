@@ -18,6 +18,7 @@ defmodule Stashix.Settings do
       "overwrite_mode" => "fill",
       "write_to_files" => true,
       "write_comicinfo" => true,
+      "comicinfo_version" => "2.0",
       "cache_search_hours" => 24,
       "cache_detail_days" => 30
     }

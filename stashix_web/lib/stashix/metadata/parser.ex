@@ -2,7 +2,23 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule Stashix.Metadata.Parser do
-  import SweetXml
+  @moduledoc """
+  Reads metadata for a library file: embedded/sidecar XML (via
+  `Stashix.Metadata.Format.MetronInfo` / `Stashix.Metadata.Format.ComicInfo`),
+  PDF info, and the file name.
+
+  Precedence inside `parse_comicinfo/1`, highest first (see
+  docs/metadata-file-io.md):
+
+    1. `<book name>.xml` sidecar next to the file
+    2. embedded `MetronInfo.xml`
+    3. embedded `ComicInfo.xml` (or the PDF info dict for `.pdf`)
+
+  Exception: ComicInfo's `Year` beats the year MetronInfo derives from its
+  dates, because MetronInfo has no Year element of its own.
+  """
+
+  alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
 
   @noise_patterns ~w(
     Digital Webrip c2c HQ Retail
@@ -20,13 +36,13 @@ defmodule Stashix.Metadata.Parser do
   def parse_comicinfo(archive_path) do
     case parse_sidecar(archive_path) do
       nil -> parse_embedded(archive_path)
-      sidecar -> merge_comic_metron(parse_embedded(archive_path), sidecar)
+      sidecar -> merge_records(parse_embedded(archive_path), sidecar)
     end
   end
 
   # Right side wins field-by-field, but external ids are unioned per source so
   # e.g. a Comic Vine id only present in ComicInfo survives next to MetronInfo's.
-  defp merge_comic_metron(base, override) do
+  defp merge_records(base, override) do
     ids =
       (List.wrap(override[:external_ids]) ++ List.wrap(base[:external_ids]))
       |> Enum.uniq_by(& &1.source)
@@ -44,8 +60,8 @@ defmodule Stashix.Metadata.Parser do
     with true <- File.regular?(path),
          {:ok, data} <- File.read(path) do
       cond do
-        String.contains?(data, "<MetronInfo") -> parse_metroninfo_xml(data)
-        String.contains?(data, "<ComicInfo") -> parse_comicinfo_xml(data)
+        String.contains?(data, "<MetronInfo") -> parse_xml(MetronInfo, data)
+        String.contains?(data, "<ComicInfo") -> parse_xml(ComicInfo, data)
         true -> nil
       end
     else
@@ -54,23 +70,11 @@ defmodule Stashix.Metadata.Parser do
   end
 
   defp parse_embedded(archive_path) do
-    ext = archive_path |> Path.extname() |> String.downcase()
-
-    case ext do
-      cbz when cbz in [".cbz", ".epub"] ->
+    case archive_path |> Path.extname() |> String.downcase() do
+      ext when ext in [".cbz", ".epub"] ->
         case extract_xml_from_zip(archive_path) do
-          nil ->
-            %{}
-
-          xmls ->
-            comic = if data = xmls[:comicinfo], do: parse_comicinfo_xml(data), else: %{}
-            metron = if data = xmls[:metroninfo], do: parse_metroninfo_xml(data), else: %{}
-
-            # When MetronInfo is present it owns the title — don't let ComicInfo's
-            # title bleed through even if MetronInfo has no stories element.
-            comic = if xmls[:metroninfo], do: Map.delete(comic, :title), else: comic
-
-            merge_comic_metron(comic, metron)
+          nil -> %{}
+          xmls -> merge_embedded(xmls)
         end
 
       ".pdf" ->
@@ -78,6 +82,26 @@ defmodule Stashix.Metadata.Parser do
 
       _ ->
         %{}
+    end
+  end
+
+  defp merge_embedded(xmls) do
+    comic = if data = xmls[:comicinfo], do: parse_xml(ComicInfo, data), else: %{}
+    metron = if data = xmls[:metroninfo], do: parse_xml(MetronInfo, data), else: %{}
+
+    # When MetronInfo is present it owns the title — don't let ComicInfo's
+    # title bleed through even if MetronInfo has no stories element.
+    comic = if xmls[:metroninfo], do: Map.delete(comic, :title), else: comic
+
+    comic
+    |> merge_records(metron)
+    |> maybe_put(:year, comic[:year])
+  end
+
+  defp parse_xml(format, data) do
+    case format.parse(data) do
+      {:ok, record} -> record
+      {:error, _} -> %{}
     end
   end
 
@@ -114,248 +138,6 @@ defmodule Stashix.Metadata.Parser do
       _ -> nil
     end
   end
-
-  defp sanitize_xml(data) when is_binary(data) do
-    # xmerl fatal on duplicate namespace declarations; deduplicate xmlns:* attrs
-    Regex.replace(
-      ~r/(<[A-Za-z][^>]*?)((\s+xmlns:[A-Za-z0-9_]+=("[^"]*"|'[^']*'))+)/,
-      data,
-      fn _, tag_open, ns_block, _, _ ->
-        deduped =
-          Regex.scan(~r/\s+xmlns:[A-Za-z0-9_]+=(?:"[^"]*"|'[^']*')/, ns_block)
-          |> Enum.map(&hd/1)
-          |> Enum.uniq_by(fn attr -> Regex.run(~r/xmlns:[A-Za-z0-9_]+/, attr) end)
-          |> Enum.join("")
-
-        tag_open <> deduped
-      end
-    )
-  end
-
-  defp parse_comicinfo_xml(data) when is_binary(data) do
-    try do
-      doc = data |> sanitize_xml() |> parse(dtd: :none)
-
-      age_rating_raw = xpath(doc, ~x"//ComicInfo/AgeRating/text()"s)
-      notes = xpath(doc, ~x"//ComicInfo/Notes/text()"os)
-      web = xpath(doc, ~x"//ComicInfo/Web/text()"os)
-      urls = split_urls(web)
-      external_ids = external_ids_from_comicinfo(urls, notes)
-
-      %{}
-      |> maybe_put(:title, xpath(doc, ~x"//ComicInfo/Title/text()"os))
-      |> maybe_put(:notes, notes)
-      |> maybe_put(:urls, if(urls != [], do: Enum.map(urls, &%{url: &1, is_primary: false})))
-      |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
-      |> maybe_put(:series, xpath(doc, ~x"//ComicInfo/Series/text()"os))
-      |> maybe_put(
-        :issue_number,
-        parse_decimal(xpath(doc, ~x"//ComicInfo/Number/text()"os))
-      )
-      |> maybe_put(:volume, filter_year_as_volume(parse_int(xpath(doc, ~x"//ComicInfo/Volume/text()"os))))
-      |> maybe_put(:year, parse_int(xpath(doc, ~x"//ComicInfo/Year/text()"os)))
-      |> maybe_put(:publisher, xpath(doc, ~x"//ComicInfo/Publisher/text()"os))
-      |> maybe_put(:page_count, parse_int(xpath(doc, ~x"//ComicInfo/PageCount/text()"os)))
-      |> maybe_put(:summary, xpath(doc, ~x"//ComicInfo/Summary/text()"os))
-      |> maybe_put(:age_rating, normalize_age_rating(age_rating_raw))
-      |> maybe_put(:language, xpath(doc, ~x"//ComicInfo/LanguageISO/text()"os))
-      |> maybe_put(:genres, split_delimited(xpath(doc, ~x"//ComicInfo/Genre/text()"os)))
-      |> maybe_put(:tags, split_delimited(xpath(doc, ~x"//ComicInfo/Tags/text()"os)))
-      |> maybe_put(
-        :arcs,
-        case xpath(doc, ~x"//ComicInfo/StoryArc/text()"os) do
-          s when s not in [nil, ""] -> [%{name: s, arc_number: nil, external_id: nil}]
-          _ -> nil
-        end
-      )
-    rescue
-      _ -> %{}
-    catch
-      :exit, _ -> %{}
-    end
-  end
-
-  defp parse_metroninfo_xml(data) when is_binary(data) do
-    try do
-      doc = data |> sanitize_xml() |> parse(dtd: :none)
-
-      age_rating_raw = xpath(doc, ~x"//MetronInfo/AgeRating/text()"s)
-      cover_date = parse_date(xpath(doc, ~x"//MetronInfo/CoverDate/text()"os))
-      store_date = parse_date(xpath(doc, ~x"//MetronInfo/StoreDate/text()"os))
-
-      community_rating =
-        case xpath(doc, ~x"//MetronInfo/CommunityRating/AverageRating/text()"os) do
-          s when s not in [nil, ""] -> with {f, _} <- Float.parse(s), do: f
-          _ -> nil
-        end
-
-      genres =
-        xpath(doc, ~x"//MetronInfo/Genres/Genre/text()"ls)
-        |> Enum.reject(&(&1 == ""))
-
-      tags =
-        xpath(doc, ~x"//MetronInfo/Tags/Tag/text()"ls)
-        |> Enum.reject(&(&1 == ""))
-
-      arcs =
-        xpath(doc, ~x"//MetronInfo/Arcs/Arc"l,
-          name: ~x"./Name/text()"s,
-          arc_number: ~x"./Number/text()"os,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-        |> Enum.map(&%{name: &1.name, arc_number: parse_int(&1.arc_number), external_id: &1.external_id})
-
-      credits =
-        xpath(doc, ~x"//MetronInfo/Credits/Credit"l,
-          creator: ~x"./Creator/text()"s,
-          creator_id: ~x"./Creator/@id"os,
-          roles: ~x"./Roles/Role/text()"ls
-        )
-        |> Enum.reject(&(&1.creator == ""))
-
-      characters =
-        xpath(doc, ~x"//MetronInfo/Characters/Character"l,
-          name: ~x"./text()"s,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      teams =
-        xpath(doc, ~x"//MetronInfo/Teams/Team"l,
-          name: ~x"./text()"s,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      universes =
-        xpath(doc, ~x"//MetronInfo/Universes/Universe"l,
-          name: ~x"./Name/text()"s,
-          designation: ~x"./Designation/text()"os,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      locations =
-        xpath(doc, ~x"//MetronInfo/Locations/Location"l,
-          name: ~x"./text()"s,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      reprints =
-        xpath(doc, ~x"//MetronInfo/Reprints/Reprint"l,
-          name: ~x"./text()"s,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      stories =
-        xpath(doc, ~x"//MetronInfo/Stories/Story"l,
-          name: ~x"./text()"s,
-          external_id: ~x"./@id"os
-        )
-        |> Enum.reject(&(&1.name == ""))
-
-      urls =
-        xpath(doc, ~x"//MetronInfo/URLs/URL"l,
-          url: ~x"./text()"s,
-          is_primary: ~x"./@primary"os
-        )
-        |> Enum.filter(&String.starts_with?(&1.url, ["http://", "https://"]))
-        |> Enum.map(&%{url: &1.url, is_primary: &1.is_primary == "true"})
-
-      prices =
-        xpath(doc, ~x"//MetronInfo/Prices/Price"l,
-          amount: ~x"./text()"s,
-          country: ~x"./@country"s
-        )
-        |> Enum.reject(&(&1.country == ""))
-        |> Enum.map(&%{amount: parse_decimal(&1.amount), country: &1.country})
-        |> Enum.reject(&is_nil(&1.amount))
-
-      external_ids =
-        xpath(doc, ~x"//MetronInfo/IDS/ID"l,
-          source: ~x"./@source"s,
-          source_id: ~x"./text()"s,
-          is_primary: ~x"./@primary"os
-        )
-        |> Enum.reject(&(&1.source == "" || &1.source_id == ""))
-        |> Enum.map(&%{source: &1.source, source_id: &1.source_id, is_primary: &1.is_primary == "true"})
-
-      last_modified =
-        case xpath(doc, ~x"//MetronInfo/LastModified/text()"os) do
-          s when s not in [nil, ""] ->
-            case NaiveDateTime.from_iso8601(s) do
-              {:ok, dt} -> dt
-              _ -> nil
-            end
-
-          _ ->
-            nil
-        end
-
-      %{}
-      |> maybe_put(:series, xpath(doc, ~x"//MetronInfo/Series/Name/text()"os))
-      |> maybe_put(:series_sort_name, xpath(doc, ~x"//MetronInfo/Series/SortName/text()"os))
-      |> maybe_put(:volume, parse_int(xpath(doc, ~x"//MetronInfo/Series/Volume/text()"os)))
-      |> maybe_put(:series_format, xpath(doc, ~x"//MetronInfo/Series/Format/text()"os))
-      |> maybe_put(:series_start_year, parse_int(xpath(doc, ~x"//MetronInfo/Series/StartYear/text()"os)))
-      |> maybe_put(:series_issue_count, parse_int(xpath(doc, ~x"//MetronInfo/Series/IssueCount/text()"os)))
-      |> maybe_put(:series_volume_count, parse_int(xpath(doc, ~x"//MetronInfo/Series/VolumeCount/text()"os)))
-      |> maybe_put(:language, xpath(doc, ~x"//MetronInfo/Series/@lang"os))
-      |> maybe_put(:issue_number, parse_decimal(xpath(doc, ~x"//MetronInfo/Number/text()"os)))
-      |> maybe_put(:alternative_number, xpath(doc, ~x"//MetronInfo/AlternativeNumber/text()"os))
-      |> maybe_put(:collection_title, xpath(doc, ~x"//MetronInfo/CollectionTitle/text()"os))
-      |> maybe_put(:cover_date, cover_date)
-      |> maybe_put(:store_date, store_date)
-      |> maybe_put(:year, (cover_date && cover_date.year) || (store_date && store_date.year))
-      |> maybe_put(:publisher, xpath(doc, ~x"//MetronInfo/Publisher/Name/text()"os))
-      |> maybe_put(:imprint, xpath(doc, ~x"//MetronInfo/Publisher/Imprint/text()"os))
-      |> maybe_put(:page_count, parse_int(xpath(doc, ~x"//MetronInfo/PageCount/text()"os)))
-      |> maybe_put(:summary, xpath(doc, ~x"//MetronInfo/Summary/text()"os))
-      |> maybe_put(:notes, xpath(doc, ~x"//MetronInfo/Notes/text()"os))
-      |> maybe_put(:age_rating, normalize_metroninfo_age_rating(age_rating_raw))
-      |> maybe_put(:isbn, xpath(doc, ~x"//MetronInfo/GTIN/ISBN/text()"os))
-      |> maybe_put(:upc, xpath(doc, ~x"//MetronInfo/GTIN/UPC/text()"os))
-      |> maybe_put(:community_rating, community_rating)
-      |> maybe_put(
-        :community_rating_count,
-        parse_int(xpath(doc, ~x"//MetronInfo/CommunityRating/RatingCount/text()"os))
-      )
-      |> maybe_put(:last_modified, last_modified)
-      |> maybe_put(:genres, if(genres != [], do: genres))
-      |> maybe_put(:tags, if(tags != [], do: tags))
-      |> maybe_put(:arcs, if(arcs != [], do: arcs))
-      |> maybe_put(:credits, if(credits != [], do: credits))
-      |> maybe_put(:characters, if(characters != [], do: characters))
-      |> maybe_put(:teams, if(teams != [], do: teams))
-      |> maybe_put(:universes, if(universes != [], do: universes))
-      |> maybe_put(:locations, if(locations != [], do: locations))
-      |> maybe_put(:reprints, if(reprints != [], do: reprints))
-      |> maybe_put(:stories, if(stories != [], do: stories))
-      # MetronInfo has no Title element; the first story name is the issue title.
-      # Skip story names that are format descriptors ("TPB", "HC", etc.) written
-      # by taggers to indicate collection type rather than an actual title.
-      |> maybe_put(:title, metroninfo_title(stories, xpath(doc, ~x"//MetronInfo/Series/Name/text()"os)))
-      |> maybe_put(:urls, if(urls != [], do: urls))
-      |> maybe_put(:prices, if(prices != [], do: prices))
-      |> maybe_put(:external_ids, if(external_ids != [], do: external_ids))
-    rescue
-      _ -> %{}
-    catch
-      :exit, _ -> %{}
-    end
-  end
-
-  defp normalize_metroninfo_age_rating("Everyone"), do: :everyone
-  defp normalize_metroninfo_age_rating("Teen"), do: :teen
-  defp normalize_metroninfo_age_rating("Teen Plus"), do: :teen_plus
-  defp normalize_metroninfo_age_rating("Mature"), do: :mature
-  defp normalize_metroninfo_age_rating("Explicit"), do: :explicit
-  defp normalize_metroninfo_age_rating("Adult"), do: :adult
-  defp normalize_metroninfo_age_rating("Unknown"), do: :unknown
-  defp normalize_metroninfo_age_rating(_), do: nil
 
   defp parse_pdf_metadata(path) do
     try do
@@ -731,109 +513,12 @@ defmodule Stashix.Metadata.Parser do
 
   # Old ComicVine/ComicTagger tools stored the series start year in <Volume>.
   # A 4-digit year-shaped value is not a real volume number.
-  defp filter_year_as_volume(v) when is_integer(v) and v >= 1800 and v <= 2099, do: nil
-  defp filter_year_as_volume(v), do: v
-
-  # Format-type labels written by taggers into <Stories> instead of a real title.
-  @format_descriptors ~w(tpb hc ogn gn annual special deluxe omnibus compendium digest hardcover paperback)
-
-  # Use the first story name as title unless it's just a format descriptor
-  # (alone or combined, e.g. "TPB/HC"). Fall back to the series name for
-  # standalones where the series IS the book title.
-  defp metroninfo_title([], series_name), do: series_name
-
-  defp metroninfo_title([%{name: name} | _], series_name) do
-    if format_descriptor?(name), do: series_name, else: name
-  end
-
-  defp format_descriptor?(name) do
-    name
-    |> String.downcase()
-    |> String.split("/")
-    |> Enum.all?(&(String.trim(&1) in @format_descriptors))
-  end
-
   defp maybe_put(map, _key, nil), do: map
   defp maybe_put(map, _key, ""), do: map
   defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
-  defp split_urls(nil), do: []
-
-  defp split_urls(web) do
-    web
-    |> String.split(~r/[\s,]+/, trim: true)
-    |> Enum.filter(&String.starts_with?(&1, ["http://", "https://"]))
-  end
-
-  @doc """
-  Source ids recoverable from ComicInfo's `Web` URLs and taggers' `Notes`
-  (ComicTagger / MetronTagger write e.g. "... info from Comic Vine ... [Issue ID 12345]"
-  or the older "[CVDB12345]").
-  """
-  def external_ids_from_comicinfo(urls, notes) do
-    from_urls = Enum.flat_map(urls, &id_from_url/1)
-    (from_urls ++ ids_from_notes(notes)) |> Enum.uniq_by(& &1.source)
-  end
-
-  defp id_from_url(url) do
-    cond do
-      m = Regex.run(~r{comicvine\.gamespot\.com/.*/4000-(\d+)}, url) ->
-        [%{source: "Comic Vine", source_id: Enum.at(m, 1), is_primary: false}]
-
-      m = Regex.run(~r{comics\.org/issue/(\d+)}, url) ->
-        [%{source: "Grand Comics Database", source_id: Enum.at(m, 1), is_primary: false}]
-
-      true ->
-        []
-    end
-  end
-
-  defp ids_from_notes(nil), do: []
-
-  defp ids_from_notes(notes) do
-    cvdb =
-      case Regex.run(~r/\[CVDB(\d+)\]/i, notes) do
-        [_, id] -> [%{source: "Comic Vine", source_id: id, is_primary: false}]
-        _ -> []
-      end
-
-    issue_id =
-      with [_, id] <- Regex.run(~r/\[Issue ID (\d+)\]/i, notes),
-           source when not is_nil(source) <- notes_source(notes) do
-        [%{source: source, source_id: id, is_primary: false}]
-      else
-        _ -> []
-      end
-
-    cvdb ++ issue_id
-  end
-
-  defp notes_source(notes) do
-    cond do
-      notes =~ ~r/from Metron/i -> "Metron"
-      notes =~ ~r/from Comic ?Vine/i -> "Comic Vine"
-      notes =~ ~r/from (GCD|Grand Comics Database)/i -> "Grand Comics Database"
-      true -> nil
-    end
-  end
-
-  defp split_delimited(nil), do: nil
-  defp split_delimited(""), do: nil
-
-  defp split_delimited(s) do
-    result = s |> String.split(~r/[,|]/) |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
-    if result == [], do: nil, else: result
-  end
-
-  defp parse_date(nil), do: nil
-  defp parse_date(""), do: nil
-
-  defp parse_date(s) do
-    case Date.from_iso8601(s) do
-      {:ok, date} -> date
-      _ -> nil
-    end
-  end
+  @doc "See `Stashix.Metadata.Format.ComicInfo.external_ids/2`."
+  defdelegate external_ids_from_comicinfo(urls, notes), to: ComicInfo, as: :external_ids
 
   defp parse_int(nil), do: nil
   defp parse_int(""), do: nil
@@ -851,13 +536,4 @@ defmodule Stashix.Metadata.Parser do
       :error -> nil
     end
   end
-
-  defp normalize_age_rating("Everyone"), do: :everyone
-  defp normalize_age_rating("Teen"), do: :teen
-  defp normalize_age_rating("Teen+"), do: :teen_plus
-  defp normalize_age_rating("Mature 17+"), do: :mature
-  defp normalize_age_rating("Adults Only 18+"), do: :adult
-  defp normalize_age_rating("X18+"), do: :explicit
-  defp normalize_age_rating("Rating Pending"), do: :unknown
-  defp normalize_age_rating(_), do: nil
 end
