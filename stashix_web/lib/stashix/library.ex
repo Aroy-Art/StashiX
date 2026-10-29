@@ -3,6 +3,12 @@
 
 defmodule Stashix.Library do
   import Ecto.Query
+
+  # Pushes from a series skip issues that lock the field (`Stashix.Metadata.Locks`).
+  defmacrop not_locked(book, field) do
+    quote do: not fragment("? = ANY(?)", ^unquote(field), unquote(book).locked_fields)
+  end
+
   alias Stashix.Repo
 
   alias Stashix.Library.{
@@ -1126,7 +1132,7 @@ defmodule Stashix.Library do
 
         query =
           from(b in Book,
-            where: b.series_id == ^series_id and is_nil(b.deleted_at),
+            where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "age_rating"),
             select: b.id
           )
 
@@ -1718,7 +1724,7 @@ defmodule Stashix.Library do
 
     books =
       from(b in Book,
-        where: b.series_id == ^series_id and is_nil(b.deleted_at),
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "age_rating"),
         order_by: [asc: b.issue_number],
         select: %{id: b.id, title: b.title, issue_number: b.issue_number, age_rating: b.age_rating}
       )
@@ -1758,7 +1764,7 @@ defmodule Stashix.Library do
 
     books =
       from(b in Book,
-        where: b.series_id == ^series_id and is_nil(b.deleted_at),
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "publisher"),
         order_by: [asc: b.issue_number],
         preload: :publishers
       )
@@ -1829,7 +1835,10 @@ defmodule Stashix.Library do
           )
 
           book_bins =
-            from(b in Book, where: b.series_id == ^series_id and is_nil(b.deleted_at), select: b.id)
+            from(b in Book,
+              where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "publisher"),
+              select: b.id
+            )
             |> Repo.all()
             |> Enum.map(&Ecto.UUID.dump!/1)
 

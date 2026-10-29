@@ -151,6 +151,22 @@ defmodule Stashix.Metadata.MatcherTest do
       assert book.upc == "76194134182900111"
     end
 
+    test "locked fields are never written, even when chosen explicitly", %{book: book} do
+      {:ok, book} = Library.update_book(book, %{summary: "Mine", locked_fields: ["summary", "characters", "upc"]})
+      metadata = Stashix.MetadataFixtures.metron_issue() |> Stashix.Metadata.Sources.Metron.issue_metadata()
+
+      assert {:ok, _} =
+               Metadata.apply_issue_metadata(book, "metron", metadata, %{"write_to_files" => false},
+                 fields: ["summary", "characters", "upc", "credits"]
+               )
+
+      book = Repo.get!(Book, book.id) |> Repo.preload([:characters, :credits])
+      assert book.summary == "Mine"
+      assert book.upc == nil
+      assert book.characters == []
+      assert book.credits != []
+    end
+
     test "explicit fields overwrite only what was chosen", %{book: book} do
       {:ok, book} = Library.update_book(book, %{summary: "Mine", upc: "000"})
       metadata = Stashix.MetadataFixtures.metron_issue() |> Stashix.Metadata.Sources.Metron.issue_metadata()

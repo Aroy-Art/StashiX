@@ -225,11 +225,43 @@ defmodule Stashix.Metadata.FileWriterTest do
     assert xml =~ "<Title>I Am Gotham, Part One</Title>"
   end
 
-  test "with ComicInfo write-back off an existing ComicInfo.xml is kept but ignored", %{tmp: tmp, book: book} do
+  test "an existing ComicInfo.xml is updated even with ComicInfo write-back off", %{tmp: tmp, book: book} do
     path = aged_cbz(tmp, "Batman 001.cbz", [{"001.jpg", "p"}, {"ComicInfo.xml", @tagged_comicinfo}], 3600)
     assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
 
-    assert entry(path, "ComicInfo.xml") == @tagged_comicinfo
+    xml = entry(path, "ComicInfo.xml")
+    assert xml =~ "<Title>I Am Gotham, Part One</Title>"
+    assert xml =~ ~s(<Page Image="0" Type="FrontCover" />)
+    refute xml =~ "Bat-family"
+  end
+
+  test "ComicInfo write-back off adds no ComicInfo.xml where there was none", %{tmp: tmp, book: book} do
+    path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
+
+    {:ok, [_ | entries]} = :zip.list_dir(String.to_charlist(path))
+    refute Enum.any?(entries, &(elem(&1, 1) == ~c"ComicInfo.xml"))
+  end
+
+  test "a ComicInfo.xml older than the MetronInfo.xml beside it is ignored", %{tmp: tmp, book: book} do
+    metron = book |> Record.from_book() |> MetronInfo.build()
+    path = aged_cbz(tmp, "Batman 001.cbz", [{"001.jpg", "p"}, {"ComicInfo.xml", @tagged_comicinfo}], 3600)
+
+    # Add a fresh MetronInfo.xml next to the hour-old ComicInfo.xml, as an external tagger would.
+    {:ok, entries} = :zip.extract(String.to_charlist(path), [:memory])
+    src = Path.join(tmp, "retag")
+    File.mkdir_p!(src)
+    old = System.os_time(:second) - 3600
+
+    for {name, data} <- entries do
+      File.write!(Path.join(src, to_string(name)), data)
+      File.touch!(Path.join(src, to_string(name)), old)
+    end
+
+    File.write!(Path.join(src, "MetronInfo.xml"), metron)
+    names = [~c"001.jpg", ~c"ComicInfo.xml", ~c"MetronInfo.xml"]
+    {:ok, _} = :zip.create(String.to_charlist(path), names, cwd: String.to_charlist(src))
+
     parsed = Parser.parse_comicinfo(path)
     assert parsed.title == "I Am Gotham, Part One"
     refute Map.has_key?(parsed, :teams), "a team only the stale ComicInfo lists must not come back"

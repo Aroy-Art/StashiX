@@ -7,7 +7,7 @@ defmodule Stashix.Scanner do
 
   alias Stashix.{Library, Metadata}
   alias Stashix.Media.{Thumbnail, Extractor, ImageResizer}
-  alias Stashix.Metadata.{Parser, Importer}
+  alias Stashix.Metadata.{Parser, Importer, Locks}
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
   @ets_table :scan_tasks
@@ -430,7 +430,7 @@ defmodule Stashix.Scanner do
     attrs =
       if keep_fetched,
         do: file_meta |> book_attrs_from_meta(series, book) |> Map.take([:series_id, :type, :page_count, :deleted_at]),
-        else: book_attrs_from_meta(file_meta, series, book)
+        else: file_meta |> book_attrs_from_meta(series, book) |> Locks.drop_locked(book)
 
     case Library.update_book(book, attrs) do
       {:ok, updated} ->
@@ -471,6 +471,15 @@ defmodule Stashix.Scanner do
       upc: from_file.(:upc, nil),
       collection_title: from_file.(:collection_title, nil),
       alternative_number: from_file.(:alternative_number, nil),
+      manga_volume: from_file.(:manga_volume, nil),
+      alternate_series: from_file.(:alternate_series, nil),
+      alternate_count: from_file.(:alternate_count, nil),
+      series_group: from_file.(:series_group, nil),
+      main_character_or_team: from_file.(:main_character_or_team, nil),
+      scan_information: from_file.(:scan_information, nil),
+      review: from_file.(:review, nil),
+      black_and_white: yes_no_to_bool(file, current.(:black_and_white, nil)),
+      manga: from_file.(:manga, nil),
       deleted_at: nil
     }
     |> put_imprint(file)
@@ -485,11 +494,20 @@ defmodule Stashix.Scanner do
 
   defp put_imprint(attrs, _file), do: attrs
 
+  defp yes_no_to_bool(%{black_and_white: "Yes"}, _current), do: true
+  defp yes_no_to_bool(%{black_and_white: "No"}, _current), do: false
+  defp yes_no_to_bool(_file, current), do: current
+
   # Publisher and the child tables (credits, characters, …) from the file. A
   # new book may take its publisher from the filename or folder; a rescan only
   # replaces it with one the file itself states.
   defp apply_file_children(book, series, %{file_path: path, comicinfo: file, metadata: metadata}, library, new?) do
-    publisher = if new?, do: metadata |> enrich_publisher(path, library) |> Map.get(:publisher), else: file[:publisher]
+    publisher =
+      cond do
+        new? -> metadata |> enrich_publisher(path, library) |> Map.get(:publisher)
+        Locks.locked?(book, :publisher) -> nil
+        true -> file[:publisher]
+      end
 
     case publisher do
       nil ->
@@ -502,7 +520,7 @@ defmodule Stashix.Scanner do
         end
     end
 
-    Importer.replace_book_metadata(book, file)
+    Importer.replace_book_metadata(book, file, skip: book.locked_fields)
   end
 
   @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
@@ -544,14 +562,14 @@ defmodule Stashix.Scanner do
           end
 
         series ->
-          if series.ongoing != ongoing or series.name != clean_name do
-            case Library.update_series_folder_meta(series, %{
-                   name: clean_name,
-                   path: parent_dir,
-                   start_year: start_year,
-                   end_year: end_year,
-                   ongoing: ongoing
-                 }) do
+          folder_meta =
+            Locks.drop_locked(
+              %{name: clean_name, path: parent_dir, start_year: start_year, end_year: end_year, ongoing: ongoing},
+              series
+            )
+
+          if Enum.any?(Map.take(folder_meta, [:name, :ongoing]), fn {k, v} -> Map.get(series, k) != v end) do
+            case Library.update_series_folder_meta(series, folder_meta) do
               {:ok, updated} -> {updated, Map.put(cache, parent_dir, updated)}
               _ -> {series, cache}
             end
@@ -694,7 +712,7 @@ defmodule Stashix.Scanner do
     Enum.reduce(series_cache, series_cache, fn {path, series}, cache ->
       {clean_name, _, _, _} = parse_folder_name(series.name)
 
-      if clean_name != series.name do
+      if clean_name != series.name and not Locks.locked?(series, :name) do
         case Library.update_series_folder_meta(series, %{name: clean_name}) do
           {:ok, updated} -> Map.put(cache, path, updated)
           _ -> cache

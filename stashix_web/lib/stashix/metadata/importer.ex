@@ -29,6 +29,7 @@ defmodule Stashix.Metadata.Importer do
   Options:
     * `:only_present` - when true, child tables whose key is absent from
       `metadata` are left untouched instead of being cleared.
+    * `:skip` - child keys never touched (e.g. fields locked on the book).
     * `:external_ids` - `:replace` (default) or `:merge`. Merge upserts the given
       ids per source and keeps ids from other sources, used when applying data
       fetched from a metadata source.
@@ -38,7 +39,11 @@ defmodule Stashix.Metadata.Importer do
       book_id = book.id
       now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
       only_present = Keyword.get(opts, :only_present, false)
-      touch? = fn key -> not only_present or Map.has_key?(metadata, key) end
+      skip = opts |> Keyword.get(:skip, []) |> Enum.map(&to_string/1)
+
+      touch? = fn key ->
+        to_string(key) not in skip and (not only_present or Map.has_key?(metadata, key))
+      end
 
       if touch?.(:genres),
         do:

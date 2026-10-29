@@ -7,11 +7,11 @@ defmodule Stashix.Metadata.Writer.FileWriter do
 
     * `.cbz` (that really is a zip) - the archive is rebuilt with
       `MetronInfo.xml` and atomically swapped in. Entries keep their
-      timestamps. With ComicInfo write-back on, `ComicInfo.xml` is rewritten
-      too, carrying over the existing one's `<Pages>`; with it off, an existing
-      `ComicInfo.xml` is left untouched (the reader then ignores it as older
-      than the MetronInfo). A sidecar that already sits next to the CBZ is
-      rewritten too, since the reader prefers the sidecar.
+      timestamps. An existing `ComicInfo.xml` is always rewritten alongside
+      (keeping its `<Pages>`); the `write_comicinfo` setting only decides
+      whether one is added to archives that have none. A sidecar that already
+      sits next to the CBZ is rewritten too, since the reader prefers the
+      sidecar.
     * everything else (`.cbr`, `.cb7`, `.pdf`, `.epub`) - a MetronInfo sidecar
       `<book file name>.xml` is written next to the file. EPUBs are not
       rewritten because their zip layout (mimetype first, stored) is strict.
@@ -43,10 +43,12 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     metron = MetronInfo.build(record)
     embed? = String.downcase(Path.extname(file.path)) == ".cbz" and Archive.kind(file.path) == :zip
 
+    existing = if embed?, do: Container.comicinfo(file.path)
+
     comic =
-      if embed? and settings["write_comicinfo"] do
+      if embed? and (existing != nil or settings["write_comicinfo"]) do
         record
-        |> Map.put(:pages, existing_pages(file.path))
+        |> Map.put(:pages, pages(existing))
         |> ComicInfo.build(version: comicinfo_version(settings))
       end
 
@@ -85,11 +87,12 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     if version in ComicInfo.versions(), do: version, else: ComicInfo.default_version()
   end
 
-  defp existing_pages(path) do
-    with xml when is_binary(xml) <- Container.comicinfo(path),
-         {:ok, %{pages: pages}} <- ComicInfo.parse(xml) do
-      pages
-    else
+  # <Pages> isn't stored in the DB; carry the archive's over as-is.
+  defp pages(nil), do: []
+
+  defp pages(xml) do
+    case ComicInfo.parse(xml) do
+      {:ok, %{pages: pages}} -> pages
       _ -> []
     end
   end

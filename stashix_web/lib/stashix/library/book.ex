@@ -33,6 +33,17 @@ defmodule Stashix.Library.Book do
     field :community_rating_count, :integer
     field :source_format, :string, virtual: true
     field :metadata_locked, :boolean, default: false
+    field :manga_volume, :string
+    field :alternate_series, :string
+    field :alternate_count, :integer
+    field :series_group, :string
+    field :main_character_or_team, :string
+    field :scan_information, :string
+    field :review, :string
+    field :black_and_white, :boolean
+    field :manga, :string
+    # Field keys (see `Stashix.Metadata.Locks`) that rescans and matching leave alone.
+    field :locked_fields, {:array, :string}, default: []
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string
 
@@ -88,8 +99,19 @@ defmodule Stashix.Library.Book do
       :imprint_id,
       :metadata_locked,
       :metadata_matched_at,
-      :metadata_source
+      :metadata_source,
+      :manga_volume,
+      :alternate_series,
+      :alternate_count,
+      :series_group,
+      :main_character_or_team,
+      :scan_information,
+      :review,
+      :black_and_white,
+      :manga,
+      :locked_fields
     ])
     |> validate_required([:title, :library_id])
+    |> validate_inclusion(:manga, ~w(Yes No YesAndRightToLeft))
   end
 end

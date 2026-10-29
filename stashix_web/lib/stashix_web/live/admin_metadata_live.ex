@@ -739,18 +739,11 @@ defmodule StashixWeb.AdminMetadataLive do
             class="ink-check"
           />
           <span>
-            Also write ComicInfo.xml into CBZ files
-            <span class="block text-xs text-muted">For readers that don't understand MetronInfo.</span>
+            Add ComicInfo.xml to CBZ files that have none
+            <span class="block text-xs text-muted">For readers that don't understand MetronInfo. An existing ComicInfo.xml is always kept up to date.</span>
           </span>
         </label>
-        <input
-          :if={!@settings["write_comicinfo"]}
-          type="hidden"
-          name="settings[comicinfo_version]"
-          value={@settings["comicinfo_version"]}
-        />
         <.field
-          :if={@settings["write_comicinfo"]}
           label="ComicInfo version"
           hint="2.1 is a draft that adds Translator, Tags, story arc numbers and GTIN; some readers only accept 2.0."
         >

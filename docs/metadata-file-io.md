@@ -245,11 +245,29 @@ The old `Writer.MetronInfoXml`, `Writer.ComicInfoXml` and `Writer.XML` are gone.
   embedded into a `.cbz` that really is a zip; anything else gets a sidecar.
 - **ComicInfo `<Pages>`** is read into the record and, when a CBZ's
   ComicInfo.xml is rewritten, carried over from the existing one.
-- **ComicInfo write-back off:** an existing ComicInfo.xml is left untouched
-  (it used to be deleted, losing its Pages). Rewrites keep every entry's
-  timestamp, and the reader ignores a ComicInfo.xml more than 60 s older than
-  the MetronInfo.xml beside it, so the kept file can't bring back values
-  edited since.
+- **Existing ComicInfo.xml is always updated** alongside MetronInfo, keeping
+  its `<Pages>`; the `write_comicinfo` setting only decides whether one is
+  added to a CBZ that has none. Rewrites keep every entry's timestamp, and the
+  reader ignores a ComicInfo.xml more than 60 s older than the MetronInfo.xml
+  beside it (e.g. left behind by an external tagger), so it can't bring back
+  values edited since.
+
+### Database coverage and field locks
+
+- New columns (migration `20240101000051`): books get `manga_volume`
+  (MetronInfo) and `alternate_series`, `alternate_count`, `series_group`,
+  `main_character_or_team`, `scan_information`, `review`, `black_and_white`,
+  `manga` (ComicInfo); series get `status` (MetronInfo 1.2). They are read on
+  scan, written on write-back and editable in the dialogs.
+- Not stored, by choice: ComicInfo `<Pages>` (carried over from the archive),
+  and the `id` attributes MetronInfo puts on creators, genres, tags,
+  publisher/imprint and roles.
+- **Per-field locks** (`locked_fields` on books and series,
+  `Stashix.Metadata.Locks`): a locked field is skipped by rescans (including
+  the folder-derived series name/years/ongoing) and by Identify/auto-match,
+  even when chosen explicitly there. Write-back still writes its value. The
+  edit dialogs (`BookEditComponent`, `SeriesEditComponent`) show a lock per
+  field; a locked field is read-only until unlocked there.
 
 ### Still open
 

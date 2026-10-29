@@ -434,6 +434,37 @@ defmodule Stashix.ScannerTest do
       assert [%{name: "Real Pub"}] = Book |> Repo.get!(book.id) |> Repo.preload(:publishers) |> Map.get(:publishers)
     end
 
+    test "a rescan leaves locked fields alone", %{lib: lib, tmp: tmp} do
+      write_cbz(mkdir(tmp, "Batman (2016)"), "Batman 001.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+
+      {:ok, _} =
+        Library.update_book(book, %{title: "Mine", age_rating: :teen, locked_fields: ~w(title publisher age_rating)})
+
+      tagged = String.replace(@tagged_xml, "</ComicInfo>", "<Characters>Robin</Characters></ComicInfo>")
+      write_cbz(Path.join(tmp, "Batman (2016)"), "Batman 001.cbz", extra: [{~c"ComicInfo.xml", tagged}])
+      Scanner.scan_sync(lib.id, true)
+
+      book = Book |> Repo.get!(book.id) |> Repo.preload([:publishers, :characters])
+      assert book.title == "Mine"
+      assert book.age_rating == :teen
+      assert book.publishers == []
+      assert book.issue_number == Decimal.new("7"), "unlocked fields still follow the file"
+      assert [%{name: "Robin"}] = book.characters
+    end
+
+    test "a locked series name survives a rescan", %{lib: lib, tmp: tmp} do
+      write_cbz(mkdir(tmp, "Batman (2016)"), "Batman 001.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      series = Repo.get!(Stashix.Library.Series, book.series_id)
+      {:ok, _} = Library.update_series(series, %{"name" => "The Batman", "locked_fields" => ["name"]})
+
+      Scanner.scan_sync(lib.id, true)
+      assert Repo.get!(Stashix.Library.Series, series.id).name == "The Batman"
+    end
+
     test "a queued write runs before a rescan reads the file", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)

@@ -36,11 +36,11 @@ defmodule Stashix.Metadata.Record do
     `:prices` (`[%{amount: Decimal, country}]`); `:external_ids`
     (`[%{source: String.t(), source_id, is_primary}]`)
 
-  ComicInfo-only extras (no DB column yet, kept so they survive a read):
-    `:manga` (`"Yes" | "No" | "YesAndRightToLeft"`), `:black_and_white`,
-    `:alternate_series`, `:alternate_count`, `:series_group`,
-    `:main_character_or_team`, `:scan_information`, `:review`, `:pages`
-    (`<Pages>` entries; see `Stashix.Metadata.Format.ComicInfo`)
+  ComicInfo-only: `:manga` (`"Yes" | "No" | "YesAndRightToLeft"`),
+    `:black_and_white` (`"Yes" | "No"`), `:alternate_series`,
+    `:alternate_count`, `:series_group`, `:main_character_or_team`,
+    `:scan_information`, `:review`; and `:pages` (`<Pages>` entries, not
+    stored in the DB; see `Stashix.Metadata.Format.ComicInfo`)
   """
 
   alias Stashix.Repo
@@ -95,6 +95,15 @@ defmodule Stashix.Metadata.Record do
       upc: book.upc,
       community_rating: book.community_rating,
       community_rating_count: book.community_rating_count,
+      manga_volume: book.manga_volume,
+      alternate_series: book.alternate_series,
+      alternate_count: book.alternate_count,
+      series_group: book.series_group,
+      main_character_or_team: book.main_character_or_team,
+      scan_information: book.scan_information,
+      review: book.review,
+      black_and_white: yes_no(book.black_and_white),
+      manga: book.manga,
       publisher: book.publishers |> List.first() |> then(&(&1 && &1.name)),
       imprint: book.imprint && book.imprint.name,
       genres: Enum.map(book.genres, & &1.name),
@@ -128,7 +137,7 @@ defmodule Stashix.Metadata.Record do
       series_format: series.format && to_string(series.format),
       series_start_year: series.start_year,
       series_end_year: series.end_year,
-      series_status: if(series.ongoing, do: "Ongoing"),
+      series_status: series.status || if(series.ongoing, do: "Ongoing"),
       series_issue_count: positive(series.issue_count),
       series_volume_count: positive(series.volume_count),
       series_summary: series.summary,
@@ -138,6 +147,10 @@ defmodule Stashix.Metadata.Record do
         Enum.map(series.alternative_names, &%{name: &1.name, lang: &1.lang, external_id: &1.external_id})
     }
   end
+
+  defp yes_no(true), do: "Yes"
+  defp yes_no(false), do: "No"
+  defp yes_no(nil), do: nil
 
   defp resource(r), do: %{name: r.name, external_id: r.external_id}
 

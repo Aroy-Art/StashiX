@@ -41,6 +41,10 @@ defmodule Stashix.Library.Series do
     # Ids of the second and third issues with a cover, for the fanned stack on cards.
     field :stack_book_ids, {:array, :string}, virtual: true, default: []
     field :metadata_locked, :boolean, default: false
+    # MetronInfo series status; `ongoing` stays the folder-derived flag.
+    field :status, :string
+    # Field keys (see `Stashix.Metadata.Locks`) that rescans and matching leave alone.
+    field :locked_fields, {:array, :string}, default: []
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string
 
@@ -73,8 +77,11 @@ defmodule Stashix.Library.Series do
       :library_id,
       :metadata_locked,
       :metadata_matched_at,
-      :metadata_source
+      :metadata_source,
+      :status,
+      :locked_fields
     ])
     |> validate_required([:name, :library_id])
+    |> validate_inclusion(:status, ~w(Cancelled Completed Hiatus Ongoing))
   end
 end

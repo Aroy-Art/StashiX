@@ -10,11 +10,12 @@ defmodule Stashix.Metadata.Apply do
     * `"replace"` - every field the source provides replaces the local value
   An explicit `fields: [...]` option (manual matching) overrides the mode.
   External ids and links (urls) are always merged, never replaced.
+  Fields locked on the book/series (`Stashix.Metadata.Locks`) are never written.
   """
   alias Stashix.Repo
   alias Stashix.Library
   alias Stashix.Library.{Book, Series, Imprint, BookExternalId, SeriesExternalId}
-  alias Stashix.Metadata.Importer
+  alias Stashix.Metadata.{Importer, Locks}
 
   @book_fields ~w(title volume year language summary age_rating collection_title alternative_number
                   isbn upc cover_date store_date notes community_rating community_rating_count)a
@@ -65,6 +66,7 @@ defmodule Stashix.Metadata.Apply do
       |> put_if(:issue_number, metadata[:issue_number], book.issue_number, fill_unless_chosen(rule))
       |> put_if(:page_count, metadata[:page_count], zero_to_nil(book.page_count), fill_unless_chosen(rule))
       |> maybe_put_imprint(metadata, book.imprint_id, rule)
+      |> Locks.drop_locked(book)
       |> Map.merge(%{
         metadata_matched_at: NaiveDateTime.utc_now(:second),
         metadata_source: source_mod.key()
@@ -75,19 +77,25 @@ defmodule Stashix.Metadata.Apply do
       # Links are merged below, never replaced, so a book can link to several sources.
       |> List.delete(:urls)
       |> Enum.filter(fn key ->
-        Map.has_key?(metadata, key) and write?(rule, key, metadata[key], Map.get(book, @child_assocs[key]))
+        Map.has_key?(metadata, key) and not Locks.locked?(book, key) and
+          write?(rule, key, metadata[key], Map.get(book, @child_assocs[key]))
       end)
       |> then(&Map.take(metadata, &1))
 
     publisher =
-      if write?(rule, :publisher, metadata[:publisher], Enum.map(book.publishers, & &1.name)),
-        do: metadata[:publisher]
+      if not Locks.locked?(book, :publisher) and
+           write?(rule, :publisher, metadata[:publisher], Enum.map(book.publishers, & &1.name)),
+         do: metadata[:publisher]
 
     Repo.transaction(fn ->
       with {:ok, updated} <- Library.update_book(book, attrs),
            {:ok, _} <- Importer.replace_book_metadata(updated, children, only_present: true) do
-        Importer.upsert_external_ids(BookExternalId, :book_id, book.id, metadata[:external_ids] || [])
-        if merge_urls?(rule, metadata[:urls]), do: Importer.merge_urls(book.id, metadata[:urls])
+        unless Locks.locked?(book, :external_ids),
+          do: Importer.upsert_external_ids(BookExternalId, :book_id, book.id, metadata[:external_ids] || [])
+
+        if merge_urls?(rule, metadata[:urls]) and not Locks.locked?(book, :urls),
+          do: Importer.merge_urls(book.id, metadata[:urls])
+
         link_publisher(updated, book.series, publisher)
 
         if book.series do
@@ -159,6 +167,7 @@ defmodule Stashix.Metadata.Apply do
       |> put_if(:format, metadata[:series_format], series.format, {:mode, "fill"})
       |> put_if(:start_year, metadata[:series_start_year], series.start_year, {:mode, "fill"})
       |> put_if(:volume, metadata[:volume], series.volume, {:mode, "fill"})
+      |> Locks.drop_locked(series)
 
     if attrs != %{}, do: Library.update_series(series, attrs)
 
@@ -182,14 +191,16 @@ defmodule Stashix.Metadata.Apply do
       |> Enum.reduce(%{}, fn field, acc ->
         put_if(acc, field, Map.get(metadata, field), Map.get(series, field), rule)
       end)
+      |> Locks.drop_locked(series)
       |> Map.merge(%{
         metadata_matched_at: NaiveDateTime.utc_now(:second),
         metadata_source: source_mod.key()
       })
 
     publisher =
-      if write?(rule, :publisher, metadata[:publisher], Enum.map(series.publishers, & &1.name)),
-        do: metadata[:publisher]
+      if not Locks.locked?(series, :publisher) and
+           write?(rule, :publisher, metadata[:publisher], Enum.map(series.publishers, & &1.name)),
+         do: metadata[:publisher]
 
     Repo.transaction(fn ->
       case Library.update_series(series, attrs) do
