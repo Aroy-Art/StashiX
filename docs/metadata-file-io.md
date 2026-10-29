@@ -238,14 +238,26 @@ The old `Writer.MetronInfoXml`, `Writer.ComicInfoXml` and `Writer.XML` are gone.
   served by the Docker image's 7z shim) and 7z archives. The type is sniffed
   from magic bytes, so a `.cbr` that is really a zip is read as a zip.
 
+- **Archive type by content everywhere:** `Stashix.Media.Archive` lists and
+  reads zip/RAR/7z entries, choosing the tool from the file's magic bytes. Both
+  the page reader (`Extractor`) and the metadata reader (`Container`) use it,
+  so a zip named `.cbr` gets pages, a thumbnail and metadata. Metadata is only
+  embedded into a `.cbz` that really is a zip; anything else gets a sidecar.
+- **ComicInfo `<Pages>`** is read into the record and, when a CBZ's
+  ComicInfo.xml is rewritten, carried over from the existing one.
+- **ComicInfo write-back off:** an existing ComicInfo.xml is left untouched
+  (it used to be deleted, losing its Pages). Rewrites keep every entry's
+  timestamp, and the reader ignores a ComicInfo.xml more than 60 s older than
+  the MetronInfo.xml beside it, so the kept file can't bring back values
+  edited since.
+
 ### Still open
 
 1. **Series stays folder-authoritative** (row 6). `<Series>` and the series
    fields in the file are read into the record but the scanner ignores them.
 2. **Writing into `.cbr`/`.cb7`** still goes to a sidecar (we can't rewrite
-   RAR); the page extractor still picks the tool by extension, so a
-   zip-in-`.cbr` gets metadata but no pages/thumbnail.
-3. **ComicInfo `<Pages>` is dropped** when a CBZ is rewritten (we never write
-   it). ComicInfo-only extras (Manga, BlackAndWhite, SeriesGroup, …) have no DB
-   column, so they survive a read but not a DB → file write.
+   RAR).
+3. ComicInfo-only extras (Manga, BlackAndWhite, SeriesGroup, …) have no DB
+   column, so they survive a read but not a DB → file write. `<Pages>` is the
+   exception: it is carried over from the archive.
 4. `docs/MetronInfo.schema.xml` is still v1.1; replace with v1.2.

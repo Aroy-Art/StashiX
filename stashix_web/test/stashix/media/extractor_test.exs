@@ -278,6 +278,32 @@ defmodule Stashix.Media.ExtractorTest do
       assert {:ok, ["001.jpg", "002.jpg", "003.jpg"]} = Extractor.list_pages(epub)
     end
 
+    test "a .cbr that is really a zip opens as a zip", %{tmp: tmp} do
+      cbr = make_cbz(Path.join(tmp, "book.cbr"), ["001.jpg", "002.jpg"])
+
+      assert {:ok, ["001.jpg", "002.jpg"]} = Extractor.list_pages(cbr)
+      assert {:ok, ""} = Extractor.get_page(cbr, 1)
+    end
+
+    if System.find_executable("7z") do
+      test "a .cbz that is really 7z opens as 7z, folders skipped", %{tmp: tmp} do
+        src = Path.join(tmp, "src7")
+        File.mkdir_p!(Path.join(src, "sub"))
+        File.write!(Path.join(src, "sub/001.jpg"), "one")
+        cbz = Path.join(tmp, "book.cbz")
+        {_, 0} = System.cmd("7z", ["a", "-t7z", "--", cbz, "sub"], cd: src, stderr_to_stdout: true)
+
+        assert {:ok, ["sub/001.jpg"]} = Extractor.list_pages(cbz)
+        assert {:ok, "one"} = Extractor.get_page(cbz, 0)
+      end
+    end
+
+    test "an archive extension with unknown content is an error", %{tmp: tmp} do
+      path = Path.join(tmp, "book.cbr")
+      File.write!(path, "not an archive")
+      assert {:error, :unsupported_format} = Extractor.list_pages(path)
+    end
+
     test "unsupported formats are an error", %{tmp: tmp} do
       assert {:error, :unsupported_format} = Extractor.list_pages(Path.join(tmp, "book.txt"))
     end

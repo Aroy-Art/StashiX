@@ -253,6 +253,33 @@ defmodule Stashix.Metadata.FormatTest do
       assert %{isbn: "1401267777"} = ok!(ComicInfo.parse("<ComicInfo><GTIN>1-4012-6777-7</GTIN></ComicInfo>"))
     end
 
+    test "Pages round-trip, with Bookmark only from 2.0" do
+      xml = """
+      <ComicInfo><Pages>
+        <Page Image="0" Type="FrontCover" ImageSize="1200" ImageWidth="900" ImageHeight="1400" Bookmark="Start" />
+        <Page Image="1" Type="Story Bogus" DoublePage="true" Key="k" />
+        <Page Image="x" Type="Story" />
+      </Pages></ComicInfo>
+      """
+
+      pages = ok!(ComicInfo.parse(xml)).pages
+
+      assert pages == [
+               %{
+                 image: 0,
+                 type: "FrontCover",
+                 image_size: 1200,
+                 image_width: 900,
+                 image_height: 1400,
+                 bookmark: "Start"
+               },
+               %{image: 1, type: "Story", double_page: "true", key: "k"}
+             ]
+
+      assert %{pages: ^pages} = %{pages: pages} |> ComicInfo.build() |> ComicInfo.parse() |> ok!()
+      refute ComicInfo.build(%{pages: pages}, version: "1.0") =~ "Bookmark"
+    end
+
     test "a year-like Volume is ignored" do
       refute Map.has_key?(ok!(ComicInfo.parse("<ComicInfo><Volume>2016</Volume></ComicInfo>")), :volume)
     end

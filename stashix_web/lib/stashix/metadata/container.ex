@@ -3,90 +3,61 @@
 
 defmodule Stashix.Metadata.Container do
   @moduledoc """
-  Finds the metadata XML embedded in a book archive.
+  Finds the metadata XML embedded in a book archive (zip, RAR or 7z, detected
+  by content via `Stashix.Media.Archive`, like the page reader).
 
-  The archive type is sniffed from its first bytes rather than trusted from
-  the extension, since `.cbr` files are often zips (and vice versa). Only
-  `ComicInfo.xml` / `MetronInfo.xml` at the archive root count, matched
+  Only `ComicInfo.xml` / `MetronInfo.xml` at the archive root count, matched
   case-insensitively.
-
-  RAR goes through `unrar` (`lb` / `p`, which the Docker image's 7z-backed
-  shim also implements) and 7z through `7z`; a missing tool just means no
-  embedded metadata.
   """
   require Logger
 
+  alias Stashix.Media.Archive
+
   @entries %{"comicinfo.xml" => :comicinfo, "metroninfo.xml" => :metroninfo}
 
-  @type xmls :: %{optional(:comicinfo | :metroninfo) => binary()}
+  # A ComicInfo.xml this much older than the MetronInfo.xml beside it was not
+  # written with it (e.g. kept while ComicInfo write-back is off).
+  @stale_after_s 60
+
+  @type found :: %{data: binary(), mtime: NaiveDateTime.t() | nil}
+  @type xmls :: %{optional(:comicinfo | :metroninfo) => found()}
 
   @doc "The embedded metadata XML of an archive, keyed by format. `%{}` when none."
   @spec read_xml(Path.t()) :: xmls()
   def read_xml(path) do
-    case kind(path) do
-      :zip -> read_zip(path)
-      :rar -> read_with(path, &list_rar/1, &extract_rar/2)
-      :seven_zip -> read_with(path, &list_7z/1, &extract_7z/2)
-      _ -> %{}
-    end
-  end
-
-  @doc "Archive type by magic bytes: `:zip`, `:rar`, `:seven_zip` or `nil`."
-  def kind(path) do
-    case File.open(path, [:read, :binary], &IO.binread(&1, 6)) do
-      {:ok, <<"PK", 3, 4, _::binary>>} -> :zip
-      {:ok, <<"Rar!", 0x1A, 7>>} -> :rar
-      {:ok, <<"7z", 0xBC, 0xAF, 0x27, 0x1C>>} -> :seven_zip
-      _ -> nil
-    end
-  end
-
-  defp format(name), do: Map.get(@entries, String.downcase(name))
-
-  defp read_zip(path) do
-    charlist = String.to_charlist(path)
-
-    with {:ok, entries} <- :zip.list_dir(charlist),
-         wanted = for({:zip_file, name, _, _, _, _} <- entries, format(to_string(name)), do: name),
-         true <- wanted != [],
-         {:ok, files} <- :zip.extract(charlist, [:memory, {:file_list, wanted}]) do
-      Map.new(files, fn {name, data} -> {format(to_string(name)), data} end)
+    with {:ok, entries} <- Archive.entries(path) do
+      for %{name: name, mtime: mtime} <- entries,
+          fmt = format(name),
+          {:ok, data} <- [Archive.read(path, name)],
+          into: %{},
+          do: {fmt, %{data: data, mtime: mtime}}
     else
-      _ -> %{}
-    end
-  end
-
-  defp read_with(path, list, extract) do
-    case list.(path) do
-      {:ok, names} ->
-        for name <- names, fmt = format(name), {:ok, data} <- [extract.(path, name)], into: %{}, do: {fmt, data}
-
       {:error, reason} ->
         Logger.debug("No embedded metadata read from #{path}: #{inspect(reason)}")
         %{}
     end
   end
 
-  defp list_rar(path) do
-    with {:ok, out} <- cmd("unrar", ["lb", "--", path]), do: {:ok, String.split(out, ~r/\R/, trim: true)}
-  end
+  @doc """
+  Whether the ComicInfo in `xmls` predates the MetronInfo beside it, so it
+  must not override anything. Unknown timestamps count as written together.
+  """
+  @spec stale_comicinfo?(xmls()) :: boolean()
+  def stale_comicinfo?(%{comicinfo: %{mtime: %NaiveDateTime{} = c}, metroninfo: %{mtime: %NaiveDateTime{} = m}}),
+    do: NaiveDateTime.diff(m, c) > @stale_after_s
 
-  defp extract_rar(path, name), do: cmd("unrar", ["p", "-inul", "--", path, name])
+  def stale_comicinfo?(_xmls), do: false
 
-  defp list_7z(path) do
-    with {:ok, out} <- cmd("7z", ["l", "-ba", "-slt", "--", path]) do
-      {:ok, for("Path = " <> name <- String.split(out, ~r/\R/, trim: true), do: name)}
+  @doc "The ComicInfo.xml embedded in an archive, or `nil`."
+  def comicinfo(path) do
+    with {:ok, entries} <- Archive.entries(path),
+         %{name: name} <- Enum.find(entries, &(format(&1.name) == :comicinfo)),
+         {:ok, data} <- Archive.read(path, name) do
+      data
+    else
+      _ -> nil
     end
   end
 
-  defp extract_7z(path, name), do: cmd("7z", ["x", "-so", "--", path, name])
-
-  defp cmd(bin, args) do
-    case System.cmd(bin, args, stderr_to_stdout: false) do
-      {out, 0} -> {:ok, out}
-      {_, status} -> {:error, {bin, status}}
-    end
-  rescue
-    ErlangError -> {:error, {bin, :not_found}}
-  end
+  defp format(name), do: Map.get(@entries, String.downcase(name))
 end

@@ -79,8 +79,12 @@ defmodule Stashix.Metadata.Parser do
   end
 
   defp merge_embedded(xmls) do
-    comic = if data = xmls[:comicinfo], do: parse_xml(ComicInfo, data), else: %{}
-    metron = if data = xmls[:metroninfo], do: parse_xml(MetronInfo, data), else: %{}
+    # A ComicInfo kept from before the last MetronInfo write (ComicInfo
+    # write-back off) is stale: it must not bring back values edited since.
+    xmls = if Container.stale_comicinfo?(xmls), do: Map.delete(xmls, :comicinfo), else: xmls
+
+    comic = if found = xmls[:comicinfo], do: parse_xml(ComicInfo, found.data), else: %{}
+    metron = if found = xmls[:metroninfo], do: parse_xml(MetronInfo, found.data), else: %{}
 
     # When MetronInfo is present it owns the title — don't let ComicInfo's
     # title bleed through even if MetronInfo has no stories element.

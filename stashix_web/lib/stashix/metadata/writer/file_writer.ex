@@ -5,10 +5,13 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   @moduledoc """
   Writes a book's database metadata back to its files.
 
-    * `.cbz` - the archive is rebuilt with `MetronInfo.xml` (and optionally a
-      `ComicInfo.xml` compat copy) and atomically swapped in. A sidecar that
-      already sits next to it is rewritten too, since the reader prefers the
-      sidecar and a stale one would shadow the embedded data.
+    * `.cbz` (that really is a zip) - the archive is rebuilt with
+      `MetronInfo.xml` and atomically swapped in. Entries keep their
+      timestamps. With ComicInfo write-back on, `ComicInfo.xml` is rewritten
+      too, carrying over the existing one's `<Pages>`; with it off, an existing
+      `ComicInfo.xml` is left untouched (the reader then ignores it as older
+      than the MetronInfo). A sidecar that already sits next to the CBZ is
+      rewritten too, since the reader prefers the sidecar.
     * everything else (`.cbr`, `.cb7`, `.pdf`, `.epub`) - a MetronInfo sidecar
       `<book file name>.xml` is written next to the file. EPUBs are not
       rewritten because their zip layout (mimetype first, stored) is strict.
@@ -20,11 +23,11 @@ defmodule Stashix.Metadata.Writer.FileWriter do
 
   alias Stashix.{Health, Library}
   alias Stashix.Library.{Book, BookFile}
-  alias Stashix.Metadata.Record
+  alias Stashix.Media.Archive
+  alias Stashix.Metadata.{Container, Record}
   alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
   alias Stashix.Scanner
 
-  @metadata_entries ~w(metroninfo.xml comicinfo.xml)
   @stored_exts Enum.map(~w(.jpg .jpeg .png .webp .gif .avif .jxl), &String.to_charlist/1)
 
   @doc "Writes metadata for every live file of the book."
@@ -38,11 +41,18 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   def write_file(%Book{} = book, %BookFile{} = file, settings) do
     record = Record.from_book(book)
     metron = MetronInfo.build(record)
-    comic = if settings["write_comicinfo"], do: ComicInfo.build(record, version: comicinfo_version(settings))
+    embed? = String.downcase(Path.extname(file.path)) == ".cbz" and Archive.kind(file.path) == :zip
+
+    comic =
+      if embed? and settings["write_comicinfo"] do
+        record
+        |> Map.put(:pages, existing_pages(file.path))
+        |> ComicInfo.build(version: comicinfo_version(settings))
+      end
 
     result =
-      case String.downcase(Path.extname(file.path)) do
-        ".cbz" ->
+      case embed? do
+        true ->
           case write_cbz(file.path, metron, comic) do
             :ok ->
               sync_existing_sidecar(file.path, metron)
@@ -56,7 +66,7 @@ defmodule Stashix.Metadata.Writer.FileWriter do
               other
           end
 
-        _ ->
+        false ->
           write_sidecar(file.path, metron)
       end
 
@@ -73,6 +83,15 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   defp comicinfo_version(settings) do
     version = settings["comicinfo_version"]
     if version in ComicInfo.versions(), do: version, else: ComicInfo.default_version()
+  end
+
+  defp existing_pages(path) do
+    with xml when is_binary(xml) <- Container.comicinfo(path),
+         {:ok, %{pages: pages}} <- ComicInfo.parse(xml) do
+      pages
+    else
+      _ -> []
+    end
   end
 
   defp sync_existing_sidecar(path, xml) do
@@ -98,6 +117,7 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   end
 
   @doc false
+  # `comic_xml` nil keeps the archive's existing ComicInfo.xml as it is.
   def write_cbz(path, metron_xml, comic_xml) do
     work_dir = Path.join(System.tmp_dir!(), "stashix-meta-#{System.unique_integer([:positive])}")
     tmp_zip = Path.join(Path.dirname(path), ".#{Path.basename(path)}.stashix-tmp")
@@ -105,7 +125,9 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     try do
       File.mkdir_p!(work_dir)
 
-      with {:ok, names} <- extract_entries(path, work_dir),
+      replaced = if comic_xml, do: ~w(metroninfo.xml comicinfo.xml), else: ~w(metroninfo.xml)
+
+      with {:ok, names} <- extract_entries(path, work_dir, replaced),
            names = add_xml(names, work_dir, "MetronInfo.xml", metron_xml),
            names = add_xml(names, work_dir, "ComicInfo.xml", comic_xml),
            {:ok, _} <-
@@ -129,9 +151,10 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     end
   end
 
-  # Extracts file entries (in archive order) except old metadata XML. Returns
-  # the charlist names to re-add. Rejects unsafe paths (zip-slip).
-  defp extract_entries(path, work_dir) do
+  # Extracts file entries (in archive order) except the metadata XML being
+  # replaced, keeping each entry's timestamp. Returns the charlist names to
+  # re-add. Rejects unsafe paths (zip-slip).
+  defp extract_entries(path, work_dir, replaced) do
     with {:ok, handle} <- :zip.zip_open(String.to_charlist(path), [:memory]) do
       try do
         {:ok, entries} = :zip.zip_list_dir(handle)
@@ -139,13 +162,13 @@ defmodule Stashix.Metadata.Writer.FileWriter do
         entries
         |> Enum.flat_map(fn
           {:zip_file, name, info, _comment, _offset, _size} ->
-            if elem(info, 2) == :directory, do: [], else: [name]
+            if elem(info, 2) == :directory, do: [], else: [{name, elem(info, 5)}]
 
           _ ->
             []
         end)
-        |> Enum.reject(&(String.downcase(Path.basename(to_string(&1))) in @metadata_entries))
-        |> Enum.reduce_while({:ok, []}, fn name, {:ok, acc} ->
+        |> Enum.reject(fn {name, _} -> String.downcase(Path.basename(to_string(name))) in replaced end)
+        |> Enum.reduce_while({:ok, []}, fn {name, mtime}, {:ok, acc} ->
           rel = to_string(name)
 
           if safe_path?(rel) do
@@ -153,6 +176,8 @@ defmodule Stashix.Metadata.Writer.FileWriter do
             dest = Path.join(work_dir, rel)
             File.mkdir_p!(Path.dirname(dest))
             File.write!(dest, data)
+            # :zip stores and restores local time; keep the entry's own.
+            :file.change_time(String.to_charlist(dest), mtime)
             {:cont, {:ok, [name | acc]}}
           else
             {:halt, {:error, {:unsafe_entry, rel}}}

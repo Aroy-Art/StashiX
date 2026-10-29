@@ -30,6 +30,14 @@ defmodule Stashix.Metadata.Format.XML do
 
   def el(name, attrs, content), do: {name, clean_attrs(attrs), to_text(content)}
 
+  @doc "An element with attributes only (`<Page Image=\"0\"/>`); dropped when it has none."
+  def empty_el(name, attrs) do
+    case clean_attrs(attrs) do
+      [] -> nil
+      attrs -> {name, attrs, :empty}
+    end
+  end
+
   defp clean_attrs(attrs), do: Enum.reject(attrs, fn {_, v} -> v in [nil, ""] end)
 
   defp to_text(%Decimal{} = d), do: Decimal.to_string(d, :normal)
@@ -38,6 +46,10 @@ defmodule Stashix.Metadata.Format.XML do
   defp to_text(%DateTime{} = d), do: DateTime.to_iso8601(d)
   defp to_text(v) when is_float(v), do: :erlang.float_to_binary(v, decimals: 2)
   defp to_text(v), do: to_string(v)
+
+  defp render({name, attrs, :empty}, depth) do
+    [String.duplicate("  ", depth), "<", name, render_attrs(attrs), " />\n"]
+  end
 
   defp render({name, attrs, children}, depth) when is_list(children) do
     pad = String.duplicate("  ", depth)

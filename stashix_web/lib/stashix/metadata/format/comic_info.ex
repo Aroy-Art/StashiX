@@ -21,8 +21,12 @@ defmodule Stashix.Metadata.Format.ComicInfo do
 
   Multi-value fields are comma-separated, except `Web` which is
   space-separated. `StoryArc` and `StoryArcNumber` pair up by position.
+
+  `<Pages>` is read into `:pages` (`[%{image: integer, type: "FrontCover …", …}]`)
+  and written back as given; Stashix doesn't store it, but `FileWriter` carries
+  it over from the archive's existing ComicInfo.xml.
   """
-  import SweetXml, only: [sigil_x: 2, xpath: 2]
+  import SweetXml, only: [sigil_x: 2, xpath: 2, xpath: 3]
   import Stashix.Metadata.Format.XML
 
   alias Stashix.Metadata.Record
@@ -80,6 +84,8 @@ defmodule Stashix.Metadata.Format.ComicInfo do
     {"Review", "2.0"},
     {"GTIN", "2.1"}
   ]
+
+  @page_types ~w(FrontCover InnerCover Roundup Story Advertisement Editorial Letters Preview BackCover Other Deleted)
 
   @elements_2_0 for {name, "2.0"} <- @sequence, do: name
   @elements_2_1 for {name, "2.1"} <- @sequence, do: name
@@ -195,8 +201,57 @@ defmodule Stashix.Metadata.Format.ComicInfo do
     |> put(:community_rating, rating(parse_float(t.("CommunityRating"))))
     |> put(:main_character_or_team, t.("MainCharacterOrTeam"))
     |> put(:review, t.("Review"))
+    |> put(:pages, pages(doc))
     |> Map.merge(gtin(t.("GTIN")))
   end
+
+  # Per-page info (cover, spreads, sizes) set by readers/taggers. Kept so a
+  # rewrite of the archive doesn't lose it; invalid attributes are dropped.
+  defp pages(doc) do
+    doc
+    |> xpath(~x"/ComicInfo/Pages/Page"l,
+      image: ~x"./@Image"os,
+      type: ~x"./@Type"os,
+      double_page: ~x"./@DoublePage"os,
+      image_size: ~x"./@ImageSize"os,
+      key: ~x"./@Key"os,
+      bookmark: ~x"./@Bookmark"os,
+      image_width: ~x"./@ImageWidth"os,
+      image_height: ~x"./@ImageHeight"os
+    )
+    |> Enum.flat_map(fn p ->
+      case parse_int(p.image) do
+        image when is_integer(image) and image >= 0 ->
+          page =
+            %{image: image}
+            |> put(:type, page_types(p.type))
+            |> put(:double_page, bool_attr(p.double_page))
+            |> put(:image_size, parse_int(p.image_size))
+            |> put(:key, blank_to_nil(p.key))
+            |> put(:bookmark, blank_to_nil(p.bookmark))
+            |> put(:image_width, parse_int(p.image_width))
+            |> put(:image_height, parse_int(p.image_height))
+
+          [page]
+
+        _ ->
+          []
+      end
+    end)
+  end
+
+  defp page_types(nil), do: nil
+
+  defp page_types(s) do
+    case s |> String.split() |> Enum.filter(&(&1 in @page_types)) do
+      [] -> nil
+      types -> Enum.join(types, " ")
+    end
+  end
+
+  defp bool_attr(s) when s in ["true", "1"], do: "true"
+  defp bool_attr(s) when s in ["false", "0"], do: "false"
+  defp bool_attr(_), do: nil
 
   # ComicInfo allows a year as Volume ("Volume 2016"); Stashix volumes are numbers.
   defp volume(v) when is_integer(v) and v >= 1800 and v <= 2099, do: nil
@@ -389,6 +444,7 @@ defmodule Stashix.Metadata.Format.ComicInfo do
       "CommunityRating" => community_rating(r[:community_rating]),
       "MainCharacterOrTeam" => r[:main_character_or_team],
       "Review" => r[:review],
+      "Pages" => Enum.map(r[:pages] || [], &build_page(&1, version)),
       "GTIN" => r[:isbn] || r[:upc]
     }
     |> Map.merge(creator_values(r[:credits] || []))
@@ -422,6 +478,19 @@ defmodule Stashix.Metadata.Format.ComicInfo do
 
   defp web(nil), do: nil
   defp web(urls), do: urls |> Enum.map(&String.replace(&1.url, " ", "%20")) |> Enum.join(" ")
+
+  defp build_page(page, version) do
+    empty_el("Page", [
+      {"Image", page.image},
+      {"Type", page[:type]},
+      {"DoublePage", page[:double_page]},
+      {"ImageSize", page[:image_size]},
+      {"Key", page[:key]},
+      {"Bookmark", if(version != "1.0", do: page[:bookmark])},
+      {"ImageWidth", page[:image_width]},
+      {"ImageHeight", page[:image_height]}
+    ])
+  end
 
   defp manga("YesAndRightToLeft", "1.0"), do: "Yes"
   defp manga(v, _), do: v

@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule Stashix.Media.Extractor do
+  alias Stashix.Media.Archive
+
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
   # Known credit/ad pages that don't follow the z-prefix convention (lowercase, no extension).
@@ -24,15 +26,14 @@ defmodule Stashix.Media.Extractor do
     if length(z_pages) > length(rest), do: names, else: rest
   end
 
-  def list_pages(book_path) do
-    ext = book_path |> Path.extname() |> String.downcase()
+  # The extension only says "archive"; `Archive` picks zip/RAR/7z by content,
+  # so a zip named .cbr (or a RAR named .cbz) still opens.
+  @archive_exts ~w(.cbz .cbr .cb7 .epub)
 
-    case ext do
-      ".cbz" -> list_zip_pages(book_path)
-      ".epub" -> list_zip_pages(book_path)
-      ".cbr" -> list_rar_pages(book_path)
-      ".cb7" -> list_7z_pages(book_path)
+  def list_pages(book_path) do
+    case book_path |> Path.extname() |> String.downcase() do
       ".pdf" -> list_pdf_pages(book_path)
+      ext when ext in @archive_exts -> list_archive_pages(book_path)
       _ -> {:error, :unsupported_format}
     end
   end
@@ -60,77 +61,15 @@ defmodule Stashix.Media.Extractor do
     end
   end
 
-  defp list_zip_pages(path) do
-    case :zip.list_dir(String.to_charlist(path)) do
-      {:ok, entries} ->
-        pages =
-          entries
-          |> Enum.filter(fn
-            {:zip_file, name, _info, _comment, _offset, _comp_size} ->
-              name_str = to_string(name)
-              String.downcase(Path.extname(name_str)) in @image_exts
+  defp list_archive_pages(path) do
+    with {:ok, names} <- Archive.list(path) do
+      pages =
+        names
+        |> Enum.filter(&(String.downcase(Path.extname(&1)) in @image_exts))
+        |> reject_credit_pages()
+        |> Enum.sort()
 
-            _ ->
-              false
-          end)
-          |> Enum.map(fn {:zip_file, name, _info, _comment, _offset, _comp_size} ->
-            to_string(name)
-          end)
-          |> reject_credit_pages()
-          |> Enum.sort()
-
-        {:ok, pages}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
-  end
-
-  defp list_rar_pages(path) do
-    try do
-      case System.cmd("unrar", ["lb", "--", path], stderr_to_stdout: true) do
-        {output, 0} ->
-          pages =
-            output
-            |> String.split("\n", trim: true)
-            |> Enum.filter(fn name ->
-              String.downcase(Path.extname(name)) in @image_exts
-            end)
-            |> reject_credit_pages()
-            |> Enum.sort()
-
-          {:ok, pages}
-
-        {error, _} ->
-          {:error, error}
-      end
-    rescue
-      ErlangError -> {:error, :unrar_not_found}
-    end
-  end
-
-  defp list_7z_pages(path) do
-    try do
-      case System.cmd("7z", ["l", "-ba", "-slt", "--", path], stderr_to_stdout: true) do
-        {output, 0} ->
-          pages =
-            output
-            |> String.split("\n", trim: true)
-            |> Enum.filter(&String.starts_with?(&1, "Path = "))
-            |> Enum.map(&String.replace_leading(&1, "Path = ", ""))
-            |> Enum.filter(fn name ->
-              String.downcase(Path.extname(name)) in @image_exts
-            end)
-            |> reject_credit_pages()
-            |> Enum.sort()
-
-          {:ok, pages}
-
-        {error, _} ->
-          {:error, error}
-      end
-    rescue
-      ErlangError -> {:error, :p7zip_not_found}
+      {:ok, pages}
     end
   end
 
@@ -162,75 +101,17 @@ defmodule Stashix.Media.Extractor do
   end
 
   defp extract_page(book_path, page_name) do
-    ext = book_path |> Path.extname() |> String.downcase()
-
-    case ext do
-      cbz when cbz in [".cbz", ".epub"] ->
-        extract_zip_page(book_path, page_name)
-
-      ".cbr" ->
-        extract_rar_page(book_path, page_name)
-
-      ".cb7" ->
-        extract_7z_page(book_path, page_name)
-
-      ".pdf" ->
-        extract_pdf_page(book_path, page_name)
-
-      _ ->
-        {:error, :unsupported_format}
+    case book_path |> Path.extname() |> String.downcase() do
+      ".pdf" -> extract_pdf_page(book_path, page_name)
+      ext when ext in @archive_exts -> extract_archive_page(book_path, page_name)
+      _ -> {:error, :unsupported_format}
     end
   end
 
-  defp extract_zip_page(archive_path, page_name) do
-    path_charlist = String.to_charlist(archive_path)
-    file_charlist = String.to_charlist(page_name)
-
-    case :zip.extract(path_charlist, [:memory, {:file_list, [file_charlist]}]) do
-      {:ok, [{_name, data}]} -> {:ok, data}
-      {:ok, []} -> {:error, :page_not_found}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp extract_rar_page(archive_path, page_name) do
-    try do
-      case System.cmd("unrar", ["p", "-inul", "--", archive_path, page_name], stderr_to_stdout: false) do
-        {data, 0} -> {:ok, data}
-        {error, _} -> {:error, error}
-      end
-    rescue
-      ErlangError -> {:error, :unrar_not_found}
-    end
-  end
-
-  defp extract_7z_page(archive_path, page_name) do
-    tmp = Path.join(System.tmp_dir!(), "stashix_#{:erlang.unique_integer([:positive])}")
-    File.mkdir_p!(tmp)
-
-    try do
-      case System.cmd("7z", ["e", "-o#{tmp}", "-y", "--", archive_path, page_name], stderr_to_stdout: true) do
-        {_, 0} ->
-          dest = Path.join(tmp, Path.basename(page_name))
-
-          case File.read(dest) do
-            {:ok, data} ->
-              File.rm_rf!(tmp)
-              {:ok, data}
-
-            error ->
-              File.rm_rf!(tmp)
-              error
-          end
-
-        {error, _} ->
-          File.rm_rf!(tmp)
-          {:error, error}
-      end
-    rescue
-      ErlangError ->
-        File.rm_rf!(tmp)
-        {:error, :p7zip_not_found}
+  defp extract_archive_page(path, name) do
+    case Archive.read(path, name) do
+      {:error, :not_found} -> {:error, :page_not_found}
+      other -> other
     end
   end
 

@@ -39,7 +39,8 @@ defmodule Stashix.Metadata.Record do
   ComicInfo-only extras (no DB column yet, kept so they survive a read):
     `:manga` (`"Yes" | "No" | "YesAndRightToLeft"`), `:black_and_white`,
     `:alternate_series`, `:alternate_count`, `:series_group`,
-    `:main_character_or_team`, `:scan_information`, `:review`
+    `:main_character_or_team`, `:scan_information`, `:review`, `:pages`
+    (`<Pages>` entries; see `Stashix.Metadata.Format.ComicInfo`)
   """
 
   alias Stashix.Repo

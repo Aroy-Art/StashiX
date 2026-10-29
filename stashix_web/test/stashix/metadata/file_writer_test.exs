@@ -188,6 +188,75 @@ defmodule Stashix.Metadata.FileWriterTest do
     assert ComicInfo.detect_version(xml) == "2.1"
   end
 
+  # A CBZ whose entries are dated `age_s` seconds ago.
+  defp aged_cbz(tmp, name, entries, age_s) do
+    src = Path.join(tmp, "src_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(src)
+    old = System.os_time(:second) - age_s
+
+    for {file, data} <- entries do
+      File.write!(Path.join(src, file), data)
+      File.touch!(Path.join(src, file), old)
+    end
+
+    path = Path.join(tmp, name)
+    names = Enum.map(entries, fn {file, _} -> String.to_charlist(file) end)
+    {:ok, _} = :zip.create(String.to_charlist(path), names, cwd: String.to_charlist(src))
+    path
+  end
+
+  defp entry(path, name) do
+    {:ok, [{_, data}]} = :zip.extract(String.to_charlist(path), [:memory, {:file_list, [String.to_charlist(name)]}])
+    data
+  end
+
+  @tagged_comicinfo """
+  <ComicInfo><Title>Old</Title><Teams>Bat-family</Teams>
+  <Pages><Page Image="0" Type="FrontCover" /><Page Image="1" DoublePage="true" /></Pages></ComicInfo>
+  """
+
+  test "ComicInfo <Pages> survive a rewrite", %{tmp: tmp, book: book} do
+    path = aged_cbz(tmp, "Batman 001.cbz", [{"001.jpg", "p"}, {"ComicInfo.xml", @tagged_comicinfo}], 0)
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => true})
+
+    xml = entry(path, "ComicInfo.xml")
+    assert xml =~ ~s(<Page Image="0" Type="FrontCover" />)
+    assert xml =~ ~s(<Page Image="1" DoublePage="true" />)
+    assert xml =~ "<Title>I Am Gotham, Part One</Title>"
+  end
+
+  test "with ComicInfo write-back off an existing ComicInfo.xml is kept but ignored", %{tmp: tmp, book: book} do
+    path = aged_cbz(tmp, "Batman 001.cbz", [{"001.jpg", "p"}, {"ComicInfo.xml", @tagged_comicinfo}], 3600)
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
+
+    assert entry(path, "ComicInfo.xml") == @tagged_comicinfo
+    parsed = Parser.parse_comicinfo(path)
+    assert parsed.title == "I Am Gotham, Part One"
+    refute Map.has_key?(parsed, :teams), "a team only the stale ComicInfo lists must not come back"
+  end
+
+  test "a rewrite keeps each entry's timestamp", %{tmp: tmp, book: book} do
+    path = aged_cbz(tmp, "Batman 001.cbz", [{"001.jpg", "p"}], 86_400)
+    {:ok, [_ | [{:zip_file, _, before, _, _, _}]]} = :zip.list_dir(String.to_charlist(path))
+
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
+
+    {:ok, [_ | entries]} = :zip.list_dir(String.to_charlist(path))
+    {:zip_file, _, info, _, _, _} = Enum.find(entries, &(elem(&1, 1) == ~c"001.jpg"))
+    assert elem(info, 5) == elem(before, 5)
+  end
+
+  if System.find_executable("rar") do
+    test "a .cbz that is really RAR gets a sidecar instead of an error", %{tmp: tmp, book: book} do
+      File.write!(Path.join(tmp, "001.jpg"), "p")
+      path = Path.join(tmp, "Batman 001.cbz")
+      {_, 0} = System.cmd("rar", ["a", "-inul", "-ep", "--", path, "001.jpg"], cd: tmp)
+
+      assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => true})
+      assert File.read!(Path.join(tmp, "Batman 001.xml")) =~ "<MetronInfo"
+    end
+  end
+
   test "rejects archives with unsafe entry names", %{tmp: tmp} do
     path = Path.join(tmp, "evil.cbz")
     {:ok, _} = :zip.create(String.to_charlist(path), [{~c"../escape.jpg", "x"}])
