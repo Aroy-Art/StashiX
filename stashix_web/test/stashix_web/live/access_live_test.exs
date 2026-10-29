@@ -64,9 +64,10 @@ defmodule StashixWeb.AccessLiveTest do
   end
 
   test "metadata edits and rescans from non-admins are ignored", %{conn: conn, teen: teen} do
-    {:ok, view, _html} = live(conn, ~p"/book/#{teen.id}")
+    # The edit dialog (which owns saving) is never mounted for non-admins.
+    {:ok, view, _html} = live(conn, ~p"/book/#{teen.id}?edit=true")
+    refute has_element?(view, "#edit-metadata-dialog")
 
-    render_hook(view, "save_metadata", %{"book" => %{"age_rating" => "everyone", "title" => "Hacked"}})
     render_hook(view, "toggle_metadata_lock", %{})
 
     book = Library.get_book!(teen.id)

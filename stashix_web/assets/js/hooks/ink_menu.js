@@ -141,7 +141,9 @@ const InkMenu = {
   },
 
   // Below the trigger, flipped above when there is no room; kept on screen.
-  place() {
+  // `side` keeps the side chosen when it opened (re-placing after a filter
+  // shrinks the list must not make the filter box jump across the trigger).
+  place(side = null) {
     const t = this.trigger.getBoundingClientRect()
     const p = this.panel
     p.style.maxHeight = ""
@@ -156,7 +158,9 @@ const InkMenu = {
     const below = vh - t.bottom - GAP - EDGE
     const above = t.top - GAP - EDGE
     let top
-    if (height <= below || below >= above) {
+    const goBelow = side ? side === "below" : height <= below || below >= above
+    this.side = goBelow ? "below" : "above"
+    if (goBelow) {
       top = t.bottom + GAP
       if (height > below) p.style.maxHeight = `${Math.max(below, 96)}px`
     } else {
@@ -247,6 +251,8 @@ const InkMenu = {
     })
     const empty = this.panel.querySelector("[data-menu-empty]")
     if (empty) empty.hidden = shown > 0
+    // Opened above the trigger, the panel's bottom must stay against it.
+    if (this.open) this.place(this.side)
   },
 
   // --- select mode ---------------------------------------------------------

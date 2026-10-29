@@ -6,7 +6,6 @@ defmodule StashixWeb.SeriesLive do
 
   alias Stashix.{Formatters, Library, Metadata, Scanner}
   alias Stashix.Accounts.User
-  alias Stashix.Library.Series
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
   import StashixWeb.DetailComponents
@@ -14,7 +13,7 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount({StashixWeb.Live.Hooks, :require_auth})
 
-  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview open_push_age_rating_dialog close_push_age_rating_dialog set_push_age_rating_target set_push_age_rating_mode toggle_push_age_rating_preview push_age_rating_to_issues)
+  @admin_events ~w(fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview open_push_age_rating_dialog close_push_age_rating_dialog set_push_age_rating_target set_push_age_rating_mode toggle_push_age_rating_preview push_age_rating_to_issues open_push_language_dialog close_push_language_dialog set_push_language set_push_language_mode push_language_to_issues)
 
   @age_ratings Ecto.Enum.values(Stashix.Library.Book, :age_rating)
 
@@ -67,7 +66,9 @@ defmodule StashixWeb.SeriesLive do
        push_age_rating_mode: :replace,
        push_age_rating_preview: nil,
        show_push_age_rating_preview: false,
-       edit_form: nil,
+       push_language: nil,
+       push_language_mode: :replace,
+       push_language_preview: nil,
        series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers(),
        book_publishers: Library.series_book_publishers(series.id),
@@ -77,18 +78,7 @@ defmodule StashixWeb.SeriesLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    socket =
-      if params["edit"] == "true" && socket.assigns.current_user.role == :admin do
-        series = socket.assigns.series
-        form = series |> Series.changeset(%{}) |> to_form()
-
-        assign(socket,
-          show_edit_dialog: true,
-          edit_form: form
-        )
-      else
-        assign(socket, show_edit_dialog: false, edit_form: nil)
-      end
+    socket = assign(socket, show_edit_dialog: params["edit"] == "true" && socket.assigns.current_user.role == :admin)
 
     socket =
       assign(socket,
@@ -99,19 +89,13 @@ defmodule StashixWeb.SeriesLive do
   end
 
   # Age rating lives on books; the series-level setting overwrites every issue.
-  defp maybe_cascade_age_rating(_series, rating, _only_unknown) when rating in [nil, ""], do: :ok
-
-  defp maybe_cascade_age_rating(series, rating, only_unknown) do
-    if rating != to_string(common_age_rating(series.books)) do
-      with {:ok, ids} <-
-             Library.set_series_age_rating(series.id, rating, only_unknown: only_unknown),
-           true <- Stashix.Settings.metadata()["write_to_files"] do
-        Enum.each(ids, &Metadata.enqueue_write/1)
-      end
-    end
-
-    :ok
+  defp assign_push_language(socket, language, mode) do
+    preview = Library.push_language_preview(socket.assigns.series.id, language, mode)
+    assign(socket, push_language: language, push_language_mode: mode, push_language_preview: preview)
   end
+
+  defp blank_language(nil), do: nil
+  defp blank_language(s), do: if(String.trim(s) == "", do: nil, else: String.trim(s))
 
   # The shared age rating of all issues, or nil when mixed/empty.
   defp common_age_rating(books) do
@@ -179,35 +163,6 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_event("close_edit_dialog", _params, socket) do
     {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series.id}")}
-  end
-
-  def handle_event("save_metadata", %{"series" => params} = all_params, socket) do
-    series = socket.assigns.series
-
-    case Library.update_series(series, params) do
-      {:ok, updated_series} ->
-        maybe_cascade_age_rating(
-          series,
-          all_params["age_rating"],
-          all_params["age_rating_only_unknown"] == "true"
-        )
-
-        series = Library.get_series_with_books(socket.assigns.access, updated_series.id)
-        books = sort_books(series.books, socket.assigns.sort)
-
-        {:noreply,
-         socket
-         |> assign(
-           series: series,
-           books: books,
-           page_title: series.name,
-           summary_info: derive_summary(series, books)
-         )
-         |> close_dialog(~p"/series/#{series.id}")}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, edit_form: to_form(changeset))}
-    end
   end
 
   def handle_event("fetch_metadata", _params, socket) do
@@ -365,6 +320,46 @@ defmodule StashixWeb.SeriesLive do
     end
   end
 
+  # The edit dialog sends its (possibly unsaved) language; the menu uses the saved one.
+  def handle_event("open_push_language_dialog", params, socket) do
+    language = blank_language(params["language"]) || socket.assigns.series.language || "en"
+    {:noreply, assign_push_language(socket, language, :replace)}
+  end
+
+  def handle_event("close_push_language_dialog", _params, socket) do
+    {:noreply, assign(socket, push_language: nil, push_language_preview: nil)}
+  end
+
+  def handle_event("set_push_language", %{"language" => language}, socket) do
+    language = blank_language(language) || socket.assigns.push_language
+    {:noreply, assign_push_language(socket, language, socket.assigns.push_language_mode)}
+  end
+
+  def handle_event("set_push_language_mode", %{"mode" => mode}, socket) when mode in ~w(replace fill) do
+    {:noreply, assign_push_language(socket, socket.assigns.push_language, String.to_existing_atom(mode))}
+  end
+
+  def handle_event("push_language_to_issues", _params, socket) do
+    series = socket.assigns.series
+    only_empty = socket.assigns.push_language_mode == :fill
+    {:ok, ids} = Library.set_series_language(series.id, socket.assigns.push_language, only_empty: only_empty)
+
+    if Stashix.Settings.metadata()["write_to_files"], do: Enum.each(ids, &Metadata.enqueue_write/1)
+
+    message =
+      case length(ids) do
+        0 -> "No issues were updated."
+        1 -> "Language pushed to 1 issue."
+        n -> "Language pushed to #{n} issues."
+      end
+
+    {:noreply,
+     socket
+     |> put_flash(:info, message)
+     |> reload_series()
+     |> assign(push_language: nil, push_language_preview: nil)}
+  end
+
   def handle_event("rescan_series", _, socket) do
     Scanner.scan_series(socket.assigns.series.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
@@ -417,6 +412,17 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_info({:metadata_updated, _, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:series_edit_saved, _id}, socket) do
+    series = Library.get_series_with_books(socket.assigns.access, socket.assigns.series.id)
+    books = sort_books(series.books, socket.assigns.sort)
+
+    {:noreply,
+     socket
+     |> assign(series: series, books: books, page_title: series.name, summary_info: derive_summary(series, books))
+     |> put_flash(:info, "Series saved")
+     |> close_dialog(~p"/series/#{series.id}")}
+  end
 
   def handle_info({:identify_applied, :series, _id}, socket) do
     {:noreply,
@@ -606,6 +612,13 @@ defmodule StashixWeb.SeriesLive do
               phx-click="open_push_age_rating_dialog"
             >
               Push age rating to issues…
+            </.menu_item>
+            <.menu_item
+              :if={@series.books != []}
+              icon="lucide-languages"
+              phx-click="open_push_language_dialog"
+            >
+              Push language to issues…
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -837,155 +850,14 @@ defmodule StashixWeb.SeriesLive do
     <% end %>
 
     <%!-- Edit Metadata Dialog --%>
-    <%= if @current_user.role == :admin && @show_edit_dialog do %>
-      <.dialog id="edit-series-dialog" title="Edit series metadata" on_close={JS.push("close_edit_dialog")}>
-        <:description>
-          Override metadata for this series. Changes persist until the next rescan.
-          <%= if @series.path do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
-              <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
-              {relative_folder(@series, @library)}
-            </p>
-          <% end %>
-        </:description>
-
-        <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
-          <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-            <.field label="Name" class="col-span-2">
-              <.text_input name="series[name]" value={@edit_form[:name].value} />
-            </.field>
-
-            <.field label="Summary" class="col-span-2">
-              <.textarea
-                name="series[summary]"
-                rows="4"
-                placeholder="Leave blank to inherit from first issue with a summary…"
-                value={@edit_form[:summary].value}
-              />
-            </.field>
-
-            <.field label="Volume">
-              <.text_input type="number" name="series[volume]" value={@edit_form[:volume].value} />
-            </.field>
-
-            <.field label="Language">
-              <.text_input name="series[language]" value={@edit_form[:language].value} />
-            </.field>
-
-            <.field label="Start Year">
-              <.text_input type="number" name="series[start_year]" value={@edit_form[:start_year].value} />
-            </.field>
-
-            <.field label="End Year">
-              <.text_input type="number" name="series[end_year]" value={@edit_form[:end_year].value} />
-            </.field>
-
-            <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Age Rating</label>
-              <% current_rating = common_age_rating(@series.books) %>
-              <.ink_select
-                id="edit-series-age-rating"
-                name="age_rating"
-                label="Age rating"
-                variant="field"
-                value={current_rating}
-                prompt={if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
-                options={[
-                  {"Unknown", "unknown"},
-                  {"Everyone", "everyone"},
-                  {"Teen", "teen"},
-                  {"Teen+", "teen_plus"},
-                  {"Mature", "mature"},
-                  {"Adult", "adult"},
-                  {"Explicit", "explicit"}
-                ]}
-              />
-              <% mixed = is_nil(current_rating) && @series.books != [] %>
-              <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
-              <div :if={mixed} class="flex items-center gap-2 mt-2">
-                <input type="hidden" name="age_rating_only_unknown" value="false" />
-                <input
-                  type="checkbox"
-                  id="age_rating_only_unknown"
-                  name="age_rating_only_unknown"
-                  value="true"
-                  checked
-                  class="ink-check"
-                />
-                <label for="age_rating_only_unknown" class="text-sm text-fg-soft cursor-pointer">
-                  Only update issues rated Unknown ({unknown_count})
-                </label>
-              </div>
-              <p class="flex items-start gap-1.5 text-xs text-warn/80 mt-1.5">
-                <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
-                <%= if mixed do %>
-                  Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
-                    @series.books
-                  )} issues.
-                <% else %>
-                  Changing this overwrites the age rating of all {length(@series.books)} issues in this series.
-                <% end %>
-              </p>
-            </div>
-
-            <div class="col-span-2 flex items-center gap-3">
-              <input
-                type="hidden"
-                name="series[ongoing]"
-                value="false"
-              />
-              <input
-                type="checkbox"
-                id="series_ongoing"
-                name="series[ongoing]"
-                value="true"
-                checked={@edit_form[:ongoing].value}
-                class="ink-check"
-              />
-              <label for="series_ongoing" class="text-sm text-fg-soft cursor-pointer">Ongoing series</label>
-            </div>
-
-            <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Publisher</label>
-              <div
-                id={"pub-picker-series-#{@series.id}"}
-                phx-hook="PublisherSearch"
-                class="relative"
-                data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
-                data-selected-ids={
-                  Jason.encode!(Enum.map(@series.publishers, fn p -> p.canonical_publisher_id || p.id end) |> Enum.uniq())
-                }
-                data-input-name="series[publisher_ids][]"
-              >
-                <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
-                <input
-                  type="text"
-                  placeholder="Search publishers…"
-                  autocomplete="off"
-                  class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-              <.ink_button
-                type="button"
-                variant="ghost"
-                size="md"
-                class="mt-2"
-                id="push-publishers-btn"
-                phx-hook="PushPublishers"
-                data-picker-id={"pub-picker-series-#{@series.id}"}
-              >
-                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues…
-              </.ink_button>
-            </div>
-          </div>
-
-          <.dialog_footer>
-            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
-            <.ink_button type="submit" size="md">Save changes</.ink_button>
-          </.dialog_footer>
-        </.form>
-      </.dialog>
-    <% end %>
+    <.live_component
+      :if={@current_user.role == :admin && @show_edit_dialog}
+      module={StashixWeb.SeriesEditComponent}
+      id="edit-series"
+      series={@series}
+      all_publishers={@all_publishers}
+      folder={@series.path && relative_folder(@series, @library)}
+    />
 
     <%= if @current_user.role == :admin && @show_push_publishers_dialog do %>
       <.dialog
@@ -1099,6 +971,13 @@ defmodule StashixWeb.SeriesLive do
         </.dialog_footer>
       </.dialog>
     <% end %>
+
+    <.push_language_dialog
+      :if={@current_user.role == :admin && @push_language}
+      language={@push_language}
+      mode={@push_language_mode}
+      preview={@push_language_preview}
+    />
 
     <%= if @current_user.role == :admin && @show_push_age_rating_dialog do %>
       <.dialog
@@ -1245,4 +1124,96 @@ defmodule StashixWeb.SeriesLive do
   defp short_age_label(:explicit), do: "Explicit"
   defp short_age_label(nil), do: "Unrated"
   defp short_age_label(other), do: to_string(other)
+
+  attr :language, :string, required: true
+  attr :mode, :atom, required: true
+  attr :preview, :map, required: true
+
+  defp push_language_dialog(assigns) do
+    ~H"""
+    <.dialog id="push-language-dialog" title="Push language to issues" on_close={JS.push("close_push_language_dialog")}>
+      <:description>
+        Set the language of every issue in this series. Issues that lock their language are skipped.
+      </:description>
+
+      <div class="space-y-4 mt-3">
+        <form id="push-language-form" phx-change="set_push_language">
+          <.field label="Language">
+            <.ink_select
+              id="push-language-select"
+              name="language"
+              label="Language"
+              variant="field"
+              value={@language}
+              options={Formatters.language_options(@language)}
+              searchable
+            />
+          </.field>
+        </form>
+
+        <div class="space-y-2">
+          <label
+            :for={
+              {mode, label, desc} <- [
+                {:replace, "Replace", "Overwrite the language on all issues."},
+                {:fill, "Fill empty", "Only set it on issues that have no language."}
+              ]
+            }
+            class={[
+              "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
+              if(@mode == mode, do: "border-ink bg-ink/10", else: "border-line hover:border-line-strong")
+            ]}
+          >
+            <input
+              type="radio"
+              name="push_language_mode"
+              value={mode}
+              checked={@mode == mode}
+              phx-click="set_push_language_mode"
+              phx-value-mode={mode}
+              class="mt-0.5 accent-ink"
+            />
+            <div>
+              <p class="text-sm font-medium text-fg">{label}</p>
+              <p class="text-xs text-muted mt-0.5">{desc}</p>
+            </div>
+          </label>
+        </div>
+
+        <% affected = length(@preview.affected) %>
+        <div class="rounded-md border border-line overflow-hidden">
+          <p class="px-3 py-2 text-xs text-muted bg-raised/60 border-b border-line">
+            <%= if affected == 0 do %>
+              All issues already match — no changes needed.
+            <% else %>
+              {affected} of {affected + @preview.unchanged} {if affected + @preview.unchanged == 1,
+                do: "issue",
+                else: "issues"} will change
+            <% end %>
+          </p>
+          <div :if={affected > 0} class="max-h-52 overflow-y-auto divide-y divide-line/80">
+            <div
+              :for={entry <- @preview.affected}
+              class="grid grid-cols-[2.5rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-2 text-xs"
+            >
+              <span class="text-faint tabular-nums">
+                {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
+              </span>
+              <span class="text-faint italic truncate">{Formatters.language_name(entry.from) || "None"}</span>
+              <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
+              <span class="text-fg truncate">{Formatters.language_name(entry.to)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <.dialog_footer>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_language_dialog">Cancel</.ink_button>
+        <.ink_button type="button" size="md" phx-click="push_language_to_issues" disabled={affected == 0}>
+          Push to issues
+        </.ink_button>
+      </.dialog_footer>
+    </.dialog>
+    """
+  end
 end

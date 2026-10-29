@@ -90,6 +90,21 @@ defmodule Stashix.Formatters do
     "zu" => "Zulu"
   }
 
+  @doc """
+  `{"English (en)", "en"}` pairs for a language picker, by name. A `current`
+  code missing from the list (e.g. `"pt-BR"`) is added so it stays selectable.
+  """
+  def language_options(current \\ nil) do
+    options =
+      @language_names
+      |> Enum.map(fn {code, name} -> {"#{name} (#{code})", code} end)
+      |> Enum.sort()
+
+    if current in [nil, ""] or Enum.any?(options, &(elem(&1, 1) == current)),
+      do: options,
+      else: [{"#{language_name(current)} (#{current})", current} | options]
+  end
+
   @doc "Returns the full language name for a BCP 47 code, or the code itself if unknown. Returns `nil` for `nil`."
   def language_name(nil), do: nil
   def language_name(code), do: Map.get(@language_names, String.downcase(code), code)

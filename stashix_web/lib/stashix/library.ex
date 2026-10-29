@@ -1147,6 +1147,43 @@ defmodule Stashix.Library do
     end
   end
 
+  @doc """
+  Sets the language of every non-deleted issue in the series, skipping issues
+  that lock it. With `only_empty: true` only issues without a language change.
+  Returns `{:ok, book_ids}` for the books that were updated.
+  """
+  def set_series_language(series_id, language, opts \\ []) when is_binary(language) and language != "" do
+    query =
+      from(b in Book,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "language"),
+        where: is_nil(b.language) or b.language != ^language,
+        select: b.id
+      )
+
+    query = if opts[:only_empty], do: where(query, [b], is_nil(b.language) or b.language == ""), else: query
+    {_, ids} = Repo.update_all(query, set: [language: language, updated_at: NaiveDateTime.utc_now(:second)])
+    {:ok, ids}
+  end
+
+  @doc "Preview of `set_series_language/3`: `%{affected: [%{book, from, to}], unchanged: n}`."
+  def push_language_preview(series_id, language, mode) when mode in [:replace, :fill] do
+    books =
+      from(b in Book,
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "language"),
+        order_by: [asc: b.issue_number],
+        select: %{id: b.id, title: b.title, issue_number: b.issue_number, language: b.language}
+      )
+      |> Repo.all()
+
+    affected =
+      for book <- books,
+          book.language != language,
+          mode == :replace or book.language in [nil, ""],
+          do: %{book: book, from: book.language, to: language}
+
+    %{affected: affected, unchanged: length(books) - length(affected)}
+  end
+
   def update_series_folder_meta(series, attrs) do
     series
     |> Series.changeset(Map.take(attrs, [:name, :path, :start_year, :end_year, :ongoing]))
@@ -1229,6 +1266,7 @@ defmodule Stashix.Library do
   end
 
   def get_publisher!(id), do: Repo.get!(Publisher, id)
+  def get_publisher(id), do: Repo.get(Publisher, id)
 
   def get_publisher_with_aliases!(access, id) do
     Repo.get!(visible_publishers(access), id) |> Repo.preload([:aliases, :canonical])
@@ -1653,6 +1691,31 @@ defmodule Stashix.Library do
     end
 
     :ok
+  end
+
+  @doc "Replaces a series' alternative names with `names` (`[%{name, lang, external_id}]`)."
+  def replace_series_alternative_names(series_id, names) do
+    now = NaiveDateTime.utc_now(:second)
+
+    rows =
+      names
+      |> Enum.uniq_by(& &1.name)
+      |> Enum.map(fn n ->
+        %{
+          id: Ecto.UUID.generate(),
+          series_id: series_id,
+          name: n.name,
+          lang: n[:lang] || "en",
+          external_id: n[:external_id],
+          inserted_at: now,
+          updated_at: now
+        }
+      end)
+
+    Repo.transaction(fn ->
+      Repo.delete_all(from(a in Stashix.Library.SeriesAlternativeName, where: a.series_id == ^series_id))
+      Repo.insert_all(Stashix.Library.SeriesAlternativeName, rows)
+    end)
   end
 
   @doc "The imprint `name` of the named publisher, creating both if needed."

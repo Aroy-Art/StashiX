@@ -6,7 +6,6 @@ defmodule StashixWeb.BookLive do
 
   alias Stashix.{Formatters, Library, Metadata, Repo, Scanner}
   alias Stashix.Accounts.User
-  alias Stashix.Library.Book
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
   import StashixWeb.DetailComponents
@@ -14,7 +13,7 @@ defmodule StashixWeb.BookLive do
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
-  @admin_events ~w(save_metadata fetch_metadata toggle_metadata_lock rescan_book)
+  @admin_events ~w(fetch_metadata toggle_metadata_lock rescan_book)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -48,7 +47,6 @@ defmodule StashixWeb.BookLive do
        show_admin_menu: false,
        show_edit_dialog: false,
        show_identify_dialog: false,
-       edit_form: nil,
        external_ids: load_external_ids(book),
        book_details: Library.get_book_details(socket.assigns.access, book.id),
        all_publishers: Library.list_all_publishers()
@@ -57,18 +55,12 @@ defmodule StashixWeb.BookLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    socket =
-      if params["edit"] == "true" && socket.assigns.current_user.role == :admin do
-        book = socket.assigns.book
-        form = book |> Book.changeset(%{}) |> to_form()
-        assign(socket, show_edit_dialog: true, edit_form: form)
-      else
-        assign(socket, show_edit_dialog: false, edit_form: nil)
-      end
+    admin = socket.assigns.current_user.role == :admin
 
     socket =
       assign(socket,
-        show_identify_dialog: params["identify"] == "true" && socket.assigns.current_user.role == :admin
+        show_edit_dialog: params["edit"] == "true" && admin,
+        show_identify_dialog: params["identify"] == "true" && admin
       )
 
     {:noreply, socket}
@@ -103,26 +95,6 @@ defmodule StashixWeb.BookLive do
 
   def handle_event("close_edit_dialog", _params, socket) do
     {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book.id}")}
-  end
-
-  def handle_event("save_metadata", %{"book" => params}, socket) do
-    book = socket.assigns.book
-
-    case Library.update_book(book, params) do
-      {:ok, updated_book} ->
-        book = Library.get_book_with_series(socket.assigns.access, updated_book.id)
-        Metadata.enqueue_write(updated_book.id)
-
-        socket =
-          socket
-          |> assign(book: book, page_title: book.title)
-          |> close_dialog(~p"/book/#{book.id}")
-
-        {:noreply, socket}
-
-      {:error, changeset} ->
-        {:noreply, assign(socket, edit_form: to_form(changeset))}
-    end
   end
 
   def handle_event("select_format", %{"format" => fmt}, socket) do
@@ -199,6 +171,14 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_info({:metadata_updated, _, _}, socket), do: {:noreply, socket}
+
+  def handle_info({:book_edit_saved, _id}, socket) do
+    {:noreply,
+     socket
+     |> reload_book()
+     |> put_flash(:info, "Metadata saved")
+     |> close_dialog(~p"/book/#{socket.assigns.book.id}")}
+  end
 
   def handle_info({:identify_applied, :book, _id}, socket) do
     {:noreply,
@@ -594,95 +574,14 @@ defmodule StashixWeb.BookLive do
     <% end %>
 
     <%!-- Edit Metadata Dialog --%>
-    <%= if @current_user.role == :admin && @show_edit_dialog do %>
-      <.dialog id="edit-metadata-dialog" title="Edit metadata" on_close={JS.push("close_edit_dialog")}>
-        <:description>
-          Override metadata for this book. Changes persist until the next rescan.
-          <%= if @selected_file do %>
-            <p class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
-              <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
-              {relative_path(@selected_file.path, @library)}
-            </p>
-          <% end %>
-        </:description>
-
-        <.form for={@edit_form} phx-submit="save_metadata" class="space-y-3 mt-2">
-          <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-            <.field label="Title" class="col-span-2">
-              <.text_input name="book[title]" value={@edit_form[:title].value} />
-            </.field>
-
-            <.field label="Issue #">
-              <.text_input name="book[issue_number]" value={@edit_form[:issue_number].value} />
-            </.field>
-
-            <.field label="Volume">
-              <.text_input type="number" name="book[volume]" value={@edit_form[:volume].value} />
-            </.field>
-
-            <.field label="Year">
-              <.text_input type="number" name="book[year]" value={@edit_form[:year].value} />
-            </.field>
-
-            <.field label="Language">
-              <.text_input name="book[language]" value={@edit_form[:language].value} />
-            </.field>
-
-            <.field label="Age Rating" class="col-span-2">
-              <.ink_select
-                id="edit-book-age-rating"
-                name="book[age_rating]"
-                label="Age rating"
-                variant="field"
-                value={@edit_form[:age_rating].value}
-                options={[
-                  {"Unknown", "unknown"},
-                  {"Everyone", "everyone"},
-                  {"Teen", "teen"},
-                  {"Teen+", "teen_plus"},
-                  {"Mature", "mature"},
-                  {"Adult", "adult"},
-                  {"Explicit", "explicit"}
-                ]}
-              />
-            </.field>
-
-            <.field label="Summary" class="col-span-2">
-              <.textarea name="book[summary]" rows="4" value={@edit_form[:summary].value} />
-            </.field>
-
-            <.field label="Notes" class="col-span-2">
-              <.textarea name="book[notes]" rows="3" value={@edit_form[:notes].value} />
-            </.field>
-
-            <div class="col-span-2">
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Publisher</label>
-              <div
-                id={"pub-picker-book-#{@book.id}"}
-                phx-hook="PublisherSearch"
-                class="relative"
-                data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
-                data-selected-ids={Jason.encode!(Enum.map(@book.publishers, & &1.id))}
-                data-input-name="book[publisher_ids][]"
-              >
-                <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
-                <input
-                  type="text"
-                  placeholder="Search publishers…"
-                  autocomplete="off"
-                  class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          <.dialog_footer>
-            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
-            <.ink_button type="submit" size="md" phx-disable-with="Saving…">Save changes</.ink_button>
-          </.dialog_footer>
-        </.form>
-      </.dialog>
-    <% end %>
+    <.live_component
+      :if={@current_user.role == :admin && @show_edit_dialog}
+      module={StashixWeb.BookEditComponent}
+      id="edit-book"
+      book={@book}
+      all_publishers={@all_publishers}
+      file_path={@selected_file && relative_path(@selected_file.path, @library)}
+    />
     """
   end
 end
