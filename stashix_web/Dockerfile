@@ -20,7 +20,7 @@ RUN MIX_ENV=prod mix release
 
 FROM alpine:3.24
 
-RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip vips su-exec
+RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip poppler-utils vips su-exec
 
 COPY --chmod=755 unrar.sh /usr/local/bin/unrar
 
