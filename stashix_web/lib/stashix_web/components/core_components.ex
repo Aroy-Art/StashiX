@@ -384,7 +384,7 @@ defmodule StashixWeb.CoreComponents do
         badge:
           cond do
             !issue? or is_nil(book.issue_number) -> nil
-            book.volume -> "Vol #{book.volume} ##{book.issue_number}"
+            book.volume && (book.series_volume_count || 2) > 1 -> "Vol #{book.volume} ##{book.issue_number}"
             true -> "##{book.issue_number}"
           end,
         progress:

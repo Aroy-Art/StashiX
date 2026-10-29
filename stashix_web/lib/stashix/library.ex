@@ -101,7 +101,28 @@ defmodule Stashix.Library do
       end
 
     books = Repo.all(query)
-    populate_source_formats(books)
+    books |> populate_source_formats() |> put_series_volume_counts(access!(opts))
+  end
+
+  # Sets `series_volume_count` so issue cards can drop the volume when a
+  # series only has one.
+  defp put_series_volume_counts(books, access) do
+    series_ids = books |> Enum.map(& &1.series_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+
+    counts =
+      if series_ids == [] do
+        %{}
+      else
+        from(b in Access.books(access),
+          where: b.series_id in ^series_ids and is_nil(b.deleted_at),
+          group_by: b.series_id,
+          select: {b.series_id, count(b.volume, :distinct)}
+        )
+        |> Repo.all()
+        |> Map.new()
+      end
+
+    Enum.map(books, &%{&1 | series_volume_count: Map.get(counts, &1.series_id)})
   end
 
   defp populate_source_formats([]), do: []
@@ -1399,7 +1420,7 @@ defmodule Stashix.Library do
         _ -> order_by(query, [b], asc: b.title)
       end
 
-    Repo.all(query)
+    query |> Repo.all() |> put_series_volume_counts(access!(opts))
   end
 
   def count_publisher_books(access, publisher_id, type) do
@@ -2225,6 +2246,7 @@ defmodule Stashix.Library do
       preload: [:cover]
     )
     |> Repo.all()
+    |> put_series_volume_counts(access)
   end
 
   def mark_orphaned_books(library_id, scanned_paths) do
@@ -2405,7 +2427,7 @@ defmodule Stashix.Library do
           )
       end
 
-    Repo.all(query)
+    query |> Repo.all() |> put_series_volume_counts(access!(opts))
   end
 
   def list_series_for_issues(opts \\ []) do

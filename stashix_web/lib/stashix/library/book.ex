@@ -32,6 +32,8 @@ defmodule Stashix.Library.Book do
     field :community_rating, :float
     field :community_rating_count, :integer
     field :source_format, :string, virtual: true
+    # Distinct volume numbers across the book's series; nil when not loaded.
+    field :series_volume_count, :integer, virtual: true
     field :metadata_locked, :boolean, default: false
     field :manga_volume, :string
     field :alternate_series, :string

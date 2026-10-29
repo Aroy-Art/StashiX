@@ -811,6 +811,7 @@ defmodule StashixWeb.SeriesLive do
             />
           </form>
         </:actions>
+        <% multi_volume? = @books |> Enum.map(& &1.volume) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length() > 1 %>
         <.cover_grid cols="narrow">
           <%= for book <- @books do %>
             <.media_card
@@ -821,7 +822,7 @@ defmodule StashixWeb.SeriesLive do
               subtitle={book.year && to_string(book.year)}
               badge={
                 cond do
-                  book.volume && book.issue_number -> "Vol. #{book.volume}  ##{book.issue_number}"
+                  multi_volume? && book.volume && book.issue_number -> "Vol. #{book.volume}  ##{book.issue_number}"
                   book.issue_number -> "##{book.issue_number}"
                   true -> nil
                 end
