@@ -34,8 +34,8 @@ defmodule StashixWeb.MetadataEditComponents do
         phx-value-tab={key}
         phx-target={@target}
         class={[
-          "px-2.5 py-1 rounded-sm text-xs font-display font-bold uppercase tracking-wide transition-colors",
-          if(key == @current, do: "bg-ink text-gray-950 -rotate-1", else: "text-fg-soft hover:text-fg hover:bg-fg/10")
+          "px-3 py-1.5 rounded-sm text-sm font-semibold transition-colors",
+          if(key == @current, do: "bg-ink text-gray-950", else: "text-fg-soft hover:text-fg hover:bg-fg/10")
         ]}
       >
         {label}
