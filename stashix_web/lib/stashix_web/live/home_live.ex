@@ -367,9 +367,20 @@ defmodule StashixWeb.HomeLive do
       (assigns.next_issue == [] or length(assigns.continue_reading) <= 1) and
         (assigns.recommendations.books != [] or assigns.recommendations.series != [])
 
+    # The hero already shows the first book in progress
+    also_reading = Enum.drop(assigns.continue_reading, 1)
+
+    pair_queues? =
+      also_reading != [] and assigns.next_issue != [] and
+        length(also_reading) <= 2 and length(assigns.next_issue) <= 2
+
     assigns =
       assign(assigns,
         hero: hero(assigns),
+        also_reading: also_reading,
+        pair_queues?: pair_queues?,
+        queue_cols:
+          if(pair_queues?, do: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1", else: "grid-cols-1 sm:grid-cols-2"),
         recent_series: Enum.flat_map(assigns.libraries_data, & &1.recent_series),
         recent_books: Enum.flat_map(assigns.libraries_data, & &1.recent_books),
         recent_issues: Enum.flat_map(assigns.libraries_data, & &1.recent_issues),
@@ -401,27 +412,28 @@ defmodule StashixWeb.HomeLive do
       <%!-- Reading queues on the left, libraries down the side (below on small screens) --%>
       <div class="flex flex-col lg:flex-row lg:items-start gap-8 lg:gap-10">
         <div :if={@queues?} class="flex-1 min-w-0 space-y-8">
-          <%!-- The hero already shows the first book in progress --%>
-          <.section :if={length(@continue_reading) > 1} title="Also reading" count={length(@continue_reading) - 1}>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <.book_row
-                :for={%{book: book, current_page: page} <- Enum.drop(@continue_reading, 1)}
-                book={book}
-                read={page}
-              />
-            </div>
-          </.section>
+          <%!-- Short queues share a row on desktop instead of each leaving half a row empty --%>
+          <div
+            :if={@also_reading != [] or @next_issue != []}
+            class={if @pair_queues?, do: "grid grid-cols-1 lg:grid-cols-2 gap-8", else: "space-y-8"}
+          >
+            <.section :if={@also_reading != []} title="Also reading" count={length(@also_reading)}>
+              <div class={["grid gap-2.5", @queue_cols]}>
+                <.book_row :for={%{book: book, current_page: page} <- @also_reading} book={book} read={page} />
+              </div>
+            </.section>
 
-          <.section :if={@next_issue != []} title="Up next" count={length(@next_issue)}>
-            <:actions :if={length(@next_issue) > 6}>
-              <.text_link navigate={~p"/issues"}>
-                See all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
-              </.text_link>
-            </:actions>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              <.book_row :for={book <- Enum.take(@next_issue, 6)} book={book} />
-            </div>
-          </.section>
+            <.section :if={@next_issue != []} title="Up next" count={length(@next_issue)}>
+              <:actions :if={length(@next_issue) > 6}>
+                <.text_link navigate={~p"/issues"}>
+                  See all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+                </.text_link>
+              </:actions>
+              <div class={["grid gap-2.5", @queue_cols]}>
+                <.book_row :for={book <- Enum.take(@next_issue, 6)} book={book} />
+              </div>
+            </.section>
+          </div>
 
           <.section :if={@picks?} title="Start reading">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
