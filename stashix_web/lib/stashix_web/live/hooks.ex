@@ -25,6 +25,8 @@ defmodule StashixWeb.Live.Hooks do
             {%{}, %{}}
           end
 
+        scan_queue = if connected?(socket) and user.role == :admin, do: load_scan_queue(libraries), else: %{}
+
         socket =
           socket
           |> assign(
@@ -33,6 +35,7 @@ defmodule StashixWeb.Live.Hooks do
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             sidebar_health_progress: initial_health,
+            sidebar_scan_queue: scan_queue,
             navbar_search_query: "",
             navbar_search_results: []
           )
@@ -74,6 +77,8 @@ defmodule StashixWeb.Live.Hooks do
             {%{}, %{}}
           end
 
+        scan_queue = if connected?(socket) and user.role == :admin, do: load_scan_queue(libraries), else: %{}
+
         socket =
           socket
           |> assign(
@@ -82,6 +87,7 @@ defmodule StashixWeb.Live.Hooks do
             sidebar_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             sidebar_health_progress: initial_health,
+            sidebar_scan_queue: scan_queue,
             navbar_search_query: "",
             navbar_search_results: []
           )
@@ -275,6 +281,20 @@ defmodule StashixWeb.Live.Hooks do
     {:cont, socket}
   end
 
+  defp handle_sidebar_progress({:scan_queue, _}, %{assigns: %{current_user: %{role: role}}} = socket)
+       when role != :admin do
+    {:halt, socket}
+  end
+
+  defp handle_sidebar_progress({:scan_queue, %{library_id: id, items: items}}, socket) do
+    queue =
+      if items == [],
+        do: Map.delete(socket.assigns.sidebar_scan_queue, id),
+        else: Map.put(socket.assigns.sidebar_scan_queue, id, items)
+
+    {:halt, assign(socket, :sidebar_scan_queue, queue)}
+  end
+
   defp handle_sidebar_progress({:clear_sidebar_scan_progress, id}, socket) do
     {:halt, update(socket, :sidebar_scan_progress, &Map.delete(&1, id))}
   end
@@ -389,6 +409,12 @@ defmodule StashixWeb.Live.Hooks do
          phase: Map.get(task, :phase, :scan)
        }}
     end)
+  end
+
+  defp load_scan_queue(libraries) do
+    Map.take(Stashix.Scanner.queued(), Enum.map(libraries, & &1.id))
+  catch
+    :exit, _ -> %{}
   end
 
   defp authenticate_from_session(session), do: TokenHelper.user_from_session(session)

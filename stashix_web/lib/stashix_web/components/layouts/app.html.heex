@@ -348,6 +348,41 @@
                 label={"#{Map.get(lib_names, lib_id, "Library")} progress"}
               />
             </div>
+            <%!-- Scans waiting for a running library or series scan (admins only) --%>
+            <% scan_queue =
+              if @current_user.role == :admin, do: Map.get(assigns, :sidebar_scan_queue) || %{}, else: %{} %>
+            <%= if scan_queue != %{} do %>
+              <.menu_label class="border-t border-fg/10 pt-2">Queued</.menu_label>
+              <div :for={{lib_id, items} <- scan_queue} id={"scan-queue-#{lib_id}"} class="px-2 pb-2">
+                <div class="flex items-center justify-between gap-3">
+                  <span class="min-w-0 truncate font-display font-bold uppercase tracking-wide text-sm text-fg">
+                    {Map.get(lib_names, lib_id, "Library")}
+                  </span>
+                  <span class="font-display font-black text-sm leading-none tabular-nums text-muted">
+                    {length(items)}
+                  </span>
+                </div>
+                <ul class="mt-1 space-y-0.5">
+                  <li
+                    :for={item <- Enum.take(items, 5)}
+                    class="flex items-center gap-2 text-[11px] text-muted min-w-0"
+                  >
+                    <.icon
+                      name={if item.kind == :series, do: "lucide-library", else: "lucide-file"}
+                      class="w-3 h-3 flex-shrink-0 text-faint"
+                    />
+                    <span class="truncate">
+                      {if item.kind == :series,
+                        do: "#{if item.force, do: "Force rescan", else: "Rescan"} · #{item.label}",
+                        else: item.label}
+                    </span>
+                  </li>
+                  <li :if={length(items) > 5} class="pl-5 text-[11px] text-faint">
+                    +{length(items) - 5} more
+                  </li>
+                </ul>
+              </div>
+            <% end %>
           </.ink_menu>
 
           <div class="w-px h-5 bg-fg/15 flex-shrink-0"></div>

@@ -60,4 +60,18 @@ defmodule StashixWeb.LibraryLiveTest do
 
     assert render(view) =~ ~r/52<\/span>\s*books/
   end
+
+  test "the activity menu lists queued scans", %{conn: conn, lib: lib} do
+    {:ok, view, html} = live(conn, ~p"/library/#{lib.id}/books")
+    refute html =~ "Queued"
+
+    items = [%{kind: :series, label: "Saga", force: true}, %{kind: :file, label: "Saga 002.cbz"}]
+    send(view.pid, {:scan_queue, %{library_id: lib.id, items: items}})
+    html = view |> element("#scan-queue-#{lib.id}") |> render()
+    assert html =~ "Force rescan · Saga"
+    assert html =~ "Saga 002.cbz"
+
+    send(view.pid, {:scan_queue, %{library_id: lib.id, items: []}})
+    refute has_element?(view, "#scan-queue-#{lib.id}")
+  end
 end

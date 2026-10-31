@@ -435,27 +435,53 @@ defmodule Stashix.ScannerTest do
     end
   end
 
-  describe "file scans during a library scan" do
-    setup %{lib: lib} do
+  describe "scan queue" do
+    setup %{lib: lib, tmp: tmp} do
+      write_cbz(mkdir(tmp, "Saga (2012-)"), "Saga 001.cbz")
+      Scanner.scan_sync(lib.id)
+      [series] = Repo.all(Stashix.Library.Series)
+
       scan = spawn(fn -> Process.sleep(:infinity) end)
       on_exit(fn -> Process.exit(scan, :kill) end)
-      %{scan: scan, state: %{table: nil, scanning: %{scan => lib.id}, pending: %{}}}
+      %{series: series, scan: scan, state: %{table: nil, scanning: %{scan => {lib.id, :library}}, pending: %{}}}
     end
 
-    test "wait for the library scan to end", %{lib: lib, scan: scan, state: state} do
-      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
-      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
-      assert state.pending == %{lib.id => MapSet.new(["/missing/a.cbz"])}
+    defp scan_down(state, pid), do: Scanner.handle_info({:DOWN, make_ref(), :process, pid, :normal}, state)
 
-      {:noreply, state} = Scanner.handle_info({:DOWN, make_ref(), :process, scan, :normal}, state)
+    test "file scans wait for the library scan", %{lib: lib, scan: scan, state: state} do
+      Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{lib.id}")
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      assert state.pending == %{lib.id => [{:file, "/missing/a.cbz"}]}
+      assert_received {:scan_queue, %{items: [%{kind: :file, label: "a.cbz"}]}}
+      refute_received {:scan_queue, _}, "unchanged queue is not re-broadcast"
+
+      {:noreply, state} = scan_down(state, scan)
       assert state.scanning == %{}
       assert state.pending == %{}
+      assert_received {:scan_queue, %{items: []}}
     end
 
-    test "for other libraries run straight away", %{scan: scan, state: state} do
+    test "file scans of other libraries run straight away", %{scan: scan, state: state} do
       {:noreply, state} = Scanner.handle_cast({:scan_file, Ecto.UUID.generate(), "/missing/a.cbz"}, state)
       assert state.pending == %{}
-      assert map_size(state.scanning) == 1 and state.scanning[scan]
+      assert Map.keys(state.scanning) == [scan]
+    end
+
+    test "series scans wait for the library scan, file scans for both", ctx do
+      %{lib: lib, series: series, scan: scan} = ctx
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, ctx.state)
+      {:noreply, state} = Scanner.handle_cast({:scan_series, series.id, false}, state)
+      assert state.pending == %{lib.id => [{:file, "/missing/a.cbz"}, {:series, series.id, false}]}
+
+      {:noreply, state} = scan_down(state, scan)
+      assert [{series_scan, {_, :series}}] = Map.to_list(state.scanning)
+      assert state.pending == %{lib.id => [{:file, "/missing/a.cbz"}]}
+
+      ref = Process.monitor(series_scan)
+      assert_receive {:DOWN, ^ref, _, _, _}, 5_000
+      {:noreply, state} = scan_down(state, series_scan)
+      assert state == %{table: nil, scanning: %{}, pending: %{}}
     end
   end
 

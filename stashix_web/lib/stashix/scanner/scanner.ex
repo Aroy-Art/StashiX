@@ -56,6 +56,9 @@ defmodule Stashix.Scanner do
     end
   end
 
+  @doc "Scans waiting for a running scan to end, per library (see `queue_items/1`)."
+  def queued, do: GenServer.call(__MODULE__, :queued)
+
   def list_active_tasks do
     :ets.tab2list(@ets_table)
     |> Enum.map(fn {id, status} -> Map.put(status, :library_id, id) end)
@@ -76,7 +79,7 @@ defmodule Stashix.Scanner do
 
     Process.monitor(pid)
     :ets.insert(@ets_table, {library_id, %{pid: pid, done: false, phase: :starting}})
-    {:noreply, put_in(state, [:scanning, pid], library_id)}
+    {:noreply, put_in(state, [:scanning, pid], {library_id, :library})}
   end
 
   def handle_cast({:cancel_scan, library_id}, state) do
@@ -93,23 +96,18 @@ defmodule Stashix.Scanner do
     {:noreply, state}
   end
 
-  # A file scan racing a library scan could import a file the library scan then
-  # marks orphaned (it was not in its file list), so it waits until that ends.
   def handle_cast({:scan_file, library_id, file_path}, state) do
-    if library_id in Map.values(state.scanning) do
-      {:noreply, update_in(state, [:pending, Access.key(library_id, MapSet.new())], &MapSet.put(&1, file_path))}
-    else
-      start_file_scan(library_id, file_path)
-      {:noreply, state}
-    end
+    {:noreply, state |> dispatch(library_id, {:file, file_path}) |> broadcast_queue(state, library_id)}
   end
 
   def handle_cast({:scan_series, series_id, force}, state) do
-    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
-      do_scan_series(series_id, force)
-    end)
+    case Library.get_series(series_id) do
+      %{library_id: library_id} ->
+        {:noreply, state |> dispatch(library_id, {:series, series_id, force}) |> broadcast_queue(state, library_id)}
 
-    {:noreply, state}
+      nil ->
+        {:noreply, state}
+    end
   end
 
   def handle_cast({:scan_book, book_id}, state) do
@@ -146,25 +144,94 @@ defmodule Stashix.Scanner do
     {:noreply, state}
   end
 
-  # A library scan ended (finished, failed or cancelled): run the file scans
-  # that came in meanwhile.
+  # A library or series scan ended (finished, failed or cancelled): run what
+  # was waiting on it.
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
     case Map.pop(state.scanning, pid) do
       {nil, _} ->
         {:noreply, state}
 
-      {library_id, scanning} ->
-        state = %{state | scanning: scanning}
+      {{library_id, _kind}, scanning} ->
+        {jobs, pending} = Map.pop(state.pending, library_id, [])
+        # Series scans first, so the file scans queue up behind them again.
+        jobs = Enum.sort_by(jobs, &match?({:file, _}, &1))
 
-        if library_id in Map.values(scanning) do
-          {:noreply, state}
-        else
-          {paths, pending} = Map.pop(state.pending, library_id, MapSet.new())
-          Enum.each(paths, &start_file_scan(library_id, &1))
-          {:noreply, %{state | pending: pending}}
-        end
+        new_state =
+          %{state | scanning: scanning, pending: pending}
+          |> then(&Enum.reduce(jobs, &1, fn job, acc -> dispatch(acc, library_id, job) end))
+          |> broadcast_queue(state, library_id)
+
+        {:noreply, new_state}
     end
+  end
+
+  @impl true
+  def handle_call(:queued, _from, state) do
+    {:reply, Map.new(state.pending, fn {library_id, jobs} -> {library_id, queue_items(jobs)} end), state}
+  end
+
+  # Tells the activity menu when a library's queue changed.
+  defp broadcast_queue(new_state, old_state, library_id) do
+    jobs = Map.get(new_state.pending, library_id, [])
+
+    if jobs != Map.get(old_state.pending, library_id, []) do
+      Phoenix.PubSub.broadcast(
+        Stashix.PubSub,
+        "scan:#{library_id}",
+        {:scan_queue, %{library_id: library_id, items: queue_items(jobs)}}
+      )
+    end
+
+    new_state
+  end
+
+  @doc false
+  def queue_items(jobs) do
+    Enum.map(jobs, fn
+      {:file, path} ->
+        %{kind: :file, label: Path.basename(path)}
+
+      {:series, series_id, force} ->
+        name = with %{name: name} <- Library.get_series(series_id), do: name
+        %{kind: :series, label: name || "Series", force: force}
+    end)
+  end
+
+  # Scans of one library that overlap step on each other: a library or series
+  # scan marks as orphaned any file missing from the list it collected at its
+  # start, including ones a concurrent file scan just imported, and two scans
+  # can import the same new file at once. So file scans wait for any running
+  # library or series scan, and series scans for a running library scan.
+  defp dispatch(state, library_id, {:file, path} = job) do
+    if running_scans(state, library_id) == [] do
+      start_file_scan(library_id, path)
+      state
+    else
+      enqueue(state, library_id, job)
+    end
+  end
+
+  defp dispatch(state, library_id, {:series, series_id, force} = job) do
+    if :library in running_scans(state, library_id) do
+      enqueue(state, library_id, job)
+    else
+      {:ok, pid} =
+        Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn -> do_scan_series(series_id, force) end)
+
+      Process.monitor(pid)
+      put_in(state, [:scanning, pid], {library_id, :series})
+    end
+  end
+
+  defp running_scans(state, library_id) do
+    for {_pid, {^library_id, kind}} <- state.scanning, do: kind
+  end
+
+  defp enqueue(state, library_id, job) do
+    update_in(state, [:pending, Access.key(library_id, [])], fn jobs ->
+      if job in jobs, do: jobs, else: jobs ++ [job]
+    end)
   end
 
   defp start_file_scan(library_id, file_path) do
