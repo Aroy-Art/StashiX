@@ -604,6 +604,15 @@ Hooks.BackdropFade = {
   }
 }
 
+// Paints a canvas with its data-blurhash, e.g. as a tinted backdrop
+Hooks.Blurhash = {
+  mounted() { this.paint() },
+  updated() { this.paint() },
+  paint() {
+    try { window.decodeBlurhash(this.el.dataset.blurhash, this.el) } catch (_) {}
+  }
+}
+
 Hooks.CoverImage = {
   mounted() {
     const hash = this.el.dataset.blurhash

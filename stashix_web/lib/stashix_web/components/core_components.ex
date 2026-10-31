@@ -423,6 +423,7 @@ defmodule StashixWeb.CoreComponents do
   attr :eyebrow, :string, default: nil
   attr :detail, :string, default: nil
   attr :progress, :float, default: nil
+  attr :blurhash, :string, default: nil, doc: "the cover's blurhash, washed across the row behind it"
   attr :class, :any, default: nil
 
   def media_row(assigns) do
@@ -430,10 +431,27 @@ defmodule StashixWeb.CoreComponents do
     <.link
       navigate={@navigate}
       class={[
-        "group flex items-center gap-3 min-w-0 p-2.5 rounded-md bg-fg/[0.03] ring-1 ring-edge hover:bg-fg/[0.07] hover:ring-ink/60 transition-colors",
+        "group relative isolate overflow-hidden flex items-center gap-3 min-w-0 p-2.5 rounded-md bg-fg/[0.03] ring-1 ring-edge hover:bg-fg/[0.07] hover:ring-ink/60 transition-colors",
         @class
       ]}
     >
+      <canvas
+        :if={@blurhash}
+        id={"row-bh-#{:erlang.phash2(@navigate)}"}
+        phx-hook="Blurhash"
+        data-blurhash={@blurhash}
+        width="32"
+        height="48"
+        class="absolute inset-0 -z-10 w-full h-full object-cover object-[50%_35%] saturate-150 opacity-80 group-hover:opacity-100 transition-opacity"
+        aria-hidden="true"
+      ></canvas>
+      <div
+        :if={@blurhash}
+        data-tone={blurhash_tone(@blurhash)}
+        class="row-scrim absolute inset-0 -z-10 pointer-events-none"
+        aria-hidden="true"
+      >
+      </div>
       <div class="w-12 aspect-[2/3] flex-shrink-0 rounded-sm overflow-hidden bg-raised">
         <img
           src={"#{@cover_url}?s=s"}
@@ -456,6 +474,30 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @base83 ~c"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz#$%*+,-.:;=?@[]^_{|}~"
+          |> Enum.with_index()
+          |> Map.new()
+
+  # "light" or "dark" from the cover's average colour, which a blurhash keeps
+  # in characters 2–5. The cut-off is mid-grey in relative luminance.
+  defp blurhash_tone(<<_::binary-size(2), dc::binary-size(4), _::binary>>) do
+    value = dc |> String.to_charlist() |> Enum.reduce(0, &(&2 * 83 + Map.get(@base83, &1, 0)))
+
+    luminance =
+      [{div(value, 65536), 0.2126}, {rem(div(value, 256), 256), 0.7152}, {rem(value, 256), 0.0722}]
+      |> Enum.map(fn {c, weight} -> weight * srgb_to_linear(c) end)
+      |> Enum.sum()
+
+    if luminance > 0.18, do: "light", else: "dark"
+  end
+
+  defp blurhash_tone(_), do: "dark"
+
+  defp srgb_to_linear(c) do
+    f = c / 255
+    if f <= 0.04045, do: f / 12.92, else: :math.pow((f + 0.055) / 1.055, 2.4)
+  end
+
   @doc "`media_row/1` for a book; `read` is the number of pages read so far."
   attr :book, :map, required: true
   attr :read, :integer, default: nil
@@ -476,7 +518,8 @@ defmodule StashixWeb.CoreComponents do
         progress:
           if(assigns.read && book.page_count && book.page_count > 1,
             do: min(assigns.read / (book.page_count - 1), 1.0)
-          )
+          ),
+        blurhash: Ecto.assoc_loaded?(book.cover) && book.cover && book.cover.blurhash
       )
 
     ~H"""
@@ -487,6 +530,7 @@ defmodule StashixWeb.CoreComponents do
       eyebrow={@eyebrow}
       detail={@detail}
       progress={@progress}
+      blurhash={@blurhash || nil}
       class={@class}
     />
     """
