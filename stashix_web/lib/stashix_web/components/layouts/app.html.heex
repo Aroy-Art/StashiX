@@ -368,13 +368,21 @@
                     class="flex items-center gap-2 text-[11px] text-muted min-w-0"
                   >
                     <.icon
-                      name={if item.kind == :series, do: "lucide-library", else: "lucide-file"}
+                      name={
+                        case item.kind do
+                          :library -> "lucide-refresh-cw"
+                          :series -> "lucide-library"
+                          :file -> "lucide-file"
+                        end
+                      }
                       class="w-3 h-3 flex-shrink-0 text-faint"
                     />
                     <span class="truncate">
-                      {if item.kind == :series,
-                        do: "#{if item.force, do: "Force rescan", else: "Rescan"} · #{item.label}",
-                        else: item.label}
+                      {case item.kind do
+                        :library -> if item.force, do: "Force scan", else: "Scan"
+                        :series -> "#{if item.force, do: "Force rescan", else: "Rescan"} · #{item.label}"
+                        :file -> item.label
+                      end}
                     </span>
                   </li>
                   <li :if={length(items) > 5} class="pl-5 text-[11px] text-faint">

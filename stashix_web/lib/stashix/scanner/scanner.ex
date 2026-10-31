@@ -72,17 +72,18 @@ defmodule Stashix.Scanner do
 
   @impl true
   def handle_cast({:scan, library_id, force}, state) do
-    {:ok, pid} =
-      Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
-        do_scan(library_id, force)
-      end)
-
-    Process.monitor(pid)
-    :ets.insert(@ets_table, {library_id, %{pid: pid, done: false, phase: :starting}})
-    {:noreply, put_in(state, [:scanning, pid], {library_id, :library})}
+    {:noreply, state |> dispatch(library_id, {:library, force}) |> broadcast_queue(state, library_id)}
   end
 
+  # Cancels the running library scan and drops a waiting one, which would
+  # otherwise start the moment the running one dies.
   def handle_cast({:cancel_scan, library_id}, state) do
+    new_state =
+      update_in(state, [:pending, Access.key(library_id, [])], fn jobs ->
+        Enum.reject(jobs, &match?({:library, _}, &1))
+      end)
+      |> broadcast_queue(state, library_id)
+
     case :ets.lookup(@ets_table, library_id) do
       [{^library_id, %{pid: pid, done: false}}] when is_pid(pid) ->
         if Process.alive?(pid), do: Process.exit(pid, :kill)
@@ -93,7 +94,7 @@ defmodule Stashix.Scanner do
 
     :ets.delete(@ets_table, library_id)
     broadcast_progress(library_id, 0, 0, true, :cancelled)
-    {:noreply, state}
+    {:noreply, new_state}
   end
 
   def handle_cast({:scan_file, library_id, file_path}, state) do
@@ -154,8 +155,9 @@ defmodule Stashix.Scanner do
 
       {{library_id, _kind}, scanning} ->
         {jobs, pending} = Map.pop(state.pending, library_id, [])
-        # Series scans first, so the file scans queue up behind them again.
-        jobs = Enum.sort_by(jobs, &match?({:file, _}, &1))
+        # Library scan first, then series scans, so the rest queue up behind
+        # them again.
+        jobs = Enum.sort_by(jobs, &job_rank/1)
 
         new_state =
           %{state | scanning: scanning, pending: pending}
@@ -168,7 +170,8 @@ defmodule Stashix.Scanner do
 
   @impl true
   def handle_call(:queued, _from, state) do
-    {:reply, Map.new(state.pending, fn {library_id, jobs} -> {library_id, queue_items(jobs)} end), state}
+    queued = for {library_id, jobs} <- state.pending, jobs != [], into: %{}, do: {library_id, queue_items(jobs)}
+    {:reply, queued, state}
   end
 
   # Tells the activity menu when a library's queue changed.
@@ -186,9 +189,16 @@ defmodule Stashix.Scanner do
     new_state
   end
 
+  defp job_rank({:library, _}), do: 0
+  defp job_rank({:series, _, _}), do: 1
+  defp job_rank({:file, _}), do: 2
+
   @doc false
   def queue_items(jobs) do
     Enum.map(jobs, fn
+      {:library, force} ->
+        %{kind: :library, label: "Library", force: force}
+
       {:file, path} ->
         %{kind: :file, label: Path.basename(path)}
 
@@ -200,9 +210,28 @@ defmodule Stashix.Scanner do
 
   # Scans of one library that overlap step on each other: a library or series
   # scan marks as orphaned any file missing from the list it collected at its
-  # start, including ones a concurrent file scan just imported, and two scans
-  # can import the same new file at once. So file scans wait for any running
-  # library or series scan, and series scans for a running library scan.
+  # start, including ones a concurrent scan just imported, and two scans can
+  # import the same new file at once. So library and file scans wait for any
+  # running library or series scan, and series scans for a running library scan.
+  defp dispatch(state, library_id, {:library, force}) do
+    if running_scans(state, library_id) == [] do
+      {:ok, pid} =
+        Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn -> do_scan(library_id, force) end)
+
+      Process.monitor(pid)
+      :ets.insert(@ets_table, {library_id, %{pid: pid, done: false, phase: :starting}})
+      put_in(state, [:scanning, pid], {library_id, :library})
+    else
+      # One waiting library scan is enough; a force request upgrades it.
+      update_in(state, [:pending, Access.key(library_id, [])], fn jobs ->
+        case Enum.split_with(jobs, &match?({:library, _}, &1)) do
+          {[], rest} -> rest ++ [{:library, force}]
+          {[{:library, queued}], rest} -> [{:library, queued or force} | rest]
+        end
+      end)
+    end
+  end
+
   defp dispatch(state, library_id, {:file, path} = job) do
     if running_scans(state, library_id) == [] do
       start_file_scan(library_id, path)

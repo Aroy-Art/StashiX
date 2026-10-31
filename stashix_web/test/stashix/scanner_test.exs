@@ -468,6 +468,38 @@ defmodule Stashix.ScannerTest do
       assert Map.keys(state.scanning) == [scan]
     end
 
+    test "library scans wait, collapse into one and upgrade to force", %{lib: lib, state: state} do
+      {:noreply, state} = Scanner.handle_cast({:scan, lib.id, false}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan, lib.id, true}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan, lib.id, false}, state)
+      assert state.pending == %{lib.id => [{:library, true}, {:file, "/missing/a.cbz"}]}
+
+      {:noreply, state} = Scanner.handle_cast({:cancel_scan, lib.id}, state)
+      assert state.pending == %{lib.id => [{:file, "/missing/a.cbz"}]}
+    end
+
+    test "a queued library scan runs before queued series and file scans", ctx do
+      %{lib: lib, series: series, scan: scan} = ctx
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, ctx.state)
+      {:noreply, state} = Scanner.handle_cast({:scan_series, series.id, false}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan, lib.id, false}, state)
+
+      {:noreply, state} = scan_down(state, scan)
+      assert [{library_scan, {_, :library}}] = Map.to_list(state.scanning)
+      assert state.pending == %{lib.id => [{:series, series.id, false}, {:file, "/missing/a.cbz"}]}
+
+      ref = Process.monitor(library_scan)
+      assert_receive {:DOWN, ^ref, _, _, _}, 5_000
+      {:noreply, state} = scan_down(state, library_scan)
+      assert [{series_scan, {_, :series}}] = Map.to_list(state.scanning)
+
+      ref = Process.monitor(series_scan)
+      assert_receive {:DOWN, ^ref, _, _, _}, 5_000
+      {:noreply, state} = scan_down(state, series_scan)
+      assert state.pending == %{}
+    end
+
     test "series scans wait for the library scan, file scans for both", ctx do
       %{lib: lib, series: series, scan: scan} = ctx
       {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, ctx.state)
