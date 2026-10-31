@@ -1,6 +1,6 @@
 ---
 services:
-  phoenix:
+  stashix:
     image: git.aroy-art.com/aroy/stashix:0.0.1
     restart: unless-stopped
     ports:
@@ -17,7 +17,7 @@ services:
       PGID: ${PGID:-1000}
     volumes:
       - ${LIBRARY_PATH:-./libraries}:/libraries:ro
-      - phoenix_data:/data
+      - stashix_data:/data
     depends_on:
       db:
         condition: service_healthy
@@ -40,4 +40,4 @@ services:
 
 volumes:
   postgres_data:
-  phoenix_data:
+  stashix_data:
