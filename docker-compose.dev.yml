@@ -2,6 +2,30 @@
 name: stashix-dev
 
 services:
+  app:
+    image: git.aroy-art.com/aroy/stashix:dev
+    build:
+      context: ./stashix_web/
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    # Dev-only values, hardcoded so the prod-oriented .env can't override them.
+    environment:
+      DATABASE_URL: postgresql://stashix:stashix@db/stashix
+      SECRET_KEY_BASE: meSrQUhnKGOZ6RP9U/7scoNw6u0pL3/MDEkw6gDDNdCXtNkjkiFdUVTlWa8xOQ9q
+      JWT_SECRET: CNXGp1GrVP8ybgiJeMbypaSj64npgzMpsWAv+bVV3p0rfVpQAdPXitfVg2F/ca1l
+      PHX_HOST: localhost
+      PORT: 4000
+      DATA_DIR: /data
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+    volumes:
+      - ./libraries:/libraries
+      - app_data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+
   db:
     image: postgres:18-alpine
     command: postgres -c shared_preload_libraries=pg_stat_statements
@@ -33,5 +57,6 @@ services:
       - pgadmin_dev_data:/var/lib/pgadmin
 
 volumes:
+  app_data:
   postgres_dev_data:
   pgadmin_dev_data:

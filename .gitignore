@@ -23,6 +23,9 @@ mutagen.yml.lock
 # Tmp files and folders
 tmp/
 
+# Dev compose library mount
+/libraries/
+
 # TypeScript build cache
 *.tsbuildinfo
 
