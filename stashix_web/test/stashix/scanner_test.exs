@@ -465,6 +465,27 @@ defmodule Stashix.ScannerTest do
       assert Repo.get!(Stashix.Library.Series, series.id).name == "The Batman"
     end
 
+    test "a new issue takes its series' language unless the file states one", %{lib: lib, tmp: tmp} do
+      folder = mkdir(tmp, "Asterix")
+      write_cbz(folder, "Asterix 001.cbz")
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      {:ok, _} = Library.update_series(Library.get_series!(book.series_id), %{"language" => "fr"})
+
+      write_cbz(folder, "Asterix 002.cbz")
+
+      write_cbz(folder, "Asterix 003.cbz",
+        extra: [{~c"ComicInfo.xml", "<ComicInfo><LanguageISO>de</LanguageISO></ComicInfo>"}]
+      )
+
+      Scanner.scan_sync(lib.id)
+
+      languages = Map.new(Library.list_books(lib.id, access: Access.all()), &{&1.issue_number, &1.language})
+      assert languages[Decimal.new("2")] == "fr"
+      assert languages[Decimal.new("3")] == "de"
+      assert languages[Decimal.new("1")] == "en", "existing issues keep their language"
+    end
+
     test "a queued write runs before a rescan reads the file", %{lib: lib, tmp: tmp} do
       write_cbz(tmp, "My Book.cbz")
       Scanner.scan_sync(lib.id)

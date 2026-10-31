@@ -446,7 +446,7 @@ defmodule Stashix.Scanner do
   # The one mapping from a file's metadata onto book columns, for new books
   # (`book` nil) and rescans alike. Title, issue number, volume and year always
   # follow the file/filename; other fields keep the book's value when the file
-  # doesn't mention them.
+  # doesn't mention them. A new issue without a file language takes its series'.
   defp book_attrs_from_meta(%{file_path: path, parsed: parsed, comicinfo: file, metadata: metadata}, series, book) do
     current = fn field, default -> if book, do: Map.get(book, field), else: default end
     from_file = fn field, default -> Map.get(file, field, current.(field, default)) end
@@ -459,7 +459,7 @@ defmodule Stashix.Scanner do
       series_id: series && series.id,
       type: if(series, do: "issue", else: "standalone"),
       page_count: resolve_page_count(metadata, path, current.(:page_count, 0)),
-      language: Map.get(metadata, :language, current.(:language, "en")),
+      language: Map.get(metadata, :language, current.(:language, (series && series.language) || "en")),
       summary: Map.get(metadata, :summary, current.(:summary, nil)),
       age_rating: from_file.(:age_rating, :unknown),
       community_rating: from_file.(:community_rating, nil),
