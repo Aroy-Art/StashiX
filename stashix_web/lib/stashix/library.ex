@@ -21,8 +21,12 @@ defmodule Stashix.Library do
     LibraryPermission,
     ReadingProgress,
     Publisher,
+    SeriesAlternativeName,
+    SeriesExternalId,
     SummaryCache
   }
+
+  alias Stashix.Metadata.MatchReview
 
   def list_libraries(user) do
     if user.role == :admin do
@@ -279,6 +283,8 @@ defmodule Stashix.Library do
   end
 
   def get_series!(id), do: Repo.get!(Series, id)
+
+  def get_series(id), do: Repo.get(Series, id)
 
   @doc "Series by id, raising `Ecto.NoResultsError` unless `access` can see it."
   def get_series!(access, id), do: Repo.get!(Access.series(access), id)
@@ -1209,6 +1215,51 @@ defmodule Stashix.Library do
     series
     |> Series.changeset(Map.take(attrs, [:name, :path, :start_year, :end_year, :ongoing]))
     |> Repo.update()
+  end
+
+  @doc """
+  Folds `source` into `target` and deletes `source`: its books, publishers, match
+  reviews and the external ids and alternative names `target` lacks move over.
+  `target` keeps its own metadata; `folder_meta` (path and folder-derived fields)
+  is applied to it afterwards, so `target` can take over `source`'s folder.
+  """
+  def merge_series(%Series{id: id}, %Series{id: id}, _folder_meta), do: {:error, :same_series}
+
+  def merge_series(%Series{} = source, %Series{} = target, folder_meta) do
+    Repo.transaction(fn ->
+      from(b in Book, where: b.series_id == ^source.id) |> Repo.update_all(set: [series_id: target.id])
+
+      from(r in MatchReview, where: r.series_id == ^source.id)
+      |> Repo.update_all(set: [series_id: target.id])
+
+      taken_sources = from(e in SeriesExternalId, where: e.series_id == ^target.id, select: e.source)
+
+      from(e in SeriesExternalId, where: e.series_id == ^source.id and e.source not in subquery(taken_sources))
+      |> Repo.update_all(set: [series_id: target.id])
+
+      taken_names = from(n in SeriesAlternativeName, where: n.series_id == ^target.id, select: n.name)
+
+      from(n in SeriesAlternativeName, where: n.series_id == ^source.id and n.name not in subquery(taken_names))
+      |> Repo.update_all(set: [series_id: target.id])
+
+      Repo.query!(
+        """
+        INSERT INTO series_publishers (series_id, publisher_id)
+        SELECT $1, publisher_id FROM series_publishers WHERE series_id = $2
+        ON CONFLICT DO NOTHING
+        """,
+        [Ecto.UUID.dump!(target.id), Ecto.UUID.dump!(source.id)]
+      )
+
+      # Deleted first: the series path is unique per library, deleted rows included.
+      Repo.delete!(source)
+
+      case update_series_folder_meta(target, folder_meta) do
+        {:ok, merged} -> merged
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+    |> tap(fn _ -> SummaryCache.clear() end)
   end
 
   def create_book(attrs) do

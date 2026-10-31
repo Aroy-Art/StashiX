@@ -360,6 +360,81 @@ defmodule Stashix.ScannerTest do
     end
   end
 
+  describe "series folder rename" do
+    alias Stashix.Library.{Series, SeriesExternalId}
+
+    setup %{lib: lib, tmp: tmp} do
+      old_dir = mkdir(tmp, "Barbarian (2026-)")
+      for n <- 1..3, do: write_cbz(old_dir, "Barbarian #{String.pad_leading("#{n}", 3, "0")}.cbz")
+      Scanner.scan_sync(lib.id)
+      [series] = Repo.all(Series)
+      new_dir = Path.join(tmp, "Barbarian (2026)")
+      %{series: series, old_dir: old_dir, new_dir: new_dir}
+    end
+
+    defp live_series, do: Repo.all(from s in Series, where: is_nil(s.deleted_at))
+
+    test "file-by-file rescan moves the series instead of creating one", ctx do
+      File.rename!(ctx.old_dir, ctx.new_dir)
+      for f <- File.ls!(ctx.new_dir), do: Scanner.scan_file_sync(ctx.lib.id, Path.join(ctx.new_dir, f))
+
+      assert [series] = live_series()
+      assert series.id == ctx.series.id
+      assert series.path == ctx.new_dir
+      assert series.ongoing == false
+      assert length(Library.list_books(ctx.lib.id, access: Access.all())) == 3
+    end
+
+    test "a duplicate made for the renamed folder is merged back", ctx do
+      File.rename!(ctx.old_dir, ctx.new_dir)
+      [first | rest] = File.ls!(ctx.new_dir) |> Enum.sort()
+
+      # What an older scanner left behind: a new series holding the issues it saw first.
+      {:ok, dup} = Library.create_or_find_series(%{library_id: ctx.lib.id, name: "Barbarian", path: ctx.new_dir})
+      Repo.update_all(from(s in Series, where: s.id == ^dup.id), set: [inserted_at: ~N[2099-01-01 00:00:00]])
+      Repo.insert!(%SeriesExternalId{series_id: ctx.series.id, source: :Metron, source_id: "42"})
+
+      for f <- rest do
+        path = Path.join(ctx.new_dir, f)
+        bf = Library.get_book_file_by_hash(Scanner.compute_hash(path, File.stat!(path).size))
+        Library.update_book_file(bf, %{path: path})
+        Repo.update_all(from(b in Book, where: b.id == ^bf.book_id), set: [series_id: dup.id])
+      end
+
+      Scanner.scan_file_sync(ctx.lib.id, Path.join(ctx.new_dir, first))
+
+      assert [series] = live_series()
+      assert series.id == ctx.series.id
+      assert series.path == ctx.new_dir
+      assert Repo.get(Series, dup.id) == nil
+      assert [%{source_id: "42"}] = Repo.all(SeriesExternalId)
+      assert Enum.all?(Library.list_books(ctx.lib.id, access: Access.all()), &(&1.series_id == series.id))
+    end
+
+    test "an edited series in the new folder is not merged", ctx do
+      File.rename!(ctx.old_dir, ctx.new_dir)
+      {:ok, other} = Library.create_or_find_series(%{library_id: ctx.lib.id, name: "Barbarian", path: ctx.new_dir})
+
+      Repo.update_all(from(s in Series, where: s.id == ^other.id),
+        set: [inserted_at: ~N[2099-01-01 00:00:00], locked_fields: ["name"]]
+      )
+
+      for f <- File.ls!(ctx.new_dir), do: Scanner.scan_file_sync(ctx.lib.id, Path.join(ctx.new_dir, f))
+
+      assert Enum.all?(Library.list_books(ctx.lib.id, access: Access.all()), &(&1.series_id == other.id))
+      assert Repo.get(Series, ctx.series.id).path == ctx.old_dir
+    end
+
+    test "issues split into a new folder get their own series", ctx do
+      split_dir = mkdir(ctx.tmp, "Barbarian Annual (2026)")
+      File.rename!(Path.join(ctx.old_dir, "Barbarian 003.cbz"), Path.join(split_dir, "Barbarian 003.cbz"))
+      Scanner.scan_sync(ctx.lib.id)
+
+      assert Repo.get(Series, ctx.series.id).path == ctx.old_dir
+      assert [_, _] = live_series()
+    end
+  end
+
   describe "scan_sync/2 force rescan" do
     test "force rescan corrects manually corrupted type", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "One-Shot"), "Standalone.cbz")

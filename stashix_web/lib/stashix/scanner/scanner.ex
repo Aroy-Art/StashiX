@@ -46,6 +46,9 @@ defmodule Stashix.Scanner do
   @doc false
   def scan_sync(library_id, force \\ false), do: do_scan(library_id, force)
 
+  @doc false
+  def scan_file_sync(library_id, file_path), do: do_scan_file(library_id, file_path)
+
   def get_task_status(library_id) do
     case :ets.lookup(@ets_table, library_id) do
       [{^library_id, status}] -> status
@@ -421,7 +424,7 @@ defmodule Stashix.Scanner do
 
   # Rescan of an existing book: the file's metadata replaces the book's.
   defp refresh_book_from_meta(book, %{file_path: file_path, comicinfo: file} = file_meta, library, cache) do
-    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
+    {series, new_cache} = find_or_create_series_cached(file_path, library, cache, book.series_id)
 
     # Metadata fetched from an external source lives only in the DB when the
     # file carries none (e.g. write-back disabled); don't reset it from the filename.
@@ -525,7 +528,9 @@ defmodule Stashix.Scanner do
 
   @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
 
-  defp find_or_create_series_cached(file_path, library, cache) do
+  # `prior_series_id` is the series the book belonged to before this scan; when
+  # that series' folder is gone, the book's new folder is taken to be its rename.
+  defp find_or_create_series_cached(file_path, library, cache, prior_series_id \\ nil) do
     parent_dir = Path.dirname(file_path)
     dir_name = Path.basename(parent_dir)
     dir_name_lower = String.downcase(dir_name)
@@ -546,39 +551,90 @@ defmodule Stashix.Scanner do
 
     if name do
       {clean_name, start_year, end_year, ongoing} = parse_folder_name(name)
+      folder_meta = %{name: clean_name, path: parent_dir, start_year: start_year, end_year: end_year, ongoing: ongoing}
+      current = Map.get(cache, parent_dir)
 
-      case Map.get(cache, parent_dir) do
-        nil ->
-          case Library.create_or_find_series(%{
-                 library_id: library.id,
-                 name: clean_name,
-                 path: parent_dir,
-                 start_year: start_year,
-                 end_year: end_year,
-                 ongoing: ongoing
-               }) do
-            {:ok, series} -> {series, Map.put(cache, parent_dir, series)}
-            _ -> {nil, cache}
-          end
-
-        series ->
-          folder_meta =
-            Locks.drop_locked(
-              %{name: clean_name, path: parent_dir, start_year: start_year, end_year: end_year, ongoing: ongoing},
-              series
-            )
-
-          if Enum.any?(Map.take(folder_meta, [:name, :ongoing]), fn {k, v} -> Map.get(series, k) != v end) do
-            case Library.update_series_folder_meta(series, folder_meta) do
-              {:ok, updated} -> {updated, Map.put(cache, parent_dir, updated)}
-              _ -> {series, cache}
-            end
-          else
-            {series, cache}
-          end
+      case renamed_series(prior_series_id, current, parent_dir) do
+        nil -> resolve_folder_series(current, folder_meta, library, cache)
+        prior -> adopt_renamed_folder(prior, current, folder_meta, library, cache)
       end
     else
       {nil, cache}
+    end
+  end
+
+  # The book's previous series, when its folder no longer exists and the book
+  # now sits in another folder: that folder is the old one renamed.
+  defp renamed_series(nil, _current, _dir), do: nil
+  defp renamed_series(id, %{id: id}, _dir), do: nil
+
+  defp renamed_series(id, _current, dir) do
+    case Library.get_series(id) do
+      %{deleted_at: nil, path: path} = prior when is_binary(path) and path != dir ->
+        if File.dir?(path), do: nil, else: prior
+
+      _ ->
+        nil
+    end
+  end
+
+  # Moves the renamed series to its new folder. A series the scan already made
+  # for that folder (from issues that moved before this one) is folded into it,
+  # unless it has metadata of its own worth keeping apart.
+  defp adopt_renamed_folder(prior, current, folder_meta, library, cache) do
+    prior_meta = Map.put(Locks.drop_locked(folder_meta, prior), :path, folder_meta.path)
+
+    result =
+      cond do
+        is_nil(current) ->
+          Library.update_series_folder_meta(prior, prior_meta)
+
+        stray_duplicate?(current, prior) ->
+          Logger.info("[scan] Merging #{current.path} series into renamed series #{prior.path}")
+          Library.merge_series(current, prior, prior_meta)
+
+        true ->
+          :keep
+      end
+
+    case result do
+      {:ok, moved} ->
+        Logger.info("[scan] Series rename detected: #{prior.path} → #{moved.path}")
+        {moved, cache |> Map.delete(prior.path) |> Map.put(moved.path, moved)}
+
+      _ ->
+        resolve_folder_series(current, folder_meta, library, cache)
+    end
+  end
+
+  # A series the scanner created for a renamed folder before the rename was
+  # recognised: newer than the original and never edited or matched.
+  defp stray_duplicate?(series, original) do
+    series.locked_fields == [] and is_nil(series.metadata_matched_at) and
+      NaiveDateTime.compare(series.inserted_at, original.inserted_at) == :gt
+  end
+
+  defp resolve_folder_series(current, folder_meta, library, cache) do
+    %{path: parent_dir} = folder_meta
+
+    case current do
+      nil ->
+        case Library.create_or_find_series(Map.put(folder_meta, :library_id, library.id)) do
+          {:ok, series} -> {series, Map.put(cache, parent_dir, series)}
+          _ -> {nil, cache}
+        end
+
+      series ->
+        folder_meta = Locks.drop_locked(folder_meta, series)
+
+        if Enum.any?(Map.take(folder_meta, [:name, :ongoing]), fn {k, v} -> Map.get(series, k) != v end) do
+          case Library.update_series_folder_meta(series, folder_meta) do
+            {:ok, updated} -> {updated, Map.put(cache, parent_dir, updated)}
+            _ -> {series, cache}
+          end
+        else
+          {series, cache}
+        end
     end
   end
 
@@ -738,19 +794,20 @@ defmodule Stashix.Scanner do
       hash_to_series = Library.load_hash_series_map(library.id, all_hashes)
 
       Enum.reduce(new_dir_files, series_cache, fn {dir, files}, cache ->
+        # The series most of the folder's files came from, if its own folder is
+        # gone; when it still exists the files were split off, not renamed.
         old_series =
           files
           |> Enum.map(&Map.get(hash_to_series, &1.file_hash))
           |> Enum.reject(&is_nil/1)
-          |> Enum.frequencies_by(& &1.id)
+          |> Enum.frequencies_by(& &1)
           |> Enum.max_by(fn {_, count} -> count end, fn -> nil end)
           |> case do
-            nil ->
-              nil
+            {%{deleted_at: nil, path: path} = series, _} when is_binary(path) ->
+              if File.dir?(path), do: nil, else: series
 
-            {_id, _} ->
-              files
-              |> Enum.find_value(&Map.get(hash_to_series, &1.file_hash))
+            _ ->
+              nil
           end
 
         case old_series && Library.update_series_folder_meta(old_series, %{path: dir}) do
