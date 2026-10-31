@@ -187,6 +187,11 @@ defmodule Stashix.Formatters do
   def format_issue_number(nil), do: nil
   def format_issue_number(%Decimal{} = n), do: n |> Decimal.normalize() |> Decimal.to_string(:normal)
 
+  @doc "A book's place in its series: \"#3\", \"Vol. 2\" for a volume-only trade, or nil."
+  def book_number_label(%{issue_number: %Decimal{} = n}), do: "##{format_issue_number(n)}"
+  def book_number_label(%{volume: v}) when is_integer(v), do: "Vol. #{v}"
+  def book_number_label(_), do: nil
+
   @doc "Years a series ran: \"2019\", \"2019–2021\", \"2019–\" while ongoing, nil when unknown."
   def series_years(%{start_year: nil}), do: nil
   def series_years(%{start_year: y, end_year: nil, ongoing: true}), do: "#{y}–"

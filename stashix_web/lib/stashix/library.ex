@@ -224,18 +224,16 @@ defmodule Stashix.Library do
 
   def get_adjacent_books(_access, %{series_id: nil}), do: {nil, nil}
 
-  def get_adjacent_books(_access, %{series_id: _series_id, issue_number: nil}), do: {nil, nil}
-
-  def get_adjacent_books(access, %{id: id, series_id: series_id, issue_number: _issue_number}) do
+  def get_adjacent_books(access, %{id: id, series_id: series_id}) do
     siblings =
       from(b in Access.books(access),
         left_join: c in BookCover,
         on: c.book_id == b.id,
-        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not is_nil(b.issue_number),
-        order_by: [asc: b.issue_number],
+        where: b.series_id == ^series_id and is_nil(b.deleted_at),
         select: %{
           id: b.id,
           issue_number: b.issue_number,
+          volume: b.volume,
           title: b.title,
           year: b.year,
           page_count: b.page_count,
@@ -243,6 +241,7 @@ defmodule Stashix.Library do
         }
       )
       |> Repo.all()
+      |> sort_reading_order()
 
     idx = Enum.find_index(siblings, &(&1.id == id))
 
@@ -250,6 +249,22 @@ defmodule Stashix.Library do
     next = idx && Enum.at(siblings, idx + 1)
 
     {prev || nil, next || nil}
+  end
+
+  @doc """
+  Sorts one series' books into reading order: by volume when the books span
+  more than one, then issue number, then title. Missing numbers sort last, so
+  volume-only trades order by volume and a stray untagged issue doesn't jump
+  behind its single-volume siblings.
+  """
+  def sort_reading_order(books) do
+    multi_volume? = books |> Enum.map(& &1.volume) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length() > 1
+
+    Enum.sort_by(books, fn b ->
+      vol = {is_nil(b.volume), b.volume || 0}
+      issue = {is_nil(b.issue_number), if(b.issue_number, do: Decimal.to_float(b.issue_number), else: 0.0)}
+      if multi_volume?, do: {vol, issue, b.title || ""}, else: {issue, vol, b.title || ""}
+    end)
   end
 
   def list_series(library_id, opts \\ []) do

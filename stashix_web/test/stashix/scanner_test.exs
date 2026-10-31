@@ -342,7 +342,8 @@ defmodule Stashix.ScannerTest do
       Scanner.scan_sync(lib.id)
       [book] = Library.list_books(lib.id, access: Access.all())
       assert book.title == "Rusty Angel"
-      assert book.issue_number == Decimal.new("1")
+      assert book.volume == 1
+      assert book.issue_number == nil
       book_id = book.id
 
       new_cbz = Path.join(folder, "Issue 1 - Rusty Angel (1994).cbz")

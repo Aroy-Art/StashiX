@@ -247,8 +247,7 @@ defmodule StashixWeb.ReaderLive do
     if finished, do: ~p"/read/#{next_book.id}?page=0", else: ~p"/read/#{next_book.id}"
   end
 
-  defp issue_label(%{issue_number: nil}), do: nil
-  defp issue_label(%{issue_number: n}), do: "##{Stashix.Formatters.format_issue_number(n)}"
+  defp issue_label(book), do: Stashix.Formatters.book_number_label(book)
 
   defp schedule_progress_save(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)

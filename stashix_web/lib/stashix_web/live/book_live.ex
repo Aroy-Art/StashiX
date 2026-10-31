@@ -300,8 +300,11 @@ defmodule StashixWeb.BookLive do
           {if @dir == :prev, do: "Previous", else: "Next"}
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
         </.eyebrow>
-        <p :if={@book.issue_number} class="font-display font-black text-2xl leading-none text-fg mt-1 tabular-nums">
-          #{Formatters.format_issue_number(@book.issue_number)}
+        <p
+          :if={label = Formatters.book_number_label(@book)}
+          class="font-display font-black text-2xl leading-none text-fg mt-1 tabular-nums"
+        >
+          {label}
         </p>
         <p class="text-xs text-muted truncate group-hover:text-fg-soft transition-colors mt-1">
           {@book.title}
@@ -319,14 +322,15 @@ defmodule StashixWeb.BookLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <% numbered = @book.issue_number && !standalone_volume?(@book) %>
-    <% issue_no = numbered && Formatters.format_issue_number(@book.issue_number) %>
+    <% number_label = !standalone_volume?(@book) && Formatters.book_number_label(@book) %>
+    <% numbered = !!number_label %>
+    <% numeral = numbered && (Formatters.format_issue_number(@book.issue_number) || to_string(@book.volume)) %>
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={
         [{"Home", "/"}, {@library.name, ~p"/library/#{@library.id}"}] ++
           if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series.id}"}], else: []) ++
-          [{if(numbered, do: "##{issue_no}", else: @book.title), nil}]
+          [{if(numbered, do: number_label, else: @book.title), nil}]
       }>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="book-admin-menu">
@@ -362,7 +366,7 @@ defmodule StashixWeb.BookLive do
           :if={numbered}
           class="hidden sm:block absolute -top-4 right-0 text-[11rem] md:text-[15rem]"
         >
-          {issue_no}
+          {numeral}
         </.ghost_numeral>
 
         <.hero_cover
@@ -380,7 +384,7 @@ defmodule StashixWeb.BookLive do
             class="rise flex items-center justify-center sm:justify-start flex-wrap gap-x-3 gap-y-2 mb-3"
             style="--i:1"
           >
-            <.sticker :if={numbered} size="lg">#{issue_no}</.sticker>
+            <.sticker :if={numbered} size="lg">{number_label}</.sticker>
             <.eyebrow :if={@book.series && !standalone_volume?(@book)}>
               <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-fg transition-colors">
                 {@book.series.name}

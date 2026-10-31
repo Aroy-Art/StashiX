@@ -75,13 +75,15 @@ defmodule Stashix.Metadata.ParserTest do
 
     test "Volume N - Title" do
       r = Parser.parse_filename("Volume 3 - Killing Angel")
-      assert r[:issue_number] == d("3")
+      assert r[:volume] == 3
+      refute r[:issue_number]
       assert r[:title] == "Killing Angel"
     end
 
     test "Vol. N - Title" do
       r = Parser.parse_filename("Vol. 2 - Dark Chapter")
-      assert r[:issue_number] == d("2")
+      assert r[:volume] == 2
+      refute r[:issue_number]
       assert r[:title] == "Dark Chapter"
     end
   end

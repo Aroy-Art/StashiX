@@ -463,10 +463,7 @@ defmodule StashixWeb.SeriesLive do
   end
 
   defp find_continue_book(books, progress_map) do
-    issue_sorted =
-      Enum.sort_by(books, fn b ->
-        if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-      end)
+    issue_sorted = Library.sort_reading_order(books)
 
     in_progress =
       Enum.find(issue_sorted, fn b ->
@@ -485,10 +482,7 @@ defmodule StashixWeb.SeriesLive do
     do: %{text: s, source: nil}
 
   defp derive_summary(_series, books) do
-    issue_sorted =
-      Enum.sort_by(books, fn b ->
-        if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-      end)
+    issue_sorted = Library.sort_reading_order(books)
 
     case Enum.find(issue_sorted, fn b -> b.summary && b.summary != "" end) do
       nil ->
@@ -497,7 +491,7 @@ defmodule StashixWeb.SeriesLive do
       book ->
         %{
           text: book.summary,
-          source: book.issue_number && "##{Formatters.format_issue_number(book.issue_number)}"
+          source: Formatters.book_number_label(book)
         }
     end
   end
@@ -538,11 +532,8 @@ defmodule StashixWeb.SeriesLive do
         p -> "#{round(p * 100)}% read"
       end
 
-    [issue_label(book), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+    [Formatters.book_number_label(book), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
   end
-
-  defp issue_label(%{issue_number: nil}), do: nil
-  defp issue_label(%{issue_number: n}), do: "##{Formatters.format_issue_number(n)}"
 
   defp sort_books(books, "title_asc"), do: Enum.sort_by(books, & &1.title)
   defp sort_books(books, "title_desc"), do: Enum.sort_by(books, & &1.title, :desc)
@@ -553,21 +544,8 @@ defmodule StashixWeb.SeriesLive do
   defp sort_books(books, "added_desc"),
     do: Enum.sort_by(books, & &1.inserted_at, {:desc, NaiveDateTime})
 
-  defp sort_books(books, "issue_desc") do
-    Enum.sort_by(
-      books,
-      fn b ->
-        if b.issue_number, do: Decimal.to_float(b.issue_number), else: -1.0
-      end,
-      :desc
-    )
-  end
-
-  defp sort_books(books, _) do
-    Enum.sort_by(books, fn b ->
-      if b.issue_number, do: Decimal.to_float(b.issue_number), else: 999_999.0
-    end)
-  end
+  defp sort_books(books, "issue_desc"), do: books |> Library.sort_reading_order() |> Enum.reverse()
+  defp sort_books(books, _), do: Library.sort_reading_order(books)
 
   @impl true
   def render(assigns) do
@@ -701,7 +679,7 @@ defmodule StashixWeb.SeriesLive do
               <.ink_button navigate={~p"/read/#{@continue_book.id}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {if has_progress, do: "Continue", else: "Start Reading"}
-                <span :if={lbl = issue_label(@continue_book)} class="text-ink">{lbl}</span>
+                <span :if={lbl = Formatters.book_number_label(@continue_book)} class="text-ink">{lbl}</span>
               </.ink_button>
               <.text_link
                 :if={has_progress && first_book && first_book.id != @continue_book.id}
@@ -824,6 +802,7 @@ defmodule StashixWeb.SeriesLive do
                 cond do
                   multi_volume? && book.volume && book.issue_number -> "Vol. #{book.volume}  ##{book.issue_number}"
                   book.issue_number -> "##{book.issue_number}"
+                  book.volume -> "Vol. #{book.volume}"
                   true -> nil
                 end
               }

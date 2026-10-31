@@ -164,19 +164,19 @@ defmodule Stashix.Metadata.Parser do
     # "Issue 6 - Angel of Death (1996)" or "Volume 3 - Killing Angel"
     result =
       case Regex.run(
-             ~r/^(?:Issue|Vol(?:ume)?)\.?\s+(\d+)\s*(?:-|–)\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i,
+             ~r/^(Issue|Vol(?:ume)?)\.?\s+(\d+)\s*(?:-|–)\s*(.+?)(?:\s*\((\d{4})\))?\s*$/i,
              clean
            ) do
-        [_, num, title, year] ->
-          result
-          |> Map.put(:issue_number, parse_decimal(num))
-          |> Map.put(:title, String.trim(title))
-          |> maybe_put(:year, parse_int(year))
+        [_, kind, num, title | year] ->
+          {key, value} =
+            if String.downcase(kind) == "issue",
+              do: {:issue_number, parse_decimal(num)},
+              else: {:volume, parse_int(num)}
 
-        [_, num, title] ->
           result
-          |> Map.put(:issue_number, parse_decimal(num))
+          |> Map.put(key, value)
           |> Map.put(:title, String.trim(title))
+          |> maybe_put(:year, parse_int(Enum.at(year, 0)))
 
         nil ->
           result

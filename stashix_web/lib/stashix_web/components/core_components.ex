@@ -383,7 +383,8 @@ defmodule StashixWeb.CoreComponents do
         subtitle: assigns.subtitle || (series && series.name) || year,
         badge:
           cond do
-            !issue? or is_nil(book.issue_number) -> nil
+            !issue? -> nil
+            is_nil(book.issue_number) -> book.volume && "Vol #{book.volume}"
             book.volume && (book.series_volume_count || 2) > 1 -> "Vol #{book.volume} ##{book.issue_number}"
             true -> "##{book.issue_number}"
           end,
