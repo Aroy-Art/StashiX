@@ -491,7 +491,7 @@ defmodule StashixWeb.SeriesLive do
       book ->
         %{
           text: book.summary,
-          source: Formatters.book_number_label(book)
+          source: Formatters.book_number_label(book, Library.volume_counts(books))
         }
     end
   end
@@ -524,7 +524,7 @@ defmodule StashixWeb.SeriesLive do
       else: nil
   end
 
-  defp run_segment_title(book, progress_map) do
+  defp run_segment_title(book, progress_map, volume_counts) do
     state =
       case book_progress(book, progress_map) do
         p when p in [nil, 0.0] -> "unread"
@@ -532,7 +532,7 @@ defmodule StashixWeb.SeriesLive do
         p -> "#{round(p * 100)}% read"
       end
 
-    [Formatters.book_number_label(book), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+    [Formatters.book_number_label(book, volume_counts), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
   end
 
   defp sort_books(books, "title_asc"), do: Enum.sort_by(books, & &1.title)
@@ -551,6 +551,7 @@ defmodule StashixWeb.SeriesLive do
   def render(assigns) do
     ~H"""
     <% issue_sorted = sort_books(@series.books, "issue_asc") %>
+    <% volume_counts = Library.volume_counts(@series.books) %>
     <% first_book = List.first(issue_sorted) %>
     <% issue_count = length(issue_sorted) %>
     <% read_count = Enum.count(issue_sorted, &((book_progress(&1, @progress_map) || 0.0) >= 1.0)) %>
@@ -679,7 +680,7 @@ defmodule StashixWeb.SeriesLive do
               <.ink_button navigate={~p"/read/#{@continue_book.id}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {if has_progress, do: "Continue", else: "Start Reading"}
-                <span :if={lbl = Formatters.book_number_label(@continue_book)} class="text-ink">{lbl}</span>
+                <span :if={lbl = Formatters.book_number_label(@continue_book, volume_counts)} class="text-ink">{lbl}</span>
               </.ink_button>
               <.text_link
                 :if={has_progress && first_book && first_book.id != @continue_book.id}
@@ -706,7 +707,7 @@ defmodule StashixWeb.SeriesLive do
           <.link
             :for={b <- issue_sorted}
             navigate={~p"/book/#{b.id}"}
-            title={run_segment_title(b, @progress_map)}
+            title={run_segment_title(b, @progress_map, volume_counts)}
             class="flex-1 min-w-0 rounded-[2px] overflow-hidden bg-fg/[0.07] transition-[filter] duration-100 hover:brightness-125"
           >
             <span class="block h-full" style={run_fill_style(b, @progress_map)} />
@@ -789,7 +790,6 @@ defmodule StashixWeb.SeriesLive do
             />
           </form>
         </:actions>
-        <% multi_volume? = @books |> Enum.map(& &1.volume) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length() > 1 %>
         <.cover_grid cols="narrow">
           <%= for book <- @books do %>
             <.media_card
@@ -798,14 +798,7 @@ defmodule StashixWeb.SeriesLive do
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"
               subtitle={book.year && to_string(book.year)}
-              badge={
-                cond do
-                  multi_volume? && book.volume && book.issue_number -> "Vol. #{book.volume}  ##{book.issue_number}"
-                  book.issue_number -> "##{book.issue_number}"
-                  book.volume -> "Vol. #{book.volume}"
-                  true -> nil
-                end
-              }
+              badge={Formatters.book_number_label(book, volume_counts)}
               progress={book_progress(book, @progress_map)}
               type={:book}
               blurhash={book.cover && book.cover.blurhash}

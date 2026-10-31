@@ -4,7 +4,7 @@
 defmodule StashixWeb.ReaderLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Accounts, Library, Media.Extractor}
+  alias Stashix.{Accounts, Formatters, Library, Media.Extractor}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -39,6 +39,7 @@ defmodule StashixWeb.ReaderLive do
       end
 
     {_prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
+    volume_counts = Library.series_volume_counts(socket.assigns.access, book)
 
     settings = user.reader_settings || %{}
     page_layout = Map.get(settings, "page_layout", "single")
@@ -55,6 +56,7 @@ defmodule StashixWeb.ReaderLive do
        current_page: current_page,
        at_end: false,
        next_book: next_book,
+       volume_counts: volume_counts,
        next_href: next_book && next_href(user.id, next_book),
        page_layout: page_layout,
        direction: direction,
@@ -247,8 +249,6 @@ defmodule StashixWeb.ReaderLive do
     if finished, do: ~p"/read/#{next_book.id}?page=0", else: ~p"/read/#{next_book.id}"
   end
 
-  defp issue_label(book), do: Stashix.Formatters.book_number_label(book)
-
   defp schedule_progress_save(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
     timer = Process.send_after(self(), :save_progress, @progress_debounce_ms)
@@ -314,13 +314,17 @@ defmodule StashixWeb.ReaderLive do
   attr :book, :map, required: true
   attr :next_book, :map, default: nil
   attr :next_href, :string, default: nil
+  attr :volume_counts, :map, default: %{}
 
   # The "ghost page" past the last one. It is pointer-events-none so the click
   # zones underneath keep working (left steps back, right carries on); only the
   # links take pointers, which ReaderZoom already leaves alone.
   defp end_card(assigns) do
     assigns =
-      assign(assigns, label: issue_label(assigns.book), next_label: assigns.next_book && issue_label(assigns.next_book))
+      assign(assigns,
+        label: Formatters.book_number_label(assigns.book, assigns.volume_counts),
+        next_label: assigns.next_book && Formatters.book_number_label(assigns.next_book, assigns.volume_counts)
+      )
 
     ~H"""
     <div
@@ -473,7 +477,7 @@ defmodule StashixWeb.ReaderLive do
 
         <%!-- Center: issue sticker + series (or book) title --%>
         <div class="flex-1 min-w-0 flex items-center justify-center gap-2.5">
-          <.sticker :if={lbl = issue_label(@book)} class="flex-shrink-0">{lbl}</.sticker>
+          <.sticker :if={lbl = Formatters.book_number_label(@book, @volume_counts)} class="flex-shrink-0">{lbl}</.sticker>
           <span class="truncate font-display font-extrabold uppercase tracking-wide text-lg leading-none text-fg">
             {(@book.series && @book.series.name) || @book.title}
           </span>
@@ -610,7 +614,13 @@ defmodule StashixWeb.ReaderLive do
           </div>
         </div>
         <div id="webtoon-end" class="relative" style="height: 100dvh;">
-          <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} />
+          <.end_card
+            :if={@at_end}
+            book={@book}
+            next_book={@next_book}
+            next_href={@next_href}
+            volume_counts={@volume_counts}
+          />
         </div>
       </div>
 
@@ -737,7 +747,7 @@ defmodule StashixWeb.ReaderLive do
           <% end %>
         </div>
 
-        <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} />
+        <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} volume_counts={@volume_counts} />
 
         <%!-- Preload adjacent pages --%>
         <div class="hidden" aria-hidden="true">

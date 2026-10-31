@@ -108,8 +108,8 @@ defmodule Stashix.Library do
     books |> populate_source_formats() |> put_series_volume_counts(access!(opts))
   end
 
-  # Sets `series_volume_count` so issue cards can drop the volume when a
-  # series only has one.
+  # Sets `series_volume_counts` so issue cards can label the book like the
+  # series page does (see `Formatters.book_number_label/2`).
   defp put_series_volume_counts(books, access) do
     series_ids = books |> Enum.map(& &1.series_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
@@ -119,14 +119,15 @@ defmodule Stashix.Library do
       else
         from(b in Access.books(access),
           where: b.series_id in ^series_ids and is_nil(b.deleted_at),
-          group_by: b.series_id,
-          select: {b.series_id, count(b.volume, :distinct)}
+          group_by: [b.series_id, b.volume],
+          select: {b.series_id, b.volume, count(b.id)}
         )
         |> Repo.all()
-        |> Map.new()
+        |> Enum.group_by(&elem(&1, 0), fn {_, volume, n} -> {volume, n} end)
+        |> Map.new(fn {series_id, pairs} -> {series_id, Map.new(pairs)} end)
       end
 
-    Enum.map(books, &%{&1 | series_volume_count: Map.get(counts, &1.series_id)})
+    Enum.map(books, &%{&1 | series_volume_counts: Map.get(counts, &1.series_id)})
   end
 
   defp populate_source_formats([]), do: []
@@ -249,6 +250,22 @@ defmodule Stashix.Library do
     next = idx && Enum.at(siblings, idx + 1)
 
     {prev || nil, next || nil}
+  end
+
+  @doc "How many of `books` carry each volume, as `%{volume => count}`."
+  def volume_counts(books), do: Enum.frequencies_by(books, & &1.volume)
+
+  @doc "`volume_counts/1` for a book's series; empty for standalone books."
+  def series_volume_counts(_access, %{series_id: nil}), do: %{}
+
+  def series_volume_counts(access, %{series_id: series_id}) do
+    from(b in Access.books(access),
+      where: b.series_id == ^series_id and is_nil(b.deleted_at),
+      group_by: b.volume,
+      select: {b.volume, count(b.id)}
+    )
+    |> Repo.all()
+    |> Map.new()
   end
 
   @doc """

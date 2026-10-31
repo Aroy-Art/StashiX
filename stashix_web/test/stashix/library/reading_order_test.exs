@@ -4,7 +4,7 @@
 defmodule Stashix.Library.ReadingOrderTest do
   use Stashix.DataCase, async: true
 
-  alias Stashix.{Accounts, Library}
+  alias Stashix.{Accounts, Formatters, Library}
   alias Stashix.Library.{Access, Series}
 
   defp b(title, attrs), do: Map.merge(%{title: title, volume: nil, issue_number: nil}, attrs)
@@ -35,6 +35,39 @@ defmodule Stashix.Library.ReadingOrderTest do
       ]
 
       assert titles(Library.sort_reading_order(books)) == ["#1", "#2", "#3", "Unnumbered"]
+    end
+  end
+
+  describe "Formatters.book_number_label/2" do
+    defp label(book, books), do: Formatters.book_number_label(book, Library.volume_counts(books))
+
+    test "a one-book volume drops its issue number" do
+      v2 = b("v2", %{volume: 2, issue_number: Decimal.new(1)})
+      books = [b("v1", %{volume: 1, issue_number: Decimal.new(1)}), v2]
+      assert label(v2, books) == "Vol. 2"
+    end
+
+    test "a multi-book volume shows both when the series spans volumes" do
+      v2 = b("v2 #2", %{volume: 2, issue_number: Decimal.new(2)})
+
+      books = [
+        b("v1", %{volume: 1, issue_number: Decimal.new(1)}),
+        b("v2 #1", %{volume: 2, issue_number: Decimal.new(1)}),
+        v2
+      ]
+
+      assert label(v2, books) == "Vol. 2 #2"
+    end
+
+    test "a single-volume series shows just the issue" do
+      one = b("#1", %{volume: 1, issue_number: Decimal.new(1)})
+      assert label(one, [one, b("#2", %{volume: 1, issue_number: Decimal.new(2)})]) == "#1"
+      assert label(one, [one]) == "#1"
+    end
+
+    test "volume-only and unnumbered books" do
+      assert label(b("v3", %{volume: 3}), []) == "Vol. 3"
+      assert label(b("none", %{}), []) == nil
     end
   end
 

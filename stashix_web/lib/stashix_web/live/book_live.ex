@@ -24,6 +24,7 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
     {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
+    volume_counts = Library.series_volume_counts(socket.assigns.access, book)
     selected_file = Library.get_preferred_book_file(book)
 
     if connected?(socket) do
@@ -42,6 +43,7 @@ defmodule StashixWeb.BookLive do
        fully_read: fully_read,
        prev_book: prev_book,
        next_book: next_book,
+       volume_counts: volume_counts,
        selected_file: selected_file,
        scanning: false,
        show_admin_menu: false,
@@ -137,6 +139,7 @@ defmodule StashixWeb.BookLive do
     current_page = (progress && progress.current_page) || 0
     fully_read = book.page_count > 0 && current_page >= book.page_count - 1
     {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
+    volume_counts = Library.series_volume_counts(socket.assigns.access, book)
 
     current_format = socket.assigns.selected_file && socket.assigns.selected_file.format
     selected_file = Library.get_preferred_book_file(book, current_format)
@@ -150,6 +153,7 @@ defmodule StashixWeb.BookLive do
        page_title: book.title,
        prev_book: prev_book,
        next_book: next_book,
+       volume_counts: volume_counts,
        selected_file: selected_file
      )}
   end
@@ -276,6 +280,7 @@ defmodule StashixWeb.BookLive do
 
   attr :book, :map, required: true
   attr :dir, :atom, required: true, values: [:prev, :next]
+  attr :volume_counts, :map, default: %{}
 
   defp adjacent_card(assigns) do
     ~H"""
@@ -301,7 +306,7 @@ defmodule StashixWeb.BookLive do
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
         </.eyebrow>
         <p
-          :if={label = Formatters.book_number_label(@book)}
+          :if={label = Formatters.book_number_label(@book, @volume_counts)}
           class="font-display font-black text-2xl leading-none text-fg mt-1 tabular-nums"
         >
           {label}
@@ -322,9 +327,15 @@ defmodule StashixWeb.BookLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <% number_label = !standalone_volume?(@book) && Formatters.book_number_label(@book) %>
+    <% number_label = !standalone_volume?(@book) && Formatters.book_number_label(@book, @volume_counts) %>
     <% numbered = !!number_label %>
-    <% numeral = numbered && (Formatters.format_issue_number(@book.issue_number) || to_string(@book.volume)) %>
+    <%!-- The giant numeral: the issue number, unless the label leads with the volume --%>
+    <% numeral =
+      numbered &&
+        if(String.starts_with?(number_label, "Vol."),
+          do: to_string(@book.volume),
+          else: Formatters.format_issue_number(@book.issue_number)
+        ) %>
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={
@@ -539,9 +550,9 @@ defmodule StashixWeb.BookLive do
 
       <%!-- Prev / Next navigation --%>
       <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label="Adjacent issues">
-        <.adjacent_card :if={@prev_book} book={@prev_book} dir={:prev} />
+        <.adjacent_card :if={@prev_book} book={@prev_book} dir={:prev} volume_counts={@volume_counts} />
         <div :if={!@prev_book}></div>
-        <.adjacent_card :if={@next_book} book={@next_book} dir={:next} />
+        <.adjacent_card :if={@next_book} book={@next_book} dir={:next} volume_counts={@volume_counts} />
       </nav>
 
       <%!-- Metadata source + file path --%>

@@ -187,10 +187,28 @@ defmodule Stashix.Formatters do
   def format_issue_number(nil), do: nil
   def format_issue_number(%Decimal{} = n), do: n |> Decimal.normalize() |> Decimal.to_string(:normal)
 
-  @doc "A book's place in its series: \"#3\", \"Vol. 2\" for a volume-only trade, or nil."
-  def book_number_label(%{issue_number: %Decimal{} = n}), do: "##{format_issue_number(n)}"
-  def book_number_label(%{volume: v}) when is_integer(v), do: "Vol. #{v}"
-  def book_number_label(_), do: nil
+  @doc """
+  A book's place in its series: "#3", "Vol. 2" or "Vol. 2 #3", or nil.
+
+  `volume_counts` maps each volume to how many of the series' books carry it
+  (see `Stashix.Library.volume_counts/1`). The volume shows only when the
+  series spans several, and a volume holding a single book drops its issue
+  number, since "#1" says nothing there. Without counts the issue number wins.
+  """
+  def book_number_label(book, volume_counts \\ %{})
+
+  def book_number_label(%{volume: v, issue_number: n}, volume_counts) do
+    multi_volume? = volume_counts |> Map.keys() |> Enum.reject(&is_nil/1) |> length() > 1
+
+    cond do
+      is_integer(v) and (is_nil(n) or (multi_volume? and volume_counts[v] == 1)) -> "Vol. #{v}"
+      is_integer(v) and multi_volume? -> "Vol. #{v} ##{format_issue_number(n)}"
+      n -> "##{format_issue_number(n)}"
+      true -> nil
+    end
+  end
+
+  def book_number_label(_, _), do: nil
 
   @doc "Years a series ran: \"2019\", \"2019–2021\", \"2019–\" while ongoing, nil when unknown."
   def series_years(%{start_year: nil}), do: nil

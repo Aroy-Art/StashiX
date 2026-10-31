@@ -376,18 +376,13 @@ defmodule StashixWeb.CoreComponents do
     issue? = assigns.as == :issue
     series = if issue? and Ecto.assoc_loaded?(book.series), do: book.series
     year = book.year && to_string(book.year)
+    number = issue? && Stashix.Formatters.book_number_label(book, book.series_volume_counts || %{})
 
     assigns =
       assign(assigns,
-        title: if(issue? and book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title),
+        title: if(number, do: "#{number} – #{book.title}", else: book.title),
         subtitle: assigns.subtitle || (series && series.name) || year,
-        badge:
-          cond do
-            !issue? -> nil
-            is_nil(book.issue_number) -> book.volume && "Vol #{book.volume}"
-            book.volume && (book.series_volume_count || 2) > 1 -> "Vol #{book.volume} ##{book.issue_number}"
-            true -> "##{book.issue_number}"
-          end,
+        badge: number,
         progress:
           if(assigns.read && book.page_count && book.page_count > 1,
             do: assigns.read / (book.page_count - 1)
