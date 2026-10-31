@@ -435,6 +435,30 @@ defmodule Stashix.ScannerTest do
     end
   end
 
+  describe "file scans during a library scan" do
+    setup %{lib: lib} do
+      scan = spawn(fn -> Process.sleep(:infinity) end)
+      on_exit(fn -> Process.exit(scan, :kill) end)
+      %{scan: scan, state: %{table: nil, scanning: %{scan => lib.id}, pending: %{}}}
+    end
+
+    test "wait for the library scan to end", %{lib: lib, scan: scan, state: state} do
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      assert state.pending == %{lib.id => MapSet.new(["/missing/a.cbz"])}
+
+      {:noreply, state} = Scanner.handle_info({:DOWN, make_ref(), :process, scan, :normal}, state)
+      assert state.scanning == %{}
+      assert state.pending == %{}
+    end
+
+    test "for other libraries run straight away", %{scan: scan, state: state} do
+      {:noreply, state} = Scanner.handle_cast({:scan_file, Ecto.UUID.generate(), "/missing/a.cbz"}, state)
+      assert state.pending == %{}
+      assert map_size(state.scanning) == 1 and state.scanning[scan]
+    end
+  end
+
   describe "scan_sync/2 force rescan" do
     test "force rescan corrects manually corrupted type", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "One-Shot"), "Standalone.cbz")

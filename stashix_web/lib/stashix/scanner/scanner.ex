@@ -64,7 +64,7 @@ defmodule Stashix.Scanner do
   @impl true
   def init(_opts) do
     table = :ets.new(@ets_table, [:named_table, :public, :set])
-    {:ok, %{table: table}}
+    {:ok, %{table: table, scanning: %{}, pending: %{}}}
   end
 
   @impl true
@@ -74,8 +74,9 @@ defmodule Stashix.Scanner do
         do_scan(library_id, force)
       end)
 
+    Process.monitor(pid)
     :ets.insert(@ets_table, {library_id, %{pid: pid, done: false, phase: :starting}})
-    {:noreply, state}
+    {:noreply, put_in(state, [:scanning, pid], library_id)}
   end
 
   def handle_cast({:cancel_scan, library_id}, state) do
@@ -92,12 +93,15 @@ defmodule Stashix.Scanner do
     {:noreply, state}
   end
 
+  # A file scan racing a library scan could import a file the library scan then
+  # marks orphaned (it was not in its file list), so it waits until that ends.
   def handle_cast({:scan_file, library_id, file_path}, state) do
-    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
-      do_scan_file(library_id, file_path)
-    end)
-
-    {:noreply, state}
+    if library_id in Map.values(state.scanning) do
+      {:noreply, update_in(state, [:pending, Access.key(library_id, MapSet.new())], &MapSet.put(&1, file_path))}
+    else
+      start_file_scan(library_id, file_path)
+      {:noreply, state}
+    end
   end
 
   def handle_cast({:scan_series, series_id, force}, state) do
@@ -111,8 +115,7 @@ defmodule Stashix.Scanner do
   def handle_cast({:scan_book, book_id}, state) do
     Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn ->
       book = Library.get_book!(book_id)
-      files = Library.get_book_files(book_id)
-      Enum.each(files, fn bf -> do_scan_file(book.library_id, bf.path) end)
+      Enum.each(Library.get_book_files(book_id), &scan_file(book.library_id, &1.path))
     end)
 
     {:noreply, state}
@@ -141,6 +144,31 @@ defmodule Stashix.Scanner do
     end)
 
     {:noreply, state}
+  end
+
+  # A library scan ended (finished, failed or cancelled): run the file scans
+  # that came in meanwhile.
+  @impl true
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    case Map.pop(state.scanning, pid) do
+      {nil, _} ->
+        {:noreply, state}
+
+      {library_id, scanning} ->
+        state = %{state | scanning: scanning}
+
+        if library_id in Map.values(scanning) do
+          {:noreply, state}
+        else
+          {paths, pending} = Map.pop(state.pending, library_id, MapSet.new())
+          Enum.each(paths, &start_file_scan(library_id, &1))
+          {:noreply, %{state | pending: pending}}
+        end
+    end
+  end
+
+  defp start_file_scan(library_id, file_path) do
+    Task.Supervisor.start_child(Stashix.Scanner.TaskSupervisor, fn -> do_scan_file(library_id, file_path) end)
   end
 
   defp do_scan(library_id, force) do
@@ -730,7 +758,6 @@ defmodule Stashix.Scanner do
     e ->
       msg = Exception.message(e)
       Logger.error("File scan failed for #{file_path}: #{msg}")
-      update_task_status(library_id, %{done: true, failed: true, error: msg})
       broadcast_progress(library_id, 0, 0, true, :failed, msg)
   end
 
@@ -744,7 +771,6 @@ defmodule Stashix.Scanner do
       with %{book_id: book_id} <- Library.get_book_file_by_path(file_path),
            do: Metadata.flush_pending_writes(book_ids: [book_id])
 
-      update_task_status(library_id, %{scanned: 0, total: 1, done: false, collecting: false})
       broadcast_progress(library_id, 0, 1, false, :file)
 
       file_meta = parse_file_metadata(file_path)
@@ -759,7 +785,6 @@ defmodule Stashix.Scanner do
 
       Library.update_series_counts(library_id)
 
-      update_task_status(library_id, %{scanned: 1, total: 1, done: true})
       broadcast_progress(library_id, 1, 1, true, :file)
     end
   end
