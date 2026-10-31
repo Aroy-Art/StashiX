@@ -214,6 +214,17 @@ defmodule Stashix.Metadata do
   def write_book_files(%Book{} = book), do: FileWriter.write_book(book, Settings.metadata())
 
   @pending_write_states ~w(available scheduled retryable)
+
+  @doc "Whether the book has a file write queued or running: its row is ahead of its files."
+  def write_pending?(book_id) do
+    from(j in Oban.Job,
+      where:
+        j.queue == "metadata_write" and fragment("?->>'book_id'", j.args) == ^to_string(book_id) and
+          j.state in ^["executing" | @pending_write_states]
+    )
+    |> Repo.exists?()
+  end
+
   @executing_wait_ms 60_000
 
   @doc """

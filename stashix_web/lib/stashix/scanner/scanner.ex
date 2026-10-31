@@ -402,6 +402,7 @@ defmodule Stashix.Scanner do
   end
 
   defp parse_file_metadata(file_path) do
+    parsed_at = NaiveDateTime.utc_now(:second)
     stat = File.stat!(file_path)
     file_hash = compute_hash(file_path, stat.size)
     last_modified = NaiveDateTime.from_erl!(stat.mtime)
@@ -414,6 +415,7 @@ defmodule Stashix.Scanner do
       file_hash: file_hash,
       last_modified: last_modified,
       file_size: stat.size,
+      parsed_at: parsed_at,
       parsed: parsed,
       comicinfo: comicinfo,
       metadata: Map.merge(parsed, comicinfo)
@@ -550,24 +552,39 @@ defmodule Stashix.Scanner do
   defp refresh_book_from_meta(book, %{file_path: file_path, comicinfo: file} = file_meta, library, cache) do
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache, book.series_id)
 
-    # Metadata fetched from an external source lives only in the DB when the
-    # file carries none (e.g. write-back disabled); don't reset it from the filename.
-    keep_fetched = book.metadata_matched_at != nil and file == %{}
+    # The row's metadata stands when it came from an external source and the
+    # file carries none (e.g. write-back disabled), or when it changed while
+    # this scan read the file.
+    keep_db = (book.metadata_matched_at != nil and file == %{}) or db_ahead_of_file?(book, file_meta)
 
     attrs =
-      if keep_fetched,
+      if keep_db,
         do: file_meta |> book_attrs_from_meta(series, book) |> Map.take([:series_id, :type, :page_count, :deleted_at]),
         else: file_meta |> book_attrs_from_meta(series, book) |> Locks.drop_locked(book)
 
     case Library.update_book(book, attrs) do
       {:ok, updated} ->
-        unless keep_fetched, do: apply_file_children(updated, series, file_meta, library, false)
+        unless keep_db, do: apply_file_children(updated, series, file_meta, library, false)
         {{updated, file_path}, new_cache}
 
       {:error, reason} ->
         Logger.error("Failed to update book for #{file_path}: #{inspect(reason)}")
         {nil, new_cache}
     end
+  end
+
+  # An edit or match that landed while this scan was reading the file: the
+  # file's metadata is older than the row, so applying it would undo the change
+  # (and the queued write-back would then write the old values into the file).
+  # The next scan picks the file up again once its write-back changed it.
+  defp db_ahead_of_file?(book, %{file_path: path, parsed_at: parsed_at, last_modified: last_modified}) do
+    ahead =
+      NaiveDateTime.compare(book.updated_at, parsed_at) == :gt or
+        Metadata.write_pending?(book.id) or
+        file_changed?(path, last_modified)
+
+    if ahead, do: Logger.info("[scan] #{path} or its book changed during the scan; keeping the book's metadata")
+    ahead
   end
 
   # The one mapping from a file's metadata onto book columns, for new books

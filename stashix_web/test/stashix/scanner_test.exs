@@ -551,6 +551,40 @@ defmodule Stashix.ScannerTest do
   </ComicInfo>
   """
 
+  describe "edits made during a scan" do
+    setup %{lib: lib, tmp: tmp} do
+      dir = mkdir(tmp, "Saga (2012-)")
+      write_cbz(dir, "Saga 001.cbz", extra: [{~c"ComicInfo.xml", "<ComicInfo><Title>Old</Title></ComicInfo>"}])
+      Scanner.scan_sync(lib.id)
+      [book] = Library.list_books(lib.id, access: Access.all())
+      write_cbz(dir, "Saga 001.cbz", extra: [{~c"ComicInfo.xml", "<ComicInfo><Title>New</Title></ComicInfo>"}])
+      %{book: book}
+    end
+
+    defp set_updated_at(book, at), do: Repo.update_all(from(b in Book, where: b.id == ^book.id), set: [updated_at: at])
+
+    test "a book changed after its file was read keeps its metadata", %{lib: lib, book: book} do
+      set_updated_at(book, ~N[2099-01-01 00:00:00])
+      Scanner.scan_sync(lib.id, true)
+      assert Repo.get!(Book, book.id).title == "Old"
+    end
+
+    test "a book last changed before its file was read takes the file's", %{lib: lib, book: book} do
+      set_updated_at(book, ~N[2000-01-01 00:00:00])
+      Scanner.scan_sync(lib.id, true)
+      assert Repo.get!(Book, book.id).title == "New"
+    end
+  end
+
+  describe "Metadata.write_pending?/1" do
+    test "is true while a write-back job waits", %{lib: lib} do
+      {:ok, book} = Library.create_book(%{library_id: lib.id, type: "standalone", title: "T"})
+      refute Stashix.Metadata.write_pending?(book.id)
+      {:ok, _} = Stashix.Metadata.enqueue_write(book.id)
+      assert Stashix.Metadata.write_pending?(book.id)
+    end
+  end
+
   describe "scan_sync/2 file metadata" do
     test "force rescan refreshes every field the file states", %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Batman (2016)"), "Batman 001.cbz")
