@@ -1,0 +1,22 @@
+# Build artifacts and fetched deps; the image builds its own.
+/_build/
+/deps/
+/cover/
+/doc/
+*.ez
+stashix-*.tar
+
+# Assets built by `mix assets.deploy` inside the image.
+/priv/static/assets/
+/priv/static/cache_manifest.json
+/assets/node_modules/
+
+# Editor/LSP state, temp files and crash dumps.
+/.elixir_ls/
+/.elixir-tools/
+/tmp/
+erl_crash.dump
+npm-debug.log
+
+# Not needed in the image.
+/test/
