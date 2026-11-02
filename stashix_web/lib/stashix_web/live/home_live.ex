@@ -422,6 +422,10 @@ defmodule StashixWeb.HomeLive do
         queue_cols:
           if(pair_queues?, do: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1", else: "grid-cols-1 sm:grid-cols-2"),
         library_options: for(%{library: lib} <- assigns.libraries_data, do: {lib.name, lib.id}),
+        recent_library_name:
+          Enum.find_value(assigns.libraries_data, fn %{library: lib} ->
+            lib.id == assigns.recent_library && lib.name
+          end),
         picks?: picks?,
         libraries_pair?: length(assigns.libraries_data) > 1,
         queues?: picks? or length(assigns.continue_reading) > 1 or assigns.next_issue != []
@@ -547,6 +551,7 @@ defmodule StashixWeb.HomeLive do
           <.view_all to={~p"/series"} />
         </:actions>
         <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />
+        <.recent_empty :if={@recent_series == []} kind="series" library={@recent_library_name} />
       </.shelf>
 
       <.shelf :if={@recent_books != [] or @recent_library} id="home-recent-books" title="Recent books">
@@ -554,6 +559,7 @@ defmodule StashixWeb.HomeLive do
           <.view_all to={~p"/books"} />
         </:actions>
         <.book_card :for={book <- @recent_books} book={book} scope="recent-books" class="flex-shrink-0 w-36" />
+        <.recent_empty :if={@recent_books == []} kind="books" library={@recent_library_name} />
       </.shelf>
 
       <.shelf :if={@recent_issues != [] or @recent_library} id="home-recent-issues" title="Recent issues">
@@ -561,8 +567,21 @@ defmodule StashixWeb.HomeLive do
           <.view_all to={~p"/issues"} />
         </:actions>
         <.book_card :for={book <- @recent_issues} book={book} as={:issue} scope="recent-issues" class="flex-shrink-0 w-36" />
+        <.recent_empty :if={@recent_issues == []} kind="issues" library={@recent_library_name} />
       </.shelf>
     </.page>
+    """
+  end
+
+  # Stands in for a recent shelf's row when the picked library has none.
+  attr :kind, :string, required: true
+  attr :library, :string, default: nil
+
+  defp recent_empty(assigns) do
+    ~H"""
+    <.empty_state ghost="0" title="Nothing here yet" class="w-full flex-shrink-0 py-4 sm:py-6">
+      No {@kind} in {@library || "this library"} yet. Pick another library above.
+    </.empty_state>
     """
   end
 

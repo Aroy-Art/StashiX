@@ -84,6 +84,10 @@ defmodule StashixWeb.HomeLiveTest do
     {:ok, view, _html} = live(conn, ~p"/")
     refute has_element?(view, "#home-recent-books", "Manga Pick")
 
+    # A library with none of a kind says so in that row
+    view |> form("#home-recent-filter") |> render_change(%{value: manga.id})
+    assert has_element?(view, "#home-recent-series", "No series in Manga yet")
+
     view |> form("#home-recent-filter") |> render_change(%{value: ""})
     assert has_element?(view, "#home-recent-books", "Manga Pick")
 
