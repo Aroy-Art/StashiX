@@ -37,7 +37,7 @@ defmodule StashixWeb.HomeLive do
        total_books: total_books,
        total_issues: total_issues,
        total_series: total_series,
-       recent_filter: %{series: nil, books: nil, issues: nil}
+       recent_library: saved_recent_library(user, libraries_data)
      )
      |> assign_recent()
      |> assign_picks()}
@@ -46,29 +46,38 @@ defmodule StashixWeb.HomeLive do
   @recent_limit 20
 
   # The recent shelves draw from every library unless one is picked in the
-  # shelf's dropdown.
+  # dropdown above them. The pick is kept in the user's settings.
   defp assign_recent(socket) do
-    %{access: access, recent_filter: filter} = socket.assigns
+    %{access: access, recent_library: library} = socket.assigns
 
     assign(socket,
-      recent_series: Library.recent_series(access, filter.series, @recent_limit),
-      recent_books: Library.recent_books(access, filter.books, @recent_limit, "standalone"),
-      recent_issues: Library.recent_issues(access, filter.issues, @recent_limit)
+      recent_series: Library.recent_series(access, library, @recent_limit),
+      recent_books: Library.recent_books(access, library, @recent_limit, "standalone"),
+      recent_issues: Library.recent_issues(access, library, @recent_limit)
     )
   end
 
-  @impl true
-  def handle_event("filter_recent", %{"shelf" => shelf, "value" => value}, socket)
-      when shelf in ~w(series books issues) do
-    library =
-      Enum.find_value(socket.assigns.libraries_data, fn %{library: lib} ->
-        to_string(lib.id) == value && lib.id
-      end)
+  # nil when nothing is saved or the saved library is gone or out of reach.
+  defp saved_recent_library(user, libraries_data) do
+    find_library(libraries_data, Map.get(user.ui_settings || %{}, "home_library"))
+  end
 
-    {:noreply,
-     socket
-     |> update(:recent_filter, &Map.put(&1, String.to_existing_atom(shelf), library))
-     |> assign_recent()}
+  defp find_library(libraries_data, id) do
+    Enum.find_value(libraries_data, fn %{library: lib} -> to_string(lib.id) == id && lib.id end)
+  end
+
+  @impl true
+  def handle_event("filter_recent", %{"value" => value}, socket) do
+    %{current_user: user, libraries_data: libraries_data} = socket.assigns
+    library = find_library(libraries_data, value)
+
+    socket =
+      case Stashix.Accounts.update_ui_settings(user, %{"home_library" => to_string(library || "")}) do
+        {:ok, user} -> assign(socket, current_user: user)
+        {:error, _} -> socket
+      end
+
+    {:noreply, socket |> assign(recent_library: library) |> assign_recent()}
   end
 
   # The spotlight and the "start reading" picks are random, and mount runs
@@ -526,25 +535,29 @@ defmodule StashixWeb.HomeLive do
         </.section>
       </div>
 
-      <.shelf :if={@recent_series != [] or @recent_filter.series} id="home-recent-series" title="Recent series">
+      <%!-- One library picker for all the recent shelves --%>
+      <.recent_filter
+        :if={@recent_series != [] or @recent_books != [] or @recent_issues != [] or @recent_library}
+        value={@recent_library}
+        options={@library_options}
+      />
+
+      <.shelf :if={@recent_series != [] or @recent_library} id="home-recent-series" title="Recent series">
         <:actions>
-          <.recent_filter shelf="series" value={@recent_filter.series} options={@library_options} />
           <.view_all to={~p"/series"} />
         </:actions>
         <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />
       </.shelf>
 
-      <.shelf :if={@recent_books != [] or @recent_filter.books} id="home-recent-books" title="Recent books">
+      <.shelf :if={@recent_books != [] or @recent_library} id="home-recent-books" title="Recent books">
         <:actions>
-          <.recent_filter shelf="books" value={@recent_filter.books} options={@library_options} />
           <.view_all to={~p"/books"} />
         </:actions>
         <.book_card :for={book <- @recent_books} book={book} scope="recent-books" class="flex-shrink-0 w-36" />
       </.shelf>
 
-      <.shelf :if={@recent_issues != [] or @recent_filter.issues} id="home-recent-issues" title="Recent issues">
+      <.shelf :if={@recent_issues != [] or @recent_library} id="home-recent-issues" title="Recent issues">
         <:actions>
-          <.recent_filter shelf="issues" value={@recent_filter.issues} options={@library_options} />
           <.view_all to={~p"/issues"} />
         </:actions>
         <.book_card :for={book <- @recent_issues} book={book} as={:issue} scope="recent-issues" class="flex-shrink-0 w-36" />
@@ -553,18 +566,22 @@ defmodule StashixWeb.HomeLive do
     """
   end
 
-  # Library picker in a recent shelf's header; only worth showing with more
-  # than one library.
-  attr :shelf, :string, required: true
+  # Library picker for the recent shelves; only worth showing with more than
+  # one library.
   attr :value, :any, default: nil
   attr :options, :list, required: true
 
   defp recent_filter(assigns) do
     ~H"""
-    <form :if={length(@options) > 1} id={"home-recent-#{@shelf}-filter"} phx-change="filter_recent">
-      <input type="hidden" name="shelf" value={@shelf} />
+    <form
+      :if={length(@options) > 1}
+      id="home-recent-filter"
+      phx-change="filter_recent"
+      class="flex items-center justify-end gap-3"
+    >
+      <span class="text-xs font-medium uppercase tracking-widest text-muted">Recently added from</span>
       <.ink_select
-        id={"home-recent-#{@shelf}-library"}
+        id="home-recent-library"
         name="value"
         label="Library"
         size="sm"

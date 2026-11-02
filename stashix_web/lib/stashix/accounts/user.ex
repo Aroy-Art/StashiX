@@ -105,11 +105,16 @@ defmodule Stashix.Accounts.User do
     attrs = Map.new(attrs, fn {k, v} -> {to_string(k), v} end)
     changeset = change(user)
 
-    case Enum.find(attrs, fn {key, value} -> value not in Map.get(@ui_choices, key, []) end) do
+    case Enum.find(attrs, fn {key, value} -> not valid_ui_setting?(key, value) end) do
       nil -> put_change(changeset, :ui_settings, Map.merge(user.ui_settings || %{}, attrs))
       {key, _value} -> add_error(changeset, :ui_settings, "has an invalid value for #{key}")
     end
   end
+
+  # The library the home page's recent shelves are narrowed to; "" for all.
+  # Free-form since libraries come and go; readers check it still exists.
+  defp valid_ui_setting?("home_library", value), do: is_binary(value)
+  defp valid_ui_setting?(key, value), do: value in Map.get(@ui_choices, key, [])
 
   @doc "Name, login name and birth date."
   def profile_changeset(user, attrs) do

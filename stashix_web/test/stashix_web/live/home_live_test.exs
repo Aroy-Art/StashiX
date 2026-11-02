@@ -67,7 +67,8 @@ defmodule StashixWeb.HomeLiveTest do
     assert render(view) =~ "Batched Arrival 3"
   end
 
-  test "recent shelves span every library and can be narrowed to one", %{conn: conn, lib: lib} do
+  test "recent shelves span every library, narrow to one, and remember the pick",
+       %{conn: conn, lib: lib} do
     {:ok, manga} = Library.create_library(%{name: "Manga", root_path: "/tmp/manga"})
     {:ok, _} = Library.create_book(%{library_id: manga.id, type: "standalone", title: "Manga Pick"})
 
@@ -75,11 +76,18 @@ defmodule StashixWeb.HomeLiveTest do
     assert has_element?(view, "#home-recent-books", "Manga Pick")
     assert has_element?(view, "#home-recent-books", "Spotlight Candidate 1")
 
-    view |> form("#home-recent-books-filter") |> render_change(%{shelf: "books", value: lib.id})
+    view |> form("#home-recent-filter") |> render_change(%{value: lib.id})
     refute has_element?(view, "#home-recent-books", "Manga Pick")
     assert has_element?(view, "#home-recent-books", "Spotlight Candidate 1")
 
-    view |> form("#home-recent-books-filter") |> render_change(%{shelf: "books", value: ""})
+    # Kept across a reload
+    {:ok, view, _html} = live(conn, ~p"/")
+    refute has_element?(view, "#home-recent-books", "Manga Pick")
+
+    view |> form("#home-recent-filter") |> render_change(%{value: ""})
+    assert has_element?(view, "#home-recent-books", "Manga Pick")
+
+    {:ok, view, _html} = live(conn, ~p"/")
     assert has_element?(view, "#home-recent-books", "Manga Pick")
   end
 
