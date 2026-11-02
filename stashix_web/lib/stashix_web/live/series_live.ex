@@ -50,6 +50,7 @@ defmodule StashixWeb.SeriesLive do
        total_pages: total_pages,
        total_size: total_size,
        cover_book: cover_book,
+       folder_cover?: !!Library.series_folder_cover(socket.assigns.access, series),
        continue_book: continue_book,
        summary_info: summary_info,
        scanning: false,
@@ -388,6 +389,7 @@ defmodule StashixWeb.SeriesLive do
        total_pages: total_pages,
        total_size: total_size,
        cover_book: List.first(books),
+       folder_cover?: !!Library.series_folder_cover(socket.assigns.access, series),
        continue_book: find_continue_book(books, progress_map),
        summary_info: derive_summary(series, books)
      )}
@@ -555,8 +557,11 @@ defmodule StashixWeb.SeriesLive do
     <% first_book = List.first(issue_sorted) %>
     <% issue_count = length(issue_sorted) %>
     <% read_count = Enum.count(issue_sorted, &((book_progress(&1, @progress_map) || 0.0) >= 1.0)) %>
-    <% has_cover = @cover_book && @cover_book.cover %>
-    <.page cover_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=s"}>
+    <%!-- A folder cover.* outranks the first issue's cover, as on list pages --%>
+    <% has_cover = @folder_cover? || (@cover_book && @cover_book.cover) %>
+    <% cover_base =
+      if @folder_cover?, do: ~p"/api/series/#{@series.id}/cover", else: has_cover && ~p"/api/books/#{@cover_book.id}/cover" %>
+    <.page cover_src={has_cover && "#{cover_base}?s=s"}>
       <.crumbs crumbs={[
         {"Home", "/"},
         {@library.name, ~p"/library/#{@library.id}"},
@@ -630,13 +635,13 @@ defmodule StashixWeb.SeriesLive do
 
         <.hero_cover
           id={"series-cover-#{@series.id}"}
-          src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=l"}
-          full_src={has_cover && ~p"/api/books/#{@cover_book.id}/cover?s=xl"}
+          src={has_cover && "#{cover_base}?s=l"}
+          full_src={has_cover && "#{cover_base}?s=xl"}
           alt={@series.name}
-          blurhash={has_cover && @cover_book.cover.blurhash}
+          blurhash={!@folder_cover? && has_cover && @cover_book.cover.blurhash}
           stack={
             issue_sorted
-            |> Enum.filter(&(&1.cover && (!@cover_book || &1.id != @cover_book.id)))
+            |> Enum.filter(&(&1.cover && (@folder_cover? || !@cover_book || &1.id != @cover_book.id)))
             |> Enum.take(2)
             |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
           }

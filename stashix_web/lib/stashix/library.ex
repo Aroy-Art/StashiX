@@ -1052,16 +1052,7 @@ defmodule Stashix.Library do
   def get_series_cover(access, series_id) do
     series = get_series!(access, series_id)
 
-    # The folder cover is unrated, so it is only served to users who can see
-    # every book of the series; others get the cover of a book they can see.
-    folder_cover =
-      series.path && sees_whole_series?(access, series_id) &&
-        Enum.find_value(~w(cover.jpg cover.jpeg cover.png cover.webp), fn name ->
-          path = Path.join(series.path, name)
-          if File.exists?(path), do: path
-        end)
-
-    folder_cover ||
+    series_folder_cover(access, series) ||
       from(bc in BookCover,
         join: b in ^Access.books(access),
         on: b.id == bc.book_id,
@@ -1071,6 +1062,19 @@ defmodule Stashix.Library do
         select: bc.path
       )
       |> Repo.one()
+  end
+
+  @doc """
+  Path of the series folder's `cover.*` image, or nil. The folder cover is
+  unrated, so it is only returned to users who can see every book of the
+  series; others fall back to the cover of a book they can see.
+  """
+  def series_folder_cover(access, series) do
+    series.path && sees_whole_series?(access, series.id) &&
+      Enum.find_value(~w(cover.jpg cover.jpeg cover.png cover.webp), fn name ->
+        path = Path.join(series.path, name)
+        if File.exists?(path), do: path
+      end)
   end
 
   defp sees_whole_series?(%Access{all?: true}, _series_id), do: true
