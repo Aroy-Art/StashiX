@@ -67,6 +67,22 @@ defmodule StashixWeb.HomeLiveTest do
     assert render(view) =~ "Batched Arrival 3"
   end
 
+  test "recent shelves span every library and can be narrowed to one", %{conn: conn, lib: lib} do
+    {:ok, manga} = Library.create_library(%{name: "Manga", root_path: "/tmp/manga"})
+    {:ok, _} = Library.create_book(%{library_id: manga.id, type: "standalone", title: "Manga Pick"})
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert has_element?(view, "#home-recent-books", "Manga Pick")
+    assert has_element?(view, "#home-recent-books", "Spotlight Candidate 1")
+
+    view |> form("#home-recent-books-filter") |> render_change(%{shelf: "books", value: lib.id})
+    refute has_element?(view, "#home-recent-books", "Manga Pick")
+    assert has_element?(view, "#home-recent-books", "Spotlight Candidate 1")
+
+    view |> form("#home-recent-books-filter") |> render_change(%{shelf: "books", value: ""})
+    assert has_element?(view, "#home-recent-books", "Manga Pick")
+  end
+
   test "an empty library shows the welcome state once connected", %{conn: conn} do
     for book <- Library.list_all_books(access: Stashix.Library.Access.all(), limit: 100),
         do: Stashix.Repo.delete!(book)

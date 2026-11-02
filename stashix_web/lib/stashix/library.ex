@@ -2293,13 +2293,17 @@ defmodule Stashix.Library do
     end)
   end
 
+  # The recent_* functions take a library id, or nil for every library the
+  # access allows.
   def recent_books(access, library_id, limit \\ 10, type \\ nil) do
     query =
       from b in Access.books(access),
-        where: b.library_id == ^library_id and is_nil(b.deleted_at),
+        where: is_nil(b.deleted_at),
         order_by: [desc: b.inserted_at],
         limit: ^limit,
         preload: [:cover]
+
+    query = in_library(query, library_id)
 
     query =
       if type, do: where(query, [b], b.type == ^type), else: query
@@ -2311,26 +2315,31 @@ defmodule Stashix.Library do
     from(s in Access.series(access),
       left_join: b in ^Access.books(access),
       on: b.series_id == s.id and is_nil(b.deleted_at),
-      where: s.library_id == ^library_id and is_nil(s.deleted_at),
+      where: is_nil(s.deleted_at),
       group_by: s.id,
       order_by: [desc: s.inserted_at],
       limit: ^limit,
       select: %{s | issue_count: count(b.id)}
     )
+    |> in_library(library_id)
     |> Repo.all()
     |> attach_series_blurhashes(access)
   end
 
   def recent_issues(access, library_id, limit \\ 10) do
     from(b in Access.books(access),
-      where: b.library_id == ^library_id and is_nil(b.deleted_at) and b.type == "issue",
+      where: is_nil(b.deleted_at) and b.type == "issue",
       order_by: [desc: b.inserted_at],
       limit: ^limit,
       preload: [:cover]
     )
+    |> in_library(library_id)
     |> Repo.all()
     |> put_series_volume_counts(access)
   end
+
+  defp in_library(query, nil), do: query
+  defp in_library(query, library_id), do: where(query, [x], x.library_id == ^library_id)
 
   def mark_orphaned_books(library_id, scanned_paths) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
