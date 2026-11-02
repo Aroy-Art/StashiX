@@ -385,6 +385,7 @@ defmodule StashixWeb.HomeLive do
         recent_books: Enum.flat_map(assigns.libraries_data, & &1.recent_books),
         recent_issues: Enum.flat_map(assigns.libraries_data, & &1.recent_issues),
         picks?: picks?,
+        libraries_pair?: length(assigns.libraries_data) > 1,
         queues?: picks? or length(assigns.continue_reading) > 1 or assigns.next_issue != []
       )
 
@@ -458,12 +459,17 @@ defmodule StashixWeb.HomeLive do
           :if={@libraries_data != []}
           title="Libraries"
           count={length(@libraries_data)}
-          class={if @queues?, do: "w-full lg:w-64 lg:flex-shrink-0", else: "w-full"}
+          class={[
+            "w-full",
+            @queues? && "lg:w-64 lg:flex-shrink-0",
+            @queues? && @libraries_pair? && "2xl:w-[33rem]"
+          ]}
         >
+          <%!-- Two columns on wide screens so a long library list doesn't trail far below the queues --%>
           <div class={[
             "grid gap-4",
             if(@queues?,
-              do: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1",
+              do: ["grid-cols-1 sm:grid-cols-2 lg:grid-cols-1", @libraries_pair? && "2xl:grid-cols-2"],
               else: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
             )
           ]}>
