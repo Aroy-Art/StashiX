@@ -33,29 +33,32 @@ defmodule StashixWeb.SessionController do
     if Accounts.setup_complete?() do
       redirect(conn, to: ~p"/login")
     else
-      %{
-        "email" => email,
-        "username" => username,
-        "password" => password,
-        "library_name" => library_name,
-        "library_path" => library_path
-      } = params
+      %{"email" => email, "username" => username, "password" => password} = params
 
-      with {:ok, user} <-
-             Accounts.create_user(%{
-               email: email,
-               username: username,
-               password: password,
-               role: :admin
-             }),
-           {:ok, library} <-
-             Stashix.Library.create_library(%{name: library_name, root_path: library_path}) do
-        Stashix.Scanner.scan_library(library.id)
+      # One transaction, so a bad library leaves no admin behind and setup can be retried.
+      result =
+        Stashix.Repo.transact(fn ->
+          with {:ok, user} <-
+                 Accounts.create_user(%{
+                   email: email,
+                   username: username,
+                   password: password,
+                   role: :admin
+                 }),
+               {:ok, library} <- maybe_create_library(params) do
+            {:ok, {user, library}}
+          end
+        end)
 
-        conn
-        |> sign_in(user)
-        |> redirect(to: ~p"/")
-      else
+      case result do
+        {:ok, {user, library}} ->
+          # The scanner reads the library from another process, so start it after the commit.
+          if library, do: Stashix.Scanner.scan_library(library.id)
+
+          conn
+          |> sign_in(user)
+          |> redirect(to: ~p"/")
+
         {:error, _} ->
           conn
           |> put_flash(:error, "Setup failed. Check your details and try again.")
@@ -63,6 +66,11 @@ defmodule StashixWeb.SessionController do
       end
     end
   end
+
+  defp maybe_create_library(%{"skip_library" => "true"}), do: {:ok, nil}
+
+  defp maybe_create_library(%{"library_name" => name, "library_path" => path}),
+    do: Stashix.Library.create_library(%{name: name, root_path: path})
 
   def delete(conn, _params) do
     Accounts.delete_session(get_session(conn, "session_id"))

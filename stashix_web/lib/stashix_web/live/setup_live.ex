@@ -21,6 +21,8 @@ defmodule StashixWeb.SetupLive do
          account_errors: %{},
          library_errors: %{},
          trigger_submit: false,
+         confirm_skip: false,
+         skip_library: false,
          account_form:
            to_form(%{
              "email" => "",
@@ -82,6 +84,18 @@ defmodule StashixWeb.SetupLive do
     {:noreply, assign(socket, trigger_submit: true, library_form: to_form(params))}
   end
 
+  def handle_event("confirm_skip", _params, socket) do
+    {:noreply, assign(socket, confirm_skip: true)}
+  end
+
+  def handle_event("cancel_skip", _params, socket) do
+    {:noreply, assign(socket, confirm_skip: false)}
+  end
+
+  def handle_event("skip", _params, socket) do
+    {:noreply, assign(socket, confirm_skip: false, skip_library: true, trigger_submit: true)}
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -133,6 +147,7 @@ defmodule StashixWeb.SetupLive do
         <input type="hidden" name="email" value={@account_data["email"]} />
         <input type="hidden" name="username" value={@account_data["username"]} />
         <input type="hidden" name="password" value={@account_data["password"]} />
+        <input :if={@skip_library} type="hidden" name="skip_library" value="true" />
 
         <.field label="Library name" error={first_error(@library_errors, :library_name)}>
           <.text_input
@@ -160,7 +175,30 @@ defmodule StashixWeb.SetupLive do
           <.ink_button type="button" variant="ghost" phx-click="back">Back</.ink_button>
           <.ink_button type="submit" class="flex-1">Finish setup</.ink_button>
         </div>
+        <button
+          type="button"
+          phx-click="confirm_skip"
+          class="block w-full text-center text-sm text-muted hover:text-fg underline underline-offset-4"
+        >
+          Skip for now
+        </button>
       </form>
+
+      <.dialog
+        :if={@confirm_skip}
+        id="skip-library-dialog"
+        size="sm"
+        title="Skip library setup?"
+        on_close={JS.push("cancel_skip")}
+      >
+        <p class="text-sm text-fg-soft">
+          Your stash will start empty. You can add a library later under Admin → Libraries.
+        </p>
+        <.dialog_footer>
+          <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_skip">Cancel</.ink_button>
+          <.ink_button type="button" size="md" phx-click="skip">Skip and finish</.ink_button>
+        </.dialog_footer>
+      </.dialog>
     </.cover_page>
     """
   end
