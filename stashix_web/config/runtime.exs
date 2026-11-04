@@ -101,8 +101,7 @@ path_overrides =
     data_dir: data_dir,
     thumbnail_dir: env_path.("THUMBNAIL_DIR") || under_data_dir.("thumbnails"),
     image_cache_dir: env_path.("IMAGE_CACHE_DIR") || under_data_dir.("cache/images/resized"),
-    metadata_image_dir: env_path.("METADATA_IMAGE_DIR") || under_data_dir.("cache/images/metadata"),
-    library_path: env_path.("LIBRARY_PATH")
+    metadata_image_dir: env_path.("METADATA_IMAGE_DIR") || under_data_dir.("cache/images/metadata")
   ]
   |> Enum.reject(fn {_key, value} -> is_nil(value) end)
 

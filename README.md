@@ -25,9 +25,13 @@ Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveV
 ```bash
 cp .env.example .env
 # edit .env — set POSTGRES_PASSWORD, SECRET_KEY_BASE, JWT_SECRET,
-# STASHIX_ENCRYPTION_KEY, LIBRARY_PATH
+# STASHIX_ENCRYPTION_KEY, LIBRARIES_PATH
 docker compose up -d
 ```
+
+`LIBRARIES_PATH` is the media folder on the host. Compose mounts it into the
+container at `/libraries`; when adding a library in Stashix, use a folder
+under it, such as `/libraries/comics`.
 
 Access at `http://localhost:4000`. A setup wizard runs on first launch.
 
@@ -65,7 +69,6 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 | `STASHIX_ENCRYPTION_KEY` | _required in prod_                     | Base64 32-byte key for secrets at rest      |
 | `PHX_HOST`               | `localhost`                            | Public hostname (used in URLs)              |
 | `PORT`                   | `4000`                                 | HTTP port                                   |
-| `LIBRARY_PATH`           | `/libraries`                           | Root path where book files are scanned from |
 | `DATA_DIR`               | `/tmp/stashix`                         | General app data                            |
 | `THUMBNAIL_DIR`          | `<repo>/tmp/data/thumbnails`           | Extracted cover images                      |
 | `IMAGE_CACHE_DIR`        | `<repo>/tmp/data/cache/images/resized` | Resized/WebP cover cache                    |

@@ -16,10 +16,14 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
     volumes:
+      # LIBRARIES_PATH is the media folder on the host (this machine). It
+      # appears inside the container as /libraries; point each library in
+      # Stashix at a folder under it, such as /libraries/comics.
+      # LIBRARY_PATH is the old name, still read for existing installs.
       # Read-write so edited metadata can be written back to your files. To
       # mount it read-only (:ro), first turn off "Write metadata to files"
       # in Admin > Metadata.
-      - ${LIBRARY_PATH:-./libraries}:/libraries
+      - ${LIBRARIES_PATH:-${LIBRARY_PATH:-./libraries}}:/libraries
       - stashix_data:/data
     depends_on:
       db:
