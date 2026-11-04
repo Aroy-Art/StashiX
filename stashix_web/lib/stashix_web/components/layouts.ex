@@ -27,6 +27,12 @@ defmodule StashixWeb.Layouts do
   def theme_attr(%Plug.Conn{cookies: %{"stashix_theme" => theme}}) when theme in ~w(dark light), do: theme
   def theme_attr(_conn), do: "system"
 
+  @dev_build Mix.env() == :dev
+
+  @doc "The running app version (`dev` in a dev build) and where its source lives, for the sidebar foot."
+  def app_version, do: if(@dev_build, do: "dev", else: "v#{Application.spec(:stashix, :vsn)}")
+  def source_url, do: Application.fetch_env!(:stashix, :source_url)
+
   @doc """
   Sidebar link. The current page carries the same ink bar as the active item
   of a menu, with its icon in violet.

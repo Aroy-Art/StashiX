@@ -128,7 +128,7 @@
       ]
 
       {_, theme_label, theme_icon} = List.keyfind(themes, theme, 0) %>
-      <div class="p-2 border-t border-fg/10">
+      <div class="p-2 border-y border-fg/10">
         <.ink_menu id="theme-menu" align="start" class="flex w-full" panel_class="w-44">
           <:trigger
             label={"Theme: #{theme_label}"}
@@ -150,6 +150,20 @@
             {label}
           </.menu_item>
         </.ink_menu>
+      </div>
+
+      <%!-- Version and source link (AGPL: the source is one click away). --%>
+      <div class="flex items-center justify-between gap-2 px-5 py-1.5 text-[11px] leading-none text-faint">
+        <span id="app-version" class="tabular-nums">{app_version()}</span>
+        <a
+          id="sidebar-source-link"
+          href={source_url()}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="flex items-center gap-1 hover:text-fg transition-colors"
+        >
+          <.icon name="lucide-code-xml" class="w-3 h-3" /> Source
+        </a>
       </div>
     </aside>
   <% end %>
