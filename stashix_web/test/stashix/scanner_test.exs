@@ -437,6 +437,9 @@ defmodule Stashix.ScannerTest do
   end
 
   describe "scan queue" do
+    # Queued file scans of /missing/a.cbz log that the file is gone
+    @describetag :capture_log
+
     setup %{lib: lib, tmp: tmp} do
       write_cbz(mkdir(tmp, "Saga (2012-)"), "Saga 001.cbz")
       Scanner.scan_sync(lib.id)

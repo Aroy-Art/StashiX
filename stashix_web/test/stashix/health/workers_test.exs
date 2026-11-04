@@ -5,10 +5,9 @@ defmodule Stashix.Health.WorkersTest do
   use Stashix.DataCase, async: false
   use Oban.Testing, repo: Stashix.Repo
 
-  alias Stashix.{Health, Library, Repo}
+  alias Stashix.{Library, Repo}
   alias Stashix.Health.CheckResult
   alias Stashix.Health.Workers.{IntegrityFileWorker, IntegrityLibraryWorker}
-  alias Stashix.Library.{Book, BookFile}
 
   setup do
     tmp = Path.join(System.tmp_dir!(), "stashix_health_test_#{:erlang.unique_integer([:positive])}")
@@ -24,7 +23,7 @@ defmodule Stashix.Health.WorkersTest do
   describe "IntegrityFileWorker" do
     test "saves :ok result and broadcasts for a valid CBZ", %{tmp: tmp, lib: lib} do
       path = write_cbz(tmp, "good.cbz")
-      {book, bf} = insert_book_file(lib, path)
+      {_book, bf} = insert_book_file(lib, path)
 
       Phoenix.PubSub.subscribe(Stashix.PubSub, "health:#{lib.id}")
 
@@ -152,7 +151,7 @@ defmodule Stashix.Health.WorkersTest do
 
   defp write_cbz(dir, filename) do
     path = Path.join(dir, filename)
-    files = [{'page001.jpg', "fake jpeg content"}]
+    files = [{~c"page001.jpg", "fake jpeg content"}]
     {:ok, {_, data}} = :zip.create(String.to_charlist(path), files, [:memory])
     File.write!(path, data)
     path
