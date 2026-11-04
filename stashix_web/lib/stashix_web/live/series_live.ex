@@ -13,7 +13,7 @@ defmodule StashixWeb.SeriesLive do
 
   on_mount({StashixWeb.Live.Hooks, :require_auth})
 
-  @admin_events ~w(fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview open_push_age_rating_dialog close_push_age_rating_dialog set_push_age_rating_target set_push_age_rating_mode toggle_push_age_rating_preview push_age_rating_to_issues open_push_language_dialog close_push_language_dialog set_push_language set_push_language_mode push_language_to_issues)
+  @admin_events ~w(fetch_metadata toggle_metadata_lock rescan_series force_rescan_series open_push_publishers_dialog close_push_publishers_dialog push_publishers_to_issues set_push_publishers_mode toggle_push_preview open_push_age_rating_dialog close_push_age_rating_dialog set_push_age_rating_target set_push_age_rating_mode toggle_push_age_rating_preview push_age_rating_to_issues open_push_language_dialog close_push_language_dialog set_push_language set_push_language_mode push_language_to_issues open_issue_numbers_dialog close_issue_numbers_dialog toggle_issue_number apply_issue_numbers)
 
   @age_ratings Ecto.Enum.values(Stashix.Library.Book, :age_rating)
 
@@ -70,6 +70,8 @@ defmodule StashixWeb.SeriesLive do
        push_language: nil,
        push_language_mode: :replace,
        push_language_preview: nil,
+       issue_numbers_preview: nil,
+       issue_numbers_skipped: MapSet.new(),
        series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers(),
        book_publishers: Library.series_book_publishers(series.id),
@@ -361,6 +363,50 @@ defmodule StashixWeb.SeriesLive do
      |> assign(push_language: nil, push_language_preview: nil)}
   end
 
+  def handle_event("open_issue_numbers_dialog", _params, socket) do
+    preview = Library.filename_issue_numbers_preview(socket.assigns.series.id)
+    {:noreply, assign(socket, issue_numbers_preview: preview, issue_numbers_skipped: MapSet.new())}
+  end
+
+  def handle_event("close_issue_numbers_dialog", _params, socket) do
+    {:noreply, assign(socket, issue_numbers_preview: nil)}
+  end
+
+  def handle_event("toggle_issue_number", %{"id" => id}, socket) do
+    skipped = socket.assigns.issue_numbers_skipped
+    skipped = if MapSet.member?(skipped, id), do: MapSet.delete(skipped, id), else: MapSet.put(skipped, id)
+    {:noreply, assign(socket, issue_numbers_skipped: skipped)}
+  end
+
+  def handle_event("apply_issue_numbers", _params, socket) do
+    numbers =
+      for entry <- socket.assigns.issue_numbers_preview.affected,
+          not MapSet.member?(socket.assigns.issue_numbers_skipped, entry.book.id),
+          into: %{},
+          do: {entry.book.id, entry.to}
+
+    case Library.set_issue_numbers(socket.assigns.series.id, numbers) do
+      {:ok, ids} ->
+        if Stashix.Settings.metadata()["write_to_files"], do: Enum.each(ids, &Metadata.enqueue_write/1)
+
+        message =
+          case length(ids) do
+            0 -> "No issues were updated."
+            1 -> "Issue number updated on 1 issue."
+            n -> "Issue numbers updated on #{n} issues."
+          end
+
+        {:noreply,
+         socket
+         |> put_flash(:info, message)
+         |> reload_series()
+         |> assign(issue_numbers_preview: nil)}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, "Could not update issue numbers.")}
+    end
+  end
+
   def handle_event("rescan_series", _, socket) do
     Scanner.scan_series(socket.assigns.series.id)
     {:noreply, assign(socket, scanning: true, show_admin_menu: false)}
@@ -603,6 +649,13 @@ defmodule StashixWeb.SeriesLive do
               phx-click="open_push_language_dialog"
             >
               Push language to issues…
+            </.menu_item>
+            <.menu_item
+              :if={@series.books != []}
+              icon="lucide-hash"
+              phx-click="open_issue_numbers_dialog"
+            >
+              Issue numbers from filenames…
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -957,6 +1010,12 @@ defmodule StashixWeb.SeriesLive do
       preview={@push_language_preview}
     />
 
+    <.issue_numbers_dialog
+      :if={@current_user.role == :admin && @issue_numbers_preview}
+      preview={@issue_numbers_preview}
+      skipped={@issue_numbers_skipped}
+    />
+
     <%= if @current_user.role == :admin && @show_push_age_rating_dialog do %>
       <.dialog
         id="push-age-rating-dialog"
@@ -1189,6 +1248,69 @@ defmodule StashixWeb.SeriesLive do
         <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_language_dialog">Cancel</.ink_button>
         <.ink_button type="button" size="md" phx-click="push_language_to_issues" disabled={affected == 0}>
           Push to issues
+        </.ink_button>
+      </.dialog_footer>
+    </.dialog>
+    """
+  end
+
+  attr :preview, :map, required: true
+  attr :skipped, :any, required: true
+
+  defp issue_numbers_dialog(assigns) do
+    ~H"""
+    <.dialog
+      id="issue-numbers-dialog"
+      title="Issue numbers from filenames"
+      on_close={JS.push("close_issue_numbers_dialog")}
+    >
+      <:description>
+        Set each issue's number from its file name, and write it into the file so a rescan keeps it.
+        Issues that lock their number are skipped.
+      </:description>
+
+      <% affected = length(@preview.affected) %>
+      <% selected = Enum.count(@preview.affected, &(not MapSet.member?(@skipped, &1.book.id))) %>
+      <% total = affected + @preview.unchanged + @preview.unparsed %>
+      <div class="mt-3 rounded-md border border-line overflow-hidden">
+        <p class="px-3 py-2 text-xs text-muted bg-raised/60 border-b border-line">
+          <%= if affected == 0 do %>
+            All issues already match their file names — no changes needed.
+          <% else %>
+            {affected} of {total} {if total == 1, do: "issue differs", else: "issues differ"} from {if total == 1,
+              do: "its file name",
+              else: "their file names"}
+          <% end %>
+        </p>
+        <div :if={affected > 0} class="max-h-72 overflow-y-auto divide-y divide-line/80">
+          <label
+            :for={entry <- @preview.affected}
+            class="grid grid-cols-[1rem_1fr_auto_auto_auto] items-center gap-x-2.5 px-3 py-2 text-xs cursor-pointer hover:bg-raised/40"
+          >
+            <input
+              type="checkbox"
+              checked={not MapSet.member?(@skipped, entry.book.id)}
+              phx-click="toggle_issue_number"
+              phx-value-id={entry.book.id}
+              class="accent-ink"
+            />
+            <span class="text-fg-soft truncate" title={entry.file}>{entry.file}</span>
+            <span class="text-faint italic tabular-nums">{if entry.from, do: "##{entry.from}", else: "—"}</span>
+            <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
+            <span class="text-fg tabular-nums font-medium">{"##{entry.to}"}</span>
+          </label>
+        </div>
+        <p :if={@preview.unparsed > 0} class="px-3 py-1.5 text-xs text-faint border-t border-line">
+          {@preview.unparsed} {if @preview.unparsed == 1,
+            do: "file has no number in its name",
+            else: "files have no number in their names"} — left as is
+        </p>
+      </div>
+
+      <.dialog_footer>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="close_issue_numbers_dialog">Cancel</.ink_button>
+        <.ink_button type="button" size="md" phx-click="apply_issue_numbers" disabled={selected == 0}>
+          {if selected == 1, do: "Update 1 issue", else: "Update #{selected} issues"}
         </.ink_button>
       </.dialog_footer>
     </.dialog>

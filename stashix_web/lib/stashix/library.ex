@@ -1247,6 +1247,61 @@ defmodule Stashix.Library do
     %{affected: affected, unchanged: length(books) - length(affected)}
   end
 
+  @doc """
+  Issues in the series whose issue number differs from the one in their file's
+  name, for when a file's embedded `<Number>` is wrong (the scanner prefers it
+  over the filename). Issues that lock their number are left out.
+  `%{affected: [%{book, file, from, to}], unchanged: n, unparsed: n}`.
+  """
+  def filename_issue_numbers_preview(series_id) do
+    rows =
+      from(b in Book,
+        join: f in BookFile,
+        on: f.book_id == b.id and is_nil(f.deleted_at),
+        where: b.series_id == ^series_id and is_nil(b.deleted_at) and not_locked(b, "issue_number"),
+        order_by: [asc_nulls_last: b.issue_number, asc: f.path],
+        select: {%{id: b.id, title: b.title, issue_number: b.issue_number}, f.path}
+      )
+      |> Repo.all()
+      # A book with several files takes the first one's name
+      |> Enum.uniq_by(fn {book, _} -> book.id end)
+
+    parsed =
+      for {book, path} <- rows do
+        file = Path.basename(path)
+        {book, file, Stashix.Metadata.Parser.parse_filename(Path.rootname(file))[:issue_number]}
+      end
+
+    affected =
+      for {book, file, number} <- parsed,
+          number != nil and not (book.issue_number && Decimal.equal?(book.issue_number, number)),
+          do: %{book: book, file: file, from: book.issue_number, to: number}
+
+    unparsed = Enum.count(parsed, fn {_, _, number} -> number == nil end)
+    %{affected: affected, unparsed: unparsed, unchanged: length(parsed) - length(affected) - unparsed}
+  end
+
+  @doc """
+  Sets issue numbers from `%{book_id => Decimal}` for issues in the series,
+  skipping issues that lock it. Returns `{:ok, book_ids}` for the books updated.
+  """
+  def set_issue_numbers(series_id, numbers) when is_map(numbers) do
+    now = NaiveDateTime.utc_now(:second)
+
+    Repo.transaction(fn ->
+      for {book_id, number} <- numbers,
+          {1, _} <-
+            [
+              from(b in Book,
+                where: b.id == ^book_id and b.series_id == ^series_id and is_nil(b.deleted_at),
+                where: not_locked(b, "issue_number")
+              )
+              |> Repo.update_all(set: [issue_number: number, updated_at: now])
+            ],
+          do: book_id
+    end)
+  end
+
   def update_series_folder_meta(series, attrs) do
     series
     |> Series.changeset(Map.take(attrs, [:name, :path, :start_year, :end_year, :ongoing]))
