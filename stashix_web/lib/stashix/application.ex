@@ -16,6 +16,7 @@ defmodule Stashix.Application do
       {TelemetryMetricsPrometheus.Core, metrics: StashixWeb.Telemetry.metrics()},
       Stashix.Repo,
       Stashix.Vault,
+      rekey_child(),
       {DNSCluster, query: Application.get_env(:stashix, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Stashix.PubSub},
       Stashix.Scanner.Supervisor,
@@ -28,7 +29,11 @@ defmodule Stashix.Application do
     ]
 
     opts = [strategy: :one_for_one, name: Stashix.Supervisor]
-    Supervisor.start_link(children, opts)
+    Supervisor.start_link(Enum.reject(children, &is_nil/1), opts)
+  end
+
+  defp rekey_child do
+    if Application.get_env(:stashix, :rekey_vault_on_start, true), do: Stashix.Vault.Rekey
   end
 
   @impl true

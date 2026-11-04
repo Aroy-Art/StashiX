@@ -43,7 +43,7 @@ Generate `STASHIX_ENCRYPTION_KEY` with:
 openssl rand -base64 32
 ```
 
-It's optional (when unset the key is derived from `JWT_SECRET`), but set it on new installs so rotating `JWT_SECRET` doesn't make stored metadata source credentials unreadable. Don't add it to an install that already has encrypted data.
+It's required. Don't change it once set: stored metadata source credentials encrypted with the old key become unreadable. Installs that started without it can add one: stored credentials are re-encrypted with it on the next start. Don't change `JWT_SECRET` in the same restart.
 
 ## Development
 
@@ -62,7 +62,7 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 | `DATABASE_URL`           | _dev.exs default_                      | Ecto DB URL (`ecto://user:pass@host/db`)    |
 | `SECRET_KEY_BASE`        | _required in prod_                     | Phoenix cookie/session encryption           |
 | `JWT_SECRET`             | _required in prod_                     | Guardian JWT signing secret                 |
-| `STASHIX_ENCRYPTION_KEY` | _derived from `JWT_SECRET`_            | Base64 32-byte key for secrets at rest      |
+| `STASHIX_ENCRYPTION_KEY` | _required in prod_                     | Base64 32-byte key for secrets at rest      |
 | `PHX_HOST`               | `localhost`                            | Public hostname (used in URLs)              |
 | `PORT`                   | `4000`                                 | HTTP port                                   |
 | `LIBRARY_PATH`           | `/libraries`                           | Root path where book files are scanned from |

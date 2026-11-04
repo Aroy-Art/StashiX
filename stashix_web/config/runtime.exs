@@ -40,18 +40,46 @@ jwt_secret =
 
 config :stashix, Stashix.Auth.Guardian, secret_key: jwt_secret
 
+# Installs that ran without STASHIX_ENCRYPTION_KEY encrypted with this key.
+# Kept so their stored secrets stay readable after setting an explicit key.
+derived_vault_key = :crypto.hash(:sha256, "stashix-vault:" <> jwt_secret)
+
 vault_key =
-  case System.get_env("STASHIX_ENCRYPTION_KEY") do
-    key when is_binary(key) and key != "" ->
-      Base.decode64!(key)
+  case {System.get_env("STASHIX_ENCRYPTION_KEY"), config_env()} do
+    {key, _env} when is_binary(key) and key != "" ->
+      case Base.decode64(String.trim(key)) do
+        {:ok, <<_::binary-size(32)>> = decoded} ->
+          decoded
+
+        {:ok, decoded} ->
+          raise """
+          environment variable STASHIX_ENCRYPTION_KEY must decode to 32 bytes, \
+          got #{byte_size(decoded)}.
+          You can generate one by calling: openssl rand -base64 32
+          """
+
+        :error ->
+          raise """
+          environment variable STASHIX_ENCRYPTION_KEY is not valid base64.
+          You can generate one by calling: openssl rand -base64 32
+          """
+      end
+
+    {_, :prod} ->
+      raise """
+      environment variable STASHIX_ENCRYPTION_KEY is missing.
+      You can generate one by calling: openssl rand -base64 32
+      """
 
     _ ->
-      :crypto.hash(:sha256, "stashix-vault:" <> jwt_secret)
+      derived_vault_key
   end
 
 config :stashix, Stashix.Vault,
   ciphers: [
-    default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V1", key: vault_key, iv_length: 12}
+    default: {Cloak.Ciphers.AES.GCM, tag: "AES.GCM.V2", key: vault_key, iv_length: 12},
+    retired:
+      {Stashix.Vault.LegacyCipher, tag: "AES.GCM.V1", keys: Enum.uniq([vault_key, derived_vault_key]), iv_length: 12}
   ]
 
 # Storage paths. Read here rather than in config.exs so releases pick them up

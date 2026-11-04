@@ -38,5 +38,8 @@ config :stashix, Oban, testing: :manual
 # Sandboxed tests must not share cached summary numbers
 config :stashix, Stashix.Library.SummaryCache, ttl_ms: 0
 
+# Tests run Stashix.Vault.Rekey themselves, inside the SQL sandbox.
+config :stashix, :rekey_vault_on_start, false
+
 # Metadata source HTTP calls are stubbed with Req.Test in tests
 config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}
