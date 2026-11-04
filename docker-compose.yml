@@ -16,7 +16,10 @@ services:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
     volumes:
-      - ${LIBRARY_PATH:-./libraries}:/libraries:ro
+      # Read-write so edited metadata can be written back to your files. To
+      # mount it read-only (:ro), first turn off "Write metadata to files"
+      # in Admin > Metadata.
+      - ${LIBRARY_PATH:-./libraries}:/libraries
       - stashix_data:/data
     depends_on:
       db:
