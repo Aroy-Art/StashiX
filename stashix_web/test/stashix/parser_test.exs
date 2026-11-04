@@ -293,6 +293,48 @@ defmodule Stashix.Metadata.ParserTest do
       assert r[:issue_number] == d("1")
     end
 
+    test "bare trailing ctc tag" do
+      r = Parser.parse_filename("The Fox and the Crow 092 ctc")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("92")
+      assert r[:source_format] == "c2c"
+    end
+
+    test "bare ctc tag before a date group" do
+      r = Parser.parse_filename("The Fox and the Crow 085 ctc (04-1964)")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("85")
+      assert r[:year] == 1964
+      assert r[:source_format] == "c2c"
+
+      r = Parser.parse_filename("The Fox and the Crow 008 ctc (1953)")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("8")
+      assert r[:year] == 1953
+    end
+
+    test "bare page count tag" do
+      r = Parser.parse_filename("The Fox and the Crow 002 36p ctc")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("2")
+      assert r[:source_format] == "c2c"
+
+      r = Parser.parse_filename("The Fox and the Crow 001 44p ctc (01-1952)")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("1")
+      assert r[:year] == 1952
+
+      r = Parser.parse_filename("The Fox and the Crow 025 33p")
+      assert r[:series] == "The Fox and the Crow"
+      assert r[:issue_number] == d("25")
+    end
+
+    test "paren ctc tag reads as c2c" do
+      r = Parser.parse_filename("The Fox and the Crow 005 (1952) (ctc)")
+      assert r[:issue_number] == d("5")
+      assert r[:source_format] == "c2c"
+    end
+
     test "strips (of N) issue count tag" do
       r =
         Parser.parse_filename("Aliens - Dust to Dust 01 (of 04) (2018) (digital) (The Magicians-Empire)")

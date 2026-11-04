@@ -22,7 +22,7 @@ defmodule Stashix.Metadata.Parser do
   alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
 
   @noise_patterns ~w(
-    Digital Webrip c2c HQ Retail
+    Digital Webrip c2c ctc HQ Retail
     HD 1080p 720p 480p
     FIXED Corrected v2 v3
     f2 f3
@@ -143,10 +143,12 @@ defmodule Stashix.Metadata.Parser do
   end
 
   def parse_filename(filename) do
+    # Cover-to-cover also comes as "ctc", and bare before the tags or at the end —
+    # "Series 005 ctc", "Series 085 ctc (04-1964)"
     source_format =
-      case Regex.run(~r/\((Digital|Webrip|c2c|Retail|HQ)\)/i, filename) do
-        [_, tag] -> String.downcase(tag)
+      case Regex.run(~r/\((Digital|Webrip|c2c|ctc|Retail|HQ)\)|\s(c2c|ctc)(?=\s*(?:\(|$))/i, filename) do
         nil -> nil
+        match -> match |> List.last() |> String.downcase() |> String.replace("ctc", "c2c")
       end
 
     clean =
@@ -157,6 +159,9 @@ defmodule Stashix.Metadata.Parser do
       |> then(&Regex.replace(~r/(\(\d{4}\))(?:\s*\([^)]*\))+\s*$/, &1, "\\1"))
       # "Series 021(1994)" — give the issue number room before its paren group
       |> then(&Regex.replace(~r/(\d)\(/, &1, "\\1 ("))
+      # Bare page count — "Series 002 36p ctc"
+      |> then(&Regex.replace(~r/\s+\d{1,3}p(?=\s|\(|$)/i, &1, ""))
+      |> then(&Regex.replace(~r/\s+(?:c2c|ctc)(?=\s*(?:\(|$))/i, &1, ""))
       |> String.trim()
 
     result = %{}
