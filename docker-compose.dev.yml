@@ -3,7 +3,7 @@ name: stashix-dev
 
 services:
   app:
-    image: git.aroy-art.com/aroy/stashix:dev
+    image: ghcr.io/aroy-art/stashix:dev
     build:
       context: ./stashix_web/
       dockerfile: Dockerfile
