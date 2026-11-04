@@ -100,8 +100,10 @@ Stashix is licensed under the [GNU Affero General Public License v3.0 or later](
 
 ### Metadata
 
-- [ ] External metadata scraping (ComicVine, MangaUpdates, Open Library, AniList)
-- [ ] Bulk metadata edit / match
+- [x] External metadata scraping (ComicVine, Metron, GCD)
+- [ ] More metadata sources (MangaUpdates, Open Library, AniList)
+- [x] Bulk metadata match (library-wide match + review queue)
+- [ ] Bulk metadata edit
 - [ ] Cover art fetching from external sources
 - [ ] Use ComicInfo `<Pages>`: `FrontCover` as the cover, skip `Deleted`/ad pages, `DoublePage` for spreads in the reader (today Pages is only preserved on write)
 - [ ] Generate ComicInfo `<Pages>` (image size/dimensions, cover, spreads) when writing ComicInfo.xml
@@ -110,7 +112,7 @@ Stashix is licensed under the [GNU Affero General Public License v3.0 or later](
 
 - [ ] MOBI / AZW3 reader
 - [ ] CBT (tar-based) support
-- [ ] Webtoon / long-strip reader mode
+- [x] Webtoon / long-strip reader mode
 
 ### Users & Auth
 
