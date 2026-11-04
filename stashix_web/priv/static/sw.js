@@ -5,7 +5,7 @@
 
 const noCache = new URLSearchParams(self.location.search).has("nocache")
 
-const CACHE = "stashix-v1"
+const CACHE = "stashix-v4"
 const STATIC = ["/assets/app.css", "/assets/app.js"]
 
 self.addEventListener("install", e => {

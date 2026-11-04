@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   viewBox="0 0 200 46"
+   viewBox="0 0 180 64"
    version="1.1"
    id="svg10"
    sodipodi:docname="logo.svg"
@@ -93,14 +93,14 @@
          stop-opacity="0"
          id="stop6" />
     </linearGradient>
-    <!-- clip for aqua dot: top ~8px of the i glyph (bounding box starts at y≈15) -->
+    <!-- clip for aqua dot: top of the i glyph; x follows the i at 73.68 -->
     <clipPath
        id="dot">
       <rect
-         x="94"
+         x="74.58"
          y="0"
          width="10"
-         height="20"
+         height="17.5"
          id="rect6" />
     </clipPath>
     <linearGradient
@@ -122,6 +122,42 @@
        x2="50"
        y2="0" />
   </defs>
+  <!-- open-book mark, centred over the word (not the tail) -->
+  <svg x="27" y="2" width="44" height="26.4" viewBox="180 360 894 536" id="mark">
+  <defs>
+    <linearGradient id="mark-cover" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8217f2"/>
+      <stop offset="1" stop-color="#650cd0"/>
+    </linearGradient>
+    <!-- middle pages: off-white, as if in the shadow of the front pages -->
+    <linearGradient id="mark-middle" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ece3f9"/>
+      <stop offset="1" stop-color="#d6c6f0"/>
+    </linearGradient>
+    <!-- right middle page: darker than the right front page, which is already violet -->
+    <linearGradient id="mark-middle-right" gradientUnits="userSpaceOnUse" x1="660" y1="420" x2="1000" y2="800">
+      <stop offset="0" stop-color="#b48cf2"/>
+      <stop offset="1" stop-color="#8b55e6"/>
+    </linearGradient>
+    <linearGradient id="mark-left" gradientUnits="userSpaceOnUse" x1="270" y1="380" x2="620" y2="820">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.45" stop-color="#f6effe"/>
+      <stop offset="1" stop-color="#d5bcfa"/>
+    </linearGradient>
+    <linearGradient id="mark-right" gradientUnits="userSpaceOnUse" x1="660" y1="380" x2="980" y2="760">
+      <stop offset="0" stop-color="#d4b8fb"/>
+      <stop offset="1" stop-color="#a66ff3"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#mark-cover)" d="M627 600 L275 445 L202 445 Q185 445 187 462 L222 762 Q225 780 245 780 C380 780 540 800 605 873 Q627 895 649 873 C714 800 874 780 1009 780 Q1029 780 1032 762 L1067 462 Q1069 445 1052 445 L979 445 Z"/>
+  <!-- middle pages: peek out beside and below the front pages, meeting them at the spine -->
+  <path fill="url(#mark-middle)" d="M250 407 C400 407 560 452 622 560 L622 848 C545 768 410 726 266 724 L234 424 Q232 407 250 407 Z"/>
+  <path fill="url(#mark-middle-right)" d="M1004 407 C854 407 694 452 632 560 L632 848 C709 768 844 726 988 724 L1020 424 Q1022 407 1004 407 Z"/>
+  <path fill="url(#mark-left)" d="M280 368 C430 368 560 420 622 548 L622 842 C540 745 420 705 302 705 L265 385 Q263 368 280 368 Z"/>
+  <path fill="url(#mark-right)" d="M974 368 C824 368 694 420 632 548 L632 842 C714 745 834 705 952 705 L989 385 Q991 368 974 368 Z"/>
+  <path fill="#8a2cf0" d="M621 548 L627 538 L633 548 L633 848 L627 856 L621 848 Z"/>
+  </svg>
+  <g transform="translate(0,18)" id="wordmark">
   <!-- violet-700 drop shadow layer -->
   <text
      x="3.76"
@@ -143,7 +179,7 @@
      id="text7">Stash</text>
   <!-- "iX" in violet with glow -->
   <text
-     x="93.1"
+     x="73.68"
      y="38"
      font-family="Big Shoulders Display Thin"
      font-weight="900"
@@ -153,7 +189,7 @@
      id="text8">iX</text>
   <!-- aqua dot: same "i", clipped to just the dot -->
   <text
-     x="93.1"
+     x="73.68"
      y="38"
      font-family="Big Shoulders Display Thin"
      font-weight="900"
@@ -163,7 +199,7 @@
      id="text9">i</text>
   <!-- tail: anchored to lower-right of X, sweeps up -->
   <g
-     transform="matrix(1.34,0,0,1.33,131,19)"
+     transform="matrix(1.34,0,0,1.33,111.6,19)"
      id="g10">
     <path
        d="M 1,13 C 16,13 36,11 49,2"
@@ -183,5 +219,6 @@
        opacity="0.8"
        id="path10"
        style="stroke:url(#linearGradient11)" />
+  </g>
   </g>
 </svg>

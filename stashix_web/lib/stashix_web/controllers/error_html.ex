@@ -42,6 +42,7 @@ defmodule StashixWeb.ErrorHTML do
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#030712" />
         <title>{@title} · Stashix</title>
+        <link rel="icon" type="image/svg+xml" href={~p"/favicon.svg"} />
         <link rel="icon" type="image/png" href={~p"/favicon.png"} />
         <link rel="stylesheet" href={~p"/assets/app.css"} />
       </head>
