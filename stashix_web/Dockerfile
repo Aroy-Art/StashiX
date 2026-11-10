@@ -1,4 +1,4 @@
-FROM elixir:1.20-alpine AS build
+FROM elixir:1.20-otp-29-alpine AS build
 
 WORKDIR /app
 

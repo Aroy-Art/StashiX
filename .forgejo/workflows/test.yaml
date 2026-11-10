@@ -24,7 +24,7 @@ jobs:
     runs-on: act-ubuntu-24.04-amd64
     env:
       ELIXIR_VERSION: "1.20.5"
-      OTP_VERSION: "28.4"
+      OTP_VERSION: "29.1.2"
 
     services:
       db:
