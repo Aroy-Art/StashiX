@@ -14,7 +14,7 @@ Specs used (XSDs fetched from the official repos):
 | MetronInfo | v1.0, v1.1, v1.2                 | github.com/Metron-Project/metroninfo `schema/` |
 | ComicInfo  | v1.0, v2.0 (stable), v2.1 (draft) | github.com/anansi-project/comicinfo `schema/`, `drafts/` |
 
-`docs/MetronInfo.schema.xml` in this repo is **v1.1**; v1.2 is current.
+The repo keeps no copy of the schemas; use the upstream ones above.
 
 ---
 
@@ -278,4 +278,3 @@ The old `Writer.MetronInfoXml`, `Writer.ComicInfoXml` and `Writer.XML` are gone.
 3. ComicInfo-only extras (Manga, BlackAndWhite, SeriesGroup, …) have no DB
    column, so they survive a read but not a DB → file write. `<Pages>` is the
    exception: it is carried over from the archive.
-4. `docs/MetronInfo.schema.xml` is still v1.1; replace with v1.2.
