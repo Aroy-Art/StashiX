@@ -25,6 +25,17 @@ Open `http://localhost:4000` and follow the setup wizard. The
 [installation guide](https://stashix.net/docs/get-started/installation/) covers
 generating secrets, file permissions and troubleshooting.
 
+> [!WARNING]
+> Stashix is pre-1.0: the database schema can change between any two releases.
+> Back up the database before every upgrade:
+>
+> ```bash
+> docker compose exec db pg_dump -U stashix stashix > stashix-backup.sql
+> ```
+>
+> See [Update Stashix](https://stashix.net/docs/get-started/installation/#update)
+> for the full steps.
+
 ## Development
 
 ```bash
