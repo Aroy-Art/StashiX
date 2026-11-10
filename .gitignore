@@ -35,3 +35,6 @@ erl_crash.dump
 
 # File watcher logs
 watch_*
+
+# Local-only notes
+/docs/release-*-plan.md
