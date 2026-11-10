@@ -23,7 +23,7 @@ First public release.
 - Admin and user roles with per-library access and age ratings.
 - Light and dark themes; installable as a PWA.
 - Prometheus metrics on a separate port.
-- Docker image at `git.aroy-art.com/aroy/stashix`.
+- Docker image at `ghcr.io/aroy-art/stashix`.
 
 ### Known issues
 
