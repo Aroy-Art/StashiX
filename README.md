@@ -2,52 +2,28 @@
 
 Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveView.
 
+Documentation: **[stashix.net](https://stashix.net/docs/)**: [installation](https://stashix.net/docs/get-started/installation/), [configuration](https://stashix.net/docs/reference/configuration/), [monitoring](https://stashix.net/docs/admin-guide/monitoring/).
+
 ## Features
 
-- Multiple library support (multiple root folders)
-- Admin + user roles with per-library permissions and age-gate controls
-- Full-text search backed by PostgreSQL tsvector
-- Folder watching — auto-import new files
-- In-browser readers for CBZ, CBR, CB7, PDF
-- Metadata parsed from filenames, ComicInfo.xml, MetronInfo.xml
-- Blurhash cover placeholders with WebP serving and on-demand resizing
-- Publisher support with alias system
-- PWA — installable on Android
+- Multiple libraries, with admin and user roles, per-library access and age ratings
+- In-browser readers for CBZ, CBR, CB7, EPUB and PDF, including a webtoon mode
+- Metadata from filenames, ComicInfo.xml and MetronInfo.xml, plus matching against ComicVine, Metron and GCD
+- Full-text search, folder watching, publisher aliases
+- Installable as a PWA
 
-## Stack
-
-- **Backend:** Elixir, Phoenix LiveView, Ecto
-- **DB:** PostgreSQL
-- **Assets:** Tailwind v4, ESBuild, Heroicons, Lucide.dev
+See [stashix.net](https://stashix.net/docs/get-started/) for the full list.
 
 ## Quick Start
 
 ```bash
-cp .env.example .env
-# edit .env — set POSTGRES_PASSWORD, SECRET_KEY_BASE, JWT_SECRET,
-# STASHIX_ENCRYPTION_KEY, LIBRARIES_PATH
+cp .env.example .env   # fill in the secrets and LIBRARIES_PATH
 docker compose up -d
 ```
 
-`LIBRARIES_PATH` is the media folder on the host. Compose mounts it into the
-container at `/libraries`; when adding a library in Stashix, use a folder
-under it, such as `/libraries/comics`.
-
-Access at `http://localhost:4000`. A setup wizard runs on first launch.
-
-Generate `SECRET_KEY_BASE` and `JWT_SECRET` (a different value for each) with:
-
-```bash
-openssl rand -base64 48
-```
-
-Generate `STASHIX_ENCRYPTION_KEY` with:
-
-```bash
-openssl rand -base64 32
-```
-
-It's required. Don't change it once set: stored metadata source credentials encrypted with the old key become unreadable. Installs that started without it can add one: stored credentials are re-encrypted with it on the next start. Don't change `JWT_SECRET` in the same restart.
+Open `http://localhost:4000` and follow the setup wizard. The
+[installation guide](https://stashix.net/docs/get-started/installation/) covers
+generating secrets, file permissions and troubleshooting.
 
 ## Development
 
@@ -59,36 +35,20 @@ mix phx.server   # http://localhost:4000
 
 Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7zip`, `unrar`, `pdfinfo`, `pdftoppm`.
 
-## Configuration
+**Stack:** Elixir, Phoenix LiveView, Ecto, PostgreSQL; Tailwind v4, ESBuild, Heroicons, Lucide.
 
-| Env var                  | Default (dev)                          | Purpose                                     |
-| ------------------------ | -------------------------------------- | ------------------------------------------- |
-| `DATABASE_URL`           | _dev.exs default_                      | Ecto DB URL (`ecto://user:pass@host/db`)    |
-| `SECRET_KEY_BASE`        | _required in prod_                     | Phoenix cookie/session encryption           |
-| `JWT_SECRET`             | _required in prod_                     | Guardian JWT signing secret                 |
-| `STASHIX_ENCRYPTION_KEY` | _required in prod_                     | Base64 32-byte key for secrets at rest      |
-| `PHX_HOST`               | `localhost`                            | Public hostname (used in URLs)              |
-| `PORT`                   | `4000`                                 | HTTP port                                   |
-| `DATA_DIR`               | `/tmp/stashix`                         | General app data                            |
-| `THUMBNAIL_DIR`          | `<repo>/tmp/data/thumbnails`           | Extracted cover images                      |
-| `IMAGE_CACHE_DIR`        | `<repo>/tmp/data/cache/images/resized` | Resized/WebP cover cache                    |
+Defaults in development:
 
-`THUMBNAIL_DIR` and `IMAGE_CACHE_DIR` are created automatically. In production point them at a persistent volume — covers are re-extracted on scan if missing.
+| Env var           | Default (dev)                          |
+| ----------------- | -------------------------------------- |
+| `DATABASE_URL`    | _dev.exs default_                      |
+| `DATA_DIR`        | `/tmp/stashix`                         |
+| `THUMBNAIL_DIR`   | `<repo>/tmp/data/thumbnails`           |
+| `IMAGE_CACHE_DIR` | `<repo>/tmp/data/cache/images/resized` |
 
-## Metrics
-
-Prometheus metrics are available on a dedicated port (default `9568`):
-
-```
-GET http://<host>:9568/metrics
-```
-
-| Config key       | Default      | Purpose                           |
-| ---------------- | ------------ | --------------------------------- |
-| `:metrics_port`  | `9568`       | Scrape endpoint port              |
-| `:metrics_ip`    | `{0,0,0,0}` | Bind address                      |
-
-The `phoenix_socket_connected_count` counter (labelled by `transport`) tracks WebSocket vs long-poll fallback connections. See [docs/metrics.md](docs/metrics.md) for the full metric list and example Grafana queries.
+All production settings are in the
+[configuration reference](https://stashix.net/docs/reference/configuration/).
+Developer notes live in [`docs/`](docs/) and in the HexDocs build (`mix docs`).
 
 ## License
 
