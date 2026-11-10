@@ -46,13 +46,11 @@ defmodule Stashix.MixProject do
           ""
       end,
       extras: [
-        "../docs/scanner-layout.md": [title: "Scanner: Library Layout"],
         "../docs/metadata-workflow.md": [title: "Metadata: Source → File Workflow"],
         "../docs/metrics.md": [title: "Metrics"]
       ],
       groups_for_extras: [
         Guides: [
-          "../docs/scanner-layout.md",
           "../docs/metadata-workflow.md",
           "../docs/metrics.md"
         ]
