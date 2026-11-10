@@ -1,4 +1,8 @@
-# Stashix
+<h1 align="center">
+  <img src="docs/assets/logo.svg" alt="" height="96">
+  <br>
+  <img src="docs/assets/wordmark.svg" alt="Stashix" height="64">
+</h1>
 
 Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveView.
 
@@ -109,3 +113,9 @@ Stashix is licensed under the [GNU Affero General Public License v3.0 or later](
 - [x] Metrics endpoint (Prometheus)
 - [ ] OPDS catalog support
 - [ ] Webhook notifications (Discord, Slack)
+
+### Localization
+
+- [ ] Translatable UI (all user-facing strings extracted)
+- [ ] Translations into other languages
+- [ ] Locale-aware dates and numbers
