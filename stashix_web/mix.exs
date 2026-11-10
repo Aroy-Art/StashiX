@@ -27,7 +27,7 @@ defmodule Stashix.MixProject do
 
   defp docs do
     [
-      main: "Stashix",
+      main: "introduction",
       logo: "priv/static/images/logo.png",
       api_reference: false,
       before_closing_head_tag: fn
@@ -46,6 +46,7 @@ defmodule Stashix.MixProject do
           ""
       end,
       extras: [
+        "../docs/introduction.md": [title: "Introduction"],
         "../docs/metadata-workflow.md": [title: "Metadata: Source → File Workflow"],
         "../docs/metrics.md": [title: "Metrics"]
       ],
