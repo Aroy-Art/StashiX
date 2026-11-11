@@ -31,7 +31,9 @@ defmodule StashixWeb.Endpoint do
     at: "/",
     from: :stashix,
     gzip: false,
-    only: StashixWeb.static_paths()
+    only: StashixWeb.static_paths(),
+    # Digested root files (favicon-<hash>.svg) miss the exact `only` match.
+    only_matching: ~w(favicon manifest)
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
