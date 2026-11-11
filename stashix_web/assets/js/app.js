@@ -1433,10 +1433,15 @@ if (window.__stashixBooted) {
   // CSS is render-blocking so by the time this deferred script runs the page is
   // fully styled. Fade out the initial-load cover; fast loads never saw the
   // spinner (500 ms animation-delay), slow loads see it disappear cleanly.
+  // On a cold load this can run before the cover's style is computed; then no
+  // transition runs and transitionend never fires. Stop it catching clicks
+  // straight away and remove it on a timer as well (0.25 s fade + margin).
   const stxLoader = document.getElementById("stx-loader")
   if (stxLoader) {
+    stxLoader.style.pointerEvents = "none"
     stxLoader.style.opacity = "0"
     stxLoader.addEventListener("transitionend", () => stxLoader.remove(), { once: true })
+    setTimeout(() => stxLoader.remove(), 400)
   }
 
   // expose liveSocket on window for web console debug logs and latency simulation:
