@@ -9,12 +9,13 @@ defmodule Stashix.Metadata.Writer.FileWriter do
       `MetronInfo.xml` and atomically swapped in. Entries keep their
       timestamps. An existing `ComicInfo.xml` is always rewritten alongside
       (keeping its `<Pages>`); the `write_comicinfo` setting only decides
-      whether one is added to archives that have none. A sidecar that already
-      sits next to the CBZ is rewritten too, since the reader prefers the
-      sidecar.
-    * everything else (`.cbr`, `.cb7`, `.pdf`, `.epub`) - a MetronInfo sidecar
-      `<book file name>.xml` is written next to the file. EPUBs are not
-      rewritten because their zip layout (mimetype first, stored) is strict.
+      whether one is added to archives that have none. Sidecars that already
+      sit next to the CBZ are rewritten too, since the reader prefers them.
+    * everything else (`.cbr`, `.cb7`, `.pdf`, `.epub`) - sidecars are
+      written next to the file (see `Stashix.Metadata.Sidecar`):
+      `<book file name>.MetronInfo.xml`, plus `<book file name>.ComicInfo.xml`
+      under the same rule as inside a CBZ. EPUBs are not rewritten because
+      their zip layout (mimetype first, stored) is strict.
 
   Afterwards the `BookFile` hash/size/mtime are refreshed so the scanner does
   not treat our own write as a changed file.
@@ -24,7 +25,7 @@ defmodule Stashix.Metadata.Writer.FileWriter do
   alias Stashix.{Health, Library}
   alias Stashix.Library.{Book, BookFile}
   alias Stashix.Media.Archive
-  alias Stashix.Metadata.{Container, Record}
+  alias Stashix.Metadata.{Container, Record, Sidecar}
   alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
   alias Stashix.Scanner
 
@@ -43,33 +44,27 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     metron = MetronInfo.build(record)
     embed? = String.downcase(Path.extname(file.path)) == ".cbz" and Archive.kind(file.path) == :zip
 
-    existing = if embed?, do: Container.comicinfo(file.path)
-
-    comic =
-      if embed? and (existing != nil or settings["write_comicinfo"]) do
-        record
-        |> Map.put(:pages, pages(existing))
-        |> ComicInfo.build(version: comicinfo_version(settings))
-      end
-
     result =
       case embed? do
         true ->
+          existing = Container.comicinfo(file.path)
+          comic = if existing != nil or settings["write_comicinfo"], do: build_comic(record, existing, settings)
+
           case write_cbz(file.path, metron, comic) do
             :ok ->
-              sync_existing_sidecar(file.path, metron)
+              sync_existing_sidecars(file.path, record, metron, settings)
 
             {:error, reason} when reason in [:bad_eocd, :not_a_zip_file, :eocd_not_found] ->
               Logger.warning("CBZ at #{file.path} has bad ZIP structure (#{inspect(reason)}), falling back to sidecar")
               Health.upsert_integrity_result(book.library_id, file.id, file.path, :error, inspect(reason))
-              write_sidecar(file.path, metron)
+              write_sidecars(file.path, record, metron, settings)
 
             other ->
               other
           end
 
         false ->
-          write_sidecar(file.path, metron)
+          write_sidecars(file.path, record, metron, settings)
       end
 
     case result do
@@ -80,6 +75,13 @@ defmodule Stashix.Metadata.Writer.FileWriter do
         Logger.error("Metadata write failed for #{file.path}: #{inspect(reason)}")
         err
     end
+  end
+
+  # `existing` is the ComicInfo being replaced; its <Pages> is carried over.
+  defp build_comic(record, existing, settings) do
+    record
+    |> Map.put(:pages, pages(existing))
+    |> ComicInfo.build(version: comicinfo_version(settings))
   end
 
   defp comicinfo_version(settings) do
@@ -97,15 +99,44 @@ defmodule Stashix.Metadata.Writer.FileWriter do
     end
   end
 
-  defp sync_existing_sidecar(path, xml) do
-    if File.regular?(sidecar_path(path)), do: write_sidecar(path, xml), else: :ok
+  # Sidecars next to a CBZ are rewritten so they can't shadow the embed, but
+  # none are created.
+  defp sync_existing_sidecars(path, record, metron, settings) do
+    existing = Sidecar.read(path)
+
+    write_types(path,
+      metroninfo: existing[:metroninfo] && metron,
+      comicinfo: existing[:comicinfo] && build_comic(record, existing[:comicinfo], settings)
+    )
   end
 
-  @doc "Path of the sidecar metadata file for a book file."
-  def sidecar_path(path), do: Path.rootname(path) <> ".xml"
+  # MetronInfo always; ComicInfo when one is there already or the setting
+  # asks for it, like inside a CBZ.
+  defp write_sidecars(path, record, metron, settings) do
+    existing = Sidecar.read(path)
 
-  defp write_sidecar(path, xml) do
-    target = sidecar_path(path)
+    comic =
+      if existing[:comicinfo] || settings["write_comicinfo"],
+        do: build_comic(record, existing[:comicinfo] || Container.comicinfo(path), settings)
+
+    write_types(path, metroninfo: metron, comicinfo: comic)
+  end
+
+  # Writes each non-nil `{type, xml}` to its sidecar. An old `<stem>.xml` is
+  # removed once the named sidecars have replaced it.
+  defp write_types(path, xmls) do
+    xmls = Enum.filter(xmls, fn {_type, xml} -> xml end)
+
+    xmls
+    |> Enum.map(fn {type, xml} -> write_atomic(Sidecar.path(path, type), xml) end)
+    |> Enum.find(:ok, &(&1 != :ok))
+    |> case do
+      :ok -> if xmls != [] and Sidecar.legacy(path), do: File.rm(Sidecar.legacy_path(path)), else: :ok
+      error -> error
+    end
+  end
+
+  defp write_atomic(target, xml) do
     tmp = Path.join(Path.dirname(target), ".#{Path.basename(target)}.stashix-tmp")
     Scanner.FileWatcher.suppress(target)
 

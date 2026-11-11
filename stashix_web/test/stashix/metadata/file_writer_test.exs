@@ -140,35 +140,60 @@ defmodule Stashix.Metadata.FileWriterTest do
     assert updated.file_hash != "x"
   end
 
-  test "non-CBZ formats get a sidecar that the parser prefers", %{tmp: tmp, book: book} do
+  test "non-CBZ formats get named sidecars that the parser prefers", %{tmp: tmp, book: book} do
     path = Path.join(tmp, "Batman 001.cbr")
     File.write!(path, "not really rar")
     file = add_file(book, path, :cbr)
 
     assert :ok = FileWriter.write_file(book, file, %{"write_comicinfo" => true})
-    assert File.read!(Path.join(tmp, "Batman 001.xml")) =~ "<MetronInfo"
+    assert File.read!(Path.join(tmp, "Batman 001.MetronInfo.xml")) =~ "<MetronInfo"
+    assert File.read!(Path.join(tmp, "Batman 001.ComicInfo.xml")) =~ "<Title>I Am Gotham, Part One</Title>"
+    refute File.exists?(Path.join(tmp, "Batman 001.xml"))
     assert File.read!(path) == "not really rar"
 
     assert %{title: "I Am Gotham, Part One", series: "Batman"} = Parser.parse_comicinfo(path)
   end
 
+  test "ComicInfo write-back off writes only the MetronInfo sidecar", %{tmp: tmp, book: book} do
+    path = Path.join(tmp, "Batman 001.cbr")
+    File.write!(path, "not really rar")
+
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbr), %{"write_comicinfo" => false})
+    assert File.exists?(Path.join(tmp, "Batman 001.MetronInfo.xml"))
+    refute File.exists?(Path.join(tmp, "Batman 001.ComicInfo.xml"))
+  end
+
+  test "an old <stem>.xml sidecar is read, then replaced by the named one", %{tmp: tmp, book: book} do
+    path = Path.join(tmp, "Batman 001.cbr")
+    File.write!(path, "not really rar")
+    legacy = Path.join(tmp, "Batman 001.xml")
+    File.write!(legacy, "<MetronInfo><Stories><Story>Legacy</Story></Stories></MetronInfo>")
+    assert %{title: "Legacy"} = Parser.parse_comicinfo(path)
+
+    assert :ok = FileWriter.write_file(book, add_file(book, path, :cbr), %{"write_comicinfo" => false})
+    refute File.exists?(legacy)
+    assert %{title: "I Am Gotham, Part One"} = Parser.parse_comicinfo(path)
+  end
+
   test "an existing sidecar next to a CBZ is rewritten so it can't shadow the embed", %{tmp: tmp, book: book} do
     path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
-    sidecar = Path.join(tmp, "Batman 001.xml")
-    File.write!(sidecar, "<ComicInfo><Title>stale</Title></ComicInfo>")
+    legacy = Path.join(tmp, "Batman 001.xml")
+    File.write!(legacy, "<ComicInfo><Title>stale</Title></ComicInfo>")
     file = add_file(book, path, :cbz)
 
     {:ok, book} = Library.update_book(book, %{title: "Gotham Rising"})
     assert :ok = FileWriter.write_file(book, file, %{"write_comicinfo" => true})
 
-    assert File.read!(sidecar) =~ "<MetronInfo"
+    assert File.read!(Path.join(tmp, "Batman 001.ComicInfo.xml")) =~ "<Title>Gotham Rising</Title>"
+    refute File.exists?(Path.join(tmp, "Batman 001.MetronInfo.xml"))
+    refute File.exists?(legacy)
     assert %{title: "Gotham Rising"} = Parser.parse_comicinfo(path)
   end
 
   test "no sidecar is created next to a CBZ that had none", %{tmp: tmp, book: book} do
     path = cbz_fixture(Path.join(tmp, "Batman 001.cbz"), [])
     assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => false})
-    refute File.exists?(Path.join(tmp, "Batman 001.xml"))
+    assert Path.wildcard(Path.join(tmp, "*.xml")) == []
   end
 
   test "an edited year survives even when the cover date disagrees", %{tmp: tmp, book: book} do
@@ -285,7 +310,7 @@ defmodule Stashix.Metadata.FileWriterTest do
       {_, 0} = System.cmd("rar", ["a", "-inul", "-ep", "--", path, "001.jpg"], cd: tmp)
 
       assert :ok = FileWriter.write_file(book, add_file(book, path, :cbz), %{"write_comicinfo" => true})
-      assert File.read!(Path.join(tmp, "Batman 001.xml")) =~ "<MetronInfo"
+      assert File.read!(Path.join(tmp, "Batman 001.MetronInfo.xml")) =~ "<MetronInfo"
     end
   end
 

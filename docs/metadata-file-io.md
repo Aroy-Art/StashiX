@@ -61,8 +61,11 @@ files tagged by other tools) — Stashix always writes MetronInfo alongside.
 `Scanner.parse_file_metadata/1` builds `metadata = Map.merge(parsed_filename, file_xml)`.
 Highest wins:
 
-1. **Sidecar** `<stem>.xml` next to the file (MetronInfo *or* ComicInfo,
-   sniffed by root tag). Merged over everything embedded, field by field.
+1. **Sidecars** `<stem>.MetronInfo.xml` and `<stem>.ComicInfo.xml` next to
+   the file, merged with each other like the embedded pair (MetronInfo wins,
+   owns the title). An older single `<stem>.xml` (sniffed by root tag) still
+   counts for a format with no named sidecar. Merged over everything
+   embedded, field by field.
    External ids are unioned per source. (`Parser.parse_comicinfo/1`)
 2. **Embedded `MetronInfo.xml`** (`.cbz`/`.epub` only). Overrides ComicInfo
    field by field. If present, ComicInfo's `Title` is discarded.
@@ -205,8 +208,11 @@ The old `Writer.MetronInfoXml`, `Writer.ComicInfoXml` and `Writer.XML` are gone.
 - **Year:** ComicInfo's `Year` beats the year MetronInfo derives from its
   dates (row 3).
 - **Issue number:** the file's number beats the filename (row 2).
-- **CBZ + existing sidecar:** the sidecar is rewritten alongside the embed
+- **CBZ + existing sidecar:** each sidecar is rewritten alongside the embed
   (row 7). No sidecar is created when there was none.
+- **Sidecar names:** `<stem>.MetronInfo.xml` always, `<stem>.ComicInfo.xml`
+  when one exists or `write_comicinfo` is on (`Stashix.Metadata.Sidecar`).
+  An old `<stem>.xml` is deleted once the named sidecars replace it.
 
 ### Verification
 

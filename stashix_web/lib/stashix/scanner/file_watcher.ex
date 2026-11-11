@@ -146,7 +146,7 @@ defmodule Stashix.Scanner.FileWatcher do
   end
 
   defp find_comic_for_sidecar(sidecar_path) do
-    base = Path.rootname(sidecar_path)
+    base = Stashix.Metadata.Sidecar.stem(sidecar_path)
 
     Enum.find_value(@supported_exts, fn ext ->
       candidate = base <> ext

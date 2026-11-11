@@ -10,7 +10,8 @@ defmodule Stashix.Metadata.Parser do
   Precedence inside `parse_comicinfo/1`, highest first (see
   docs/metadata-file-io.md):
 
-    1. `<book name>.xml` sidecar next to the file
+    1. `<book name>.MetronInfo.xml` / `<book name>.ComicInfo.xml` sidecars
+       next to the file (or an older single `<book name>.xml`)
     2. embedded `MetronInfo.xml` (zip, RAR or 7z; see `Stashix.Metadata.Container`)
     3. embedded `ComicInfo.xml` (or the PDF info dict for `.pdf`)
 
@@ -18,7 +19,7 @@ defmodule Stashix.Metadata.Parser do
   dates, because MetronInfo has no Year element of its own.
   """
 
-  alias Stashix.Metadata.Container
+  alias Stashix.Metadata.{Container, Sidecar}
   alias Stashix.Metadata.Format.{ComicInfo, MetronInfo}
 
   @noise_patterns ~w(
@@ -53,20 +54,13 @@ defmodule Stashix.Metadata.Parser do
     |> maybe_put(:external_ids, if(ids != [], do: ids))
   end
 
-  # A `<book name>.xml` next to the file (written by metadata write-back for
-  # formats we can't embed into) takes precedence over embedded data.
+  # `<book name>.MetronInfo.xml` / `.ComicInfo.xml` next to the file (written
+  # by metadata write-back for formats we can't embed into) take precedence
+  # over embedded data.
   defp parse_sidecar(archive_path) do
-    path = Path.rootname(archive_path) <> ".xml"
-
-    with true <- File.regular?(path),
-         {:ok, data} <- File.read(path) do
-      cond do
-        String.contains?(data, "<MetronInfo") -> parse_xml(MetronInfo, data)
-        String.contains?(data, "<ComicInfo") -> parse_xml(ComicInfo, data)
-        true -> nil
-      end
-    else
-      _ -> nil
+    case Sidecar.read(archive_path) do
+      xmls when xmls == %{} -> nil
+      xmls -> merge_formats(xmls[:comicinfo], xmls[:metroninfo])
     end
   end
 
@@ -83,12 +77,16 @@ defmodule Stashix.Metadata.Parser do
     # write-back off) is stale: it must not bring back values edited since.
     xmls = if Container.stale_comicinfo?(xmls), do: Map.delete(xmls, :comicinfo), else: xmls
 
-    comic = if found = xmls[:comicinfo], do: parse_xml(ComicInfo, found.data), else: %{}
-    metron = if found = xmls[:metroninfo], do: parse_xml(MetronInfo, found.data), else: %{}
+    merge_formats(xmls[:comicinfo] && xmls.comicinfo.data, xmls[:metroninfo] && xmls.metroninfo.data)
+  end
+
+  defp merge_formats(comic_xml, metron_xml) do
+    comic = if comic_xml, do: parse_xml(ComicInfo, comic_xml), else: %{}
+    metron = if metron_xml, do: parse_xml(MetronInfo, metron_xml), else: %{}
 
     # When MetronInfo is present it owns the title — don't let ComicInfo's
     # title bleed through even if MetronInfo has no stories element.
-    comic = if xmls[:metroninfo], do: Map.delete(comic, :title), else: comic
+    comic = if metron_xml, do: Map.delete(comic, :title), else: comic
 
     comic
     |> merge_records(metron)
