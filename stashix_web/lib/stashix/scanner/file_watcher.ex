@@ -23,20 +23,35 @@ defmodule Stashix.Scanner.FileWatcher do
     GenServer.cast(__MODULE__, {:suppress, path, System.monotonic_time(:millisecond) + @suppress_ms})
   end
 
+  @doc """
+  Whether new and changed files are picked up live: `:watching`, `:idle` (no
+  library folders to watch) or `{:disabled, reason}`.
+  """
+  def status do
+    GenServer.call(__MODULE__, :status)
+  catch
+    :exit, _ -> {:disabled, "The file watcher process is not running."}
+  end
+
   @impl true
   def init(_opts) do
     libraries = load_libraries()
     paths = Enum.map(libraries, & &1.root_path) |> Enum.filter(&File.dir?/1)
 
-    watcher_pid =
-      if paths != [] do
-        {:ok, pid} = FileSystem.start_link(dirs: paths)
-        FileSystem.subscribe(pid)
-        pid
-      end
+    {watcher_pid, status} = if paths != [], do: start_watcher(paths), else: {nil, :idle}
 
-    {:ok, %{watcher: watcher_pid, debounce: %{}, suppressed: %{}, libraries: library_path_map(libraries)}}
+    {:ok,
+     %{
+       watcher: watcher_pid,
+       status: status,
+       debounce: %{},
+       suppressed: %{},
+       libraries: library_path_map(libraries)
+     }}
   end
+
+  @impl true
+  def handle_call(:status, _from, state), do: {:reply, state.status, state}
 
   @impl true
   def handle_cast({:suppress, path, until}, state) do
@@ -79,6 +94,28 @@ defmodule Stashix.Scanner.FileWatcher do
     Logger.info("FileWatcher triggering scan for #{path}")
     Stashix.Scanner.scan_file(library_id, path)
     {:noreply, %{state | debounce: Map.delete(state.debounce, path)}}
+  end
+
+  # FileSystem returns :ignore when its backend (inotify-tools on Linux) is
+  # missing. Run without live watching rather than taking the app down;
+  # a manual library scan still picks up changes.
+  defp start_watcher(paths) do
+    case FileSystem.start_link(dirs: paths) do
+      {:ok, pid} ->
+        FileSystem.subscribe(pid)
+        {pid, :watching}
+
+      other ->
+        Logger.warning("FileWatcher: live watching disabled, file system watcher did not start: #{inspect(other)}")
+        {nil, {:disabled, disabled_reason()}}
+    end
+  end
+
+  defp disabled_reason do
+    case :os.type() do
+      {:unix, :linux} -> "The file system watcher could not start. It needs inotify-tools, which isn't installed."
+      _ -> "The file system watcher could not start on this system. The server log has the details."
+    end
   end
 
   defp load_libraries do

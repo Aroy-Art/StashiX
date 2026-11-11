@@ -13,6 +13,7 @@ defmodule StashixWeb.AdminLive.Libraries do
   attr :libraries, :any, required: true
   attr :scanning_libraries, :any, required: true
   attr :show_library_form, :any, required: true
+  attr :file_watcher_status, :any, required: true
 
   def tab(assigns) do
     ~H"""
@@ -29,6 +30,21 @@ defmodule StashixWeb.AdminLive.Libraries do
           >
             Add Library
           </.ink_button>
+        </div>
+      </div>
+
+      <div
+        :if={match?({:disabled, _}, @file_watcher_status)}
+        role="status"
+        class="flex gap-3 rounded-lg ring-1 ring-amber-400/40 bg-amber-400/[0.06] p-4"
+      >
+        <.icon name="lucide-eye-off" class="w-5 h-5 shrink-0 text-warn mt-0.5" />
+        <div class="space-y-1 text-sm">
+          <p class="font-medium text-warn">Live file watching is off</p>
+          <p class="text-fg-soft">{elem(@file_watcher_status, 1)}</p>
+          <p class="text-muted">
+            New and changed files won't appear on their own. Run Scan on a library to pick them up.
+          </p>
         </div>
       </div>
 
