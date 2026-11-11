@@ -15,7 +15,7 @@ defmodule StashixWeb.Endpoint do
     max_age: 7 * 24 * 60 * 60
   ]
 
-  socket "/live", Phoenix.LiveView.Socket,
+  socket "/live", StashixWeb.LiveSocket,
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
@@ -49,7 +49,8 @@ defmodule StashixWeb.Endpoint do
     cookie_key: "request_logger"
 
   plug Plug.RequestId
-  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
+  # RequestLogger below writes the one access line; skip Phoenix's start/"Sent" pair.
+  plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint], log: false
 
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],

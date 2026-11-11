@@ -13,8 +13,9 @@ defmodule StashixWeb.Plugs.RequestLogger do
     Plug.Conn.register_before_send(conn, fn conn ->
       duration_ms = System.convert_time_unit(System.monotonic_time() - start, :native, :millisecond)
       ip = conn.remote_ip |> :inet.ntoa() |> List.to_string()
+      path = if conn.query_string == "", do: conn.request_path, else: "#{conn.request_path}?#{conn.query_string}"
 
-      Logger.info("#{conn.method} #{conn.request_path} #{conn.status} ip=#{ip} #{duration_ms}ms")
+      Logger.info("#{conn.method} #{path} #{conn.status} ip=#{ip} #{duration_ms}ms")
 
       conn
     end)
