@@ -152,6 +152,9 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
       port: port
     ],
+    # PHX_HOST plus loopback, so opening the server on this machine works
+    # without setting PHX_HOST. "//host" matches any scheme and port.
+    check_origin: ["//#{host}", "//localhost", "//127.0.0.1", "//[::1]"],
     secret_key_base: secret_key_base
 
   # ## SSL Support
