@@ -627,7 +627,10 @@ defmodule StashixWeb.CoreComponents do
   attr :scroll_to, :string, default: nil
 
   def pagination(assigns) do
-    assigns = assign(assigns, :pages, pagination_pages(assigns.page, assigns.total_pages))
+    assigns =
+      assigns
+      |> assign(:pages, pagination_pages(assigns.page, assigns.total_pages, 11))
+      |> assign(:mobile_pages, pagination_pages(assigns.page, assigns.total_pages, 5))
 
     ~H"""
     <nav :if={@total_pages > 1} id={@id} aria-label="Pages" class="flex items-center justify-center gap-1">
@@ -645,14 +648,14 @@ defmodule StashixWeb.CoreComponents do
       />
 
       <button
-        :for={{p, i} <- Enum.with_index(@pages, 1)}
+        :for={p <- @pages}
         type="button"
         phx-click={page_click(@on_page, p, @scroll_to)}
         aria-label={"Page #{p}"}
         aria-current={p == @page && "page"}
         class={[
           "h-9 min-w-9 px-1.5 items-center justify-center rounded-sm font-display font-black text-xl leading-none tabular-nums transition-colors",
-          if(i > 5 and p != @page, do: "hidden sm:flex", else: "flex"),
+          if(p in @mobile_pages, do: "flex", else: "hidden sm:flex"),
           if(p == @page,
             do: "sticker bg-ink text-zinc-950",
             else: "text-muted hover:text-fg hover:bg-fg/10"
@@ -704,12 +707,11 @@ defmodule StashixWeb.CoreComponents do
     |> JS.dispatch("stashix:scroll-to", detail: %{id: scroll_to})
   end
 
-  defp pagination_pages(_current, total) when total <= 11, do: Enum.to_list(1..total)
+  # A window of `size` pages centred on `current`, clamped to 1..total.
+  defp pagination_pages(_current, total, size) when total <= size, do: Enum.to_list(1..total)
 
-  defp pagination_pages(current, total) do
-    half = 5
-    start = max(1, min(current - half, total - 10))
-    finish = min(total, start + 10)
-    Enum.to_list(start..finish)
+  defp pagination_pages(current, total, size) do
+    start = max(1, min(current - div(size, 2), total - size + 1))
+    Enum.to_list(start..(start + size - 1))
   end
 end
