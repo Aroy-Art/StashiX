@@ -1,7 +1,7 @@
 ---
 services:
   stashix:
-    image: ghcr.io/aroy-art/stashix:0.0.1
+    image: ghcr.io/aroy-art/stashix:0.0.2
     restart: unless-stopped
     ports:
       - "4000:4000"
