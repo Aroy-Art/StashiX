@@ -502,6 +502,7 @@ defmodule StashixWeb.HomeLive do
                   navigate={~p"/series/#{s.id}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
+                  blurhash={s.cover_blurhash}
                   eyebrow="Series"
                   detail={
                     [s.issue_count && "#{s.issue_count} issues", Stashix.Formatters.series_years(s)]
