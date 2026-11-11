@@ -6,6 +6,7 @@ defmodule StashixWeb.SeriesLive do
 
   alias Stashix.{Formatters, Library, Metadata, Scanner}
   alias Stashix.Accounts.User
+  alias Stashix.Media.ImageResizer
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
   import StashixWeb.DetailComponents
@@ -31,6 +32,7 @@ defmodule StashixWeb.SeriesLive do
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
     continue_book = find_continue_book(books, progress_map)
     summary_info = derive_summary(series, books)
+    folder_cover = Library.series_folder_cover(socket.assigns.access, series)
 
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
@@ -50,7 +52,8 @@ defmodule StashixWeb.SeriesLive do
        total_pages: total_pages,
        total_size: total_size,
        cover_book: cover_book,
-       folder_cover?: !!Library.series_folder_cover(socket.assigns.access, series),
+       folder_cover?: folder_cover != nil,
+       folder_cover_blurhash: folder_cover && ImageResizer.blurhash(folder_cover),
        continue_book: continue_book,
        summary_info: summary_info,
        scanning: false,
@@ -426,6 +429,7 @@ defmodule StashixWeb.SeriesLive do
     progress_map = Library.progress_map(socket.assigns.current_user.id, book_ids)
     total_pages = Enum.sum(Enum.map(series.books, & &1.page_count))
     total_size = Library.total_size_for_series(socket.assigns.access, series.id)
+    folder_cover = Library.series_folder_cover(socket.assigns.access, series)
 
     {:noreply,
      assign(socket,
@@ -436,7 +440,8 @@ defmodule StashixWeb.SeriesLive do
        total_pages: total_pages,
        total_size: total_size,
        cover_book: List.first(books),
-       folder_cover?: !!Library.series_folder_cover(socket.assigns.access, series),
+       folder_cover?: folder_cover != nil,
+       folder_cover_blurhash: folder_cover && ImageResizer.blurhash(folder_cover),
        continue_book: find_continue_book(books, progress_map),
        summary_info: derive_summary(series, books)
      )}
@@ -698,7 +703,7 @@ defmodule StashixWeb.SeriesLive do
           src={has_cover && "#{cover_base}?s=l"}
           full_src={has_cover && "#{cover_base}?s=xl"}
           alt={@series.name}
-          blurhash={!@folder_cover? && has_cover && @cover_book.cover.blurhash}
+          blurhash={if @folder_cover?, do: @folder_cover_blurhash, else: has_cover && @cover_book.cover.blurhash}
           stack={
             issue_sorted
             |> Enum.filter(&(&1.cover && (@folder_cover? || !@cover_book || &1.id != @cover_book.id)))

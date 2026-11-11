@@ -38,7 +38,7 @@ defmodule StashixWeb.DetailComponents do
           onerror="this.style.display='none'"
         />
       </div>
-      <div class="cover-stack-top group absolute inset-0 rounded-md overflow-hidden ring-1 ring-edge shadow-[0_24px_60px_-12px_light-dark(rgba(0,0,0,0.3),rgba(0,0,0,0.9))]">
+      <div class="cover-stack-top group absolute inset-0 rounded-md overflow-hidden bg-raised ring-1 ring-edge shadow-[0_24px_60px_-12px_light-dark(rgba(0,0,0,0.3),rgba(0,0,0,0.9))]">
         <%= if @src do %>
           <.blurhash_image id={@id} src={@src} alt={@alt} blurhash={@blurhash} />
           <button

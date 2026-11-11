@@ -49,6 +49,21 @@ defmodule Stashix.Media.ImageResizer do
     end
   end
 
+  @doc """
+  Blurhash of an image, worked out from its cached `:sx` thumbnail so only
+  the first call pays for decoding the full image. Nil when it can't be read.
+  """
+  def blurhash(source_path) do
+    with {:ok, thumb} <- resize(source_path, :sx),
+         {:ok, img} <- Image.open(thumb),
+         {:ok, flat} <- Image.flatten(img),
+         {:ok, hash} <- Image.Blurhash.encode(flat, x_components: 4, y_components: 3) do
+      hash
+    else
+      _ -> nil
+    end
+  end
+
   def bust_cache(source_path) do
     cache_dir = resized_cache_dir()
     cache_key = :crypto.hash(:md5, source_path) |> Base.encode16(case: :lower)
