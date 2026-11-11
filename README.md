@@ -8,6 +8,10 @@ Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveV
 
 Documentation: **[stashix.net](https://stashix.net/docs/)**: [installation](https://stashix.net/docs/get-started/installation/), [configuration](https://stashix.net/docs/reference/configuration/), [monitoring](https://stashix.net/docs/admin-guide/monitoring/).
 
+> [!WARNING]
+> **Stashix is early software.** Expect bugs, and back up your database before upgrading.
+> [Here's how you can help](https://stashix.net/blog/post/how-to-help/).
+
 ## Features
 
 - Multiple libraries, with admin and user roles, per-library access and age ratings
@@ -64,6 +68,14 @@ Defaults in development:
 All production settings are in the
 [configuration reference](https://stashix.net/docs/reference/configuration/).
 Developer notes live in [`docs/`](docs/) and in the HexDocs build (`mix docs`).
+
+## Contributing
+
+Bug reports, feature ideas, docs fixes and code are all welcome. Start with
+[how you can help](https://stashix.net/blog/post/how-to-help/), and see the
+[contributing guide](https://stashix.net/docs/contributing/) for details.
+Commits must be signed off (`git commit -s`) under the
+[Developer Certificate of Origin](https://developercertificate.org/).
 
 ## License
 
