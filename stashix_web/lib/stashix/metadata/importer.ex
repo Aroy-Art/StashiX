@@ -171,13 +171,15 @@ defmodule Stashix.Metadata.Importer do
   defp replace_credits(book_id, credits, now) do
     Repo.delete_all(from c in BookCredit, where: c.book_id == ^book_id)
 
-    for %{creator: name, roles: roles} <- credits, roles != [] do
+    for %{creator: name, roles: roles} <- credits do
       creator = find_or_create_creator(name)
 
       rows =
         roles
         |> Enum.map(&normalize_role/1)
         |> Enum.reject(&is_nil/1)
+        # Sources sometimes list a creator without a role; keep them rather than drop the credit.
+        |> then(&if(&1 == [], do: [:Other], else: &1))
         |> Enum.map(fn role ->
           %{
             id: Ecto.UUID.generate(),
@@ -189,9 +191,7 @@ defmodule Stashix.Metadata.Importer do
           }
         end)
 
-      if rows != [] do
-        Repo.insert_all(BookCredit, rows, on_conflict: :nothing)
-      end
+      Repo.insert_all(BookCredit, rows, on_conflict: :nothing)
     end
   end
 

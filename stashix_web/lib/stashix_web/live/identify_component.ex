@@ -604,6 +604,7 @@ defmodule StashixWeb.IdentifyComponent do
     items
     |> Enum.map(fn
       %{creator: %{name: name}, role: role} -> {name, to_string(role)}
+      %{creator: name, roles: []} -> {name, "Other"}
       %{creator: name, roles: roles} -> {name, Enum.join(roles, "/")}
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
