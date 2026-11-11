@@ -1,7 +1,7 @@
 <h1 align="center">
-  <img src="docs/assets/logo.svg" alt="" height="96">
+  <img src="docs/assets/logo.svg" alt="" height="72">
   <br>
-  <img src="docs/assets/wordmark.svg" alt="Stashix" height="64">
+  <img src="docs/assets/wordmark.svg" alt="Stashix" height="88">
 </h1>
 
 Self-hosted comic book and ebook library server. Built with Elixir/Phoenix LiveView.
