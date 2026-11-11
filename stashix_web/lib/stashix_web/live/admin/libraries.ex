@@ -9,11 +9,14 @@ defmodule StashixWeb.AdminLive.Libraries do
   """
   use StashixWeb, :html
 
+  import StashixWeb.MetadataComponents, only: [needs_sources: 1]
+
   attr :editing_library_id, :any, required: true
   attr :libraries, :any, required: true
   attr :scanning_libraries, :any, required: true
   attr :show_library_form, :any, required: true
   attr :file_watcher_status, :any, required: true
+  attr :sources_ready, :boolean, required: true
 
   def tab(assigns) do
     ~H"""
@@ -106,15 +109,18 @@ defmodule StashixWeb.AdminLive.Libraries do
                 >
                   Force rescan
                 </.ink_button>
-                <.ink_button
-                  variant="ghost"
-                  size="md"
-                  phx-click="match_library_metadata"
-                  phx-value-id={lib.id}
-                  title="Look up metadata for unmatched books from the enabled sources"
-                >
-                  Match Metadata
-                </.ink_button>
+                <.needs_sources ready={@sources_ready} class="inline-flex">
+                  <.ink_button
+                    variant="ghost"
+                    size="md"
+                    phx-click="match_library_metadata"
+                    phx-value-id={lib.id}
+                    title="Look up metadata for unmatched books from the enabled sources"
+                    disabled={!@sources_ready}
+                  >
+                    Match Metadata
+                  </.ink_button>
+                </.needs_sources>
                 <.ink_button
                   variant="danger"
                   size="md"

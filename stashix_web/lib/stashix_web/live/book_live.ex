@@ -47,6 +47,7 @@ defmodule StashixWeb.BookLive do
        selected_file: selected_file,
        scanning: false,
        show_admin_menu: false,
+       sources_ready: socket.assigns.current_user.role == :admin && Stashix.Metadata.Sources.any_ready?(),
        show_edit_dialog: false,
        show_identify_dialog: false,
        external_ids: load_external_ids(book),
@@ -350,8 +351,14 @@ defmodule StashixWeb.BookLive do
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
             <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">Edit metadata</.menu_item>
-            <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata">Fetch metadata</.menu_item>
-            <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog">Identify…</.menu_item>
+            <.needs_sources ready={@sources_ready} class="block">
+              <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
+                Fetch metadata
+              </.menu_item>
+              <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog" disabled={!@sources_ready}>
+                Identify…
+              </.menu_item>
+            </.needs_sources>
             <.menu_item
               icon={if @book.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"

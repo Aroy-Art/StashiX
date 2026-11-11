@@ -287,4 +287,24 @@ defmodule StashixWeb.MetadataComponents do
   defp entry_id({_name, _count, id}), do: id
   defp entry_id({_name, id}) when is_binary(id), do: id
   defp entry_id(_), do: nil
+
+  @doc """
+  Wraps controls that query metadata sources. Callers disable those controls
+  when `ready` is false; the wrapper then carries a tooltip saying why. The
+  title sits out here because disabled buttons take no pointer events.
+  """
+  attr :ready, :boolean, required: true
+  attr :class, :any, default: nil
+  slot :inner_block, required: true
+
+  def needs_sources(assigns) do
+    ~H"""
+    <span
+      class={[!@ready && "cursor-not-allowed", @class]}
+      title={!@ready && "No metadata sources set up. Enable one under Admin · Metadata · Sources."}
+    >
+      {render_slot(@inner_block)}
+    </span>
+    """
+  end
 end

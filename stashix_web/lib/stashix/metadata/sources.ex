@@ -49,6 +49,9 @@ defmodule Stashix.Metadata.Sources do
   @doc "Enabled sources ordered by priority."
   def enabled, do: Enum.filter(list(), & &1.config.enabled)
 
+  @doc "True when at least one source is enabled and fully configured, so matching can run."
+  def any_ready?, do: Enum.any?(enabled(), &configured?(&1.module, &1.config.config))
+
   def get(key) do
     case module(key) do
       nil -> nil

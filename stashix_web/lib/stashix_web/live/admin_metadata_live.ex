@@ -9,6 +9,7 @@ defmodule StashixWeb.AdminMetadataLive do
   alias Stashix.Metadata.Sources
   alias Stashix.Metadata.Format.ComicInfo
   import StashixWeb.DialogHistory
+  import StashixWeb.MetadataComponents, only: [needs_sources: 1]
 
   on_mount {StashixWeb.Live.Hooks, :require_admin}
 
@@ -76,6 +77,7 @@ defmodule StashixWeb.AdminMetadataLive do
     |> assign(
       page_title: "Admin · Metadata Jobs",
       libraries: Library.list_libraries(%{role: :admin}),
+      sources_ready: Sources.any_ready?(),
       summary_cleanup: nil
     )
     |> load_jobs()
@@ -392,6 +394,7 @@ defmodule StashixWeb.AdminMetadataLive do
         <.jobs_tab
           job_counts={@job_counts}
           libraries={@libraries}
+          sources_ready={@sources_ready}
           cache_count={@cache_count}
           summary_cleanup={@summary_cleanup}
           write_to_files={@settings["write_to_files"]}
@@ -856,6 +859,7 @@ defmodule StashixWeb.AdminMetadataLive do
 
   attr :job_counts, :map
   attr :libraries, :list
+  attr :sources_ready, :boolean
   attr :cache_count, :integer
   attr :summary_cleanup, :map
   attr :write_to_files, :boolean
@@ -907,19 +911,27 @@ defmodule StashixWeb.AdminMetadataLive do
               <p class="text-fg text-sm font-medium">{lib.name}</p>
               <p class="text-muted text-xs">{lib.root_path}</p>
             </div>
-            <div class="flex gap-2">
+            <.needs_sources ready={@sources_ready} class="flex gap-2">
               <.ink_button
                 size="md"
                 phx-click="match_library"
                 phx-value-id={lib.id}
                 phx-value-all="false"
+                disabled={!@sources_ready}
               >
                 Match unmatched
               </.ink_button>
-              <.ink_button variant="ghost" size="md" phx-click="match_library" phx-value-id={lib.id} phx-value-all="true">
+              <.ink_button
+                variant="ghost"
+                size="md"
+                phx-click="match_library"
+                phx-value-id={lib.id}
+                phx-value-all="true"
+                disabled={!@sources_ready}
+              >
                 Re-match all
               </.ink_button>
-            </div>
+            </.needs_sources>
           </div>
         <% end %>
       </div>

@@ -55,6 +55,7 @@ defmodule StashixWeb.SeriesLive do
        summary_info: summary_info,
        scanning: false,
        show_admin_menu: false,
+       sources_ready: socket.assigns.current_user.role == :admin && Stashix.Metadata.Sources.any_ready?(),
        show_edit_dialog: false,
        show_identify_dialog: false,
        show_push_publishers_dialog: false,
@@ -620,8 +621,14 @@ defmodule StashixWeb.SeriesLive do
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
             <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">Edit metadata</.menu_item>
-            <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata">Fetch metadata</.menu_item>
-            <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog">Identify series…</.menu_item>
+            <.needs_sources ready={@sources_ready} class="block">
+              <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
+                Fetch metadata
+              </.menu_item>
+              <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog" disabled={!@sources_ready}>
+                Identify series…
+              </.menu_item>
+            </.needs_sources>
             <.menu_item
               icon={if @series.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"

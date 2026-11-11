@@ -27,6 +27,7 @@ defmodule StashixWeb.AdminLive do
        pending_confirm: nil,
        scanning_libraries: MapSet.new(),
        file_watcher_status: :idle,
+       sources_ready: false,
        publishers: [],
        all_publishers: [],
        publishers_with_aliases: [],
@@ -70,6 +71,7 @@ defmodule StashixWeb.AdminLive do
     |> assign(:page_title, "Admin · Libraries")
     |> assign(:libraries, Library.list_libraries(%{role: :admin}))
     |> assign(:file_watcher_status, Stashix.Scanner.FileWatcher.status())
+    |> assign(:sources_ready, Stashix.Metadata.Sources.any_ready?())
   end
 
   defp apply_action(socket, :cleanup, _params) do
@@ -600,6 +602,7 @@ defmodule StashixWeb.AdminLive do
         scanning_libraries={@scanning_libraries}
         show_library_form={@show_library_form}
         file_watcher_status={@file_watcher_status}
+        sources_ready={@sources_ready}
       />
       <Cleanup.tab
         :if={@live_action == :cleanup}
