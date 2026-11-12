@@ -33,7 +33,7 @@ defmodule StashixWeb.StatsLive do
 
     {:ok,
      assign(socket,
-       page_title: "Stats",
+       page_title: gettext("Stats"),
        chart_by_year: build_by_year(by_year),
        chart_by_type: build_by_type(by_type),
        chart_by_month: build_by_month(by_month),
@@ -134,8 +134,8 @@ defmodule StashixWeb.StatsLive do
       Enum.map(rows, fn {type, count} ->
         label =
           case type do
-            "issue" -> "Issues"
-            "standalone" -> "Books"
+            "issue" -> gettext("Issues")
+            "standalone" -> gettext("Books")
             other -> String.capitalize(other)
           end
 
@@ -185,9 +185,9 @@ defmodule StashixWeb.StatsLive do
 
   defp build_reading(%{unread: unread, in_progress: in_progress, completed: completed}) do
     data = [
-      %{"name" => "Unread", "value" => unread},
-      %{"name" => "In Progress", "value" => in_progress},
-      %{"name" => "Completed", "value" => completed}
+      %{"name" => gettext("Unread"), "value" => unread},
+      %{"name" => gettext("In progress"), "value" => in_progress},
+      %{"name" => gettext("Completed"), "value" => completed}
     ]
 
     %{
@@ -341,13 +341,13 @@ defmodule StashixWeb.StatsLive do
   defp build_by_age_rating(rows) do
     rating_label = fn r ->
       case r do
-        :unknown -> "Unknown"
-        :everyone -> "Everyone"
-        :teen -> "Teen"
-        :teen_plus -> "Teen+"
-        :mature -> "Mature"
-        :adult -> "Adult"
-        :explicit -> "Explicit"
+        :unknown -> gettext("Unknown")
+        :everyone -> gettext("Everyone")
+        :teen -> gettext("Teen")
+        :teen_plus -> gettext("Teen+")
+        :mature -> gettext("Mature")
+        :adult -> gettext("Adult")
+        :explicit -> gettext("Explicit")
         other -> other |> Atom.to_string() |> title_case()
       end
     end
@@ -476,6 +476,16 @@ defmodule StashixWeb.StatsLive do
     end)
   end
 
+  defp role_group_label("Writing"), do: gettext("Writing")
+  defp role_group_label("Art"), do: gettext("Art")
+  defp role_group_label("Inking"), do: gettext("Inking")
+  defp role_group_label("Colouring"), do: gettext("Colouring")
+  defp role_group_label("Lettering"), do: gettext("Lettering")
+  defp role_group_label("Covers"), do: gettext("Covers")
+  defp role_group_label("Editing"), do: gettext("Editing")
+  defp role_group_label("Production"), do: gettext("Production")
+  defp role_group_label(_other), do: gettext("Other")
+
   defp build_credits_by_role([]) do
     %{"series" => [%{"data" => []}]}
   end
@@ -487,7 +497,7 @@ defmodule StashixWeb.StatsLive do
       |> Enum.map(fn {group, counts} -> {group, Enum.sum(counts)} end)
       |> Enum.sort_by(fn {_, c} -> c end, :desc)
 
-    data = Enum.map(grouped, fn {group, count} -> %{"name" => group, "value" => count} end)
+    data = Enum.map(grouped, fn {group, count} -> %{"name" => role_group_label(group), "value" => count} end)
 
     %{
       "tooltip" => %{"trigger" => "item"},
@@ -612,22 +622,26 @@ defmodule StashixWeb.StatsLive do
   def render(assigns) do
     ~H"""
     <.page wide>
-      <.page_hero title="Stats" eyebrow="Your stash in numbers" count={@stats.total_books > 0 && @stats.total_books} />
+      <.page_hero
+        title={gettext("Stats")}
+        eyebrow={gettext("Your stash in numbers")}
+        count={@stats.total_books > 0 && @stats.total_books}
+      />
 
       <.panel variant="indicia">
         <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-6 px-6 py-6">
-          <.figure label="Total" note="books & issues">{format_number(@stats.total_books)}</.figure>
-          <.figure label="Unread" note={pct(@stats.unread, @stats.total_books)} tone="text-fg-soft">
+          <.figure label={gettext("Total")} note={gettext("books & issues")}>{format_number(@stats.total_books)}</.figure>
+          <.figure label={gettext("Unread")} note={pct(@stats.unread, @stats.total_books)} tone="text-fg-soft">
             {format_number(@stats.unread)}
           </.figure>
-          <.figure label="In progress" note={pct(@stats.in_progress, @stats.total_books)} tone="text-accent">
+          <.figure label={gettext("In progress")} note={pct(@stats.in_progress, @stats.total_books)} tone="text-accent">
             {format_number(@stats.in_progress)}
           </.figure>
-          <.figure label="Completed" note={pct(@stats.completed, @stats.total_books)} tone="text-success">
+          <.figure label={gettext("Completed")} note={pct(@stats.completed, @stats.total_books)} tone="text-success">
             {format_number(@stats.completed)}
           </.figure>
-          <.figure label="Pages" note="across all files">{format_number(@stats.total_pages)}</.figure>
-          <.figure label="Size" note="total storage">
+          <.figure label={gettext("Pages")} note={gettext("across all files")}>{format_number(@stats.total_pages)}</.figure>
+          <.figure label={gettext("Size")} note={gettext("total storage")}>
             {Stashix.Formatters.format_bytes(Decimal.to_integer(@stats.total_file_size))}
           </.figure>
         </dl>
@@ -636,25 +650,33 @@ defmodule StashixWeb.StatsLive do
       <%!-- Fun fact, lettered like a narrator's caption --%>
       <div>
         <p class="reader-end-caption inline-block max-w-2xl px-4 py-2.5 bg-ink text-zinc-950 text-sm sm:text-base font-semibold leading-snug">
-          Meanwhile, at the printer: your whole library on A4 would take
-          <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
-          sheets weighing <span class="font-display font-black text-xl">{@stats.paper_weight}</span>.
+          <.rich_text text={
+            gettext("Meanwhile, at the printer: your whole library on A4 would take %{sheets} sheets weighing %{weight}.",
+              sheets: rich_marker("sheets"),
+              weight: rich_marker("weight")
+            )
+          }>
+            <:part name="sheets">
+              <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
+            </:part>
+            <:part name="weight"><span class="font-display font-black text-xl">{@stats.paper_weight}</span></:part>
+          </.rich_text>
         </p>
         <p class="mt-3 text-xs text-muted tabular-nums">
-          {format_number(@stats.total_pages)} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)
+          {gettext("%{pages} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)", pages: format_number(@stats.total_pages))}
         </p>
       </div>
 
-      <.section title="Metadata coverage">
+      <.section title={gettext("Metadata coverage")}>
         <.panel class="p-5">
           <dl class="grid grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-6">
             <div
               :for={
                 {label, count} <- [
-                  {"With summary", @stats.metadata.with_summary},
-                  {"With genres", @stats.metadata.with_genres},
-                  {"With credits", @stats.metadata.with_credits},
-                  {"With external ids", @stats.metadata.with_external_ids}
+                  {gettext("With summary"), @stats.metadata.with_summary},
+                  {gettext("With genres"), @stats.metadata.with_genres},
+                  {gettext("With credits"), @stats.metadata.with_credits},
+                  {gettext("With external ids"), @stats.metadata.with_external_ids}
                 ]
               }
               class="min-w-0"
@@ -667,51 +689,58 @@ defmodule StashixWeb.StatsLive do
                 value={if @stats.metadata.total > 0, do: count / @stats.metadata.total, else: 0.0}
                 class="h-1 mt-2"
               />
-              <p class="mt-1.5 text-xs text-muted tabular-nums">{count} of {@stats.metadata.total}</p>
+              <p class="mt-1.5 text-xs text-muted tabular-nums">
+                {gettext("%{count} of %{total}", count: count, total: @stats.metadata.total)}
+              </p>
             </div>
           </dl>
         </.panel>
       </.section>
 
-      <.section title="Over time">
+      <.section title={gettext("Over time")}>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <.chart_card id="chart_by_month" title="Added by month" option={@chart_by_month} />
-          <.chart_card id="chart_by_year" title="Publication year" option={@chart_by_year} />
+          <.chart_card id="chart_by_month" title={gettext("Added by month")} option={@chart_by_month} />
+          <.chart_card id="chart_by_year" title={gettext("Publication year")} option={@chart_by_year} />
         </div>
       </.section>
 
-      <.section title="Breakdown">
+      <.section title={gettext("Breakdown")}>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <.chart_card id="chart_by_type" title="Type" option={@chart_by_type} />
-          <.chart_card id="chart_reading" title="Reading progress" option={@chart_reading} />
-          <.chart_card id="chart_by_format" title="File formats" option={@chart_by_format} />
-          <.chart_card id="chart_by_language" title="Language" option={@chart_by_language} />
-          <.chart_card id="chart_by_age_rating" title="Age rating" option={@chart_by_age_rating} />
-          <.chart_card id="chart_credits_by_role" title="Credits by role" option={@chart_credits_by_role} />
+          <.chart_card id="chart_by_type" title={gettext("Type")} option={@chart_by_type} />
+          <.chart_card id="chart_reading" title={gettext("Reading progress")} option={@chart_reading} />
+          <.chart_card id="chart_by_format" title={gettext("File formats")} option={@chart_by_format} />
+          <.chart_card id="chart_by_language" title={gettext("Language")} option={@chart_by_language} />
+          <.chart_card id="chart_by_age_rating" title={gettext("Age rating")} option={@chart_by_age_rating} />
+          <.chart_card id="chart_credits_by_role" title={gettext("Credits by role")} option={@chart_credits_by_role} />
         </div>
       </.section>
 
-      <.section title="Top of the stash">
+      <.section title={gettext("Top of the stash")}>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <.chart_card
             id="chart_top_series"
-            title="Series by issue count"
+            title={gettext("Series by issue count")}
             option={@chart_top_series}
             height="h-96"
             class="lg:col-span-2"
           />
-          <.chart_card id="chart_top_creators" title="Creators by credits" option={@chart_top_creators} height="h-96" />
-          <.chart_card id="chart_top_genres" title="Genres" option={@chart_top_genres} height="h-96" />
-          <.chart_card id="chart_top_characters" title="Characters" option={@chart_top_characters} height="h-96" />
+          <.chart_card
+            id="chart_top_creators"
+            title={gettext("Creators by credits")}
+            option={@chart_top_creators}
+            height="h-96"
+          />
+          <.chart_card id="chart_top_genres" title={gettext("Genres")} option={@chart_top_genres} height="h-96" />
+          <.chart_card id="chart_top_characters" title={gettext("Characters")} option={@chart_top_characters} height="h-96" />
           <.chart_card
             id="chart_top_publishers"
-            title="Publishers by book count"
+            title={gettext("Publishers by book count")}
             option={@chart_top_publishers}
             height="h-96"
           />
           <.chart_card
             id="chart_size_by_publisher"
-            title="File size by publisher"
+            title={gettext("File size by publisher")}
             option={@chart_size_by_publisher}
             height="h-[50rem] lg:h-[28rem]"
             class="lg:col-span-2"

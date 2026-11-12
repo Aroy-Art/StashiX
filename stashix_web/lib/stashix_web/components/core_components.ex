@@ -158,6 +158,51 @@ defmodule StashixWeb.CoreComponents do
     end
   end
 
+  @doc """
+  A translated sentence with markup inside it, kept whole for translators.
+  Bind each placeholder to `rich_marker/1` and fill it with a `:part` of the
+  same name:
+
+      <.rich_text text={gettext("See %{link}.", link: rich_marker("link"))}>
+        <:part name="link"><.link navigate="/x">{gettext("here")}</.link></:part>
+      </.rich_text>
+  """
+  attr :text, :string, required: true
+
+  slot :part do
+    attr :name, :string, required: true
+  end
+
+  def rich_text(assigns) do
+    pieces =
+      assigns.text
+      |> String.split(<<0>>)
+      |> Enum.with_index()
+      |> Enum.map(fn
+        {text, i} when rem(i, 2) == 0 -> {:text, text}
+        {name, _} -> {:part, Enum.find(assigns.part, &(&1.name == name))}
+      end)
+
+    assigns = assign(assigns, :pieces, pieces)
+
+    # :for on one tag, so no whitespace lands between the pieces of the sentence.
+    ~H"""
+    <.rich_piece :for={piece <- @pieces} piece={piece} />
+    """
+  end
+
+  attr :piece, :any, required: true
+
+  defp rich_piece(%{piece: {:text, text}} = assigns), do: assigns |> assign(:text, text) |> text_piece()
+  defp rich_piece(%{piece: {:part, nil}} = assigns), do: ~H""
+  defp rich_piece(%{piece: {:part, part}} = assigns), do: assigns |> assign(:part, part) |> part_piece()
+
+  defp text_piece(assigns), do: ~H"{@text}"
+  defp part_piece(assigns), do: ~H"{render_slot(@part)}"
+
+  @doc "Placeholder value for `rich_text/1`."
+  def rich_marker(name), do: <<0>> <> to_string(name) <> <<0>>
+
   def show(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,

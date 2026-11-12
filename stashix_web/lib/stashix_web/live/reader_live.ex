@@ -52,7 +52,7 @@ defmodule StashixWeb.ReaderLive do
 
     {:ok,
      assign(socket,
-       page_title: "Reading: #{book.title}",
+       page_title: gettext("Reading: %{title}", title: book.title),
        book: book,
        book_format: book_format,
        pages: pages,
@@ -302,9 +302,9 @@ defmodule StashixWeb.ReaderLive do
 
   defp fit_modes do
     [
-      {"page", "Fit page", "lucide-scan"},
-      {"width", "Fit width", "lucide-move-horizontal"},
-      {"height", "Fit height", "lucide-move-vertical"}
+      {"page", gettext("Fit page"), "lucide-scan"},
+      {"width", gettext("Fit width"), "lucide-move-horizontal"},
+      {"height", gettext("Fit height"), "lucide-move-vertical"}
     ]
   end
 
@@ -336,11 +336,11 @@ defmodule StashixWeb.ReaderLive do
       id="reader-end"
       class="reader-end absolute inset-0 z-20 pointer-events-none flex items-center justify-center px-6 py-16 overflow-hidden bg-canvas/85 backdrop-blur-md"
       role="region"
-      aria-label="End of issue"
+      aria-label={gettext("End of issue")}
     >
       <div class="halftone absolute inset-0" aria-hidden="true"></div>
       <.ghost_numeral class="absolute -right-6 -bottom-12 text-[16rem] md:text-[26rem]">
-        {if @next_book, do: String.trim_leading(@next_label || "", "#"), else: "END"}
+        {if @next_book, do: String.trim_leading(@next_label || "", "#"), else: gettext("END")}
       </.ghost_numeral>
 
       <div class="relative flex flex-col sm:flex-row items-center gap-7 sm:gap-12 max-w-3xl">
@@ -350,7 +350,7 @@ defmodule StashixWeb.ReaderLive do
             navigate={@next_href}
             replace
             class="reader-end-page pointer-events-auto relative block w-28 sm:w-48 flex-shrink-0 aspect-[2/3] rounded-sm bg-surface"
-            aria-label={"Read next issue #{@next_label}"}
+            aria-label={gettext("Read next issue %{number}", number: @next_label)}
           >
             <img
               src={~p"/api/books/#{@next_book.id}/cover?s=m"}
@@ -360,7 +360,7 @@ defmodule StashixWeb.ReaderLive do
               draggable="false"
             />
             <.sticker size="md" tilt={false} class="reader-end-sticker absolute -top-3 -left-4">
-              Next {@next_label}
+              {gettext("Next %{number}", number: @next_label)}
             </.sticker>
           </.link>
         <% else %>
@@ -371,14 +371,14 @@ defmodule StashixWeb.ReaderLive do
 
         <div class="min-w-0 text-center sm:text-left">
           <.eyebrow class="rise" style="--i:1">
-            End of {if @label, do: "issue #{@label}", else: "the book"}
+            {if @label, do: gettext("End of issue %{number}", number: @label), else: gettext("End of the book")}
             <span class="reader-end-stamp ml-2 inline-flex items-center gap-1 px-1.5 py-px border-2 border-ink text-ink rounded-sm">
-              <.icon name="lucide-check" class="w-3 h-3" /> Read
+              <.icon name="lucide-check" class="w-3 h-3" /> {gettext("Read")}
             </span>
           </.eyebrow>
 
           <.display_heading size="hero" class="rise mt-3" style="--i:2">
-            {if @next_book, do: "To be continued", else: "The End"}
+            {if @next_book, do: gettext("To be continued"), else: gettext("The End")}
           </.display_heading>
 
           <%!-- Narration box, as lettered in the gutter of a last panel --%>
@@ -388,21 +388,21 @@ defmodule StashixWeb.ReaderLive do
           >
             <%= cond do %>
               <% @next_book -> %>
-                Meanwhile, in issue {@next_label}…
+                {gettext("Meanwhile, in issue %{number}…", number: @next_label)}
               <% @book.series -> %>
-                That was the last one. Nothing past here but ghosts.
+                {gettext("That was the last one. Nothing past here but ghosts.")}
               <% true -> %>
-                And they all closed the book. Nothing past here but ghosts.
+                {gettext("And they all closed the book. Nothing past here but ghosts.")}
             <% end %>
           </p>
 
           <div class="rise flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-4 mt-7" style="--i:4">
             <.ink_button :if={@next_book} navigate={@next_href} replace class="pointer-events-auto">
-              Next issue <span class="text-ink">{@next_label}</span>
+              {gettext("Next issue")} <span class="text-ink">{@next_label}</span>
               <.icon name="lucide-arrow-right" class="w-4 h-4" />
             </.ink_button>
             <.ink_button variant="ghost" phx-click="exit" phx-value-to="book" class="reader-end-alt pointer-events-auto">
-              <.icon name="lucide-book-open" class="w-4 h-4" /> Issue page
+              <.icon name="lucide-book-open" class="w-4 h-4" /> {gettext("Issue page")}
             </.ink_button>
             <.ink_button
               :if={@book.series}
@@ -411,7 +411,7 @@ defmodule StashixWeb.ReaderLive do
               phx-value-to="series"
               class={["pointer-events-auto", if(@next_book, do: "reader-end-alt", else: "order-first")]}
             >
-              <.icon name="lucide-library" class="w-4 h-4" /> Back to series
+              <.icon name="lucide-library" class="w-4 h-4" /> {gettext("Back to series")}
             </.ink_button>
           </div>
 
@@ -419,9 +419,9 @@ defmodule StashixWeb.ReaderLive do
             class="rise hidden sm:flex items-center gap-2 mt-6 text-[11px] tracking-[0.16em] uppercase text-muted"
             style="--i:5"
           >
-            <span :if={@next_book}><kbd class="text-fg-soft">→</kbd> keep reading</span>
+            <span :if={@next_book}><kbd class="text-fg-soft">→</kbd> {gettext("keep reading")}</span>
             <span :if={@next_book} class="text-fg/25">/</span>
-            <span><kbd class="text-fg-soft">←</kbd> last page</span>
+            <span><kbd class="text-fg-soft">←</kbd> {gettext("last page")}</span>
           </p>
         </div>
       </div>
@@ -473,11 +473,11 @@ defmodule StashixWeb.ReaderLive do
         <button
           phx-click="exit"
           phx-value-to="book"
-          title="Close reader"
+          title={gettext("Close reader")}
           class="group flex items-center gap-1.5 h-8 pl-1.5 pr-2.5 rounded-md text-muted hover:text-fg hover:bg-fg/10 font-display font-bold uppercase tracking-wide transition-colors whitespace-nowrap"
         >
           <.icon name="lucide-x" class="w-4 h-4 transition-transform group-hover:rotate-90" />
-          <span class="hidden sm:inline">Close</span>
+          <span class="hidden sm:inline">{gettext("Close")}</span>
         </button>
 
         <%!-- Center: issue sticker + series (or book) title --%>
@@ -494,28 +494,28 @@ defmodule StashixWeb.ReaderLive do
                Modal, so the tap that closes it does not also turn the page. --%>
           <.ink_menu id="reader-view-menu" modal panel_class="w-60" class="ink-segmented group">
             <:trigger
-              title="View options"
+              title={gettext("View options")}
               class={[
                 segment_class(false),
                 "gap-1.5 px-2.5 group-data-[open]:bg-violet-600! group-data-[open]:text-white!"
               ]}
             >
               <.icon name={layout_icon(@page_layout)} class="w-4 h-4 flex-shrink-0" />
-              <span class="hidden md:inline font-display font-bold uppercase tracking-wide text-sm">View</span>
+              <span class="hidden md:inline font-display font-bold uppercase tracking-wide text-sm">{gettext("View")}</span>
               <.icon
                 name="lucide-chevron-down"
                 class="w-3 h-3 flex-shrink-0 transition-transform group-data-[open]:rotate-180"
               />
             </:trigger>
 
-            <.menu_label>Layout</.menu_label>
+            <.menu_label>{gettext("Layout")}</.menu_label>
             <.menu_item
               :for={
                 {layout, label} <- [
-                  {"single", "Single page"},
-                  {"double", "Facing pages"},
-                  {"cover", "Facing, cover first"},
-                  {"webtoon", "Webtoon (scroll)"}
+                  {"single", gettext("Single page")},
+                  {"double", gettext("Facing pages")},
+                  {"cover", gettext("Facing, cover first")},
+                  {"webtoon", gettext("Webtoon (scroll)")}
                 ]
               }
               icon={layout_icon(layout)}
@@ -527,7 +527,7 @@ defmodule StashixWeb.ReaderLive do
             </.menu_item>
 
             <div class="sm:hidden">
-              <.menu_label class="mt-2">Fit</.menu_label>
+              <.menu_label class="mt-2">{gettext("Fit")}</.menu_label>
               <.menu_item
                 :for={{mode, label, icon} <- fit_modes()}
                 icon={icon}
@@ -539,12 +539,12 @@ defmodule StashixWeb.ReaderLive do
               </.menu_item>
 
               <div :if={@page_layout != "webtoon"}>
-                <.menu_label class="mt-2">Direction</.menu_label>
+                <.menu_label class="mt-2">{gettext("Direction")}</.menu_label>
                 <.menu_item
                   icon={if @direction == "ltr", do: "lucide-arrow-right", else: "lucide-arrow-left"}
                   phx-click="toggle_direction"
                 >
-                  {if @direction == "ltr", do: "Left to right", else: "Right to left"}
+                  {if @direction == "ltr", do: gettext("Left to right"), else: gettext("Right to left")}
                 </.menu_item>
               </div>
             </div>
@@ -565,7 +565,7 @@ defmodule StashixWeb.ReaderLive do
           <%!-- Direction toggle; the webtoon strip only runs top to bottom --%>
           <.segmented :if={@page_layout != "webtoon"} class="hidden sm:flex">
             <.segment
-              title="Toggle reading direction (LTR/RTL)"
+              title={gettext("Toggle reading direction (LTR/RTL)")}
               phx-click="toggle_direction"
               class="gap-1 px-2.5 font-display font-bold tracking-wide text-sm"
             >
@@ -580,7 +580,7 @@ defmodule StashixWeb.ReaderLive do
           <%!-- Page counter --%>
           <p class="min-w-[3.25rem] text-right tabular-nums leading-none whitespace-nowrap">
             <%= if @at_end do %>
-              <span class="font-display font-black uppercase tracking-wide text-xl text-ink">End</span>
+              <span class="font-display font-black uppercase tracking-wide text-xl text-ink">{gettext("End")}</span>
             <% else %>
               <span class="font-display font-black text-xl text-fg">{@current_page + 1}</span>
               <span class="text-muted text-xs"> / {@page_count}</span>
@@ -674,12 +674,12 @@ defmodule StashixWeb.ReaderLive do
           <.segmented vertical class="reader-ctl-float">
             <.segment
               icon="lucide-plus"
-              title="Zoom in (+)"
+              title={gettext("Zoom in (+)")}
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-in'))"
             />
             <.segment
               icon="lucide-minus"
-              title="Zoom out (-)"
+              title={gettext("Zoom out (-)")}
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-out'))"
             />
             <%!-- Zoom readout, filled in and shown by ReaderZoom while zoomed --%>
@@ -687,7 +687,7 @@ defmodule StashixWeb.ReaderLive do
               id="reader-zoom-level"
               phx-update="ignore"
               onclick="window.dispatchEvent(new CustomEvent('reader:zoom-reset'))"
-              title="Reset zoom (0)"
+              title={gettext("Reset zoom (0)")}
               class="items-center justify-center h-7 min-w-8 px-1 font-display font-bold text-xs text-ink tabular-nums hover:bg-fg/10 transition-colors"
               style="display: none;"
             ></button>
@@ -781,7 +781,7 @@ defmodule StashixWeb.ReaderLive do
             max={@page_count - 1}
             value={@current_page}
             phx-hook="PageSlider"
-            aria-label="Page"
+            aria-label={gettext("Page")}
             class="reader-slider flex-1"
             style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
           />

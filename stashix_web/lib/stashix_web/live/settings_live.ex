@@ -25,7 +25,7 @@ defmodule StashixWeb.SettingsLive do
     {:ok,
      socket
      |> assign(
-       page_title: "Settings",
+       page_title: gettext("Settings"),
        preview_covers: preview_covers(socket),
        current_session_id: session["session_id"],
        sessions: []
@@ -46,7 +46,7 @@ defmodule StashixWeb.SettingsLive do
 
     case Accounts.update_ui_settings(socket.assigns.current_user, attrs) do
       {:ok, user} -> {:noreply, socket |> assign(current_user: user) |> StashixWeb.Live.Hooks.push_theme()}
-      {:error, _changeset} -> {:noreply, put_flash(socket, :error, "That is not one of the choices.")}
+      {:error, _changeset} -> {:noreply, put_flash(socket, :error, gettext("That is not one of the choices."))}
     end
   end
 
@@ -70,7 +70,7 @@ defmodule StashixWeb.SettingsLive do
          socket
          |> assign(current_user: user)
          |> assign_profile_form(User.profile_changeset(user, %{}))
-         |> put_flash(:info, "Profile saved.")}
+         |> put_flash(:info, gettext("Profile saved."))}
 
       {:error, changeset} ->
         {:noreply, assign_profile_form(socket, changeset)}
@@ -119,13 +119,16 @@ defmodule StashixWeb.SettingsLive do
 
   defp last_seen(%Session{last_seen_at: at}) do
     case DateTime.diff(DateTime.utc_now(), at, :minute) do
-      minutes when minutes < 10 -> "Active now"
-      minutes when minutes < 60 -> "Active #{minutes} min ago"
-      minutes when minutes < 60 * 24 -> "Active #{div(minutes, 60)} h ago"
-      minutes when minutes < 60 * 48 -> "Active yesterday"
-      minutes -> "Active #{div(minutes, 60 * 24)} days ago"
+      minutes when minutes < 10 -> gettext("Active now")
+      minutes when minutes < 60 -> gettext("Active %{count} min ago", count: minutes)
+      minutes when minutes < 60 * 24 -> gettext("Active %{count} h ago", count: div(minutes, 60))
+      minutes when minutes < 60 * 48 -> gettext("Active yesterday")
+      minutes -> ngettext("Active 1 day ago", "Active %{count} days ago", div(minutes, 60 * 24))
     end
   end
+
+  defp role_label(:admin), do: gettext("Admin")
+  defp role_label(:user), do: gettext("User")
 
   defp stale?(%Session{last_seen_at: at}) do
     DateTime.diff(DateTime.utc_now(), at, :day) >= 30
@@ -133,10 +136,8 @@ defmodule StashixWeb.SettingsLive do
 
   defp field_error(form, field) do
     case form[field].errors do
-      [{message, opts} | _] ->
-        Enum.reduce(opts, message, fn {key, value}, acc ->
-          String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-        end)
+      [error | _] ->
+        translate_error(error)
 
       _ ->
         nil
@@ -147,13 +148,13 @@ defmodule StashixWeb.SettingsLive do
   def render(assigns) do
     ~H"""
     <.page>
-      <.page_hero title="Settings" eyebrow={@current_user.display_name || @current_user.username} />
+      <.page_hero title={gettext("Settings")} eyebrow={@current_user.display_name || @current_user.username} />
 
-      <.tabs label="Settings sections">
-        <:tab patch={~p"/settings"} active={@live_action == :ui}>UI</:tab>
-        <:tab patch={~p"/settings/personal"} active={@live_action == :personal}>Personal</:tab>
-        <:tab patch={~p"/settings/security"} active={@live_action == :security}>Security</:tab>
-        <:tab patch={~p"/settings/about"} active={@live_action == :about}>About</:tab>
+      <.tabs label={gettext("Settings sections")}>
+        <:tab patch={~p"/settings"} active={@live_action == :ui}>{gettext("UI")}</:tab>
+        <:tab patch={~p"/settings/personal"} active={@live_action == :personal}>{gettext("Personal")}</:tab>
+        <:tab patch={~p"/settings/security"} active={@live_action == :security}>{gettext("Security")}</:tab>
+        <:tab patch={~p"/settings/about"} active={@live_action == :about}>{gettext("About")}</:tab>
       </.tabs>
 
       <.ui_tab :if={@live_action == :ui} current_user={@current_user} preview_covers={@preview_covers} />
@@ -213,17 +214,19 @@ defmodule StashixWeb.SettingsLive do
     ~H"""
     <.language_section current_user={@current_user} />
 
-    <.section title="Theme">
+    <.section title={gettext("Theme")}>
       <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
-        System follows your device's light or dark setting. Saved to your account, so it follows you to other devices.
+        {gettext(
+          "System follows your device's light or dark setting. Saved to your account, so it follows you to other devices."
+        )}
       </p>
       <form id="ui-settings-theme" phx-change="set_ui" class="grid grid-cols-3 gap-4 max-w-xl">
         <label
           :for={
             {value, name, icon, scheme} <- [
-              {"system", "System", "lucide-monitor", "scheme-light-dark"},
-              {"light", "Light", "lucide-sun", "scheme-light"},
-              {"dark", "Dark", "lucide-moon", "scheme-dark"}
+              {"system", gettext("System"), "lucide-monitor", "scheme-light-dark"},
+              {"light", gettext("Light"), "lucide-sun", "scheme-light"},
+              {"dark", gettext("Dark"), "lucide-moon", "scheme-dark"}
             ]
           }
           class="choice-card group relative block p-3 rounded-md bg-surface ring-1 ring-edge cursor-pointer transition-shadow"
@@ -240,21 +243,21 @@ defmodule StashixWeb.SettingsLive do
           <p class="mt-2 flex items-center gap-1.5 font-display font-black uppercase text-xl leading-none text-fg">
             <.icon name={icon} class="w-4 h-4 text-muted" />{name}
           </p>
-          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">On</.sticker>
+          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">{gettext("On")}</.sticker>
         </label>
       </form>
     </.section>
 
-    <.section title="Read mark">
+    <.section title={gettext("Read mark")}>
       <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
-        How a finished book is marked on its cover. Applies everywhere covers are shown, on this account only.
+        {gettext("How a finished book is marked on its cover. Applies everywhere covers are shown, on this account only.")}
       </p>
       <form id="ui-settings" phx-change="set_ui" class="grid grid-cols-2 gap-4 max-w-md">
         <label
           :for={
             {value, name, blurb} <- [
-              {"check", "Tick", "A small green tick in the corner."},
-              {"stamp", "Stamp", "A READ stamp across the cover."}
+              {"check", gettext("Tick"), gettext("A small green tick in the corner.")},
+              {"stamp", gettext("Stamp"), gettext("A READ stamp across the cover.")}
             ]
           }
           class="choice-card group relative block p-3 rounded-md bg-surface ring-1 ring-edge cursor-pointer transition-shadow"
@@ -273,14 +276,14 @@ defmodule StashixWeb.SettingsLive do
           </div>
           <p class="mt-1 font-display font-black uppercase text-xl leading-none text-fg">{name}</p>
           <p class="mt-1 text-xs text-muted">{blurb}</p>
-          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">On</.sticker>
+          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">{gettext("On")}</.sticker>
         </label>
       </form>
     </.section>
 
-    <.section title="Book info">
+    <.section title={gettext("Book info")}>
       <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
-        Show file size and format on book and series pages. Off by default.
+        {gettext("Show file size and format on book and series pages. Off by default.")}
       </p>
       <form id="ui-settings-extended" phx-change="set_ui" class="flex flex-col gap-5 max-w-xl">
         <label class="inline-flex items-center gap-3 cursor-pointer select-none">
@@ -293,14 +296,14 @@ defmodule StashixWeb.SettingsLive do
             class="sr-only peer"
           />
           <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
-          <span class="text-sm text-fg-soft">Show extended book info</span>
+          <span class="text-sm text-fg-soft">{gettext("Show extended book info")}</span>
         </label>
         <.indicia>
-          <:item label="Publisher">Image Comics</:item>
-          <:item label="Format" show={@extended_book_info == "on"}>CBZ</:item>
-          <:item label="Size" show={@extended_book_info == "on"}>47.3 MB</:item>
-          <:item label="Language">English</:item>
-          <:item label="Age Rating">Mature</:item>
+          <:item label={gettext("Publisher")}>Image Comics</:item>
+          <:item label={gettext("Format")} show={@extended_book_info == "on"}>CBZ</:item>
+          <:item label={gettext("Size")} show={@extended_book_info == "on"}>47.3 MB</:item>
+          <:item label={gettext("Language")}>{gettext("English")}</:item>
+          <:item label={gettext("Age Rating")}>{gettext("Mature")}</:item>
         </.indicia>
       </form>
     </.section>
@@ -310,10 +313,12 @@ defmodule StashixWeb.SettingsLive do
         <input type="hidden" name="data_saver" value="off" />
         <input type="checkbox" name="data_saver" value="on" checked={@data_saver == "on"} class="sr-only peer" />
         <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
-        <span class="font-display font-black uppercase text-xl leading-none text-fg">Data saver</span>
+        <span class="font-display font-black uppercase text-xl leading-none text-fg">{gettext("Data saver")}</span>
       </label>
       <p class="mt-3 text-sm text-muted">
-        Minimizes data usage by preventing automatic prefetching (e.g., upcoming reader pages and covers on hover).
+        {gettext(
+          "Minimizes data usage by preventing automatic prefetching (e.g., upcoming reader pages and covers on hover)."
+        )}
       </p>
     </form>
     """
@@ -324,7 +329,7 @@ defmodule StashixWeb.SettingsLive do
 
   defp personal_tab(assigns) do
     ~H"""
-    <.section title="About you">
+    <.section title={gettext("About you")}>
       <.form
         for={@form}
         id="profile-form"
@@ -333,25 +338,34 @@ defmodule StashixWeb.SettingsLive do
         class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl"
       >
         <.field
-          label="Display name"
-          hint="Shown in the top bar instead of your username."
+          label={gettext("Display name")}
+          hint={gettext("Shown in the top bar instead of your username.")}
           error={field_error(@form, :display_name)}
         >
           <.text_input name="profile[display_name]" value={@form[:display_name].value} autocomplete="name" />
         </.field>
-        <.field label="Username" hint="What you sign in with." required error={field_error(@form, :username)}>
+        <.field
+          label={gettext("Username")}
+          hint={gettext("What you sign in with.")}
+          required
+          error={field_error(@form, :username)}
+        >
           <.text_input name="profile[username]" value={@form[:username].value} required autocomplete="username" />
         </.field>
-        <.field label="Birth date" error={field_error(@form, :birth_date)}>
+        <.field label={gettext("Birth date")} error={field_error(@form, :birth_date)}>
           <.text_input type="date" name="profile[birth_date]" value={@form[:birth_date].value} />
         </.field>
         <div class="sm:col-span-2 flex items-center gap-4 pt-1">
-          <.ink_button type="submit" size="md">Save profile</.ink_button>
+          <.ink_button type="submit" size="md">{gettext("Save profile")}</.ink_button>
           <p class="text-xs text-muted">
-            Email and password are under <.link
-              patch={~p"/settings/security"}
-              class="underline underline-offset-4 hover:text-fg"
-            >Security</.link>.
+            <.rich_text text={gettext("Email and password are under %{security}.", security: rich_marker("security"))}>
+              <:part name="security">
+                <.link
+                  patch={~p"/settings/security"}
+                  class="underline underline-offset-4 hover:text-fg"
+                >{gettext("Security")}</.link>
+              </:part>
+            </.rich_text>
           </p>
         </div>
       </.form>
@@ -359,9 +373,9 @@ defmodule StashixWeb.SettingsLive do
 
     <.panel variant="indicia">
       <.stat_list class="px-6 py-5">
-        <.stat label="Role">{@current_user.role}</.stat>
-        <.stat label="Email">{@current_user.email}</.stat>
-        <.stat label="Member since">{Calendar.strftime(@current_user.inserted_at, "%b %Y")}</.stat>
+        <.stat label={gettext("Role")}>{role_label(@current_user.role)}</.stat>
+        <.stat label={gettext("Email")}>{@current_user.email}</.stat>
+        <.stat label={gettext("Member since")}>{Calendar.strftime(@current_user.inserted_at, "%b %Y")}</.stat>
       </.stat_list>
     </.panel>
     """
@@ -377,17 +391,17 @@ defmodule StashixWeb.SettingsLive do
     ~H"""
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
       <.panel class="p-5 sm:p-6">
-        <.display_heading size="panel" class="mb-1">Password</.display_heading>
-        <p class="mb-5 text-sm text-muted">Changing it signs you out on every other device.</p>
+        <.display_heading size="panel" class="mb-1">{gettext("Password")}</.display_heading>
+        <p class="mb-5 text-sm text-muted">{gettext("Changing it signs you out on every other device.")}</p>
         <form id="password-form" method="post" action={~p"/settings/password"} class="space-y-4">
           <input type="hidden" name="_csrf_token" value={@csrf} />
-          <.field label="Current password">
+          <.field label={gettext("Current password")}>
             <.text_input type="password" name="current_password" required autocomplete="current-password" />
           </.field>
-          <.field label="New password" hint="At least 8 characters.">
+          <.field label={gettext("New password")} hint={gettext("At least 8 characters.")}>
             <.text_input type="password" name="password" required minlength="8" autocomplete="new-password" />
           </.field>
-          <.field label="Repeat new password">
+          <.field label={gettext("Repeat new password")}>
             <.text_input
               type="password"
               name="password_confirmation"
@@ -396,31 +410,33 @@ defmodule StashixWeb.SettingsLive do
               autocomplete="new-password"
             />
           </.field>
-          <.ink_button type="submit" size="md">Change password</.ink_button>
+          <.ink_button type="submit" size="md">{gettext("Change password")}</.ink_button>
         </form>
       </.panel>
 
       <div class="space-y-6">
         <.panel class="p-5 sm:p-6">
-          <.display_heading size="panel" class="mb-1">Email</.display_heading>
+          <.display_heading size="panel" class="mb-1">{gettext("Email")}</.display_heading>
           <p class="mb-5 text-sm text-muted">
-            Currently <span class="font-semibold text-fg-soft">{@current_user.email}</span>.
+            <.rich_text text={gettext("Currently %{email}.", email: rich_marker("email"))}>
+              <:part name="email"><span class="font-semibold text-fg-soft">{@current_user.email}</span></:part>
+            </.rich_text>
           </p>
           <form id="email-form" method="post" action={~p"/settings/email"} class="space-y-4">
             <input type="hidden" name="_csrf_token" value={@csrf} />
-            <.field label="New email">
+            <.field label={gettext("New email")}>
               <.text_input type="email" name="email" required autocomplete="email" />
             </.field>
-            <.field label="Current password">
+            <.field label={gettext("Current password")}>
               <.text_input type="password" name="current_password" required autocomplete="current-password" />
             </.field>
-            <.ink_button type="submit" size="md">Change email</.ink_button>
+            <.ink_button type="submit" size="md">{gettext("Change email")}</.ink_button>
           </form>
         </.panel>
 
         <.panel class="p-5 sm:p-6">
-          <.display_heading size="panel" class="mb-1">Sessions</.display_heading>
-          <p class="mb-4 text-sm text-muted">Where this account is signed in.</p>
+          <.display_heading size="panel" class="mb-1">{gettext("Sessions")}</.display_heading>
+          <p class="mb-4 text-sm text-muted">{gettext("Where this account is signed in.")}</p>
           <ul :if={@sessions != []} id="sessions" class="mb-5 border-y border-fg/10 divide-y divide-fg/10">
             <li
               :for={session <- @sessions}
@@ -435,10 +451,12 @@ defmodule StashixWeb.SettingsLive do
                   {Session.device(session)}
                 </p>
                 <p class="text-xs text-muted">
-                  {last_seen(session)} · signed in {Calendar.strftime(session.inserted_at, "%-d %b %Y")}
+                  {last_seen(session)} · {gettext("signed in %{date}",
+                    date: Calendar.strftime(session.inserted_at, "%-d %b %Y")
+                  )}
                 </p>
                 <p :if={session.ip_address} class="text-xs text-muted">
-                  IP:
+                  {gettext("IP:")}
                   <span
                     class="relative inline-block font-mono align-baseline cursor-pointer"
                     phx-click={
@@ -452,7 +470,7 @@ defmodule StashixWeb.SettingsLive do
                 </p>
               </div>
               <.sticker :if={session.id == @current_session_id} size="xs" tilt={false} class="shrink-0 uppercase">
-                This one
+                {gettext("This one")}
               </.sticker>
               <.ink_button
                 :if={session.id != @current_session_id}
@@ -461,22 +479,22 @@ defmodule StashixWeb.SettingsLive do
                 class="shrink-0"
                 phx-click="revoke_session"
                 phx-value-id={session.id}
-                aria-label={"Sign out #{Session.device(session)}"}
+                aria-label={gettext("Sign out %{device}", device: Session.device(session))}
               >
-                Sign out
+                {gettext("Sign out")}
               </.ink_button>
             </li>
           </ul>
           <p :if={@sessions == []} id="sessions-empty" class="mb-5 text-sm text-faint">
-            None recorded yet. Sign-ins from before this list existed show up once they sign in again.
+            {gettext("None recorded yet. Sign-ins from before this list existed show up once they sign in again.")}
           </p>
           <p class="mb-5 text-sm text-muted">
-            Left a device signed in? This signs the account out of every browser and app except this one.
+            {gettext("Left a device signed in? This signs the account out of every browser and app except this one.")}
           </p>
           <form id="sessions-form" method="post" action={~p"/settings/sessions/revoke"}>
             <input type="hidden" name="_csrf_token" value={@csrf} />
             <.ink_button type="submit" size="md" variant="warning">
-              <.icon name="lucide-log-out" class="w-4 h-4" /> Sign out everywhere else
+              <.icon name="lucide-log-out" class="w-4 h-4" /> {gettext("Sign out everywhere else")}
             </.ink_button>
           </form>
         </.panel>
@@ -495,25 +513,38 @@ defmodule StashixWeb.SettingsLive do
     ~H"""
     <.panel variant="indicia">
       <.stat_list class="px-6 py-5">
-        <.stat label="Version">{@version}</.stat>
-        <.stat label="License">AGPL-3.0-or-later</.stat>
+        <.stat label={gettext("Version")}>{@version}</.stat>
+        <.stat label={gettext("License")}>AGPL-3.0-or-later</.stat>
       </.stat_list>
     </.panel>
 
-    <.section title="Source code">
+    <.section title={gettext("Source code")}>
       <p class="max-w-xl -mt-1 text-sm text-muted">
-        Stashix is free software: you can redistribute and modify it under the terms of the <a
-          href="https://www.gnu.org/licenses/agpl-3.0.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline underline-offset-4 hover:text-fg"
-        >GNU Affero General Public License</a>, version 3 or later. The source code for this server is at <a
-          id="source-link"
-          href={@source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline underline-offset-4 hover:text-fg"
-        >{@source_url}</a>.
+        <.rich_text text={
+          gettext(
+            "Stashix is free software: you can redistribute and modify it under the terms of the %{license}, version 3 or later. The source code for this server is at %{source}.",
+            license: rich_marker("license"),
+            source: rich_marker("source")
+          )
+        }>
+          <:part name="license">
+            <a
+              href="https://www.gnu.org/licenses/agpl-3.0.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline underline-offset-4 hover:text-fg"
+            >{gettext("GNU Affero General Public License")}</a>
+          </:part>
+          <:part name="source">
+            <a
+              id="source-link"
+              href={@source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="underline underline-offset-4 hover:text-fg"
+            >{@source_url}</a>
+          </:part>
+        </.rich_text>
       </p>
     </.section>
     """

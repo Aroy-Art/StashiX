@@ -14,51 +14,16 @@ defmodule StashixWeb.SearchLive do
   # depending on its column count (see preview_class/1).
   @preview 18
 
-  @types [
-    {"All", "all"},
-    {"Issues", "issue"},
-    {"Books", "standalone"},
-    {"Series", "series"}
-  ]
-
-  @read_statuses [
-    {"Any", ""},
-    {"Unread", "unread"},
-    {"In progress", "in_progress"},
-    {"Read", "read"}
-  ]
-
-  @sort_options [
-    {"Relevance", "relevance"},
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
+  @type_values ~w(all issue standalone series)
 
   @age_ratings Ecto.Enum.values(Book, :age_rating)
   @age_rating_strings Enum.map(@age_ratings, &to_string/1)
   @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
-  @series_statuses [
-    {"Any", ""},
-    {"Ongoing", "ongoing"},
-    {"Completed", "completed"}
-  ]
-
   # URL params that count as filters (everything except q, type, sort, page).
   @filter_keys ~w(from to age creator creator_match role library publisher genre tag character team location status series_status)
-  # Name-based book facets, each with a typeahead picker: {param, title, plural}.
-  @facets [
-    {"genre", "Genre", "genres"},
-    {"tag", "Tag", "tags"},
-    {"character", "Character", "characters"},
-    {"team", "Team", "teams"},
-    {"location", "Location", "locations"}
-  ]
-  @facet_keys Enum.map(@facets, &elem(&1, 0))
+  # Name-based book facets, each with a typeahead picker; facets/0 has their labels.
+  @facet_keys ~w(genre tag character team location)
   @max_facet_names 10
   @max_creators 10
 
@@ -68,7 +33,7 @@ defmodule StashixWeb.SearchLive do
 
     {:ok,
      assign(socket,
-       page_title: "Search",
+       page_title: gettext("Search"),
        params: %{},
        page: 1,
        books: [],
@@ -81,16 +46,16 @@ defmodule StashixWeb.SearchLive do
        total_pages: 1,
        progress_map: %{},
        publishers: Library.list_publishers_with_books(socket.assigns.access),
-       facets: @facets,
+       facets: facets(),
        # Facets nothing in the library uses stay out of the sidebar.
        facets_present: Enum.filter(@facet_keys, &Library.facet_any?(String.to_existing_atom(&1))),
        facet_query: {nil, ""},
        facet_suggestions: [],
        year_counts: year_counts,
        years: Enum.map(year_counts, &elem(&1, 0)),
-       types: @types,
-       read_statuses: @read_statuses,
-       series_statuses: @series_statuses,
+       types: types(),
+       read_statuses: read_statuses(),
+       series_statuses: series_statuses(),
        age_ratings: @age_ratings,
        credit_roles: @credit_roles,
        creator_query: "",
@@ -261,9 +226,9 @@ defmodule StashixWeb.SearchLive do
   defp normalize_params(params, years) do
     q = params |> Map.get("q", "") |> to_string() |> String.trim()
 
-    type = if params["type"] in Enum.map(@types, &elem(&1, 1)), do: params["type"], else: "all"
+    type = if params["type"] in @type_values, do: params["type"], else: "all"
 
-    sort_values = Enum.map(@sort_options, &elem(&1, 1))
+    sort_values = Enum.map(search_sort_options(), &elem(&1, 1))
     sort = if params["sort"] in sort_values, do: params["sort"], else: nil
     # Relevance only means something with a query.
     sort = if sort == "relevance" and q == "", do: nil, else: sort
@@ -469,17 +434,17 @@ defmodule StashixWeb.SearchLive do
     year =
       case {params["from"], params["to"]} do
         {nil, nil} -> []
-        {f, nil} -> [{"Released #{f}+", "year", nil}]
-        {nil, t} -> [{"Released ≤ #{t}", "year", nil}]
-        {y, y} -> [{"Released #{y}", "year", nil}]
-        {f, t} -> [{"Released #{f}–#{t}", "year", nil}]
+        {f, nil} -> [{gettext("Released %{year}+", year: f), "year", nil}]
+        {nil, t} -> [{gettext("Released ≤ %{year}", year: t), "year", nil}]
+        {y, y} -> [{gettext("Released %{year}", year: y), "year", nil}]
+        {f, t} -> [{gettext("Released %{from}–%{to}", from: f, to: t), "year", nil}]
       end
 
     ages = for a <- params["age"], do: {short_age_label(a), "age", a}
 
     library =
       if id = params["library"] do
-        name = Enum.find_value(assigns.sidebar_libraries, "Library", &(&1.id == id && &1.name))
+        name = Enum.find_value(assigns.sidebar_libraries, gettext("Library"), &(&1.id == id && &1.name))
         [{name, "library", nil}]
       else
         []
@@ -487,39 +452,46 @@ defmodule StashixWeb.SearchLive do
 
     publisher =
       if id = params["publisher"] do
-        name = Enum.find_value(assigns.publishers, "Publisher", &(&1.id == id && &1.name))
+        name = Enum.find_value(assigns.publishers, gettext("Publisher"), &(&1.id == id && &1.name))
         [{name, "publisher", nil}]
       else
         []
       end
 
-    joiner = if params["creator_match"] == "any", do: "or", else: "and"
-
     creator =
       assigns.selected_creators
       |> Enum.with_index()
       |> Enum.map(fn {c, i} ->
-        label = if i == 0, do: "Creator: #{c.name}", else: "#{joiner} #{c.name}"
+        label =
+          cond do
+            i == 0 -> gettext("Creator: %{name}", name: c.name)
+            params["creator_match"] == "any" -> gettext("or %{name}", name: c.name)
+            true -> gettext("and %{name}", name: c.name)
+          end
+
         {label, "creator", c.id}
       end)
 
-    role = if r = params["role"], do: [{"Role: #{r}", "role", nil}], else: []
+    role = if r = params["role"], do: [{gettext("Role: %{role}", role: r), "role", nil}], else: []
 
     status =
       if s = params["status"] do
-        [{List.keyfind(@read_statuses, s, 1) |> elem(0), "status", nil}]
+        [{List.keyfind(read_statuses(), s, 1) |> elem(0), "status", nil}]
       else
         []
       end
 
     series_status =
       if s = params["series_status"] do
-        [{List.keyfind(@series_statuses, s, 1) |> elem(0), "series_status", nil}]
+        [{List.keyfind(series_statuses(), s, 1) |> elem(0), "series_status", nil}]
       else
         []
       end
 
-    facets = for {key, title, _} <- @facets, name <- params[key], do: {"#{title}: #{name}", key, name}
+    facets =
+      for {key, title, _, _} <- facets(),
+          name <- params[key],
+          do: {gettext("%{facet}: %{name}", facet: title, name: name), key, name}
 
     year ++ ages ++ creator ++ role ++ library ++ publisher ++ facets ++ status ++ series_status
   end
@@ -535,13 +507,48 @@ defmodule StashixWeb.SearchLive do
     |> Enum.take(@max_facet_names)
   end
 
-  defp short_age_label("unknown"), do: "Unrated"
-  defp short_age_label("everyone"), do: "Everyone"
-  defp short_age_label("teen"), do: "Teen"
-  defp short_age_label("teen_plus"), do: "Teen+"
-  defp short_age_label("mature"), do: "Mature"
-  defp short_age_label("adult"), do: "Adult"
-  defp short_age_label("explicit"), do: "Explicit"
+  defp types do
+    [
+      {gettext("All"), "all"},
+      {gettext("Issues"), "issue"},
+      {gettext("Books"), "standalone"},
+      {gettext("Series"), "series"}
+    ]
+  end
+
+  defp read_statuses do
+    [
+      {gettext("Any"), ""},
+      {gettext("Unread"), "unread"},
+      {gettext("In progress"), "in_progress"},
+      {gettext("Read"), "read"}
+    ]
+  end
+
+  defp series_statuses do
+    [{gettext("Any"), ""}, {gettext("Ongoing"), "ongoing"}, {gettext("Completed"), "completed"}]
+  end
+
+  defp search_sort_options, do: [{gettext("Relevance"), "relevance"} | sort_options(:titles)]
+
+  # {param, title, search placeholder, nothing-found text}
+  defp facets do
+    [
+      {"genre", gettext("Genre"), gettext("Search genres..."), gettext("No genres found")},
+      {"tag", gettext("Tag"), gettext("Search tags..."), gettext("No tags found")},
+      {"character", gettext("Character"), gettext("Search characters..."), gettext("No characters found")},
+      {"team", gettext("Team"), gettext("Search teams..."), gettext("No teams found")},
+      {"location", gettext("Location"), gettext("Search locations..."), gettext("No locations found")}
+    ]
+  end
+
+  defp short_age_label("unknown"), do: gettext("Unrated")
+  defp short_age_label("everyone"), do: gettext("Everyone")
+  defp short_age_label("teen"), do: gettext("Teen")
+  defp short_age_label("teen_plus"), do: gettext("Teen+")
+  defp short_age_label("mature"), do: gettext("Mature")
+  defp short_age_label("adult"), do: gettext("Adult")
+  defp short_age_label("explicit"), do: gettext("Explicit")
   defp short_age_label(other), do: other
 
   defp filter_count(params) do
@@ -591,7 +598,7 @@ defmodule StashixWeb.SearchLive do
       assign(assigns,
         active: active_filters(assigns.params, assigns),
         filter_count: filter_count(assigns.params),
-        sort_options: @sort_options,
+        sort_options: search_sort_options(),
         count: result_count(assigns),
         backdrop: backdrop_cover(assigns),
         show_series: assigns.series != [] and assigns.params["type"] in ["all", "series"],
@@ -610,7 +617,7 @@ defmodule StashixWeb.SearchLive do
             </.ghost_numeral>
 
             <div class="rise relative flex items-center gap-3 mb-2" style="--i:1">
-              <.eyebrow>Search the stash</.eyebrow>
+              <.eyebrow>{gettext("Search the stash")}</.eyebrow>
               <span class="hidden sm:block"><.kbd keys={["Ctrl", "K"]} /></span>
             </div>
 
@@ -626,8 +633,8 @@ defmodule StashixWeb.SearchLive do
                 value={@params["q"]}
                 data-ctrl-k-target
                 phx-debounce="300"
-                placeholder="Title or creator"
-                aria-label="Search"
+                placeholder={gettext("Title or creator")}
+                aria-label={gettext("Search")}
                 autocomplete="off"
                 class="search-headline w-full pt-1 pb-2 pl-10 sm:pl-12 md:pl-14 pr-12 sm:pr-14 text-4xl sm:text-5xl md:text-6xl text-fg"
                 autofocus
@@ -636,7 +643,7 @@ defmodule StashixWeb.SearchLive do
                 :if={@params["q"] != ""}
                 type="button"
                 phx-click={JS.push("clear_query") |> JS.dispatch("stashix:clear-input", to: "#search-q")}
-                aria-label="Clear search"
+                aria-label={gettext("Clear search")}
                 class="absolute right-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-raised hover:bg-ink text-fg-soft hover:text-gray-950 transition-colors"
               >
                 <.icon name="lucide-x" class="w-5 h-5" />
@@ -649,7 +656,7 @@ defmodule StashixWeb.SearchLive do
             >
               <span>
                 <span class="text-fg font-semibold">{delimit(@count)}</span>
-                {if @count == 1, do: "result", else: "results"}
+                {ngettext("result", "results", @count)}
               </span>
             </p>
           </header>
@@ -657,7 +664,7 @@ defmodule StashixWeb.SearchLive do
           <%!-- Filters: rail on lg+, slide-over drawer below --%>
           <aside
             id="search-filters"
-            aria-label="Filters"
+            aria-label={gettext("Filters")}
             class="filter-drawer lg:col-start-2 lg:row-start-2 lg:row-span-2 lg:self-start"
           >
             <.panel
@@ -667,15 +674,15 @@ defmodule StashixWeb.SearchLive do
             >
               <div class="sticky top-0 z-10 flex items-center gap-3 px-5 py-4 bg-surface lg:static lg:bg-transparent">
                 <.display_heading size="panel" count={@filter_count > 0 && @filter_count} count_tone="ink">
-                  Filters
+                  {gettext("Filters")}
                 </.display_heading>
                 <.text_link :if={@filter_count > 0} type="button" phx-click="clear_filters" class="ml-auto">
-                  Clear all
+                  {gettext("Clear all")}
                 </.text_link>
                 <button
                   type="button"
                   phx-click={close_filters()}
-                  aria-label="Close filters"
+                  aria-label={gettext("Close filters")}
                   class={[
                     "lg:hidden flex items-center justify-center w-8 h-8 rounded-lg bg-raised hover:bg-strong text-fg-soft hover:text-fg transition-colors",
                     @filter_count == 0 && "ml-auto"
@@ -685,11 +692,11 @@ defmodule StashixWeb.SearchLive do
                 </button>
               </div>
 
-              <.filter_section :if={@year_counts != []} title="Release year">
+              <.filter_section :if={@year_counts != []} title={gettext("Release year")}>
                 <.year_range counts={@year_counts} from={@params["from"]} to={@params["to"]} />
               </.filter_section>
 
-              <.filter_section title="Age rating">
+              <.filter_section title={gettext("Age rating")}>
                 <div class="flex flex-wrap gap-1.5">
                   <%= for rating <- @age_ratings do %>
                     <% value = to_string(rating) %>
@@ -707,7 +714,7 @@ defmodule StashixWeb.SearchLive do
                 </div>
               </.filter_section>
 
-              <.filter_section title="Read status">
+              <.filter_section title={gettext("Read status")}>
                 <div class="grid grid-cols-2 gap-1.5">
                   <%= for {label, value} <- @read_statuses do %>
                     <.pill active={(@params["status"] || "") == value} class="text-center">
@@ -724,7 +731,7 @@ defmodule StashixWeb.SearchLive do
                 </div>
               </.filter_section>
 
-              <.filter_section :if={@params["type"] in ["all", "series"]} title="Series status">
+              <.filter_section :if={@params["type"] in ["all", "series"]} title={gettext("Series status")}>
                 <div class="grid grid-cols-3 gap-1.5">
                   <%= for {label, value} <- @series_statuses do %>
                     <.pill active={(@params["series_status"] || "") == value} class="text-center">
@@ -741,7 +748,7 @@ defmodule StashixWeb.SearchLive do
                 </div>
               </.filter_section>
 
-              <.filter_section title="Creator">
+              <.filter_section title={gettext("Creator")}>
                 <.creator_picker
                   selected={@selected_creators}
                   match={@params["creator_match"] || "all"}
@@ -751,33 +758,33 @@ defmodule StashixWeb.SearchLive do
                 <.ink_select
                   id="filter-role"
                   name="role"
-                  label="Role"
+                  label={gettext("Role")}
                   variant="field"
-                  prompt="Any role"
+                  prompt={gettext("Any role")}
                   value={@params["role"]}
                   options={Enum.map(@credit_roles, &{&1, &1})}
                 />
               </.filter_section>
 
-              <.filter_section :if={length(@sidebar_libraries) > 1} title="Library">
+              <.filter_section :if={length(@sidebar_libraries) > 1} title={gettext("Library")}>
                 <.ink_select
                   id="filter-library"
                   name="library"
-                  label="Library"
+                  label={gettext("Library")}
                   variant="field"
-                  prompt="All libraries"
+                  prompt={gettext("All libraries")}
                   value={@params["library"]}
                   options={Enum.map(@sidebar_libraries, &{&1.name, &1.id})}
                 />
               </.filter_section>
 
-              <.filter_section :if={@publishers != []} title="Publisher">
+              <.filter_section :if={@publishers != []} title={gettext("Publisher")}>
                 <.ink_select
                   id="filter-publisher"
                   name="publisher"
-                  label="Publisher"
+                  label={gettext("Publisher")}
                   variant="field"
-                  prompt="All publishers"
+                  prompt={gettext("All publishers")}
                   searchable
                   value={@params["publisher"]}
                   options={Enum.map(@publishers, &{&1.name, &1.id})}
@@ -785,13 +792,14 @@ defmodule StashixWeb.SearchLive do
               </.filter_section>
 
               <.filter_section
-                :for={{key, title, plural} <- @facets}
+                :for={{key, title, placeholder, none_found} <- @facets}
                 :if={key in @facets_present || @params[key] != []}
                 title={title}
               >
                 <.facet_picker
                   key={key}
-                  plural={plural}
+                  placeholder={placeholder}
+                  none_found={none_found}
                   selected={@params[key]}
                   query={if elem(@facet_query, 0) == key, do: elem(@facet_query, 1), else: ""}
                   suggestions={@facet_suggestions}
@@ -800,7 +808,7 @@ defmodule StashixWeb.SearchLive do
 
               <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-surface">
                 <.ink_button type="button" phx-click={close_filters()} class="w-full">
-                  Show {delimit(@count)} {if @count == 1, do: "result", else: "results"}
+                  {ngettext("Show 1 result", "Show %{number} results", @count, number: delimit(@count))}
                 </.ink_button>
               </div>
             </.panel>
@@ -822,7 +830,7 @@ defmodule StashixWeb.SearchLive do
           <div
             class="grid grid-cols-4 gap-1 w-full sm:flex sm:items-center sm:gap-2 sm:w-auto"
             role="tablist"
-            aria-label="Result type"
+            aria-label={gettext("Result type")}
           >
             <%= for {label, value} <- @types do %>
               <button
@@ -857,7 +865,7 @@ defmodule StashixWeb.SearchLive do
               phx-click={open_filters()}
               class="lg:hidden inline-flex items-center gap-2 h-9 px-4 text-sm font-medium rounded-full border bg-surface border-line-strong text-fg hover:border-line-strong transition-colors"
             >
-              <.icon name="lucide-sliders-horizontal" class="w-3.5 h-3.5" /> Filters
+              <.icon name="lucide-sliders-horizontal" class="w-3.5 h-3.5" /> {gettext("Filters")}
               <span
                 :if={@filter_count > 0}
                 class="px-1.5 rounded-sm bg-ink text-gray-950 text-xs font-bold tabular-nums"
@@ -869,7 +877,7 @@ defmodule StashixWeb.SearchLive do
               <.ink_select
                 id="search-sort-input"
                 name="value"
-                label="Sort results"
+                label={gettext("Sort results")}
                 value={@params["sort"]}
                 options={Enum.filter(@sort_options, fn {_, value} -> value != "relevance" or @params["q"] != "" end)}
               />
@@ -892,12 +900,12 @@ defmodule StashixWeb.SearchLive do
                 <.icon name="lucide-x" class="w-3 h-3" />
               </button>
             <% end %>
-            <.text_link type="button" phx-click="clear_filters" class="px-1">Clear all</.text_link>
+            <.text_link type="button" phx-click="clear_filters" class="px-1">{gettext("Clear all")}</.text_link>
           </div>
 
           <section :if={@show_series}>
             <.results_heading
-              title="Series"
+              title={gettext("Series")}
               total={@series_total}
               show_all={@params["type"] == "all" and @series_total > 12 and "series"}
             />
@@ -908,12 +916,12 @@ defmodule StashixWeb.SearchLive do
                 class={if @params["type"] == "all", do: preview_class(i)}
               />
             </.cover_grid>
-            <.show_more :if={@params["type"] == "all"} total={@series_total} type="series" one="series" many="series" />
+            <.show_more :if={@params["type"] == "all"} total={@series_total} type="series" />
           </section>
 
           <section :if={@show_standalone_books}>
             <.results_heading
-              title="Books"
+              title={gettext("Books")}
               total={@standalone_books_total}
               show_all={@standalone_books_total > 12 and "standalone"}
             />
@@ -932,13 +940,13 @@ defmodule StashixWeb.SearchLive do
                 blurhash={b.cover && b.cover.blurhash}
               />
             </.cover_grid>
-            <.show_more total={@standalone_books_total} type="standalone" one="book" many="books" />
+            <.show_more total={@standalone_books_total} type="standalone" />
           </section>
 
           <section :if={@show_books}>
             <.results_heading
               :if={@params["type"] == "all"}
-              title="Issues"
+              title={gettext("Issues")}
               total={@books_total}
               show_all={@books_total > 12 and "issue"}
             />
@@ -957,7 +965,7 @@ defmodule StashixWeb.SearchLive do
                 blurhash={book.cover && book.cover.blurhash}
               />
             </.cover_grid>
-            <.show_more :if={@params["type"] == "all"} total={@books_total} type="issue" one="issue" many="issues" />
+            <.show_more :if={@params["type"] == "all"} total={@books_total} type="issue" />
           </section>
 
           <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
@@ -966,12 +974,16 @@ defmodule StashixWeb.SearchLive do
           <.empty_state
             :if={!@loading and !@show_series and !@show_standalone_books and !@show_books}
             ghost="0"
-            title={if @filter_count > 0 or @params["q"] != "", do: "Nothing in the long box", else: "Nothing here yet"}
+            title={
+              if @filter_count > 0 or @params["q"] != "",
+                do: gettext("Nothing in the long box"),
+                else: gettext("Nothing here yet")
+            }
           >
-            <span :if={@filter_count > 0 or @params["q"] != ""}>Loosen the filters or try another spelling.</span>
+            <span :if={@filter_count > 0 or @params["q"] != ""}>{gettext("Loosen the filters or try another spelling.")}</span>
             <:actions :if={@filter_count > 0}>
               <.ink_button type="button" phx-click="clear_filters">
-                <.icon name="lucide-funnel-x" class="w-4 h-4" /> Clear filters
+                <.icon name="lucide-funnel-x" class="w-4 h-4" /> {gettext("Clear filters")}
               </.ink_button>
             </:actions>
           </.empty_state>
@@ -1008,7 +1020,7 @@ defmodule StashixWeb.SearchLive do
     <div class="flex items-end justify-between gap-4 mb-4">
       <.display_heading count={delimit(@total)}>{@title}</.display_heading>
       <.text_link :if={@show_all} type="button" phx-click="set_type" phx-value-type={@show_all}>
-        Show all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+        {gettext("Show all")} <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
       </.text_link>
     </div>
     """
@@ -1016,8 +1028,6 @@ defmodule StashixWeb.SearchLive do
 
   attr :total, :integer, required: true
   attr :type, :string, required: true
-  attr :one, :string, required: true
-  attr :many, :string, required: true
 
   # "Show N more" under a preview grid. How many cards are visible depends on
   # the column count (see preview_class/1), so each breakpoint gets its own
@@ -1042,12 +1052,22 @@ defmodule StashixWeb.SearchLive do
         "group items-center justify-center gap-2.5 w-full mt-4 px-5 py-3 rounded-md border border-line-strong bg-surface text-fg font-display font-extrabold uppercase text-xl leading-none tracking-wide hover:border-ink hover:bg-raised transition-colors"
       ]}
     >
-      Show <span class="text-ink tabular-nums">{delimit(@total - shown)}</span>
-      more {if @total - shown == 1, do: @one, else: @many}
+      <.rich_text text={show_more_label(@type, @total - shown)}>
+        <:part name="number"><span class="text-ink tabular-nums">{delimit(@total - shown)}</span></:part>
+      </.rich_text>
       <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink transition-transform group-hover:translate-x-1" />
     </button>
     """
   end
+
+  defp show_more_label("series", n),
+    do: ngettext("Show 1 more series", "Show %{number} more series", n, number: rich_marker("number"))
+
+  defp show_more_label("standalone", n),
+    do: ngettext("Show 1 more book", "Show %{number} more books", n, number: rich_marker("number"))
+
+  defp show_more_label("issue", n),
+    do: ngettext("Show 1 more issue", "Show %{number} more issues", n, number: rich_marker("number"))
 
   attr :title, :string, required: true
   slot :inner_block, required: true
@@ -1118,9 +1138,9 @@ defmodule StashixWeb.SearchLive do
           data-label
           class="font-display font-bold uppercase text-xl leading-tight tracking-wide text-fg tabular-nums"
         >
-          {if @lo == @first and @hi == @last, do: "Any year", else: "#{@lo} – #{@hi}"}
+          {if @lo == @first and @hi == @last, do: gettext("Any year"), else: "#{@lo} – #{@hi}"}
         </span>
-        <span data-total class="text-xs text-muted tabular-nums">{@total} books</span>
+        <span data-total class="text-xs text-muted tabular-nums">{ngettext("1 book", "%{count} books", @total)}</span>
       </div>
 
       <%!-- Inset by half a thumb so bar centres line up with handle centres --%>
@@ -1130,7 +1150,7 @@ defmodule StashixWeb.SearchLive do
           data-bar
           data-year={b.year}
           data-active={b.active}
-          title={"#{b.year}: #{b.count} #{if b.count == 1, do: "book", else: "books"}"}
+          title={"#{b.year}: " <> ngettext("1 book", "%{count} books", b.count)}
           class="absolute bottom-0 -translate-x-1/2 rounded-t-[1px] bg-line-strong data-[active]:bg-violet-500 transition-colors"
           style={"left: #{b.left}%; width: max(#{@bar_width}%, 1px); height: #{b.height}%;"}
         />
@@ -1150,7 +1170,7 @@ defmodule StashixWeb.SearchLive do
           min={@first}
           max={@last}
           value={@lo}
-          aria-label="From year"
+          aria-label={gettext("From year")}
           class="year-range-input absolute inset-0 w-full"
         />
         <input
@@ -1159,7 +1179,7 @@ defmodule StashixWeb.SearchLive do
           min={@first}
           max={@last}
           value={@hi}
-          aria-label="To year"
+          aria-label={gettext("To year")}
           class="year-range-input absolute inset-0 w-full"
         />
       </div>
@@ -1192,10 +1212,10 @@ defmodule StashixWeb.SearchLive do
     <div
       :if={length(@selected) > 1}
       class="grid grid-cols-2 gap-1.5"
-      title="Match books credited to all selected creators, or to any of them"
+      title={gettext("Match books credited to all selected creators, or to any of them")}
     >
       <.pill
-        :for={{label, value} <- [{"All of them", "all"}, {"Any of them", "any"}]}
+        :for={{label, value} <- [{gettext("All of them"), "all"}, {gettext("Any of them"), "any"}]}
         active={@match == value}
         class="text-center"
       >
@@ -1216,7 +1236,7 @@ defmodule StashixWeb.SearchLive do
         type="text"
         name="creator_search"
         value={@query}
-        placeholder={if @selected == [], do: "Search creators...", else: "Add another creator..."}
+        placeholder={if @selected == [], do: gettext("Search creators..."), else: gettext("Add another creator...")}
         autocomplete="off"
         role="combobox"
         aria-autocomplete="list"
@@ -1239,7 +1259,7 @@ defmodule StashixWeb.SearchLive do
           <span class="shrink-0 text-xs text-muted tabular-nums">{c.credits}</span>
         </button>
         <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-muted">
-          No creators found
+          {gettext("No creators found")}
         </div>
       </div>
     </div>
@@ -1247,7 +1267,8 @@ defmodule StashixWeb.SearchLive do
   end
 
   attr :key, :string, required: true
-  attr :plural, :string, required: true
+  attr :placeholder, :string, required: true
+  attr :none_found, :string, required: true
   attr :selected, :list, required: true
   attr :query, :string, required: true
   attr :suggestions, :list, required: true
@@ -1267,7 +1288,7 @@ defmodule StashixWeb.SearchLive do
         type="text"
         name={"#{@key}_search"}
         value={@query}
-        placeholder={if @selected == [], do: "Search #{@plural}...", else: "Add another..."}
+        placeholder={if @selected == [], do: @placeholder, else: gettext("Add another...")}
         autocomplete="off"
         role="combobox"
         aria-autocomplete="list"
@@ -1291,7 +1312,7 @@ defmodule StashixWeb.SearchLive do
           <span class="shrink-0 text-xs text-muted tabular-nums">{s.books}</span>
         </button>
         <div :if={@suggestions == []} class="px-3 py-2.5 text-sm text-muted">
-          No {@plural} found
+          {@none_found}
         </div>
       </div>
     </div>
@@ -1314,7 +1335,7 @@ defmodule StashixWeb.SearchLive do
         phx-click="remove_filter"
         phx-value-key={@key}
         phx-value-value={@value}
-        aria-label={"Remove #{@label}"}
+        aria-label={gettext("Remove %{name}", name: @label)}
         class="p-0.5 rounded-sm hover:bg-ink hover:text-gray-950 transition-colors"
       >
         <.icon name="lucide-x" class="w-3.5 h-3.5" />

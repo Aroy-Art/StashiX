@@ -16,12 +16,12 @@ msgstr ""
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/stashix_web/live/settings_live.ex:178
+#: lib/stashix_web/live/settings_live.ex:179
 #, elixir-autogen, elixir-format
 msgid "Automatic"
 msgstr ""
 
-#: lib/stashix_web/live/settings_live.ex:184
+#: lib/stashix_web/live/settings_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "Automatic follows your browser's language. Saved to your account, so it follows you to other devices."
 msgstr ""
@@ -41,8 +41,10 @@ msgstr ""
 #: lib/stashix_web/live/series_live.ex:822
 #: lib/stashix_web/live/series_live.ex:1203
 #: lib/stashix_web/live/series_live.ex:1207
-#: lib/stashix_web/live/settings_live.ex:182
-#: lib/stashix_web/live/settings_live.ex:192
+#: lib/stashix_web/live/settings_live.ex:183
+#: lib/stashix_web/live/settings_live.ex:193
+#: lib/stashix_web/live/settings_live.ex:305
+#: lib/stashix_web/live/stats_live.ex:712
 #, elixir-autogen, elixir-format
 msgid "Language"
 msgstr ""
@@ -57,6 +59,7 @@ msgstr ""
 msgid "Success!"
 msgstr ""
 
+#: lib/stashix_web/live/settings_live.ex:49
 #: lib/stashix_web/live/settings_live.ex:57
 #, elixir-autogen, elixir-format
 msgid "That is not one of the choices."
@@ -106,7 +109,7 @@ msgstr ""
 msgid "+%{count} more"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:364
+#: lib/stashix_web/components/core_components.ex:409
 #: lib/stashix_web/live/creator_live.ex:250
 #: lib/stashix_web/live/home_live.ex:307
 #: lib/stashix_web/live/home_live.ex:520
@@ -118,7 +121,7 @@ msgid_plural "%{count} issues"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/stashix_web/components/core_components.ex:525
+#: lib/stashix_web/components/core_components.ex:570
 #: lib/stashix_web/live/book_live.ex:433
 #: lib/stashix_web/live/home_live.ex:285
 #, elixir-autogen, elixir-format
@@ -162,16 +165,19 @@ msgstr ""
 #: lib/stashix_web/components/layouts/app.html.heex:42
 #: lib/stashix_web/live/book_live.ex:354
 #: lib/stashix_web/live/series_live.ex:629
+#: lib/stashix_web/live/settings_live.ex:130
 #, elixir-autogen, elixir-format
 msgid "Admin"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:606
+#: lib/stashix_web/components/core_components.ex:651
 #: lib/stashix_web/live/home_live.ex:654
+#: lib/stashix_web/live/search_live.ex:775
 #, elixir-autogen, elixir-format
 msgid "All libraries"
 msgstr ""
 
+#: lib/stashix_web/live/settings_live.ex:401
 #: lib/stashix_web/live/setup_live.ex:122
 #, elixir-autogen, elixir-format
 msgid "At least 8 characters."
@@ -206,6 +212,9 @@ msgstr ""
 #: lib/stashix_web/live/all_books_live.ex:98
 #: lib/stashix_web/live/creator_live.ex:213
 #: lib/stashix_web/live/home_live.ex:468
+#: lib/stashix_web/live/search_live.ex:514
+#: lib/stashix_web/live/search_live.ex:924
+#: lib/stashix_web/live/stats_live.ex:138
 #, elixir-autogen, elixir-format
 msgid "Books"
 msgstr ""
@@ -232,6 +241,7 @@ msgid "Cancelled"
 msgstr ""
 
 #: lib/stashix_web/components/metadata_components.ex:72
+#: lib/stashix_web/live/stats_live.ex:734
 #, elixir-autogen, elixir-format
 msgid "Characters"
 msgstr ""
@@ -248,6 +258,7 @@ msgstr ""
 
 #: lib/stashix_web/components/detail_components.ex:74
 #: lib/stashix_web/components/ui/dialog.ex:56
+#: lib/stashix_web/live/reader_live.ex:480
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -287,6 +298,7 @@ msgid "Credits"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:128
+#: lib/stashix_web/live/settings_live.ex:229
 #, elixir-autogen, elixir-format
 msgid "Dark"
 msgstr ""
@@ -297,6 +309,8 @@ msgid "Done"
 msgstr ""
 
 #: lib/stashix_web/controllers/settings_controller.ex:74
+#: lib/stashix_web/live/settings_live.ex:377
+#: lib/stashix_web/live/settings_live.ex:419
 #: lib/stashix_web/live/setup_live.ex:114
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -327,12 +341,12 @@ msgstr ""
 msgid "First issue: set up your stash"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:670
+#: lib/stashix_web/components/core_components.ex:715
 #, elixir-autogen, elixir-format
 msgid "First page"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:567
+#: lib/stashix_web/components/core_components.ex:612
 #: lib/stashix_web/components/layouts/app.html.heex:405
 #: lib/stashix_web/live/book_live.ex:379
 #: lib/stashix_web/live/series_live.ex:690
@@ -356,6 +370,7 @@ msgid "Generating covers"
 msgstr ""
 
 #: lib/stashix_web/components/metadata_components.ex:60
+#: lib/stashix_web/live/stats_live.ex:733
 #, elixir-autogen, elixir-format
 msgid "Genres"
 msgstr ""
@@ -408,12 +423,15 @@ msgstr ""
 #: lib/stashix_web/live/all_issues_live.ex:98
 #: lib/stashix_web/live/creator_live.ex:214
 #: lib/stashix_web/live/home_live.ex:469
+#: lib/stashix_web/live/search_live.ex:513
+#: lib/stashix_web/live/search_live.ex:949
 #: lib/stashix_web/live/series_live.ex:847
+#: lib/stashix_web/live/stats_live.ex:137
 #, elixir-autogen, elixir-format
 msgid "Issues"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:707
+#: lib/stashix_web/components/core_components.ex:752
 #, elixir-autogen, elixir-format
 msgid "Last page"
 msgstr ""
@@ -435,12 +453,15 @@ msgstr ""
 #: lib/stashix_web/components/layouts/app.html.heex:378
 #: lib/stashix_web/live/home_live.ex:652
 #: lib/stashix_web/live/library_live.ex:194
+#: lib/stashix_web/live/search_live.ex:447
+#: lib/stashix_web/live/search_live.ex:769
+#: lib/stashix_web/live/search_live.ex:773
 #: lib/stashix_web/live/setup_live.ex:110
 #, elixir-autogen, elixir-format
 msgid "Library"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:558
+#: lib/stashix_web/components/core_components.ex:603
 #, elixir-autogen, elixir-format
 msgid "Library actions"
 msgstr ""
@@ -456,6 +477,7 @@ msgid "Library path"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:127
+#: lib/stashix_web/live/settings_live.ex:228
 #, elixir-autogen, elixir-format
 msgid "Light"
 msgstr ""
@@ -511,7 +533,7 @@ msgstr ""
 msgid "My Comics"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:701
+#: lib/stashix_web/components/core_components.ex:746
 #, elixir-autogen, elixir-format
 msgid "Next page"
 msgstr ""
@@ -568,19 +590,21 @@ msgstr ""
 msgid "Open the box"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:685
+#: lib/stashix_web/components/core_components.ex:730
 #, elixir-autogen, elixir-format
 msgid "Page %{number}"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:667
+#: lib/stashix_web/components/core_components.ex:712
 #: lib/stashix_web/live/series_live.ex:802
+#: lib/stashix_web/live/stats_live.ex:643
 #, elixir-autogen, elixir-format
 msgid "Pages"
 msgstr ""
 
 #: lib/stashix_web/controllers/settings_controller.ex:75
 #: lib/stashix_web/live/login_live.ex:82
+#: lib/stashix_web/live/settings_live.ex:394
 #: lib/stashix_web/live/setup_live.ex:121
 #, elixir-autogen, elixir-format
 msgid "Password"
@@ -596,13 +620,17 @@ msgstr ""
 msgid "Password confirmation"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:676
+#: lib/stashix_web/components/core_components.ex:721
 #, elixir-autogen, elixir-format
 msgid "Previous page"
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex:519
 #: lib/stashix_web/live/publisher_live.ex:164
+#: lib/stashix_web/live/search_live.ex:455
+#: lib/stashix_web/live/search_live.ex:781
+#: lib/stashix_web/live/search_live.ex:785
+#: lib/stashix_web/live/settings_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Publisher"
 msgstr ""
@@ -620,11 +648,13 @@ msgstr ""
 msgid "Queued"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:315
-#: lib/stashix_web/components/core_components.ex:318
-#: lib/stashix_web/components/core_components.ex:324
+#: lib/stashix_web/components/core_components.ex:360
+#: lib/stashix_web/components/core_components.ex:363
+#: lib/stashix_web/components/core_components.ex:369
 #: lib/stashix_web/live/book_live.ex:435
 #: lib/stashix_web/live/book_live.ex:486
+#: lib/stashix_web/live/reader_live.ex:376
+#: lib/stashix_web/live/search_live.ex:524
 #, elixir-autogen, elixir-format
 msgid "Read"
 msgstr ""
@@ -640,6 +670,7 @@ msgid "Refresh page"
 msgstr ""
 
 #: lib/stashix_web/components/metadata_edit_components.ex:239
+#: lib/stashix_web/live/search_live.ex:1338
 #, elixir-autogen, elixir-format
 msgid "Remove %{name}"
 msgstr ""
@@ -664,7 +695,7 @@ msgstr ""
 msgid "Scan"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:564
+#: lib/stashix_web/components/core_components.ex:609
 #, elixir-autogen, elixir-format
 msgid "Scan for new files"
 msgstr ""
@@ -685,6 +716,8 @@ msgid "Scanning for unsupported files"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:72
+#: lib/stashix_web/live/search_live.ex:36
+#: lib/stashix_web/live/search_live.ex:637
 #, elixir-autogen, elixir-format
 msgid "Search"
 msgstr ""
@@ -713,12 +746,16 @@ msgstr ""
 #: lib/stashix_web/live/creator_live.ex:212
 #: lib/stashix_web/live/home_live.ex:467
 #: lib/stashix_web/live/home_live.ex:517
+#: lib/stashix_web/live/search_live.ex:515
+#: lib/stashix_web/live/search_live.ex:908
 #, elixir-autogen, elixir-format
 msgid "Series"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:570
+#: lib/stashix_web/components/core_components.ex:615
 #: lib/stashix_web/components/layouts/app.html.heex:436
+#: lib/stashix_web/live/settings_live.ex:28
+#: lib/stashix_web/live/settings_live.ex:151
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
@@ -739,6 +776,7 @@ msgid "Sign in"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:440
+#: lib/stashix_web/live/settings_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "Sign out"
 msgstr ""
@@ -763,7 +801,7 @@ msgstr ""
 msgid "Skip library setup?"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:647
+#: lib/stashix_web/components/core_components.ex:692
 #, elixir-autogen, elixir-format
 msgid "Sort"
 msgstr ""
@@ -779,6 +817,8 @@ msgid "Stashix home"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:77
+#: lib/stashix_web/live/stats_live.ex:36
+#: lib/stashix_web/live/stats_live.ex:626
 #, elixir-autogen, elixir-format
 msgid "Stats"
 msgstr ""
@@ -790,6 +830,7 @@ msgid "Story Arcs"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:126
+#: lib/stashix_web/live/settings_live.ex:227
 #, elixir-autogen, elixir-format
 msgid "System"
 msgstr ""
@@ -816,6 +857,7 @@ msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex:139
 #: lib/stashix_web/components/layouts/app.html.heex:142
+#: lib/stashix_web/live/settings_live.ex:217
 #, elixir-autogen, elixir-format
 msgid "Theme"
 msgstr ""
@@ -852,6 +894,7 @@ msgid "Universes"
 msgstr ""
 
 #: lib/stashix_web/components/metadata_edit_components.ex:200
+#: lib/stashix_web/live/stats_live.ex:344
 #, elixir-autogen, elixir-format
 msgid "Unknown"
 msgstr ""
@@ -861,6 +904,7 @@ msgstr ""
 msgid "Unlock %{field}"
 msgstr ""
 
+#: lib/stashix_web/live/settings_live.ex:348
 #: lib/stashix_web/live/setup_live.ex:117
 #, elixir-autogen, elixir-format
 msgid "Username"
@@ -942,7 +986,7 @@ msgid_plural "%{count} votes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/stashix_web/components/core_components.ex:624
+#: lib/stashix_web/components/core_components.ex:669
 #, elixir-autogen, elixir-format
 msgid "A → Z"
 msgstr ""
@@ -967,7 +1011,9 @@ msgstr ""
 msgid "Adjacent issues"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:550
 #: lib/stashix_web/live/series_live.ex:1181
+#: lib/stashix_web/live/stats_live.ex:349
 #, elixir-autogen, elixir-format
 msgid "Adult"
 msgstr ""
@@ -980,11 +1026,14 @@ msgstr ""
 
 #: lib/stashix_web/live/book_live.ex:540
 #: lib/stashix_web/live/series_live.ex:816
+#: lib/stashix_web/live/settings_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "Age Rating"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:699
 #: lib/stashix_web/live/series_live.ex:1052
+#: lib/stashix_web/live/stats_live.ex:713
 #, elixir-autogen, elixir-format
 msgid "Age rating"
 msgstr ""
@@ -1059,6 +1108,7 @@ msgid "Apply the series publisher(s) to all issues. Choose how to handle issues 
 msgstr ""
 
 #: lib/stashix_web/live/creator_live.ex:153
+#: lib/stashix_web/live/stats_live.ex:480
 #, elixir-autogen, elixir-format
 msgid "Art"
 msgstr ""
@@ -1102,7 +1152,10 @@ msgstr ""
 msgid "Community rating"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:529
 #: lib/stashix_web/live/series_live.ex:742
+#: lib/stashix_web/live/stats_live.ex:190
+#: lib/stashix_web/live/stats_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "Completed"
 msgstr ""
@@ -1139,21 +1192,23 @@ msgid "Cover date"
 msgstr ""
 
 #: lib/stashix_web/live/creator_live.ex:156
+#: lib/stashix_web/live/stats_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "Covers"
 msgstr ""
 
 #: lib/stashix_web/live/creator_live.ex:266
+#: lib/stashix_web/live/search_live.ex:751
 #, elixir-autogen, elixir-format
 msgid "Creator"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:629
+#: lib/stashix_web/components/core_components.ex:674
 #, elixir-autogen, elixir-format
 msgid "Date Added ↑"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:628
+#: lib/stashix_web/components/core_components.ex:673
 #, elixir-autogen, elixir-format
 msgid "Date Added ↓"
 msgstr ""
@@ -1190,7 +1245,9 @@ msgstr ""
 msgid "Empty — scan it to fill it"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:546
 #: lib/stashix_web/live/series_live.ex:1177
+#: lib/stashix_web/live/stats_live.ex:345
 #, elixir-autogen, elixir-format
 msgid "Everyone"
 msgstr ""
@@ -1200,7 +1257,9 @@ msgstr ""
 msgid "Excluded from automatic matching"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:551
 #: lib/stashix_web/live/series_live.ex:1182
+#: lib/stashix_web/live/stats_live.ex:350
 #, elixir-autogen, elixir-format
 msgid "Explicit"
 msgstr ""
@@ -1235,6 +1294,7 @@ msgstr ""
 #: lib/stashix_web/live/book_live.ex:457
 #: lib/stashix_web/live/book_live.ex:525
 #: lib/stashix_web/live/series_live.ex:127
+#: lib/stashix_web/live/settings_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Format"
 msgstr ""
@@ -1264,12 +1324,12 @@ msgstr ""
 msgid "In stores"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:635
+#: lib/stashix_web/components/core_components.ex:680
 #, elixir-autogen, elixir-format
 msgid "Issue # ↑"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:635
+#: lib/stashix_web/components/core_components.ex:680
 #, elixir-autogen, elixir-format
 msgid "Issue # ↓"
 msgstr ""
@@ -1340,7 +1400,10 @@ msgstr ""
 msgid "Mark as unread"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:549
 #: lib/stashix_web/live/series_live.ex:1180
+#: lib/stashix_web/live/settings_live.ex:306
+#: lib/stashix_web/live/stats_live.ex:348
 #, elixir-autogen, elixir-format
 msgid "Mature"
 msgstr ""
@@ -1439,6 +1502,7 @@ msgid "None of their credits are on books you can see."
 msgstr ""
 
 #: lib/stashix_web/live/home_live.ex:620
+#: lib/stashix_web/live/search_live.ex:980
 #, elixir-autogen, elixir-format
 msgid "Nothing here yet"
 msgstr ""
@@ -1455,6 +1519,7 @@ msgstr ""
 msgid "Nothing on the shelves yet"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:529
 #: lib/stashix_web/live/series_live.ex:738
 #, elixir-autogen, elixir-format
 msgid "Ongoing"
@@ -1476,6 +1541,7 @@ msgid "Only update issues that have no publisher set."
 msgstr ""
 
 #: lib/stashix_web/live/creator_live.ex:159
+#: lib/stashix_web/live/stats_live.ex:487
 #, elixir-autogen, elixir-format
 msgid "Other"
 msgstr ""
@@ -1596,6 +1662,7 @@ msgstr ""
 
 #: lib/stashix_web/live/book_live.ex:446
 #: lib/stashix_web/live/home_live.ex:376
+#: lib/stashix_web/live/stats_live.ex:710
 #, elixir-autogen, elixir-format
 msgid "Reading progress"
 msgstr ""
@@ -1693,6 +1760,8 @@ msgstr ""
 
 #: lib/stashix_web/live/book_live.ex:529
 #: lib/stashix_web/live/series_live.ex:808
+#: lib/stashix_web/live/settings_live.ex:304
+#: lib/stashix_web/live/stats_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Size"
 msgstr ""
@@ -1718,12 +1787,16 @@ msgstr ""
 msgid "Stories"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:547
 #: lib/stashix_web/live/series_live.ex:1178
+#: lib/stashix_web/live/stats_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "Teen"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:548
 #: lib/stashix_web/live/series_live.ex:1179
+#: lib/stashix_web/live/stats_live.ex:347
 #, elixir-autogen, elixir-format
 msgid "Teen+"
 msgstr ""
@@ -1744,6 +1817,7 @@ msgid "Try scanning it."
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex:254
+#: lib/stashix_web/live/stats_live.ex:709
 #, elixir-autogen, elixir-format
 msgid "Type"
 msgstr ""
@@ -1754,6 +1828,7 @@ msgstr ""
 msgid "Unlock metadata"
 msgstr ""
 
+#: lib/stashix_web/live/search_live.ex:545
 #: lib/stashix_web/live/series_live.ex:1176
 #: lib/stashix_web/live/series_live.ex:1183
 #, elixir-autogen, elixir-format
@@ -1797,12 +1872,12 @@ msgstr ""
 msgid "Written"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:626
+#: lib/stashix_web/components/core_components.ex:671
 #, elixir-autogen, elixir-format
 msgid "Year ↑"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:627
+#: lib/stashix_web/components/core_components.ex:672
 #, elixir-autogen, elixir-format
 msgid "Year ↓"
 msgstr ""
@@ -1812,7 +1887,7 @@ msgstr ""
 msgid "Your stash"
 msgstr ""
 
-#: lib/stashix_web/components/core_components.ex:625
+#: lib/stashix_web/components/core_components.ex:670
 #, elixir-autogen, elixir-format
 msgid "Z → A"
 msgstr ""
@@ -1887,4 +1962,966 @@ msgstr ""
 #: lib/stashix_web/live/series_live.ex:588
 #, elixir-autogen, elixir-format
 msgid "unread"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:693
+#, elixir-autogen, elixir-format
+msgid "%{count} of %{total}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:494
+#, elixir-autogen, elixir-format
+msgid "%{facet}: %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:666
+#, elixir-autogen, elixir-format
+msgid "%{pages} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1143
+#: lib/stashix_web/live/search_live.ex:1153
+#, elixir-autogen, elixir-format
+msgid "1 book"
+msgid_plural "%{count} books"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex:260
+#, elixir-autogen, elixir-format
+msgid "A READ stamp across the cover."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:259
+#, elixir-autogen, elixir-format
+msgid "A small green tick in the corner."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:157
+#, elixir-autogen, elixir-format
+msgid "About"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:332
+#, elixir-autogen, elixir-format
+msgid "About you"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:124
+#, elixir-autogen, elixir-format
+msgid "Active %{count} h ago"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:123
+#, elixir-autogen, elixir-format
+msgid "Active %{count} min ago"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:126
+#, elixir-autogen, elixir-format
+msgid "Active 1 day ago"
+msgid_plural "Active %{count} days ago"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex:122
+#, elixir-autogen, elixir-format
+msgid "Active now"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:125
+#, elixir-autogen, elixir-format
+msgid "Active yesterday"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1239
+#, elixir-autogen, elixir-format
+msgid "Add another creator..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1291
+#, elixir-autogen, elixir-format
+msgid "Add another..."
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:702
+#, elixir-autogen, elixir-format
+msgid "Added by month"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:512
+#, elixir-autogen, elixir-format
+msgid "All"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1218
+#, elixir-autogen, elixir-format
+msgid "All of them"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:787
+#, elixir-autogen, elixir-format
+msgid "All publishers"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:395
+#, elixir-autogen, elixir-format
+msgid "And they all closed the book. Nothing past here but ghosts."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:521
+#: lib/stashix_web/live/search_live.ex:529
+#, elixir-autogen, elixir-format
+msgid "Any"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1218
+#, elixir-autogen, elixir-format
+msgid "Any of them"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:763
+#, elixir-autogen, elixir-format
+msgid "Any role"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1141
+#, elixir-autogen, elixir-format
+msgid "Any year"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:414
+#, elixir-autogen, elixir-format
+msgid "Back to series"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:355
+#, elixir-autogen, elixir-format
+msgid "Birth date"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:284
+#, elixir-autogen, elixir-format
+msgid "Book info"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:707
+#, elixir-autogen, elixir-format
+msgid "Breakdown"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:433
+#, elixir-autogen, elixir-format
+msgid "Change email"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:413
+#, elixir-autogen, elixir-format
+msgid "Change password"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:395
+#, elixir-autogen, elixir-format
+msgid "Changing it signs you out on every other device."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:539
+#, elixir-autogen, elixir-format
+msgid "Character"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:680
+#: lib/stashix_web/live/search_live.ex:903
+#, elixir-autogen, elixir-format
+msgid "Clear all"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:986
+#, elixir-autogen, elixir-format
+msgid "Clear filters"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:646
+#, elixir-autogen, elixir-format
+msgid "Clear search"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:685
+#, elixir-autogen, elixir-format
+msgid "Close filters"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:476
+#, elixir-autogen, elixir-format
+msgid "Close reader"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:482
+#, elixir-autogen, elixir-format
+msgid "Colouring"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:467
+#, elixir-autogen, elixir-format
+msgid "Creator: %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:729
+#, elixir-autogen, elixir-format
+msgid "Creators by credits"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:714
+#, elixir-autogen, elixir-format
+msgid "Credits by role"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:398
+#: lib/stashix_web/live/settings_live.ex:430
+#, elixir-autogen, elixir-format
+msgid "Current password"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:421
+#, elixir-autogen, elixir-format
+msgid "Currently %{email}."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:316
+#, elixir-autogen, elixir-format
+msgid "Data saver"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:542
+#, elixir-autogen, elixir-format
+msgid "Direction"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:341
+#, elixir-autogen, elixir-format
+msgid "Display name"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:343
+#, elixir-autogen, elixir-format
+msgid "END"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:485
+#, elixir-autogen, elixir-format
+msgid "Editing"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:361
+#, elixir-autogen, elixir-format
+msgid "Email and password are under %{security}."
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:583
+#, elixir-autogen, elixir-format
+msgid "End"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:339
+#, elixir-autogen, elixir-format
+msgid "End of issue"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:374
+#, elixir-autogen, elixir-format
+msgid "End of issue %{number}"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:374
+#, elixir-autogen, elixir-format
+msgid "End of the book"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:305
+#, elixir-autogen, elixir-format
+msgid "English"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:516
+#, elixir-autogen, elixir-format
+msgid "Facing pages"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:517
+#, elixir-autogen, elixir-format
+msgid "Facing, cover first"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:711
+#, elixir-autogen, elixir-format
+msgid "File formats"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:743
+#, elixir-autogen, elixir-format
+msgid "File size by publisher"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:667
+#: lib/stashix_web/live/search_live.ex:677
+#: lib/stashix_web/live/search_live.ex:868
+#, elixir-autogen, elixir-format
+msgid "Filters"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:530
+#, elixir-autogen, elixir-format
+msgid "Fit"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:307
+#, elixir-autogen, elixir-format
+msgid "Fit height"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:305
+#, elixir-autogen, elixir-format
+msgid "Fit page"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:306
+#, elixir-autogen, elixir-format
+msgid "Fit width"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1173
+#, elixir-autogen, elixir-format
+msgid "From year"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:536
+#, elixir-autogen, elixir-format
+msgid "GNU Affero General Public License"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:537
+#, elixir-autogen, elixir-format
+msgid "Genre"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:253
+#, elixir-autogen, elixir-format
+msgid "How a finished book is marked on its cover. Applies everywhere covers are shown, on this account only."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:459
+#, elixir-autogen, elixir-format
+msgid "IP:"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:523
+#: lib/stashix_web/live/stats_live.ex:189
+#: lib/stashix_web/live/stats_live.ex:637
+#, elixir-autogen, elixir-format
+msgid "In progress"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:481
+#, elixir-autogen, elixir-format
+msgid "Inking"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:405
+#, elixir-autogen, elixir-format
+msgid "Issue page"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:511
+#, elixir-autogen, elixir-format
+msgid "Layout"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:492
+#, elixir-autogen, elixir-format
+msgid "Left a device signed in? This signs the account out of every browser and app except this one."
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:547
+#, elixir-autogen, elixir-format
+msgid "Left to right"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:483
+#, elixir-autogen, elixir-format
+msgid "Lettering"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:517
+#, elixir-autogen, elixir-format
+msgid "License"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:541
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:983
+#, elixir-autogen, elixir-format
+msgid "Loosen the filters or try another spelling."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1215
+#, elixir-autogen, elixir-format
+msgid "Match books credited to all selected creators, or to any of them"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:654
+#, elixir-autogen, elixir-format
+msgid "Meanwhile, at the printer: your whole library on A4 would take %{sheets} sheets weighing %{weight}."
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:391
+#, elixir-autogen, elixir-format
+msgid "Meanwhile, in issue %{number}…"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:378
+#, elixir-autogen, elixir-format
+msgid "Member since"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:670
+#, elixir-autogen, elixir-format
+msgid "Metadata coverage"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:319
+#, elixir-autogen, elixir-format
+msgid "Minimizes data usage by preventing automatic prefetching (e.g., upcoming reader pages and covers on hover)."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:427
+#, elixir-autogen, elixir-format
+msgid "New email"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:401
+#, elixir-autogen, elixir-format
+msgid "New password"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:363
+#, elixir-autogen, elixir-format
+msgid "Next %{number}"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:401
+#, elixir-autogen, elixir-format
+msgid "Next issue"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:539
+#, elixir-autogen, elixir-format
+msgid "No characters found"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1262
+#, elixir-autogen, elixir-format
+msgid "No creators found"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:537
+#, elixir-autogen, elixir-format
+msgid "No genres found"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:541
+#, elixir-autogen, elixir-format
+msgid "No locations found"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:538
+#, elixir-autogen, elixir-format
+msgid "No tags found"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:540
+#, elixir-autogen, elixir-format
+msgid "No teams found"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:489
+#, elixir-autogen, elixir-format
+msgid "None recorded yet. Sign-ins from before this list existed show up once they sign in again."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:979
+#, elixir-autogen, elixir-format
+msgid "Nothing in the long box"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:246
+#: lib/stashix_web/live/settings_live.ex:279
+#, elixir-autogen, elixir-format
+msgid "On"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:700
+#, elixir-autogen, elixir-format
+msgid "Over time"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:784
+#, elixir-autogen, elixir-format
+msgid "Page"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:155
+#, elixir-autogen, elixir-format
+msgid "Personal"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:486
+#, elixir-autogen, elixir-format
+msgid "Production"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:73
+#, elixir-autogen, elixir-format
+msgid "Profile saved."
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:703
+#, elixir-autogen, elixir-format
+msgid "Publication year"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:737
+#, elixir-autogen, elixir-format
+msgid "Publishers by book count"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:251
+#, elixir-autogen, elixir-format
+msgid "Read mark"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:353
+#, elixir-autogen, elixir-format
+msgid "Read next issue %{number}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:717
+#, elixir-autogen, elixir-format
+msgid "Read status"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:55
+#, elixir-autogen, elixir-format
+msgid "Reading: %{title}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:695
+#, elixir-autogen, elixir-format
+msgid "Release year"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:440
+#, elixir-autogen, elixir-format
+msgid "Released %{from}–%{to}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:439
+#, elixir-autogen, elixir-format
+msgid "Released %{year}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:437
+#, elixir-autogen, elixir-format
+msgid "Released %{year}+"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:438
+#, elixir-autogen, elixir-format
+msgid "Released ≤ %{year}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:532
+#, elixir-autogen, elixir-format
+msgid "Relevance"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:404
+#, elixir-autogen, elixir-format
+msgid "Repeat new password"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:690
+#, elixir-autogen, elixir-format
+msgid "Reset zoom (0)"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:833
+#, elixir-autogen, elixir-format
+msgid "Result type"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:547
+#, elixir-autogen, elixir-format
+msgid "Right to left"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:761
+#: lib/stashix_web/live/settings_live.ex:376
+#, elixir-autogen, elixir-format
+msgid "Role"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:475
+#, elixir-autogen, elixir-format
+msgid "Role: %{role}"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:359
+#, elixir-autogen, elixir-format
+msgid "Save profile"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:539
+#, elixir-autogen, elixir-format
+msgid "Search characters..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1239
+#, elixir-autogen, elixir-format
+msgid "Search creators..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:537
+#, elixir-autogen, elixir-format
+msgid "Search genres..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:541
+#, elixir-autogen, elixir-format
+msgid "Search locations..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:538
+#, elixir-autogen, elixir-format
+msgid "Search tags..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:540
+#, elixir-autogen, elixir-format
+msgid "Search teams..."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:620
+#, elixir-autogen, elixir-format
+msgid "Search the stash"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:156
+#: lib/stashix_web/live/settings_live.ex:366
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:722
+#, elixir-autogen, elixir-format
+msgid "Series by issue count"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:734
+#, elixir-autogen, elixir-format
+msgid "Series status"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:438
+#, elixir-autogen, elixir-format
+msgid "Sessions"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:153
+#, elixir-autogen, elixir-format
+msgid "Settings sections"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1067
+#, elixir-autogen, elixir-format
+msgid "Show 1 more book"
+msgid_plural "Show %{number} more books"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/search_live.ex:1070
+#, elixir-autogen, elixir-format
+msgid "Show 1 more issue"
+msgid_plural "Show %{number} more issues"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/search_live.ex:1064
+#, elixir-autogen, elixir-format
+msgid "Show 1 more series"
+msgid_plural "Show %{number} more series"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/search_live.ex:811
+#, elixir-autogen, elixir-format
+msgid "Show 1 result"
+msgid_plural "Show %{number} results"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/search_live.ex:1023
+#, elixir-autogen, elixir-format
+msgid "Show all"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:299
+#, elixir-autogen, elixir-format
+msgid "Show extended book info"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:286
+#, elixir-autogen, elixir-format
+msgid "Show file size and format on book and series pages. Off by default."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:342
+#, elixir-autogen, elixir-format
+msgid "Shown in the top bar instead of your username."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:482
+#, elixir-autogen, elixir-format
+msgid "Sign out %{device}"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:497
+#, elixir-autogen, elixir-format
+msgid "Sign out everywhere else"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:515
+#, elixir-autogen, elixir-format
+msgid "Single page"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:880
+#, elixir-autogen, elixir-format
+msgid "Sort results"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:521
+#, elixir-autogen, elixir-format
+msgid "Source code"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:260
+#, elixir-autogen, elixir-format
+msgid "Stamp"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:524
+#, elixir-autogen, elixir-format
+msgid "Stashix is free software: you can redistribute and modify it under the terms of the %{license}, version 3 or later. The source code for this server is at %{source}."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:219
+#, elixir-autogen, elixir-format
+msgid "System follows your device's light or dark setting. Saved to your account, so it follows you to other devices."
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:538
+#, elixir-autogen, elixir-format
+msgid "Tag"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:540
+#, elixir-autogen, elixir-format
+msgid "Team"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:393
+#, elixir-autogen, elixir-format
+msgid "That was the last one. Nothing past here but ghosts."
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:381
+#, elixir-autogen, elixir-format
+msgid "The End"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:473
+#, elixir-autogen, elixir-format
+msgid "This one"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:259
+#, elixir-autogen, elixir-format
+msgid "Tick"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:636
+#, elixir-autogen, elixir-format
+msgid "Title or creator"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:381
+#, elixir-autogen, elixir-format
+msgid "To be continued"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:1182
+#, elixir-autogen, elixir-format
+msgid "To year"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:568
+#, elixir-autogen, elixir-format
+msgid "Toggle reading direction (LTR/RTL)"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:718
+#, elixir-autogen, elixir-format
+msgid "Top of the stash"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:633
+#, elixir-autogen, elixir-format
+msgid "Total"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:154
+#, elixir-autogen, elixir-format
+msgid "UI"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:522
+#: lib/stashix_web/live/stats_live.ex:188
+#: lib/stashix_web/live/stats_live.ex:634
+#, elixir-autogen, elixir-format
+msgid "Unread"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:131
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:516
+#, elixir-autogen, elixir-format
+msgid "Version"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:504
+#, elixir-autogen, elixir-format
+msgid "View"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:497
+#, elixir-autogen, elixir-format
+msgid "View options"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:518
+#, elixir-autogen, elixir-format
+msgid "Webtoon (scroll)"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:349
+#, elixir-autogen, elixir-format
+msgid "What you sign in with."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:439
+#, elixir-autogen, elixir-format
+msgid "Where this account is signed in."
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:678
+#, elixir-autogen, elixir-format
+msgid "With credits"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:679
+#, elixir-autogen, elixir-format
+msgid "With external ids"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:677
+#, elixir-autogen, elixir-format
+msgid "With genres"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:676
+#, elixir-autogen, elixir-format
+msgid "With summary"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:479
+#, elixir-autogen, elixir-format
+msgid "Writing"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:627
+#, elixir-autogen, elixir-format
+msgid "Your stash in numbers"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:677
+#, elixir-autogen, elixir-format
+msgid "Zoom in (+)"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:682
+#, elixir-autogen, elixir-format
+msgid "Zoom out (-)"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:643
+#, elixir-autogen, elixir-format
+msgid "across all files"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:469
+#, elixir-autogen, elixir-format
+msgid "and %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:633
+#, elixir-autogen, elixir-format
+msgid "books & issues"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:422
+#, elixir-autogen, elixir-format
+msgid "keep reading"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex:424
+#, elixir-autogen, elixir-format
+msgid "last page"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:468
+#, elixir-autogen, elixir-format
+msgid "or %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex:659
+#, elixir-autogen, elixir-format
+msgid "result"
+msgid_plural "results"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex:454
+#, elixir-autogen, elixir-format
+msgid "signed in %{date}"
+msgstr ""
+
+#: lib/stashix_web/live/stats_live.ex:644
+#, elixir-autogen, elixir-format
+msgid "total storage"
 msgstr ""
