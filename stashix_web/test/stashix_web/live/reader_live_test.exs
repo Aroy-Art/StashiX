@@ -57,6 +57,15 @@ defmodule StashixWeb.ReaderLiveTest do
     assert_redirect(view, ~p"/read/#{Repo.preload(second, :series)}")
   end
 
+  test "data saver stops the reader preloading the next pages", %{conn: conn, user: user, first: first} do
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{first.id}")
+    assert has_element?(view, "#reader-preload img")
+
+    {:ok, _} = Accounts.update_ui_settings(user, %{"data_saver" => "on"})
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{first.id}")
+    refute has_element?(view, "#reader-preload")
+  end
+
   test "half issues render on the series, book and reader pages", %{conn: conn, second: second} do
     second |> Ecto.Changeset.change(issue_number: Decimal.new("1.5")) |> Stashix.Repo.update!()
 

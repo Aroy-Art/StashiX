@@ -40,6 +40,18 @@ defmodule StashixWeb.SettingsLiveTest do
     assert User.ui_setting(Accounts.get_user!(user.id), "read_mark") == "stamp"
   end
 
+  test "the UI tab toggles data saver and publishes it to the layout", %{conn: conn, user: user} do
+    {:ok, view, html} = live(conn, ~p"/settings")
+    assert html =~ ~s(data-data-saver="off")
+
+    html = view |> element("#ui-settings-data-saver") |> render_change(%{"data_saver" => "on"})
+    assert html =~ ~s(data-data-saver="on")
+    assert User.ui_setting(Accounts.get_user!(user.id), "data_saver") == "on"
+
+    view |> element("#ui-settings-data-saver") |> render_change(%{"data_saver" => "off"})
+    assert User.ui_setting(Accounts.get_user!(user.id), "data_saver") == "off"
+  end
+
   test "the theme is saved to the account and pushed to the browser", %{conn: conn, user: user} do
     {:ok, view, _html} = live(conn, ~p"/settings")
     assert_push_event(view, "set-theme", %{theme: "system"})

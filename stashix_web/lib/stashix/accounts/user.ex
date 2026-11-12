@@ -84,10 +84,11 @@ defmodule Stashix.Accounts.User do
   # Changes a user makes to their own account. None of these cast :role.
   # ---------------------------------------------------------------------------
 
-  @ui_defaults %{"read_mark" => "check", "extended_book_info" => "off", "theme" => "system"}
+  @ui_defaults %{"read_mark" => "check", "extended_book_info" => "off", "theme" => "system", "data_saver" => "off"}
   @ui_choices %{
     "read_mark" => ~w(check stamp),
     "extended_book_info" => ~w(on off),
+    "data_saver" => ~w(on off),
     "theme" => ~w(system dark light)
   }
 

@@ -65,6 +65,7 @@ defmodule StashixWeb.ReaderLive do
        page_layout: page_layout,
        direction: direction,
        fit_mode: fit_mode,
+       data_saver: Accounts.User.ui_setting(user, "data_saver") == "on",
        overlay_visible: true,
        save_timer: nil
      ), layout: false}
@@ -753,8 +754,8 @@ defmodule StashixWeb.ReaderLive do
 
         <.end_card :if={@at_end} book={@book} next_book={@next_book} next_href={@next_href} volume_counts={@volume_counts} />
 
-        <%!-- Preload adjacent pages --%>
-        <div class="hidden" aria-hidden="true">
+        <%!-- Preload adjacent pages, unless the reader is saving data --%>
+        <div :if={!@data_saver} id="reader-preload" class="hidden" aria-hidden="true">
           <%= for offset <- preload_offsets(@page_layout) do %>
             <% p = @current_page + offset %>
             <%= if p >= 0 && p < @page_count do %>

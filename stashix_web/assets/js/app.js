@@ -1303,8 +1303,13 @@ function prefetchImagesFor(href) {
   return []
 }
 
+// Data saver: the browser's Save-Data hint, or the account setting the app
+// layout publishes (Settings > UI).
+const savingData = () =>
+  navigator.connection?.saveData || document.querySelector("[data-data-saver='on']") !== null
+
 function prefetchLink(link) {
-  if (navigator.connection?.saveData) return
+  if (savingData()) return
   for (const src of prefetchImagesFor(link.href)) {
     if (prefetchedImages.has(src)) continue
     prefetchedImages.add(src)

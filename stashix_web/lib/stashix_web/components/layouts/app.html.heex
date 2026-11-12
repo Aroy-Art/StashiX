@@ -7,6 +7,7 @@
 <div
   class="flex h-screen h-dvh overflow-hidden bg-canvas text-fg"
   data-read-mark={user && Stashix.Accounts.User.ui_setting(user, "read_mark")}
+  data-data-saver={user && Stashix.Accounts.User.ui_setting(user, "data_saver")}
 >
   <%!-- Mobile backdrop --%>
   <%= if Map.get(assigns, :current_user) do %>

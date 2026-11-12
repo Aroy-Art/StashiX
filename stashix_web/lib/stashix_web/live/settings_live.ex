@@ -169,7 +169,8 @@ defmodule StashixWeb.SettingsLive do
       assign(assigns,
         theme: User.ui_setting(assigns.current_user, "theme"),
         read_mark: User.ui_setting(assigns.current_user, "read_mark"),
-        extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info")
+        extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info"),
+        data_saver: User.ui_setting(assigns.current_user, "data_saver")
       )
 
     ~H"""
@@ -264,6 +265,18 @@ defmodule StashixWeb.SettingsLive do
         </.indicia>
       </form>
     </.section>
+
+    <form id="ui-settings-data-saver" phx-change="set_ui" class="max-w-xl">
+      <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+        <input type="hidden" name="data_saver" value="off" />
+        <input type="checkbox" name="data_saver" value="on" checked={@data_saver == "on"} class="sr-only peer" />
+        <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        <span class="font-display font-black uppercase text-xl leading-none text-fg">Data saver</span>
+      </label>
+      <p class="mt-3 text-sm text-muted">
+        Minimizes data usage by preventing automatic prefetching (e.g., upcoming reader pages and covers on hover).
+      </p>
+    </form>
     """
   end
 
