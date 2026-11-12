@@ -3,11 +3,13 @@
 ## `msgid`s here are often extracted from source code.
 ## Add new translations manually only if they're dynamic
 ## translations that can't be statically extracted.
-##
 ## Run `mix gettext.extract` to bring this file up to
 ## date. Leave `msgstr`s empty as changing them here has no
 ## effect: edit them in PO (`.po`) files instead.
 ## From Ecto.Changeset.cast/4
+#: lib/stashix_web/live/setup_live.ex:51
+#: lib/stashix_web/live/setup_live.ex:53
+#, elixir-autogen
 msgid "can't be blank"
 msgstr ""
 
@@ -106,4 +108,14 @@ msgid "must be greater than or equal to %{number}"
 msgstr ""
 
 msgid "must be equal to %{number}"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:57
+#, elixir-autogen, elixir-format
+msgid "must be at least 8 characters"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:62
+#, elixir-autogen, elixir-format
+msgid "passwords do not match"
 msgstr ""

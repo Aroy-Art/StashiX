@@ -134,9 +134,9 @@ defmodule StashixWeb.CoreComponents do
     >
       <p class="text-sm text-fg-soft">{@confirm.message}</p>
       <.dialog_footer>
-        <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_confirm">Cancel</.ink_button>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_confirm">{gettext("Cancel")}</.ink_button>
         <.ink_button type="button" variant="danger" size="md" phx-click="confirm_action">
-          {@confirm[:confirm_label] || "Confirm"}
+          {@confirm[:confirm_label] || gettext("Confirm")}
         </.ink_button>
       </.dialog_footer>
     </.dialog>
@@ -144,6 +144,19 @@ defmodule StashixWeb.CoreComponents do
   end
 
   ## JS Commands
+
+  @doc """
+  A changeset error `{message, opts}` in the user's language, from the
+  `errors` domain. Messages Ecto and our schemas produce are listed in
+  priv/gettext/errors.pot.
+  """
+  def translate_error({msg, opts}) do
+    if count = opts[:count] do
+      Gettext.dngettext(StashixWeb.Gettext, "errors", msg, msg, count, opts)
+    else
+      Gettext.dgettext(StashixWeb.Gettext, "errors", msg, opts)
+    end
+  end
 
   def show(js \\ %JS{}, selector) do
     JS.show(js,
@@ -299,16 +312,16 @@ defmodule StashixWeb.CoreComponents do
           <span
             :if={@read}
             class="read-mark-check absolute top-2 left-2 flex items-center justify-center w-6 h-6 rounded-full bg-green-500 text-white ring-2 ring-canvas/70 shadow-[0_2px_6px_rgb(0_0_0/0.6)]"
-            title="Read"
+            title={gettext("Read")}
           >
             <.icon name="lucide-check" class="w-3.5 h-3.5 stroke-[3]" />
-            <span class="sr-only">Read</span>
+            <span class="sr-only">{gettext("Read")}</span>
           </span>
           <span
             :if={@read}
             class="read-mark-stamp read-stamp absolute top-[14%] left-1/2 px-2 pt-0.5 border-[3px] border-ink rounded-sm bg-canvas/60 text-ink font-display font-black uppercase text-xl leading-none"
           >
-            Read
+            {gettext("Read")}
           </span>
 
           <.progress_bar
@@ -348,7 +361,7 @@ defmodule StashixWeb.CoreComponents do
       subtitle={@subtitle || Stashix.Formatters.series_years(@series)}
       badge={
         @badge ||
-          (@series.issue_count && "#{@series.issue_count} #{if @series.issue_count == 1, do: "issue", else: "issues"}")
+          (@series.issue_count && ngettext("1 issue", "%{count} issues", @series.issue_count))
       }
       type={:series}
       blurhash={@series.cover_blurhash}
@@ -509,7 +522,7 @@ defmodule StashixWeb.CoreComponents do
         title: if(book.issue_number, do: "##{book.issue_number} – #{book.title}", else: book.title),
         eyebrow: series && series.name,
         detail:
-          [book.year, book.page_count && book.page_count > 0 && "#{book.page_count} pages"]
+          [book.year, book.page_count && book.page_count > 0 && ngettext("1 page", "%{count} pages", book.page_count)]
           |> Enum.filter(& &1)
           |> Enum.join(" · "),
         progress:
@@ -542,19 +555,19 @@ defmodule StashixWeb.CoreComponents do
     ~H"""
     <.ink_menu id={@id} class={@class}>
       <:trigger
-        label="Library actions"
+        label={gettext("Library actions")}
         class="p-1 text-fg/30 hover:text-ink transition-colors"
       >
         <.icon name="lucide-ellipsis-vertical" class="w-3.5 h-3.5" />
       </:trigger>
       <.menu_item icon="lucide-refresh-cw" phx-click={JS.push("sidebar_scan", value: %{id: @library_id})}>
-        Scan for new files
+        {gettext("Scan for new files")}
       </.menu_item>
       <.menu_item icon="lucide-rotate-ccw" phx-click={JS.push("sidebar_force_scan", value: %{id: @library_id})}>
-        Force rescan
+        {gettext("Force rescan")}
       </.menu_item>
       <.menu_separator />
-      <.menu_item icon="lucide-settings" navigate="/admin/libraries">Settings</.menu_item>
+      <.menu_item icon="lucide-settings" navigate="/admin/libraries">{gettext("Settings")}</.menu_item>
     </.ink_menu>
     """
   end
@@ -590,7 +603,7 @@ defmodule StashixWeb.CoreComponents do
   def library_filter(assigns) do
     ~H"""
     <.pill tag="button" type="button" active={is_nil(@selected_id)} phx-click={@event} phx-value-id="">
-      All libraries
+      {gettext("All libraries")}
     </.pill>
     <.pill
       :for={lib <- @libraries}
@@ -614,7 +627,7 @@ defmodule StashixWeb.CoreComponents do
   def sort_select(assigns) do
     ~H"""
     <form id={@id} phx-change={@event} class={@class}>
-      <.ink_select id={"#{@id}-input"} name="value" label="Sort" value={@selected} options={@options} />
+      <.ink_select id={"#{@id}-input"} name="value" label={gettext("Sort")} value={@selected} options={@options} />
     </form>
     """
   end
@@ -634,16 +647,16 @@ defmodule StashixWeb.CoreComponents do
       |> assign(:mobile_pages, pagination_pages(assigns.page, assigns.total_pages, 5))
 
     ~H"""
-    <nav :if={@total_pages > 1} id={@id} aria-label="Pages" class="flex items-center justify-center gap-1">
+    <nav :if={@total_pages > 1} id={@id} aria-label={gettext("Pages")} class="flex items-center justify-center gap-1">
       <.page_step
         icon="lucide-chevron-first"
-        label="First page"
+        label={gettext("First page")}
         disabled={@page == 1}
         click={page_click(@on_page, 1, @scroll_to)}
       />
       <.page_step
         icon="lucide-chevron-left"
-        label="Previous page"
+        label={gettext("Previous page")}
         disabled={@page == 1}
         click={page_click(@on_page, @page - 1, @scroll_to)}
       />
@@ -652,7 +665,7 @@ defmodule StashixWeb.CoreComponents do
         :for={p <- @pages}
         type="button"
         phx-click={page_click(@on_page, p, @scroll_to)}
-        aria-label={"Page #{p}"}
+        aria-label={gettext("Page %{number}", number: p)}
         aria-current={p == @page && "page"}
         class={[
           "h-9 min-w-9 px-1.5 items-center justify-center rounded-sm font-display font-black text-xl leading-none tabular-nums transition-colors",
@@ -668,13 +681,13 @@ defmodule StashixWeb.CoreComponents do
 
       <.page_step
         icon="lucide-chevron-right"
-        label="Next page"
+        label={gettext("Next page")}
         disabled={@page == @total_pages}
         click={page_click(@on_page, @page + 1, @scroll_to)}
       />
       <.page_step
         icon="lucide-chevron-last"
-        label="Last page"
+        label={gettext("Last page")}
         disabled={@page == @total_pages}
         click={page_click(@on_page, @total_pages, @scroll_to)}
       />

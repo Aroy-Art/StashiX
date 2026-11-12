@@ -10,6 +10,7 @@ defmodule StashixWeb.UI.Dialog do
   close requests. Specimens live at `/dev/ui`.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   alias Phoenix.LiveView.JS
   import StashixWeb.UI.Ink, only: [display_heading: 1, icon_button: 1]
@@ -52,7 +53,7 @@ defmodule StashixWeb.UI.Dialog do
               {render_slot(@description)}
             </div>
           </div>
-          <.icon_button icon="lucide-x" label="Close" data-dialog-close />
+          <.icon_button icon="lucide-x" label={gettext("Close")} data-dialog-close />
         </header>
         <div class="px-5 sm:px-6 py-5">
           {render_slot(@inner_block)}

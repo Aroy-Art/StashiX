@@ -15,7 +15,7 @@ defmodule StashixWeb.SetupLive do
     else
       {:ok,
        assign(socket,
-         page_title: "Setup",
+         page_title: gettext("Setup"),
          step: :account,
          account_data: %{},
          account_errors: %{},
@@ -48,18 +48,18 @@ defmodule StashixWeb.SetupLive do
       ) do
     errors =
       %{}
-      |> then(fn e -> if email == "", do: Map.put(e, :email, ["can't be blank"]), else: e end)
+      |> then(fn e -> if email == "", do: Map.put(e, :email, [dgettext("errors", "can't be blank")]), else: e end)
       |> then(fn e ->
-        if username == "", do: Map.put(e, :username, ["can't be blank"]), else: e
+        if username == "", do: Map.put(e, :username, [dgettext("errors", "can't be blank")]), else: e
       end)
       |> then(fn e ->
         if String.length(password) < 8,
-          do: Map.put(e, :password, ["must be at least 8 characters"]),
+          do: Map.put(e, :password, [dgettext("errors", "must be at least 8 characters")]),
           else: e
       end)
       |> then(fn e ->
         if password != confirmation,
-          do: Map.put(e, :password_confirmation, ["passwords do not match"]),
+          do: Map.put(e, :password_confirmation, [dgettext("errors", "passwords do not match")]),
           else: e
       end)
 
@@ -101,26 +101,30 @@ defmodule StashixWeb.SetupLive do
     ~H"""
     <.cover_page
       issue="#0"
-      tagline="First issue: set up your stash"
-      heading={if @step == :account, do: "Create the admin account", else: "Add your first library"}
+      tagline={gettext("First issue: set up your stash")}
+      heading={if @step == :account, do: gettext("Create the admin account"), else: gettext("Add your first library")}
     >
       <:steps>
-        <.cover_step number={1} current={@step == :account} done={@step == :library}>Account</.cover_step>
+        <.cover_step number={1} current={@step == :account} done={@step == :library}>{gettext("Account")}</.cover_step>
         <span class="w-6 h-px bg-fg/20"></span>
-        <.cover_step number={2} current={@step == :library}>Library</.cover_step>
+        <.cover_step number={2} current={@step == :library}>{gettext("Library")}</.cover_step>
       </:steps>
 
       <form :if={@step == :account} phx-submit="next" class="space-y-4">
-        <.field label="Email" error={first_error(@account_errors, :email)}>
+        <.field label={gettext("Email")} error={first_error(@account_errors, :email)}>
           <.text_input type="email" name="email" value={@account_form[:email].value} required autofocus />
         </.field>
-        <.field label="Username" error={first_error(@account_errors, :username)}>
+        <.field label={gettext("Username")} error={first_error(@account_errors, :username)}>
           <.text_input name="username" value={@account_form[:username].value} required autocomplete="username" />
         </.field>
-        <.field label="Password" hint="At least 8 characters." error={first_error(@account_errors, :password)}>
+        <.field
+          label={gettext("Password")}
+          hint={gettext("At least 8 characters.")}
+          error={first_error(@account_errors, :password)}
+        >
           <.text_input type="password" name="password" required minlength="8" autocomplete="new-password" />
         </.field>
-        <.field label="Confirm password" error={first_error(@account_errors, :password_confirmation)}>
+        <.field label={gettext("Confirm password")} error={first_error(@account_errors, :password_confirmation)}>
           <.text_input
             type="password"
             name="password_confirmation"
@@ -130,7 +134,7 @@ defmodule StashixWeb.SetupLive do
           />
         </.field>
         <.ink_button type="submit" class="w-full mt-2">
-          Continue <.icon name="lucide-arrow-right" class="w-4 h-4" />
+          {gettext("Continue")} <.icon name="lucide-arrow-right" class="w-4 h-4" />
         </.ink_button>
       </form>
 
@@ -149,18 +153,18 @@ defmodule StashixWeb.SetupLive do
         <input type="hidden" name="password" value={@account_data["password"]} />
         <input :if={@skip_library} type="hidden" name="skip_library" value="true" />
 
-        <.field label="Library name" error={first_error(@library_errors, :library_name)}>
+        <.field label={gettext("Library name")} error={first_error(@library_errors, :library_name)}>
           <.text_input
             name="library_name"
             value={@library_form[:library_name].value}
             required
             autofocus
-            placeholder="My Comics"
+            placeholder={gettext("My Comics")}
           />
         </.field>
         <.field
-          label="Library path"
-          hint="Absolute path to the folder containing your books."
+          label={gettext("Library path")}
+          hint={gettext("Absolute path to the folder containing your books.")}
           error={first_error(@library_errors, :library_path)}
         >
           <.text_input
@@ -172,15 +176,15 @@ defmodule StashixWeb.SetupLive do
           />
         </.field>
         <div class="flex gap-3 pt-2">
-          <.ink_button type="button" variant="ghost" phx-click="back">Back</.ink_button>
-          <.ink_button type="submit" class="flex-1">Finish setup</.ink_button>
+          <.ink_button type="button" variant="ghost" phx-click="back">{gettext("Back")}</.ink_button>
+          <.ink_button type="submit" class="flex-1">{gettext("Finish setup")}</.ink_button>
         </div>
         <button
           type="button"
           phx-click="confirm_skip"
           class="block w-full text-center text-sm text-muted hover:text-fg underline underline-offset-4"
         >
-          Skip for now
+          {gettext("Skip for now")}
         </button>
       </form>
 
@@ -188,15 +192,15 @@ defmodule StashixWeb.SetupLive do
         :if={@confirm_skip}
         id="skip-library-dialog"
         size="sm"
-        title="Skip library setup?"
+        title={gettext("Skip library setup?")}
         on_close={JS.push("cancel_skip")}
       >
         <p class="text-sm text-fg-soft">
-          Your stash will start empty. You can add a library later under Admin → Libraries.
+          {gettext("Your stash will start empty. You can add a library later under Admin → Libraries.")}
         </p>
         <.dialog_footer>
-          <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_skip">Cancel</.ink_button>
-          <.ink_button type="button" size="md" phx-click="skip">Skip and finish</.ink_button>
+          <.ink_button type="button" variant="ghost" size="md" phx-click="cancel_skip">{gettext("Cancel")}</.ink_button>
+          <.ink_button type="button" size="md" phx-click="skip">{gettext("Skip and finish")}</.ink_button>
         </.dialog_footer>
       </.dialog>
     </.cover_page>

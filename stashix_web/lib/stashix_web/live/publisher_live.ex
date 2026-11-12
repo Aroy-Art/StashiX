@@ -190,7 +190,8 @@ defmodule StashixWeb.PublisherLive do
     ~H"""
     <.collection_page
       name={@publisher.name}
-      kind="Publisher"
+      kind={gettext("Publisher")}
+      empty_title={gettext("Nothing from this publisher")}
       base_path={~p"/publisher/#{@publisher}"}
       live_action={@live_action}
       series_count={assigns[:series_count] || 0}

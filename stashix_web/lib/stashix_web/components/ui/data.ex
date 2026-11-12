@@ -6,6 +6,7 @@ defmodule StashixWeb.UI.Data do
   Tables and tab bars of the "ink" design language. Specimens live at `/dev/ui`.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Ink, only: [sticker: 1]
 
@@ -48,7 +49,7 @@ defmodule StashixWeb.UI.Data do
             >
               {col[:label]}
             </th>
-            <th :if={@action != []} scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
+            <th :if={@action != []} scope="col" class="px-4 py-3"><span class="sr-only">{gettext("Actions")}</span></th>
           </tr>
         </thead>
         <tbody class="divide-y divide-fg/[0.06]">

@@ -4,6 +4,7 @@
 defmodule StashixWeb.MetadataComponents do
   @moduledoc "Pieces for showing MetronInfo details (credits, characters, arcs, …) on book and series pages."
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   alias Phoenix.LiveView.JS
   alias Stashix.Metadata.Roles
@@ -46,7 +47,7 @@ defmodule StashixWeb.MetadataComponents do
     <div :if={@show} class="space-y-5">
       <.credits_line groups={@headline} />
       <.expander id={@id}>
-        <.detail_section label="Credits" show={@credits != []}>
+        <.detail_section label={gettext("Credits")} show={@credits != []}>
           <div class="grid grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-3">
             <%= for {role, entries} <- @credits, entry <- entries do %>
               <.creator_card name={entry_name(entry)} role={credit_role(role, entry)} creator_id={entry_id(entry)} />
@@ -56,39 +57,39 @@ defmodule StashixWeb.MetadataComponents do
 
         <.detail_grid entries={@facts} />
 
-        <.detail_section label="Genres" show={@genres != []}>
+        <.detail_section label={gettext("Genres")} show={@genres != []}>
           <.chips items={@genres} search_param="genre" />
         </.detail_section>
 
-        <.detail_section label="Tags" show={@tags != []}>
+        <.detail_section label={gettext("Tags")} show={@tags != []}>
           <.chips items={@tags} search_param="tag" />
         </.detail_section>
 
-        <.detail_section label="Story Arcs" show={@arcs != []}>
+        <.detail_section label={gettext("Story Arcs")} show={@arcs != []}>
           <.chips items={@arcs} />
         </.detail_section>
 
-        <.detail_section label="Characters" show={@characters != []}>
+        <.detail_section label={gettext("Characters")} show={@characters != []}>
           <.chips items={@characters} search_param="character" />
         </.detail_section>
 
-        <.detail_section label="Teams" show={@teams != []}>
+        <.detail_section label={gettext("Teams")} show={@teams != []}>
           <.chips items={@teams} search_param="team" />
         </.detail_section>
 
-        <.detail_section label="Locations" show={@locations != []}>
+        <.detail_section label={gettext("Locations")} show={@locations != []}>
           <.chips items={@locations} search_param="location" />
         </.detail_section>
 
-        <.detail_section label="Universes" show={@universes != []}>
+        <.detail_section label={gettext("Universes")} show={@universes != []}>
           <.chips items={@universes} />
         </.detail_section>
 
-        <.detail_section label="Reprints" show={@reprints != []}>
+        <.detail_section label={gettext("Reprints")} show={@reprints != []}>
           <.chips items={@reprints} />
         </.detail_section>
 
-        <.detail_section label="Links" show={@links != []}>
+        <.detail_section label={gettext("Links")} show={@links != []}>
           <div class="flex flex-wrap gap-1.5">
             <%= for {label, href} <- @links do %>
               <.chip :if={href} href={href} target="_blank" rel="noopener noreferrer">
@@ -99,7 +100,7 @@ defmodule StashixWeb.MetadataComponents do
           </div>
         </.detail_section>
 
-        <.detail_section label="Notes" show={@notes != ""}>
+        <.detail_section label={gettext("Notes")} show={@notes != ""}>
           <p class="text-sm text-muted leading-relaxed whitespace-pre-line break-words">{@notes}</p>
         </.detail_section>
       </.expander>
@@ -107,7 +108,9 @@ defmodule StashixWeb.MetadataComponents do
     """
   end
 
-  defp credit_role(role, {_name, count, _id}) when count > 1, do: "#{role} · #{count} issues"
+  defp credit_role(role, {_name, count, _id}) when count > 1,
+    do: ngettext("%{role} · 1 issue", "%{role} · %{count} issues", count, role: role)
+
   defp credit_role(role, _entry), do: role
 
   @doc "Headline credits as one column per role; long lists are cut with a '+N more' marker."
@@ -128,7 +131,7 @@ defmodule StashixWeb.MetadataComponents do
             {String.trim(entry_name(n))}
           </.link>
           <span :if={length(names) > @limit} class="block text-xs text-muted">
-            +{length(names) - @limit} more
+            {gettext("+%{count} more", count: length(names) - @limit)}
           </span>
         </dd>
       </div>
@@ -156,8 +159,8 @@ defmodule StashixWeb.MetadataComponents do
           class="inline-flex items-center gap-2 pl-4 pr-3 py-2 rounded-full border border-edge bg-fg/5 text-xs font-bold tracking-[0.16em] uppercase text-fg hover:border-ink hover:bg-ink/10 hover:text-fg transition-colors"
           aria-controls={@id}
         >
-          <span id={"#{@id}-more"}>More info</span>
-          <span id={"#{@id}-less"} class="hidden">Less info</span>
+          <span id={"#{@id}-more"}>{gettext("More info")}</span>
+          <span id={"#{@id}-less"} class="hidden">{gettext("Less info")}</span>
           <span id={"#{@id}-chevron"} class="inline-flex text-ink transition-transform duration-200">
             <.icon name="lucide-chevron-down" class="w-4 h-4" />
           </span>
@@ -271,7 +274,7 @@ defmodule StashixWeb.MetadataComponents do
         </.chip>
         <.chip :if={!@search_param} count={entry_count(item)}>{entry_name(item)}</.chip>
       <% end %>
-      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-muted">+{@rest} more</span>
+      <span :if={@rest > 0} class="px-2 py-0.5 text-xs text-muted">{gettext("+%{count} more", count: @rest)}</span>
     </div>
     """
   end
@@ -304,7 +307,7 @@ defmodule StashixWeb.MetadataComponents do
     ~H"""
     <span
       class={[!@ready && "cursor-not-allowed", @class]}
-      title={!@ready && "No metadata sources set up. Enable one under Admin · Metadata · Sources."}
+      title={!@ready && gettext("No metadata sources set up. Enable one under Admin · Metadata · Sources.")}
     >
       {render_slot(@inner_block)}
     </span>

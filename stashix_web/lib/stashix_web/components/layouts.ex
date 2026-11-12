@@ -64,6 +64,11 @@ defmodule StashixWeb.Layouts do
     """
   end
 
+  @doc "Tag on a navbar quick result."
+  def result_type_label(:series), do: gettext("Series")
+  def result_type_label(:issue), do: gettext("Issue")
+  def result_type_label(:book), do: gettext("Book")
+
   @doc "True when `path` is `base` or lies under it."
   def under?(nil, _base), do: false
   def under?(path, "/"), do: path == "/"

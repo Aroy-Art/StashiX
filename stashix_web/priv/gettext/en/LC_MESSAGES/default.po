@@ -36,6 +36,7 @@ msgstr ""
 msgid "Hang in there while we get back on track"
 msgstr ""
 
+#: lib/stashix_web/components/metadata_edit_components.ex:197
 #: lib/stashix_web/live/settings_live.ex:182
 #: lib/stashix_web/live/settings_live.ex:192
 #, elixir-autogen, elixir-format
@@ -65,4 +66,777 @@ msgstr ""
 #: lib/stashix_web/components/core_components.ex:63
 #, elixir-autogen, elixir-format
 msgid "close"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:360
+#, elixir-autogen, elixir-format
+msgid "%{done} / %{total} files"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:68
+#, elixir-autogen, elixir-format
+msgid "%{field} %{message}."
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:367
+#, elixir-autogen, elixir-format
+msgid "%{library} progress"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:112
+#, elixir-autogen, elixir-format
+msgid "%{role} · 1 issue"
+msgid_plural "%{role} · %{count} issues"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/components/detail_components.ex:70
+#, elixir-autogen, elixir-format
+msgid "%{title} cover"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:413
+#: lib/stashix_web/components/metadata_components.ex:134
+#: lib/stashix_web/components/metadata_components.ex:277
+#, elixir-autogen, elixir-format
+msgid "+%{count} more"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:364
+#: lib/stashix_web/live/hooks.ex:165
+#, elixir-autogen, elixir-format
+msgid "1 issue"
+msgid_plural "%{count} issues"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/components/core_components.ex:525
+#, elixir-autogen, elixir-format
+msgid "1 page"
+msgid_plural "%{count} pages"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/setup_live.ex:167
+#, elixir-autogen, elixir-format
+msgid "Absolute path to the folder containing your books."
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:108
+#, elixir-autogen, elixir-format
+msgid "Account"
+msgstr ""
+
+#: lib/stashix_web/components/ui/data.ex:52
+#, elixir-autogen, elixir-format
+msgid "Actions"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:273
+#, elixir-autogen, elixir-format
+msgid "Add"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:105
+#, elixir-autogen, elixir-format
+msgid "Add your first library"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:221
+#, elixir-autogen, elixir-format
+msgid "Add… (Enter)"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:41
+#: lib/stashix_web/components/layouts/app.html.heex:42
+#, elixir-autogen, elixir-format
+msgid "Admin"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:606
+#, elixir-autogen, elixir-format
+msgid "All libraries"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:122
+#, elixir-autogen, elixir-format
+msgid "At least 8 characters."
+msgstr ""
+
+#: lib/stashix_web/components/ui/page.ex:60
+#: lib/stashix_web/live/setup_live.ex:179
+#, elixir-autogen, elixir-format
+msgid "Back"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:62
+#, elixir-autogen, elixir-format
+msgid "Back to library"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:297
+#: lib/stashix_web/components/layouts/app.html.heex:309
+#, elixir-autogen, elixir-format
+msgid "Background tasks"
+msgstr ""
+
+#: lib/stashix_web/components/layouts.ex:70
+#, elixir-autogen, elixir-format
+msgid "Book"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:63
+#: lib/stashix_web/components/collection_components.ex:73
+#: lib/stashix_web/components/collection_components.ex:262
+#: lib/stashix_web/components/layouts/app.html.heex:74
+#, elixir-autogen, elixir-format
+msgid "Books"
+msgstr ""
+
+#: lib/stashix_web/components/ui/page.ex:62
+#, elixir-autogen, elixir-format
+msgid "Breadcrumb"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:137
+#: lib/stashix_web/components/layouts/app.html.heex:342
+#: lib/stashix_web/live/setup_live.ex:202
+#, elixir-autogen, elixir-format
+msgid "Cancel"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:352
+#, elixir-autogen, elixir-format
+msgid "Cancelled"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:72
+#, elixir-autogen, elixir-format
+msgid "Characters"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:354
+#, elixir-autogen, elixir-format
+msgid "Checking archive integrity"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:48
+#, elixir-autogen, elixir-format
+msgid "Cleanup"
+msgstr ""
+
+#: lib/stashix_web/components/detail_components.ex:74
+#: lib/stashix_web/components/ui/dialog.ex:56
+#, elixir-autogen, elixir-format
+msgid "Close"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:353
+#, elixir-autogen, elixir-format
+msgid "Complete"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:139
+#, elixir-autogen, elixir-format
+msgid "Confirm"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:127
+#, elixir-autogen, elixir-format
+msgid "Confirm password"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:137
+#, elixir-autogen, elixir-format
+msgid "Continue"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:105
+#, elixir-autogen, elixir-format
+msgid "Create the admin account"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:50
+#, elixir-autogen, elixir-format
+msgid "Credits"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:128
+#, elixir-autogen, elixir-format
+msgid "Dark"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:333
+#, elixir-autogen, elixir-format
+msgid "Done"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:74
+#: lib/stashix_web/live/setup_live.ex:114
+#, elixir-autogen, elixir-format
+msgid "Email"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:37
+#, elixir-autogen, elixir-format
+msgid "Email changed to %{email}."
+msgstr ""
+
+#: lib/stashix_web/live/login_live.ex:72
+#, elixir-autogen, elixir-format
+msgid "Email or username"
+msgstr ""
+
+#: lib/stashix_web/components/ui/menu.ex:273
+#, elixir-autogen, elixir-format
+msgid "Filter options"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:180
+#, elixir-autogen, elixir-format
+msgid "Finish setup"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:104
+#, elixir-autogen, elixir-format
+msgid "First issue: set up your stash"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:653
+#, elixir-autogen, elixir-format
+msgid "First page"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:567
+#: lib/stashix_web/components/layouts/app.html.heex:405
+#, elixir-autogen, elixir-format
+msgid "Force rescan"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:402
+#, elixir-autogen, elixir-format
+msgid "Force scan"
+msgstr ""
+
+#: lib/stashix_web/live/hooks.ex:236
+#, elixir-autogen, elixir-format
+msgid "Force scan started"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:356
+#, elixir-autogen, elixir-format
+msgid "Generating covers"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:60
+#, elixir-autogen, elixir-format
+msgid "Genres"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:50
+#, elixir-autogen, elixir-format
+msgid "Health"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:351
+#, elixir-autogen, elixir-format
+msgid "Health check complete"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:54
+#: lib/stashix_web/components/collection_components.ex:99
+#: lib/stashix_web/components/layouts/app.html.heex:71
+#, elixir-autogen, elixir-format
+msgid "Home"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:357
+#, elixir-autogen, elixir-format
+msgid "Indexing new file"
+msgstr ""
+
+#: lib/stashix_web/controllers/session_controller.ex:27
+#, elixir-autogen, elixir-format
+msgid "Invalid email or password"
+msgstr ""
+
+#: lib/stashix_web/live/login_live.ex:47
+#, elixir-autogen, elixir-format
+msgid "Invalid email/username or password"
+msgstr ""
+
+#: lib/stashix_web/components/layouts.ex:69
+#, elixir-autogen, elixir-format
+msgid "Issue"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:64
+#: lib/stashix_web/components/collection_components.ex:78
+#: lib/stashix_web/components/collection_components.ex:263
+#: lib/stashix_web/components/layouts/app.html.heex:75
+#, elixir-autogen, elixir-format
+msgid "Issues"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:690
+#, elixir-autogen, elixir-format
+msgid "Last page"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:163
+#, elixir-autogen, elixir-format
+msgid "Less info"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:47
+#: lib/stashix_web/components/layouts/app.html.heex:89
+#, elixir-autogen, elixir-format
+msgid "Libraries"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:328
+#: lib/stashix_web/components/layouts/app.html.heex:367
+#: lib/stashix_web/components/layouts/app.html.heex:378
+#: lib/stashix_web/live/library_live.ex:223
+#: lib/stashix_web/live/setup_live.ex:110
+#, elixir-autogen, elixir-format
+msgid "Library"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:558
+#, elixir-autogen, elixir-format
+msgid "Library actions"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:156
+#, elixir-autogen, elixir-format
+msgid "Library name"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:166
+#, elixir-autogen, elixir-format
+msgid "Library path"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:127
+#, elixir-autogen, elixir-format
+msgid "Light"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:92
+#, elixir-autogen, elixir-format
+msgid "Links"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:80
+#, elixir-autogen, elixir-format
+msgid "Locations"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:86
+#, elixir-autogen, elixir-format
+msgid "Lock %{field}"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:91
+#, elixir-autogen, elixir-format
+msgid "Lock so rescans and matching can't change it"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:90
+#, elixir-autogen, elixir-format
+msgid "Locked: rescans and matching leave it alone. Click to unlock."
+msgstr ""
+
+#: lib/stashix_web/live/login_live.ex:25
+#, elixir-autogen, elixir-format
+msgid "Login"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:67
+#, elixir-autogen, elixir-format
+msgid "Main"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:51
+#, elixir-autogen, elixir-format
+msgid "Metadata"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:162
+#, elixir-autogen, elixir-format
+msgid "More info"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:162
+#, elixir-autogen, elixir-format
+msgid "My Comics"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:684
+#, elixir-autogen, elixir-format
+msgid "Next page"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:244
+#, elixir-autogen, elixir-format
+msgid "No content"
+msgstr ""
+
+#: lib/stashix_web/components/ui/menu.ex:294
+#, elixir-autogen, elixir-format
+msgid "No matches"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:310
+#, elixir-autogen, elixir-format
+msgid "No metadata sources set up. Enable one under Admin · Metadata · Sources."
+msgstr ""
+
+#: lib/stashix_web/components/layouts/root.html.heex:106
+#, elixir-autogen, elixir-format
+msgid "No signal — connection lost"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:245
+#: lib/stashix_web/components/metadata_edit_components.ex:292
+#, elixir-autogen, elixir-format
+msgid "None"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:103
+#, elixir-autogen, elixir-format
+msgid "Notes"
+msgstr ""
+
+#: lib/stashix_web/live/publisher_live.ex:194
+#, elixir-autogen, elixir-format
+msgid "Nothing from this publisher"
+msgstr ""
+
+#: lib/stashix_web/live/library_live.ex:224
+#, elixir-autogen, elixir-format
+msgid "Nothing in this library"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:310
+#, elixir-autogen, elixir-format
+msgid "Nothing running"
+msgstr ""
+
+#: lib/stashix_web/live/login_live.ex:86
+#, elixir-autogen, elixir-format
+msgid "Open the box"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:668
+#, elixir-autogen, elixir-format
+msgid "Page %{number}"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:650
+#, elixir-autogen, elixir-format
+msgid "Pages"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:75
+#: lib/stashix_web/live/login_live.ex:82
+#: lib/stashix_web/live/setup_live.ex:121
+#, elixir-autogen, elixir-format
+msgid "Password"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:26
+#, elixir-autogen, elixir-format
+msgid "Password changed. Other devices have been signed out."
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:76
+#, elixir-autogen, elixir-format
+msgid "Password confirmation"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:659
+#, elixir-autogen, elixir-format
+msgid "Previous page"
+msgstr ""
+
+#: lib/stashix_web/live/publisher_live.ex:193
+#, elixir-autogen, elixir-format
+msgid "Publisher"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:49
+#: lib/stashix_web/components/layouts/app.html.heex:76
+#, elixir-autogen, elixir-format
+msgid "Publishers"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:374
+#, elixir-autogen, elixir-format
+msgid "Queued"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:315
+#: lib/stashix_web/components/core_components.ex:318
+#: lib/stashix_web/components/core_components.ex:324
+#, elixir-autogen, elixir-format
+msgid "Read"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/root.html.heex:112
+#, elixir-autogen, elixir-format
+msgid "Reconnect"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/root.html.heex:67
+#, elixir-autogen, elixir-format
+msgid "Refresh page"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:239
+#, elixir-autogen, elixir-format
+msgid "Remove %{name}"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:286
+#, elixir-autogen, elixir-format
+msgid "Remove row"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:88
+#, elixir-autogen, elixir-format
+msgid "Reprints"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:405
+#, elixir-autogen, elixir-format
+msgid "Rescan"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:402
+#, elixir-autogen, elixir-format
+msgid "Scan"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:564
+#, elixir-autogen, elixir-format
+msgid "Scan for new files"
+msgstr ""
+
+#: lib/stashix_web/live/hooks.ex:231
+#, elixir-autogen, elixir-format
+msgid "Scan started"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:358
+#, elixir-autogen, elixir-format
+msgid "Scanning files"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:355
+#, elixir-autogen, elixir-format
+msgid "Scanning for unsupported files"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:72
+#, elixir-autogen, elixir-format
+msgid "Search"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:226
+#, elixir-autogen, elixir-format
+msgid "Search titles, series, publishers..."
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:285
+#, elixir-autogen, elixir-format
+msgid "See all results for \"%{query}\""
+msgstr ""
+
+#: lib/stashix_web/components/auth_components.ex:62
+#, elixir-autogen, elixir-format
+msgid "Self-hosted · read anywhere"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:62
+#: lib/stashix_web/components/collection_components.ex:68
+#: lib/stashix_web/components/collection_components.ex:261
+#: lib/stashix_web/components/layouts.ex:68
+#: lib/stashix_web/components/layouts/app.html.heex:73
+#, elixir-autogen, elixir-format
+msgid "Series"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:570
+#: lib/stashix_web/components/layouts/app.html.heex:436
+#, elixir-autogen, elixir-format
+msgid "Settings"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:18
+#, elixir-autogen, elixir-format
+msgid "Setup"
+msgstr ""
+
+#: lib/stashix_web/controllers/session_controller.ex:64
+#, elixir-autogen, elixir-format
+msgid "Setup failed. Check your details and try again."
+msgstr ""
+
+#: lib/stashix_web/live/login_live.ex:54
+#, elixir-autogen, elixir-format
+msgid "Sign in"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:440
+#, elixir-autogen, elixir-format
+msgid "Sign out"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:49
+#, elixir-autogen, elixir-format
+msgid "Signed out everywhere else."
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:203
+#, elixir-autogen, elixir-format
+msgid "Skip and finish"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:187
+#, elixir-autogen, elixir-format
+msgid "Skip for now"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:195
+#, elixir-autogen, elixir-format
+msgid "Skip library setup?"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:630
+#, elixir-autogen, elixir-format
+msgid "Sort"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:166
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:33
+#, elixir-autogen, elixir-format
+msgid "Stashix home"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:77
+#, elixir-autogen, elixir-format
+msgid "Stats"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:68
+#, elixir-autogen, elixir-format
+msgid "Story Arcs"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:126
+#, elixir-autogen, elixir-format
+msgid "System"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:438
+#, elixir-autogen, elixir-format
+msgid "System settings"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:64
+#, elixir-autogen, elixir-format
+msgid "Tags"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:76
+#, elixir-autogen, elixir-format
+msgid "Teams"
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:62
+#, elixir-autogen, elixir-format
+msgid "The current password is not right."
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:139
+#: lib/stashix_web/components/layouts/app.html.heex:142
+#, elixir-autogen, elixir-format
+msgid "Theme"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:135
+#, elixir-autogen, elixir-format
+msgid "Theme: %{theme}"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:197
+#, elixir-autogen, elixir-format
+msgid "Toggle sidebar"
+msgstr ""
+
+#: lib/stashix_web/controllers/session_controller.ex:22
+#: lib/stashix_web/live/login_live.ex:44
+#, elixir-autogen, elixir-format
+msgid "Too many failed attempts. Try again in a few minutes."
+msgstr ""
+
+#: lib/stashix_web/controllers/settings_controller.ex:63
+#, elixir-autogen, elixir-format
+msgid "Too many wrong attempts. Try again in a few minutes."
+msgstr ""
+
+#: lib/stashix_web/components/ui/menu.ex:272
+#, elixir-autogen, elixir-format
+msgid "Type to filter"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_components.ex:84
+#, elixir-autogen, elixir-format
+msgid "Universes"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:200
+#, elixir-autogen, elixir-format
+msgid "Unknown"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex:85
+#, elixir-autogen, elixir-format
+msgid "Unlock %{field}"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:117
+#, elixir-autogen, elixir-format
+msgid "Username"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex:46
+#, elixir-autogen, elixir-format
+msgid "Users"
+msgstr ""
+
+#: lib/stashix_web/components/collection_components.ex:256
+#, elixir-autogen, elixir-format
+msgid "View all"
+msgstr ""
+
+#: lib/stashix_web/components/detail_components.ex:48
+#, elixir-autogen, elixir-format
+msgid "View cover full screen"
+msgstr ""
+
+#: lib/stashix_web/components/auth_components.ex:29
+#, elixir-autogen, elixir-format
+msgid "Your long box, online"
+msgstr ""
+
+#: lib/stashix_web/live/setup_live.ex:199
+#, elixir-autogen, elixir-format
+msgid "Your stash will start empty. You can add a library later under Admin → Libraries."
 msgstr ""

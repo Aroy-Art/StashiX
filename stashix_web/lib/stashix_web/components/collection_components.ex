@@ -8,6 +8,7 @@ defmodule StashixWeb.CollectionComponents do
   one paginated grid per kind.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.CoreComponents
   import StashixWeb.UI.Icon, only: [icon: 1]
@@ -20,7 +21,8 @@ defmodule StashixWeb.CollectionComponents do
   sort attrs). `:meta` adds a line under the title on the overview.
   """
   attr :name, :string, required: true
-  attr :kind, :string, required: true, doc: ~s("Library" or "Publisher")
+  attr :kind, :string, required: true, doc: ~s("Library" or "Publisher", translated)
+  attr :empty_title, :string, required: true, doc: "headline when the collection holds nothing"
   attr :base_path, :string, required: true
   attr :live_action, :atom, required: true
   attr :series_count, :integer, default: 0
@@ -49,7 +51,7 @@ defmodule StashixWeb.CollectionComponents do
 
     ~H"""
     <.page wide cover_src={@cover_src}>
-      <.crumbs crumbs={[{"Home", "/"}, {@name, nil}]} />
+      <.crumbs crumbs={[{gettext("Home"), "/"}, {@name, nil}]} />
 
       <.page_hero title={@name} eyebrow={@kind}>
         <:meta :if={@meta != []}>{render_slot(@meta)}</:meta>
@@ -57,28 +59,28 @@ defmodule StashixWeb.CollectionComponents do
 
       <.panel :if={!@empty?} variant="indicia">
         <.stat_list class="px-6 py-5">
-          <.stat :if={@series_count > 0} label="Series" navigate={"#{@base_path}/series"}>{@series_count}</.stat>
-          <.stat :if={@books_count > 0} label="Books" navigate={"#{@base_path}/books"}>{@books_count}</.stat>
-          <.stat :if={@issues_count > 0} label="Issues" navigate={"#{@base_path}/issues"}>{@issues_count}</.stat>
+          <.stat :if={@series_count > 0} label={gettext("Series")} navigate={"#{@base_path}/series"}>{@series_count}</.stat>
+          <.stat :if={@books_count > 0} label={gettext("Books")} navigate={"#{@base_path}/books"}>{@books_count}</.stat>
+          <.stat :if={@issues_count > 0} label={gettext("Issues")} navigate={"#{@base_path}/issues"}>{@issues_count}</.stat>
         </.stat_list>
       </.panel>
 
-      <.shelf :if={@recent_series != []} id="collection-series" title="Series" count={@series_count}>
+      <.shelf :if={@recent_series != []} id="collection-series" title={gettext("Series")} count={@series_count}>
         <:actions><.view_all to={"#{@base_path}/series"} /></:actions>
         <.series_card :for={s <- @recent_series} series={s} class="flex-shrink-0 w-36" />
       </.shelf>
 
-      <.shelf :if={@recent_books != []} id="collection-books" title="Books" count={@books_count}>
+      <.shelf :if={@recent_books != []} id="collection-books" title={gettext("Books")} count={@books_count}>
         <:actions><.view_all to={"#{@base_path}/books"} /></:actions>
         <.book_card :for={b <- @recent_books} book={b} class="flex-shrink-0 w-36" />
       </.shelf>
 
-      <.shelf :if={@recent_issues != []} id="collection-issues" title="Issues" count={@issues_count}>
+      <.shelf :if={@recent_issues != []} id="collection-issues" title={gettext("Issues")} count={@issues_count}>
         <:actions><.view_all to={"#{@base_path}/issues"} /></:actions>
         <.book_card :for={b <- @recent_issues} book={b} as={:issue} class="flex-shrink-0 w-36" />
       </.shelf>
 
-      <.empty_state :if={@empty?} ghost="0" title={"Nothing in this #{String.downcase(@kind)}"}>
+      <.empty_state :if={@empty?} ghost="0" title={@empty_title}>
         {@empty_hint}
       </.empty_state>
     </.page>
@@ -94,7 +96,7 @@ defmodule StashixWeb.CollectionComponents do
 
     ~H"""
     <.page wide fade cover_src={@cover_src}>
-      <.crumbs crumbs={[{"Home", "/"}, {@name, @base_path}, {@section, nil}]} />
+      <.crumbs crumbs={[{gettext("Home"), "/"}, {@name, @base_path}, {@section, nil}]} />
 
       <.page_hero title={@section} eyebrow={@name} count={@total > 0 && @total}>
         <:meta>
@@ -239,7 +241,7 @@ defmodule StashixWeb.CollectionComponents do
               <span class="text-[10px] uppercase tracking-widest text-ink/80 font-semibold">{label}</span>
             </div>
           </dl>
-          <p :if={@stats == []} class="mt-1 text-xs text-faint">No content</p>
+          <p :if={@stats == []} class="mt-1 text-xs text-faint">{gettext("No content")}</p>
         </div>
       </.link>
     </div>
@@ -251,14 +253,14 @@ defmodule StashixWeb.CollectionComponents do
   def view_all(assigns) do
     ~H"""
     <.text_link navigate={@to}>
-      View all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+      {gettext("View all")} <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
     </.text_link>
     """
   end
 
-  defp section_label(:series), do: "Series"
-  defp section_label(:books), do: "Books"
-  defp section_label(:issues), do: "Issues"
+  defp section_label(:series), do: gettext("Series")
+  defp section_label(:books), do: gettext("Books")
+  defp section_label(:issues), do: gettext("Issues")
 
   defp overview_cover(%{recent_series: [s | _]}), do: "/api/series/#{s.id}/cover?s=s"
   defp overview_cover(%{recent_books: [b | _]}), do: "/api/books/#{b.id}/cover?s=s"

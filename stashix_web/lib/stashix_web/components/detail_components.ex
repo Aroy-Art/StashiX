@@ -4,6 +4,7 @@
 defmodule StashixWeb.DetailComponents do
   @moduledoc "Shared hero pieces for the series and book detail pages."
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   alias Phoenix.LiveView.JS
   import StashixWeb.UI.Icon, only: [icon: 1]
@@ -44,7 +45,7 @@ defmodule StashixWeb.DetailComponents do
           <button
             phx-click={JS.dispatch("stashix:show-modal", to: "##{@id}-lightbox")}
             class="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/30 transition-colors cursor-zoom-in"
-            aria-label="View cover full screen"
+            aria-label={gettext("View cover full screen")}
           >
             <.icon
               name="lucide-zoom-in"
@@ -66,11 +67,11 @@ defmodule StashixWeb.DetailComponents do
       id={"#{@id}-lightbox"}
       phx-mounted={JS.ignore_attributes(["open"])}
       phx-click={JS.dispatch("stashix:close-modal")}
-      aria-label={"#{@alt} cover"}
+      aria-label={gettext("%{title} cover", title: @alt)}
       class="lightbox scheme-dark"
     >
       <img src={@full_src || @src} alt={@alt} loading="lazy" class="max-h-[90vh] max-w-[90vw] object-contain rounded-md" />
-      <.icon_button icon="lucide-x" label="Close" class="fixed top-4 right-4" />
+      <.icon_button icon="lucide-x" label={gettext("Close")} class="fixed top-4 right-4" />
     </dialog>
     """
   end

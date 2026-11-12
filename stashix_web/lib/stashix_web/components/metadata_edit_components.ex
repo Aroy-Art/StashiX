@@ -12,6 +12,7 @@ defmodule StashixWeb.MetadataEditComponents do
   renders read-only; see `Stashix.Metadata.Locks`.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Icon
   import StashixWeb.UI.Forms, only: [input_class: 1]
@@ -79,11 +80,15 @@ defmodule StashixWeb.MetadataEditComponents do
           phx-value-field={@key}
           phx-target={@target}
           aria-pressed={to_string(@locked)}
-          aria-label={if @locked, do: "Unlock #{@label}", else: "Lock #{@label}"}
+          aria-label={
+            if @locked,
+              do: gettext("Unlock %{field}", field: @label),
+              else: gettext("Lock %{field}", field: @label)
+          }
           title={
             if @locked,
-              do: "Locked: rescans and matching leave it alone. Click to unlock.",
-              else: "Lock so rescans and matching can't change it"
+              do: gettext("Locked: rescans and matching leave it alone. Click to unlock."),
+              else: gettext("Lock so rescans and matching can't change it")
           }
           class={[
             "p-0.5 rounded-sm transition-colors",
@@ -189,10 +194,10 @@ defmodule StashixWeb.MetadataEditComponents do
       <StashixWeb.UI.Menu.ink_select
         id={@id}
         name={@name}
-        label="Language"
+        label={gettext("Language")}
         variant="field"
         value={@value}
-        prompt="Unknown"
+        prompt={gettext("Unknown")}
         options={@options}
         searchable
       />
@@ -210,9 +215,11 @@ defmodule StashixWeb.MetadataEditComponents do
   attr :locked, :boolean, default: false
   attr :target, :any, required: true
   attr :nonce, :integer, default: 0
-  attr :placeholder, :string, default: "Add… (Enter)"
+  attr :placeholder, :string, default: nil, doc: "defaults to \"Add… (Enter)\""
 
   def edit_chips(assigns) do
+    assigns = assign(assigns, :placeholder, assigns.placeholder || gettext("Add… (Enter)"))
+
     ~H"""
     <div class="flex flex-wrap items-center gap-1.5">
       <span
@@ -229,13 +236,13 @@ defmodule StashixWeb.MetadataEditComponents do
           phx-value-field={@key}
           phx-value-index={i}
           phx-target={@target}
-          aria-label={"Remove #{item["name"]}"}
+          aria-label={gettext("Remove %{name}", name: item["name"])}
           class="text-faint hover:text-danger"
         >
           <.icon name="lucide-x" class="w-3 h-3" />
         </button>
       </span>
-      <span :if={@locked and @items == []} class="text-xs text-muted">None</span>
+      <span :if={@locked and @items == []} class="text-xs text-muted">{gettext("None")}</span>
       <%!-- form="" detaches the box from the form: Enter adds a chip instead of saving. --%>
       <input
         :if={!@locked}
@@ -259,10 +266,12 @@ defmodule StashixWeb.MetadataEditComponents do
   attr :rows, :list, required: true
   attr :locked, :boolean, default: false
   attr :target, :any, required: true
-  attr :add_label, :string, default: "Add"
+  attr :add_label, :string, default: nil, doc: "defaults to \"Add\""
   slot :inner_block, required: true
 
   def edit_rows(assigns) do
+    assigns = assign(assigns, :add_label, assigns.add_label || gettext("Add"))
+
     ~H"""
     <div class="space-y-1.5">
       <div :for={{row, i} <- Enum.with_index(@rows)} class="flex items-center gap-1.5">
@@ -274,13 +283,13 @@ defmodule StashixWeb.MetadataEditComponents do
           phx-value-field={@key}
           phx-value-index={i}
           phx-target={@target}
-          aria-label="Remove row"
+          aria-label={gettext("Remove row")}
           class="p-1 text-faint hover:text-danger flex-shrink-0"
         >
           <.icon name="lucide-x" class="w-3.5 h-3.5" />
         </button>
       </div>
-      <span :if={@locked and @rows == []} class="text-xs text-muted">None</span>
+      <span :if={@locked and @rows == []} class="text-xs text-muted">{gettext("None")}</span>
       <button
         :if={!@locked}
         type="button"

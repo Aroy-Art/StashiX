@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule StashixWeb.Live.Hooks do
+  use Gettext, backend: StashixWeb.Gettext
+
   import Phoenix.LiveView
   import Phoenix.Component
 
@@ -160,7 +162,7 @@ defmodule StashixWeb.Live.Hooks do
               type: :series,
               id: s.id,
               label: s.name,
-              sub: if(s.issue_count > 0, do: "#{s.issue_count} issues"),
+              sub: if(s.issue_count > 0, do: ngettext("1 issue", "%{count} issues", s.issue_count)),
               cover: true
             }
           end) ++
@@ -226,12 +228,12 @@ defmodule StashixWeb.Live.Hooks do
 
   defp handle_sidebar_scan("sidebar_scan", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id)
-    {:halt, put_flash(socket, :info, "Scan started")}
+    {:halt, put_flash(socket, :info, gettext("Scan started"))}
   end
 
   defp handle_sidebar_scan("sidebar_force_scan", %{"id" => id}, socket) do
     Stashix.Scanner.scan_library(id, true)
-    {:halt, put_flash(socket, :info, "Force scan started")}
+    {:halt, put_flash(socket, :info, gettext("Force scan started"))}
   end
 
   defp handle_sidebar_scan("cancel_scan", %{"id" => id}, socket) do

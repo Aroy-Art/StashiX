@@ -23,7 +23,7 @@ defmodule StashixWeb.SettingsController do
       {:ok, user} ->
         conn
         |> renew_session(user)
-        |> put_flash(:info, "Password changed. Other devices have been signed out.")
+        |> put_flash(:info, gettext("Password changed. Other devices have been signed out."))
         |> back()
 
       {:error, reason} ->
@@ -34,7 +34,7 @@ defmodule StashixWeb.SettingsController do
   def update_email(conn, params) do
     case Accounts.change_email(conn.assigns.current_user, params["current_password"], Map.take(params, ["email"])) do
       {:ok, user} ->
-        conn |> put_flash(:info, "Email changed to #{user.email}.") |> back()
+        conn |> put_flash(:info, gettext("Email changed to %{email}.", email: user.email)) |> back()
 
       {:error, reason} ->
         conn |> put_flash(:error, error_message(reason)) |> back()
@@ -46,7 +46,7 @@ defmodule StashixWeb.SettingsController do
 
     conn
     |> renew_session(user)
-    |> put_flash(:info, "Signed out everywhere else.")
+    |> put_flash(:info, gettext("Signed out everywhere else."))
     |> back()
   end
 
@@ -59,19 +59,22 @@ defmodule StashixWeb.SettingsController do
     |> SessionController.sign_in(user)
   end
 
-  defp error_message(:invalid_password), do: "The current password is not right."
-  defp error_message(:rate_limited), do: "Too many wrong attempts. Try again in a few minutes."
+  defp error_message(:invalid_password), do: gettext("The current password is not right.")
+  defp error_message(:rate_limited), do: gettext("Too many wrong attempts. Try again in a few minutes.")
 
   defp error_message(%Ecto.Changeset{} = changeset) do
-    {field, {message, opts}} = hd(changeset.errors)
+    {field, error} = hd(changeset.errors)
 
-    message =
-      Enum.reduce(opts, message, fn {key, value}, acc ->
-        String.replace(acc, "%{#{key}}", fn _ -> to_string(value) end)
-      end)
-
-    "#{field |> to_string() |> String.replace("_", " ") |> String.capitalize()} #{message}."
+    gettext("%{field} %{message}.",
+      field: field_label(field),
+      message: StashixWeb.CoreComponents.translate_error(error)
+    )
   end
+
+  defp field_label(:email), do: gettext("Email")
+  defp field_label(:password), do: gettext("Password")
+  defp field_label(:password_confirmation), do: gettext("Password confirmation")
+  defp field_label(field), do: field |> to_string() |> String.replace("_", " ") |> String.capitalize()
 
   defp require_user(conn, _opts) do
     case TokenHelper.user_from_session(get_session(conn)) do

@@ -220,7 +220,8 @@ defmodule StashixWeb.LibraryLive do
     ~H"""
     <.collection_page
       name={@library.name}
-      kind="Library"
+      kind={gettext("Library")}
+      empty_title={gettext("Nothing in this library")}
       base_path={~p"/library/#{@library}"}
       live_action={@live_action}
       series_count={assigns[:series_count] || 0}

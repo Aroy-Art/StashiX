@@ -8,6 +8,7 @@ defmodule StashixWeb.AuthComponents do
   cover art would be, a barcode strip along the foot.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Ink, only: [eyebrow: 1, display_heading: 1]
   import StashixWeb.UI.Logo, only: [logo: 1]
@@ -19,13 +20,13 @@ defmodule StashixWeb.AuthComponents do
   form panel; `:steps` is an optional row above the panel.
   """
   attr :issue, :string, default: "#1"
-  attr :tagline, :string, default: "Your long box, online"
+  attr :tagline, :string, default: nil, doc: "defaults to \"Your long box, online\""
   attr :heading, :string, required: true
   slot :steps
   slot :inner_block, required: true
 
   def cover_page(assigns) do
-    assigns = assign(assigns, version: @version)
+    assigns = assign(assigns, version: @version, tagline: assigns.tagline || gettext("Your long box, online"))
 
     ~H"""
     <div class="relative min-h-dvh flex items-center justify-center px-4 py-8 sm:py-12 bg-canvas text-fg overflow-hidden">
@@ -58,7 +59,7 @@ defmodule StashixWeb.AuthComponents do
 
         <footer class="relative flex items-end justify-between gap-4 px-4 sm:px-5 pb-4">
           <div class="cover-barcode h-9 w-32" aria-hidden="true"></div>
-          <.eyebrow size="sm" tone="muted" class="text-right">Self-hosted · read anywhere</.eyebrow>
+          <.eyebrow size="sm" tone="muted" class="text-right">{gettext("Self-hosted · read anywhere")}</.eyebrow>
         </footer>
       </main>
     </div>

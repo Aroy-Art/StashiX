@@ -22,7 +22,7 @@ defmodule StashixWeb.LoginLive do
     else
       {:ok,
        assign(socket,
-         page_title: "Login",
+         page_title: gettext("Login"),
          form: to_form(%{"login" => "", "password" => ""}),
          error: nil,
          trigger_submit: false
@@ -41,17 +41,17 @@ defmodule StashixWeb.LoginLive do
          )}
 
       {:error, :rate_limited} ->
-        {:noreply, assign(socket, error: "Too many failed attempts. Try again in a few minutes.")}
+        {:noreply, assign(socket, error: gettext("Too many failed attempts. Try again in a few minutes."))}
 
       {:error, _} ->
-        {:noreply, assign(socket, error: "Invalid email/username or password")}
+        {:noreply, assign(socket, error: gettext("Invalid email/username or password"))}
     end
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.cover_page heading="Sign in" issue="#1">
+    <.cover_page heading={gettext("Sign in")} issue="#1">
       <p
         :if={@error}
         role="alert"
@@ -69,7 +69,7 @@ defmodule StashixWeb.LoginLive do
         class="space-y-4"
       >
         <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
-        <.field label="Email or username">
+        <.field label={gettext("Email or username")}>
           <.text_input
             name="login"
             value={@form["login"].value}
@@ -79,11 +79,11 @@ defmodule StashixWeb.LoginLive do
             placeholder="you@example.com"
           />
         </.field>
-        <.field label="Password">
+        <.field label={gettext("Password")}>
           <.text_input type="password" name="password" required autocomplete="current-password" />
         </.field>
         <.ink_button type="submit" class="w-full mt-2">
-          <.icon name="lucide-book-open" class="w-4 h-4" /> Open the box
+          <.icon name="lucide-book-open" class="w-4 h-4" /> {gettext("Open the box")}
         </.ink_button>
       </form>
     </.cover_page>

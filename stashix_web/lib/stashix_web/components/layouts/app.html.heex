@@ -30,7 +30,7 @@
            and keeps the tip of the trail inside the sidebar. --%>
       <%!-- The logo block and the top bar stay dark in every theme: one dark band. --%>
       <div class="scheme-dark flex items-center justify-center h-16 bg-band border-b border-fg/10">
-        <.link navigate="/" class="flex items-center text-[2.125rem] pr-[1.45em]" aria-label="Stashix home">
+        <.link navigate="/" class="flex items-center text-[2.125rem] pr-[1.45em]" aria-label={gettext("Stashix home")}>
           <.logo id="sidebar-logo" />
         </.link>
       </div>
@@ -38,17 +38,17 @@
       <% path = Map.get(assigns, :current_path) %>
       <%= if Map.get(assigns, :admin_sidebar) do %>
         <%!-- Admin Nav --%>
-        <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label="Admin">
-          <.eyebrow class="px-3 pt-2 pb-1.5">Admin</.eyebrow>
+        <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Admin")}>
+          <.eyebrow class="px-3 pt-2 pb-1.5">{gettext("Admin")}</.eyebrow>
           <.nav_item
             :for={
               {label, to, icon} <- [
-                {"Users", "/admin/users", "lucide-users"},
-                {"Libraries", "/admin/libraries", "lucide-folder"},
-                {"Cleanup", "/admin/cleanup", "lucide-trash"},
-                {"Publishers", "/admin/publishers", "lucide-building"},
-                {"Health", "/admin/health", "lucide-heart-pulse"},
-                {"Metadata", "/admin/metadata", "lucide-database-zap"}
+                {gettext("Users"), "/admin/users", "lucide-users"},
+                {gettext("Libraries"), "/admin/libraries", "lucide-folder"},
+                {gettext("Cleanup"), "/admin/cleanup", "lucide-trash"},
+                {gettext("Publishers"), "/admin/publishers", "lucide-building"},
+                {gettext("Health"), "/admin/health", "lucide-heart-pulse"},
+                {gettext("Metadata"), "/admin/metadata", "lucide-database-zap"}
               ]
             }
             navigate={to}
@@ -59,22 +59,22 @@
           </.nav_item>
 
           <div class="mt-3 pt-3 border-t border-fg/10">
-            <.nav_item navigate="/" icon="lucide-arrow-left">Back to library</.nav_item>
+            <.nav_item navigate="/" icon="lucide-arrow-left">{gettext("Back to library")}</.nav_item>
           </div>
         </nav>
       <% else %>
         <%!-- Main Nav --%>
-        <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label="Main">
+        <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Main")}>
           <.nav_item
             :for={
               {label, to, icon} <- [
-                {"Home", "/", "lucide-house"},
-                {"Search", "/search", "lucide-search"},
-                {"Series", "/series", "lucide-book-copy"},
-                {"Books", "/books", "lucide-library-big"},
-                {"Issues", "/issues", "lucide-layers"},
-                {"Publishers", "/publishers", "lucide-building"},
-                {"Stats", "/stats", "lucide-chart-bar"}
+                {gettext("Home"), "/", "lucide-house"},
+                {gettext("Search"), "/search", "lucide-search"},
+                {gettext("Series"), "/series", "lucide-book-copy"},
+                {gettext("Books"), "/books", "lucide-library-big"},
+                {gettext("Issues"), "/issues", "lucide-layers"},
+                {gettext("Publishers"), "/publishers", "lucide-building"},
+                {gettext("Stats"), "/stats", "lucide-chart-bar"}
               ]
             }
             navigate={to}
@@ -86,7 +86,7 @@
 
           <%!-- Libraries section in sidebar --%>
           <%= if Map.get(assigns, :sidebar_libraries) do %>
-            <.eyebrow class="px-3 pt-5 pb-1.5">Libraries</.eyebrow>
+            <.eyebrow class="px-3 pt-5 pb-1.5">{gettext("Libraries")}</.eyebrow>
             <%= for lib <- @sidebar_libraries do %>
               <% progress = Map.get(assigns[:sidebar_scan_progress] || %{}, lib.id)
 
@@ -123,23 +123,23 @@
       <% theme = Stashix.Accounts.User.ui_setting(@current_user, "theme")
 
       themes = [
-        {"system", "System", "lucide-sun-moon"},
-        {"light", "Light", "lucide-sun"},
-        {"dark", "Dark", "lucide-moon"}
+        {"system", gettext("System"), "lucide-sun-moon"},
+        {"light", gettext("Light"), "lucide-sun"},
+        {"dark", gettext("Dark"), "lucide-moon"}
       ]
 
       {_, theme_label, theme_icon} = List.keyfind(themes, theme, 0) %>
       <div class="p-2 border-y border-fg/10">
         <.ink_menu id="theme-menu" align="start" class="flex w-full" panel_class="w-44">
           <:trigger
-            label={"Theme: #{theme_label}"}
+            label={gettext("Theme: %{theme}", theme: theme_label)}
             class="flex items-center gap-3 w-full px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-sm text-muted hover:text-fg hover:bg-fg/[0.06] transition-colors"
           >
             <.icon name={theme_icon} class="w-4 h-4" />
-            <span>Theme</span>
+            <span>{gettext("Theme")}</span>
             <span class="ml-auto text-faint">{theme_label}</span>
           </:trigger>
-          <.menu_label>Theme</.menu_label>
+          <.menu_label>{gettext("Theme")}</.menu_label>
           <.menu_item
             :for={{value, label, icon} <- themes}
             id={"theme-#{value}"}
@@ -163,7 +163,7 @@
           rel="noopener noreferrer"
           class="flex items-center gap-1 hover:text-fg transition-colors"
         >
-          <.icon name="lucide-code-xml" class="w-3 h-3" /> Source
+          <.icon name="lucide-code-xml" class="w-3 h-3" /> {gettext("Source")}
         </a>
       </div>
     </aside>
@@ -194,7 +194,7 @@
         <button
           onclick="toggleSidebar()"
           class="lg:hidden p-1.5 rounded-md text-muted hover:text-fg hover:bg-fg/10 transition-colors flex-shrink-0"
-          aria-label="Toggle sidebar"
+          aria-label={gettext("Toggle sidebar")}
         >
           <.icon name="lucide-menu" class="w-5 h-5" />
         </button>
@@ -223,7 +223,7 @@
               phx-debounce="200"
               phx-blur="navbar_search_clear"
               phx-hook="SearchNav"
-              placeholder="Search titles, series, publishers..."
+              placeholder={gettext("Search titles, series, publishers...")}
               class="nav-search w-full pl-9 pr-4 sm:pr-20 py-2 text-sm text-fg placeholder-faint"
               autocomplete="off"
             />
@@ -273,7 +273,7 @@
                         <% end %>
                       </div>
                       <.eyebrow tag="span" size="xs" tone="muted" class="shrink-0">
-                        {Atom.to_string(result.type)}
+                        {result_type_label(result.type)}
                       </.eyebrow>
                     </.link>
                   <% end %>
@@ -282,7 +282,8 @@
                   navigate={~p"/search?#{[q: navbar_query]}"}
                   class="ink-menu-item flex items-center justify-center gap-2 mt-1.5 px-2 py-2 rounded-sm border-t border-fg/10 font-display font-bold uppercase tracking-wide text-sm text-fg-soft hover:text-fg hover:bg-fg/[0.05] focus:bg-fg/[0.07] outline-none transition-colors"
                 >
-                  See all results for "{navbar_query}" <.icon name="lucide-arrow-right" class="w-3.5 h-3.5 text-ink" />
+                  {gettext("See all results for \"%{query}\"", query: navbar_query)}
+                  <.icon name="lucide-arrow-right" class="w-3.5 h-3.5 text-ink" />
                 </.link>
               </div>
             <% end %>
@@ -293,7 +294,7 @@
           <%!-- Activity indicator dropdown --%>
           <.ink_menu id="activity-menu" panel_class="w-72">
             <:trigger
-              label="Background tasks"
+              label={gettext("Background tasks")}
               class={[
                 "relative p-1.5 rounded-lg transition-colors hover:bg-fg/10 flex items-center justify-center",
                 if(active_tasks != [], do: "text-ink", else: "text-muted hover:text-fg")
@@ -305,8 +306,8 @@
                 class="absolute -top-0.5 -right-0.5 w-2 h-2 bg-ink rounded-full animate-ping"
               ></span>
             </:trigger>
-            <.menu_label>Background tasks</.menu_label>
-            <p :if={all_tasks == []} class="px-2 pt-1 pb-2 text-sm text-muted">Nothing running</p>
+            <.menu_label>{gettext("Background tasks")}</.menu_label>
+            <p :if={all_tasks == []} class="px-2 pt-1 pb-2 text-sm text-muted">{gettext("Nothing running")}</p>
             <div
               :for={{task_id, task} <- all_tasks}
               id={"task-#{task_id}"}
@@ -324,12 +325,12 @@
               pct = if total > 0, do: progress / total %>
               <div class="flex items-center justify-between gap-3">
                 <span class="min-w-0 truncate font-display font-bold uppercase tracking-wide text-sm text-fg">
-                  {Map.get(lib_names, lib_id, "Library")}
+                  {Map.get(lib_names, lib_id, gettext("Library"))}
                 </span>
                 <div class="flex items-center gap-2 flex-shrink-0">
                   <span class="font-display font-black text-lg leading-none tabular-nums text-ink">
                     {cond do
-                      done -> "Done"
+                      done -> gettext("Done")
                       pct -> "#{round(pct * 100)}%"
                       true -> "…"
                     end}
@@ -338,7 +339,7 @@
                     :if={!done}
                     phx-click={if is_health, do: "cancel_health_scan", else: "cancel_scan"}
                     phx-value-id={lib_id}
-                    title="Cancel"
+                    title={gettext("Cancel")}
                     class="p-0.5 rounded text-faint hover:text-danger hover:bg-fg/10 transition-colors"
                   >
                     <.icon name="lucide-x" class="w-3.5 h-3.5" />
@@ -347,31 +348,34 @@
               </div>
               <p class="mt-0.5 mb-2 text-[11px] text-muted">
                 {cond do
-                  done and is_health -> "Health check complete"
-                  done and Map.get(task, :phase) == :cancelled -> "Cancelled"
-                  done -> "Complete"
-                  is_health and task.type == :integrity -> "Checking archive integrity"
-                  is_health and task.type == :unsupported -> "Scanning for unsupported files"
-                  Map.get(task, :phase) == :thumbnails -> "Generating covers"
-                  Map.get(task, :phase) == :file -> "Indexing new file"
-                  true -> "Scanning files"
+                  done and is_health -> gettext("Health check complete")
+                  done and Map.get(task, :phase) == :cancelled -> gettext("Cancelled")
+                  done -> gettext("Complete")
+                  is_health and task.type == :integrity -> gettext("Checking archive integrity")
+                  is_health and task.type == :unsupported -> gettext("Scanning for unsupported files")
+                  Map.get(task, :phase) == :thumbnails -> gettext("Generating covers")
+                  Map.get(task, :phase) == :file -> gettext("Indexing new file")
+                  true -> gettext("Scanning files")
                 end}
-                <span :if={!done and total > 0} class="tabular-nums"> · {progress} / {total} files</span>
+                <span :if={!done and total > 0} class="tabular-nums"> · {gettext("%{done} / %{total} files",
+                  done: progress,
+                  total: total
+                )}</span>
               </p>
               <.run_bar
                 value={if done, do: 1.0, else: pct}
-                label={"#{Map.get(lib_names, lib_id, "Library")} progress"}
+                label={gettext("%{library} progress", library: Map.get(lib_names, lib_id, gettext("Library")))}
               />
             </div>
             <%!-- Scans waiting for a running library or series scan (admins only) --%>
             <% scan_queue =
               if @current_user.role == :admin, do: Map.get(assigns, :sidebar_scan_queue) || %{}, else: %{} %>
             <%= if scan_queue != %{} do %>
-              <.menu_label class="border-t border-fg/10 pt-2">Queued</.menu_label>
+              <.menu_label class="border-t border-fg/10 pt-2">{gettext("Queued")}</.menu_label>
               <div :for={{lib_id, items} <- scan_queue} id={"scan-queue-#{lib_id}"} class="px-2 pb-2">
                 <div class="flex items-center justify-between gap-3">
                   <span class="min-w-0 truncate font-display font-bold uppercase tracking-wide text-sm text-fg">
-                    {Map.get(lib_names, lib_id, "Library")}
+                    {Map.get(lib_names, lib_id, gettext("Library"))}
                   </span>
                   <span class="font-display font-black text-sm leading-none tabular-nums text-muted">
                     {length(items)}
@@ -394,14 +398,19 @@
                     />
                     <span class="truncate">
                       {case item.kind do
-                        :library -> if item.force, do: "Force scan", else: "Scan"
-                        :series -> "#{if item.force, do: "Force rescan", else: "Rescan"} · #{item.label}"
-                        :file -> item.label
+                        :library ->
+                          if item.force, do: gettext("Force scan"), else: gettext("Scan")
+
+                        :series ->
+                          "#{if item.force, do: gettext("Force rescan"), else: gettext("Rescan")} · #{item.label}"
+
+                        :file ->
+                          item.label
                       end}
                     </span>
                   </li>
                   <li :if={length(items) > 5} class="pl-5 text-[11px] text-faint">
-                    +{length(items) - 5} more
+                    {gettext("+%{count} more", count: length(items) - 5)}
                   </li>
                 </ul>
               </div>
@@ -424,11 +433,11 @@
                 class="w-3.5 h-3.5 text-muted transition-transform group-data-[open]:rotate-180"
               />
             </:trigger>
-            <.menu_item icon="lucide-sliders-horizontal" navigate="/settings">Settings</.menu_item>
+            <.menu_item icon="lucide-sliders-horizontal" navigate="/settings">{gettext("Settings")}</.menu_item>
             <.menu_item :if={@current_user.role == :admin} icon="lucide-settings" navigate="/admin/users">
-              System settings
+              {gettext("System settings")}
             </.menu_item>
-            <.menu_item icon="lucide-log-out" href="/logout" method="delete">Sign out</.menu_item>
+            <.menu_item icon="lucide-log-out" href="/logout" method="delete">{gettext("Sign out")}</.menu_item>
           </.ink_menu>
         </div>
       </header>

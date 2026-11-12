@@ -64,7 +64,7 @@
         id="stx-loader-refresh"
         onclick="window.location.reload()"
         style="display:none;padding:8px 20px;background:transparent;border:1px solid light-dark(rgba(0,0,0,0.2), rgba(255,255,255,0.2));border-radius:6px;color:light-dark(rgba(0,0,0,0.6), rgba(255,255,255,0.6));font-size:14px;cursor:pointer;font-family:inherit"
-      >Refresh page</button>
+      >{gettext("Refresh page")}</button>
     </div>
     <script>
       setTimeout(function() {
@@ -103,13 +103,13 @@
         <line x1="12" y1="20" x2="12.01" y2="20" />
       </svg>
       <span class="relative font-display font-black uppercase tracking-[0.07em] text-orange-950 text-sm leading-none flex-1 min-w-0 truncate">
-        No signal — connection lost
+        {gettext("No signal — connection lost")}
       </span>
       <button
         id="ws-reconnect-btn"
         class="ws-reconnect-btn relative shrink-0 font-display font-black uppercase tracking-[0.06em] text-xs px-3 py-1 bg-orange-950 text-orange-300 rounded-sm hover:text-fg transition-colors"
       >
-        Reconnect
+        {gettext("Reconnect")}
       </button>
     </div>
   </body>

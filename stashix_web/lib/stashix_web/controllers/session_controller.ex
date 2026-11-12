@@ -19,12 +19,12 @@ defmodule StashixWeb.SessionController do
 
       {:error, :rate_limited} ->
         conn
-        |> put_flash(:error, "Too many failed attempts. Try again in a few minutes.")
+        |> put_flash(:error, gettext("Too many failed attempts. Try again in a few minutes."))
         |> redirect(to: ~p"/login")
 
       {:error, _} ->
         conn
-        |> put_flash(:error, "Invalid email or password")
+        |> put_flash(:error, gettext("Invalid email or password"))
         |> redirect(to: ~p"/login")
     end
   end
@@ -61,7 +61,7 @@ defmodule StashixWeb.SessionController do
 
         {:error, _} ->
           conn
-          |> put_flash(:error, "Setup failed. Check your details and try again.")
+          |> put_flash(:error, gettext("Setup failed. Check your details and try again."))
           |> redirect(to: ~p"/setup")
       end
     end

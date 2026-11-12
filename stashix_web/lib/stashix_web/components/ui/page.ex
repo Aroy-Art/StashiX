@@ -8,6 +8,7 @@ defmodule StashixWeb.UI.Page do
   Specimens live at `/dev/ui`.
   """
   use Phoenix.Component
+  use Gettext, backend: StashixWeb.Gettext
 
   alias Phoenix.LiveView.JS
   import StashixWeb.UI.Icon, only: [icon: 1]
@@ -56,9 +57,9 @@ defmodule StashixWeb.UI.Page do
   def crumbs(assigns) do
     ~H"""
     <div class="flex flex-wrap items-center gap-x-3 gap-y-3 text-xs">
-      <.icon_button icon="lucide-arrow-left" label="Back" phx-click={JS.dispatch("phx:history-back")} />
+      <.icon_button icon="lucide-arrow-left" label={gettext("Back")} phx-click={JS.dispatch("phx:history-back")} />
       <nav
-        aria-label="Breadcrumb"
+        aria-label={gettext("Breadcrumb")}
         class="flex items-center gap-2 flex-1 min-w-0 overflow-hidden font-medium uppercase tracking-[0.12em]"
       >
         <%= for {{label, path}, idx} <- Enum.with_index(@crumbs) do %>
