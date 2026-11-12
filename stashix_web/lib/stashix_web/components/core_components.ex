@@ -618,6 +618,23 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc "Options for `sort_select/1`: `:titles` for series and books, `:issues` adds the issue number."
+  def sort_options(:titles) do
+    [
+      {gettext("A → Z"), "title_asc"},
+      {gettext("Z → A"), "title_desc"},
+      {gettext("Year ↑"), "year_asc"},
+      {gettext("Year ↓"), "year_desc"},
+      {gettext("Date Added ↓"), "added_desc"},
+      {gettext("Date Added ↑"), "added_asc"}
+    ]
+  end
+
+  def sort_options(:issues) do
+    {by_title, rest} = Enum.split(sort_options(:titles), 2)
+    by_title ++ [{gettext("Issue # ↑"), "issue_asc"}, {gettext("Issue # ↓"), "issue_desc"}] ++ rest
+  end
+
   attr :id, :string, default: "sort-select"
   attr :options, :list, required: true
   attr :selected, :string, required: true

@@ -13,35 +13,6 @@ defmodule StashixWeb.PublisherLive do
 
   @page_size 48
 
-  @series_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
-  @books_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
-  @issues_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Issue # ↑", "issue_asc"},
-    {"Issue # ↓", "issue_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
   @impl true
   def mount(%{"id" => param}, _session, socket) do
     id = Slug.resolve!(Stashix.Library.Publisher, param)
@@ -69,7 +40,7 @@ defmodule StashixWeb.PublisherLive do
          total_pages: 1,
          page: 1,
          sort: "title_asc",
-         sort_options: @series_sort_options,
+         sort_options: sort_options(:titles),
          progress_map: %{},
          loading: true
        )}
@@ -109,7 +80,7 @@ defmodule StashixWeb.PublisherLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @series_sort_options,
+            sort_options: sort_options(:titles),
             progress_map: %{},
             loading: false
           )
@@ -132,7 +103,7 @@ defmodule StashixWeb.PublisherLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @books_sort_options,
+            sort_options: sort_options(:titles),
             progress_map: progress_map,
             loading: false
           )
@@ -149,7 +120,7 @@ defmodule StashixWeb.PublisherLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @issues_sort_options,
+            sort_options: sort_options(:issues),
             progress_map: progress_map,
             loading: false
           )
@@ -208,10 +179,10 @@ defmodule StashixWeb.PublisherLive do
       sort={assigns[:sort]}
       progress_map={assigns[:progress_map] || %{}}
       loading={assigns[:loading] || false}
-      empty_hint="No series or books are linked to it yet."
+      empty_hint={gettext("No series or books are linked to it yet.")}
     >
       <:meta :if={@publisher.aliases != []}>
-        <span>Also known as {Enum.map_join(@publisher.aliases, ", ", & &1.name)}</span>
+        <span>{gettext("Also known as %{names}", names: Enum.map_join(@publisher.aliases, ", ", & &1.name))}</span>
       </:meta>
     </.collection_page>
     """

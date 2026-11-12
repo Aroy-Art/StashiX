@@ -4,7 +4,7 @@
 defmodule StashixWeb.HomeLive do
   use StashixWeb, :live_view
 
-  import StashixWeb.CollectionComponents, only: [collection_card: 1, view_all: 1]
+  import StashixWeb.CollectionComponents, only: [collection_card: 1, count_stats: 3, view_all: 1]
 
   alias Stashix.Library
 
@@ -28,7 +28,7 @@ defmodule StashixWeb.HomeLive do
 
     {:ok,
      assign(socket,
-       page_title: "Home",
+       page_title: gettext("Home"),
        libraries_data: libraries_data,
        continue_reading: continue_reading,
        next_issue: next_issue,
@@ -249,7 +249,7 @@ defmodule StashixWeb.HomeLive do
 
     %{
       id: "home-hero-#{book.id}",
-      eyebrow: "Continue reading",
+      eyebrow: gettext("Continue reading"),
       series: series,
       sticker: book.issue_number && "##{book.issue_number}",
       ghost: book.issue_number && to_string(book.issue_number),
@@ -257,53 +257,62 @@ defmodule StashixWeb.HomeLive do
       meta:
         Enum.reject(
           [
-            book.issue_number && count && count > 0 && "Issue #{book.issue_number} of #{count}",
-            book.page_count && book.page_count > 0 && "Page #{page + 1} of #{book.page_count}"
+            book.issue_number && count && count > 0 &&
+              gettext("Issue %{number} of %{count}", number: book.issue_number, count: count),
+            book.page_count && book.page_count > 0 &&
+              gettext("Page %{page} of %{count}", page: page + 1, count: book.page_count)
           ],
           &(&1 in [nil, false])
         ),
       progress: if(book.page_count && book.page_count > 1, do: min(page / (book.page_count - 1), 1.0)),
       cover: ~p"/api/books/#{book.id}/cover",
       to: ~p"/book/#{slug_param(book)}",
-      primary: {"Continue", "lucide-play", ~p"/read/#{slug_param(book)}"},
-      secondary: {"Details", ~p"/book/#{slug_param(book)}"}
+      primary: {gettext("Continue"), "lucide-play", ~p"/read/#{slug_param(book)}"},
+      secondary: {gettext("Details"), ~p"/book/#{slug_param(book)}"}
     }
   end
 
   defp hero(%{spotlight: {:book, book}}) do
     %{
       id: "home-hero-#{book.id}",
-      eyebrow: "Discover",
+      eyebrow: gettext("Discover"),
       series: loaded(book.series),
       sticker: book.issue_number && "##{book.issue_number}",
       ghost: book.issue_number && to_string(book.issue_number),
       title: book.title,
-      meta: if(book.page_count && book.page_count > 0, do: ["#{book.page_count} pages"], else: []),
+      meta:
+        if(book.page_count && book.page_count > 0,
+          do: [ngettext("1 page", "%{count} pages", book.page_count)],
+          else: []
+        ),
       progress: nil,
       cover: ~p"/api/books/#{book.id}/cover",
       to: ~p"/book/#{slug_param(book)}",
-      primary: {"Start reading", "lucide-play", ~p"/read/#{slug_param(book)}"},
-      secondary: {"Details", ~p"/book/#{slug_param(book)}"}
+      primary: {gettext("Start reading"), "lucide-play", ~p"/read/#{slug_param(book)}"},
+      secondary: {gettext("Details"), ~p"/book/#{slug_param(book)}"}
     }
   end
 
   defp hero(%{spotlight: {:series, series}}) do
     %{
       id: "home-hero-#{series.id}",
-      eyebrow: "Discover a series",
+      eyebrow: gettext("Discover a series"),
       series: nil,
       sticker: nil,
       ghost: series.issue_count && series.issue_count > 1 && to_string(series.issue_count),
       title: series.name,
       meta:
         Enum.reject(
-          [series.issue_count && "#{series.issue_count} issues", Stashix.Formatters.series_years(series)],
+          [
+            series.issue_count && ngettext("1 issue", "%{count} issues", series.issue_count),
+            Stashix.Formatters.series_years(series)
+          ],
           &is_nil/1
         ),
       progress: nil,
       cover: ~p"/api/series/#{series.id}/cover",
       to: ~p"/series/#{slug_param(series)}",
-      primary: {"Browse series", "lucide-library", ~p"/series/#{slug_param(series)}"},
+      primary: {gettext("Browse series"), "lucide-library", ~p"/series/#{slug_param(series)}"},
       secondary: nil
     }
   end
@@ -364,7 +373,7 @@ defmodule StashixWeb.HomeLive do
         <.progress_bar
           :if={@hero.progress}
           value={@hero.progress}
-          label="Reading progress"
+          label={gettext("Reading progress")}
           class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs"
           style="--i:3"
         />
@@ -443,19 +452,21 @@ defmodule StashixWeb.HomeLive do
       <.home_hero :if={@hero} hero={@hero} />
       <.home_hero_placeholder :if={!@hero and @picks_pending} />
 
-      <.page_hero :if={!@hero and !@picks_pending} title="Your stash" eyebrow="Welcome" />
-      <.empty_state :if={!@hero and !@picks_pending} ghost="0" title="Nothing on the shelves yet">
-        Add a library and scan it, and what you can read shows up here.
+      <.page_hero :if={!@hero and !@picks_pending} title={gettext("Your stash")} eyebrow={gettext("Welcome")} />
+      <.empty_state :if={!@hero and !@picks_pending} ghost="0" title={gettext("Nothing on the shelves yet")}>
+        {gettext("Add a library and scan it, and what you can read shows up here.")}
         <:actions :if={@current_user.role == :admin}>
-          <.ink_button navigate={~p"/admin/libraries"}><.icon name="lucide-folder-plus" class="w-4 h-4" /> Add a library</.ink_button>
+          <.ink_button navigate={~p"/admin/libraries"}><.icon name="lucide-folder-plus" class="w-4 h-4" /> {gettext(
+            "Add a library"
+          )}</.ink_button>
         </:actions>
       </.empty_state>
 
       <.panel :if={@hero || @picks_pending} variant="indicia">
         <.stat_list inline class="px-6 py-5 lg:py-3.5">
-          <.stat label="Series" navigate={~p"/series"}>{@total_series}</.stat>
-          <.stat label="Books" navigate={~p"/books"}>{@total_books}</.stat>
-          <.stat label="Issues" navigate={~p"/issues"}>{@total_issues}</.stat>
+          <.stat label={gettext("Series")} navigate={~p"/series"}>{@total_series}</.stat>
+          <.stat label={gettext("Books")} navigate={~p"/books"}>{@total_books}</.stat>
+          <.stat label={gettext("Issues")} navigate={~p"/issues"}>{@total_issues}</.stat>
         </.stat_list>
       </.panel>
 
@@ -476,16 +487,16 @@ defmodule StashixWeb.HomeLive do
                 end
               }
             >
-              <.section :if={@also_reading != []} title="Also reading" count={length(@also_reading)}>
+              <.section :if={@also_reading != []} title={gettext("Also reading")} count={length(@also_reading)}>
                 <div class={["grid gap-2.5", length(@also_reading) > 1 && @queue_cols]}>
                   <.book_row :for={%{book: book, current_page: page} <- @also_reading} book={book} read={page} />
                 </div>
               </.section>
 
-              <.section :if={@next_issue != []} title="Up next" count={length(@next_issue)}>
+              <.section :if={@next_issue != []} title={gettext("Up next")} count={length(@next_issue)}>
                 <:actions :if={length(@next_issue) > 6}>
                   <.text_link navigate={~p"/issues"}>
-                    See all <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
+                    {gettext("See all")} <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
                   </.text_link>
                 </:actions>
                 <div class={["grid gap-2.5", length(@next_issue) > 1 && @queue_cols]}>
@@ -494,7 +505,7 @@ defmodule StashixWeb.HomeLive do
               </.section>
             </div>
 
-            <.section :if={@picks?} title="Start reading">
+            <.section :if={@picks?} title={gettext("Start reading")}>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <.book_row :for={book <- @recommendations.books} book={book} />
                 <.media_row
@@ -503,9 +514,12 @@ defmodule StashixWeb.HomeLive do
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   blurhash={s.cover_blurhash}
-                  eyebrow="Series"
+                  eyebrow={gettext("Series")}
                   detail={
-                    [s.issue_count && "#{s.issue_count} issues", Stashix.Formatters.series_years(s)]
+                    [
+                      s.issue_count && ngettext("1 issue", "%{count} issues", s.issue_count),
+                      Stashix.Formatters.series_years(s)
+                    ]
                     |> Enum.filter(& &1)
                     |> Enum.join(" · ")
                   }
@@ -516,7 +530,7 @@ defmodule StashixWeb.HomeLive do
 
           <.section
             :if={@libraries_data != []}
-            title="Libraries"
+            title={gettext("Libraries")}
             count={length(@libraries_data)}
             class={[
               "w-full order-last lg:order-none",
@@ -537,8 +551,8 @@ defmodule StashixWeb.HomeLive do
                 navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
                 covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
-                stats={[{"series", data.series_count}, {"books", data.book_count}, {"issues", data.issue_count}]}
-                note="Empty — scan it to fill it"
+                stats={count_stats(data.series_count, data.book_count, data.issue_count)}
+                note={gettext("Empty — scan it to fill it")}
               >
                 <:menu :if={@current_user.role == :admin}>
                   <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
@@ -563,7 +577,7 @@ defmodule StashixWeb.HomeLive do
           options={@library_options}
         />
 
-        <.shelf :if={@recent_series != [] or @recent_library} id="home-recent-series" title="Recent series">
+        <.shelf :if={@recent_series != [] or @recent_library} id="home-recent-series" title={gettext("Recent series")}>
           <:actions>
             <.view_all to={~p"/series"} />
           </:actions>
@@ -571,7 +585,7 @@ defmodule StashixWeb.HomeLive do
           <.recent_empty :if={@recent_series == []} kind="series" library={@recent_library_name} />
         </.shelf>
 
-        <.shelf :if={@recent_books != [] or @recent_library} id="home-recent-books" title="Recent books">
+        <.shelf :if={@recent_books != [] or @recent_library} id="home-recent-books" title={gettext("Recent books")}>
           <:actions>
             <.view_all to={~p"/books"} />
           </:actions>
@@ -579,7 +593,7 @@ defmodule StashixWeb.HomeLive do
           <.recent_empty :if={@recent_books == []} kind="books" library={@recent_library_name} />
         </.shelf>
 
-        <.shelf :if={@recent_issues != [] or @recent_library} id="home-recent-issues" title="Recent issues">
+        <.shelf :if={@recent_issues != [] or @recent_library} id="home-recent-issues" title={gettext("Recent issues")}>
           <:actions>
             <.view_all to={~p"/issues"} />
           </:actions>
@@ -603,11 +617,20 @@ defmodule StashixWeb.HomeLive do
 
   defp recent_empty(assigns) do
     ~H"""
-    <.empty_state ghost="0" title="Nothing here yet" class="w-full flex-shrink-0 py-4 sm:py-6">
-      No {@kind} in {@library || "this library"} yet. Pick another library above.
+    <.empty_state ghost="0" title={gettext("Nothing here yet")} class="w-full flex-shrink-0 py-4 sm:py-6">
+      {recent_empty_text(@kind, @library || gettext("this library"))}
     </.empty_state>
     """
   end
+
+  defp recent_empty_text("series", library),
+    do: gettext("No series in %{library} yet. Pick another library above.", library: library)
+
+  defp recent_empty_text("books", library),
+    do: gettext("No books in %{library} yet. Pick another library above.", library: library)
+
+  defp recent_empty_text("issues", library),
+    do: gettext("No issues in %{library} yet. Pick another library above.", library: library)
 
   # Library picker for the recent shelves; only worth showing with more than
   # one library.
@@ -622,13 +645,13 @@ defmodule StashixWeb.HomeLive do
       phx-change="filter_recent"
       class="flex items-center justify-end gap-3"
     >
-      <span class="text-xs font-medium uppercase tracking-widest text-muted">Recently added from</span>
+      <span class="text-xs font-medium uppercase tracking-widest text-muted">{gettext("Recently added from")}</span>
       <.ink_select
         id="home-recent-library"
         name="value"
-        label="Library"
+        label={gettext("Library")}
         size="sm"
-        prompt="All libraries"
+        prompt={gettext("All libraries")}
         value={@value}
         options={@options}
       />
@@ -651,10 +674,10 @@ defmodule StashixWeb.HomeLive do
         collecting: collecting,
         label:
           cond do
-            failed -> "Scan failed"
-            progress.done -> "Complete"
-            collecting -> "Collecting files…"
-            true -> "Scanning… #{progress.scanned}/#{progress.total}"
+            failed -> gettext("Scan failed")
+            progress.done -> gettext("Complete")
+            collecting -> gettext("Collecting files…")
+            true -> gettext("Scanning… %{done}/%{total}", done: progress.scanned, total: progress.total)
           end,
         value:
           cond do
@@ -676,7 +699,7 @@ defmodule StashixWeb.HomeLive do
       <p :if={@failed && @progress[:error]} class="mt-0.5 text-[10px] text-danger leading-tight break-words">
         {@progress[:error]}
       </p>
-      <.run_bar :if={not @failed} value={@value} label={"#{@name} scan progress"} />
+      <.run_bar :if={not @failed} value={@value} label={gettext("%{library} scan progress", library: @name)} />
     </div>
     """
   end

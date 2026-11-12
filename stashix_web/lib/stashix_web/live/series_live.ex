@@ -124,12 +124,12 @@ defmodule StashixWeb.SeriesLive do
   # Series-level facts for the details grid; empty values are dropped by the grid.
   defp series_facts(series) do
     [
-      {"Format", series.format && to_string(series.format)},
-      {"Also known as", Enum.map_join(series.alternative_names, " · ", & &1.name)},
-      {"Published issues", series.issue_count > 0 && series.issue_count},
-      {"Volumes", series.volume_count > 0 && series.volume_count},
-      {"Metadata source", metadata_source_label(series)},
-      {"External IDs", Enum.map_join(series.external_ids, " · ", &"#{&1.source} #{&1.source_id}")}
+      {gettext("Format"), series.format && to_string(series.format)},
+      {gettext("Also known as"), Enum.map_join(series.alternative_names, " · ", & &1.name)},
+      {gettext("Published issues"), series.issue_count > 0 && series.issue_count},
+      {gettext("Volumes"), series.volume_count > 0 && series.volume_count},
+      {gettext("Metadata source"), metadata_source_label(series)},
+      {gettext("External IDs"), Enum.map_join(series.external_ids, " · ", &"#{&1.source} #{&1.source_id}")}
     ]
     |> Enum.map(fn {label, value} -> {label, value || nil} end)
   end
@@ -179,10 +179,10 @@ defmodule StashixWeb.SeriesLive do
   def handle_event("fetch_metadata", _params, socket) do
     case Metadata.enqueue_series(socket.assigns.series.id) do
       {:ok, _} ->
-        {:noreply, put_flash(socket, :info, "Looking up metadata for the series and its issues…")}
+        {:noreply, put_flash(socket, :info, gettext("Looking up metadata for the series and its issues…"))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not queue metadata lookup")}
+        {:noreply, put_flash(socket, :error, gettext("Could not queue metadata lookup"))}
     end
   end
 
@@ -243,21 +243,22 @@ defmodule StashixWeb.SeriesLive do
       {:ok, []} ->
         {:noreply,
          socket
-         |> put_flash(:info, "No issues were updated.")
+         |> put_flash(:info, gettext("No issues were updated."))
          |> assign(show_push_publishers_dialog: false)}
 
       {:ok, ids} ->
         if Stashix.Settings.metadata()["write_to_files"],
           do: Enum.each(ids, &Metadata.enqueue_write/1)
 
-        count = length(ids)
-        label = if count == 1, do: "1 issue", else: "#{count} issues"
         series = Library.get_series_with_books(socket.assigns.access, series.id)
         books = sort_books(series.books, socket.assigns.sort)
 
         {:noreply,
          socket
-         |> put_flash(:info, "Publishers pushed to #{label}.")
+         |> put_flash(
+           :info,
+           ngettext("Publishers pushed to 1 issue.", "Publishers pushed to %{count} issues.", length(ids))
+         )
          |> assign(
            series: series,
            books: books,
@@ -266,7 +267,7 @@ defmodule StashixWeb.SeriesLive do
          )}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not update publishers.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not update publishers."))}
     end
   end
 
@@ -314,20 +315,21 @@ defmodule StashixWeb.SeriesLive do
       {:ok, []} ->
         {:noreply,
          socket
-         |> put_flash(:info, "No issues were updated.")
+         |> put_flash(:info, gettext("No issues were updated."))
          |> assign(show_push_age_rating_dialog: false)}
 
       {:ok, ids} ->
-        label = if length(ids) == 1, do: "1 issue", else: "#{length(ids)} issues"
-
         {:noreply,
          socket
-         |> put_flash(:info, "Age rating pushed to #{label}.")
+         |> put_flash(
+           :info,
+           ngettext("Age rating pushed to 1 issue.", "Age rating pushed to %{count} issues.", length(ids))
+         )
          |> reload_series()
          |> assign(show_push_age_rating_dialog: false)}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not update age rating.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not update age rating."))}
     end
   end
 
@@ -359,9 +361,8 @@ defmodule StashixWeb.SeriesLive do
 
     message =
       case length(ids) do
-        0 -> "No issues were updated."
-        1 -> "Language pushed to 1 issue."
-        n -> "Language pushed to #{n} issues."
+        0 -> gettext("No issues were updated.")
+        n -> ngettext("Language pushed to 1 issue.", "Language pushed to %{count} issues.", n)
       end
 
     {:noreply,
@@ -399,9 +400,8 @@ defmodule StashixWeb.SeriesLive do
 
         message =
           case length(ids) do
-            0 -> "No issues were updated."
-            1 -> "Issue number updated on 1 issue."
-            n -> "Issue numbers updated on #{n} issues."
+            0 -> gettext("No issues were updated.")
+            n -> ngettext("Issue number updated on 1 issue.", "Issue numbers updated on %{count} issues.", n)
           end
 
         {:noreply,
@@ -411,7 +411,7 @@ defmodule StashixWeb.SeriesLive do
          |> assign(issue_numbers_preview: nil)}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not update issue numbers.")}
+        {:noreply, put_flash(socket, :error, gettext("Could not update issue numbers."))}
     end
   end
 
@@ -478,7 +478,7 @@ defmodule StashixWeb.SeriesLive do
     {:noreply,
      socket
      |> assign(series: series, books: books, page_title: series.name, summary_info: derive_summary(series, books))
-     |> put_flash(:info, "Series saved")
+     |> put_flash(:info, gettext("Series saved"))
      |> close_dialog(~p"/series/#{series}")}
   end
 
@@ -486,7 +486,7 @@ defmodule StashixWeb.SeriesLive do
     {:noreply,
      socket
      |> reload_series()
-     |> put_flash(:info, "Series metadata applied")
+     |> put_flash(:info, gettext("Series metadata applied"))
      |> close_dialog(~p"/series/#{socket.assigns.series}")}
   end
 
@@ -585,9 +585,9 @@ defmodule StashixWeb.SeriesLive do
   defp run_segment_title(book, progress_map, volume_counts) do
     state =
       case book_progress(book, progress_map) do
-        p when p in [nil, 0.0] -> "unread"
-        p when p >= 1.0 -> "read"
-        p -> "#{round(p * 100)}% read"
+        p when p in [nil, 0.0] -> gettext("unread")
+        p when p >= 1.0 -> gettext("read")
+        p -> gettext("%{percent}% read", percent: round(p * 100))
       end
 
     [Formatters.book_number_label(book, volume_counts), book.title, state] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
@@ -619,30 +619,30 @@ defmodule StashixWeb.SeriesLive do
       if @folder_cover?, do: ~p"/api/series/#{@series.id}/cover", else: has_cover && ~p"/api/books/#{@cover_book.id}/cover" %>
     <.page cover_src={has_cover && "#{cover_base}?s=s"}>
       <.crumbs crumbs={[
-        {"Home", "/"},
+        {gettext("Home"), "/"},
         {@library.name, ~p"/library/#{@library}"},
         {@series.name, nil}
       ]}>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="series-admin-menu">
             <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg backdrop-blur-sm transition-colors">
-              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> {gettext("Admin")}
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
-            <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">Edit metadata</.menu_item>
+            <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">{gettext("Edit metadata")}</.menu_item>
             <.needs_sources ready={@sources_ready} class="block">
               <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
-                Fetch metadata
+                {gettext("Fetch metadata")}
               </.menu_item>
               <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog" disabled={!@sources_ready}>
-                Identify series…
+                {gettext("Identify series…")}
               </.menu_item>
             </.needs_sources>
             <.menu_item
               icon={if @series.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"
             >
-              {if @series.metadata_locked, do: "Unlock metadata", else: "Lock metadata"}
+              {if @series.metadata_locked, do: gettext("Unlock metadata"), else: gettext("Lock metadata")}
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -650,28 +650,28 @@ defmodule StashixWeb.SeriesLive do
               icon="lucide-arrow-down-to-line"
               phx-click="open_push_publishers_dialog"
             >
-              Push publishers to issues…
+              {gettext("Push publishers to issues…")}
             </.menu_item>
             <.menu_item
               :if={@series.books != []}
               icon="lucide-shield"
               phx-click="open_push_age_rating_dialog"
             >
-              Push age rating to issues…
+              {gettext("Push age rating to issues…")}
             </.menu_item>
             <.menu_item
               :if={@series.books != []}
               icon="lucide-languages"
               phx-click="open_push_language_dialog"
             >
-              Push language to issues…
+              {gettext("Push language to issues…")}
             </.menu_item>
             <.menu_item
               :if={@series.books != []}
               icon="lucide-hash"
               phx-click="open_issue_numbers_dialog"
             >
-              Issue numbers from filenames…
+              {gettext("Issue numbers from filenames…")}
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -679,7 +679,7 @@ defmodule StashixWeb.SeriesLive do
               icon_class={if @scanning, do: "animate-spin"}
               phx-click="rescan_series"
             >
-              {if @scanning, do: "Scanning…", else: "Rescan series"}
+              {if @scanning, do: gettext("Scanning…"), else: gettext("Rescan series")}
             </.menu_item>
             <.menu_item
               icon={if @scanning, do: "lucide-loader-circle", else: "lucide-zap"}
@@ -687,7 +687,7 @@ defmodule StashixWeb.SeriesLive do
               tone="warning"
               phx-click="force_rescan_series"
             >
-              {if @scanning, do: "Scanning…", else: "Force rescan"}
+              {if @scanning, do: gettext("Scanning…"), else: gettext("Force rescan")}
             </.menu_item>
           </.ink_menu>
         </:actions>
@@ -735,15 +735,15 @@ defmodule StashixWeb.SeriesLive do
             <span :if={yr = year_range(@series)} class="tabular-nums">{yr}</span>
             <%= if @series.ongoing do %>
               <span class="inline-flex items-center gap-1.5 text-success">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Ongoing
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> {gettext("Ongoing")}
               </span>
             <% else %>
               <span class="inline-flex items-center gap-1.5 text-muted">
-                <span class="w-1.5 h-1.5 rounded-full bg-faint"></span> Completed
+                <span class="w-1.5 h-1.5 rounded-full bg-faint"></span> {gettext("Completed")}
               </span>
             <% end %>
             <span class="tabular-nums">
-              {issue_count} {if issue_count == 1, do: "issue", else: "issues"}
+              {ngettext("1 issue", "%{count} issues", issue_count)}
             </span>
           </div>
 
@@ -753,7 +753,7 @@ defmodule StashixWeb.SeriesLive do
             <div class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7" style="--i:4">
               <.ink_button navigate={~p"/read/#{@continue_book}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
-                {if has_progress, do: "Continue", else: "Start Reading"}
+                {if has_progress, do: gettext("Continue"), else: gettext("Start Reading")}
                 <span :if={lbl = Formatters.book_number_label(@continue_book, volume_counts)} class="text-ink">{lbl}</span>
               </.ink_button>
               <.text_link
@@ -761,7 +761,7 @@ defmodule StashixWeb.SeriesLive do
                 tone="subtle"
                 navigate={~p"/read/#{first_book}"}
               >
-                <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from #1
+                <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> {gettext("Read from #1")}
               </.text_link>
             </div>
           <% end %>
@@ -771,10 +771,10 @@ defmodule StashixWeb.SeriesLive do
       <%!-- The run: solid = read, striped = in progress, dark = unread --%>
       <section :if={issue_count > 1} class="rise" style="--i:5">
         <div class="flex items-baseline justify-between mb-3">
-          <.eyebrow tag="h2" size="sm" tone="muted">The Run</.eyebrow>
+          <.eyebrow tag="h2" size="sm" tone="muted">{gettext("The Run")}</.eyebrow>
           <p class="tabular-nums leading-none">
             <span class="font-display font-black text-3xl text-fg">{read_count}</span>
-            <span class="text-muted text-sm"> / {issue_count} read</span>
+            <span class="text-muted text-sm">{gettext("/ %{count} read", count: issue_count)}</span>
           </p>
         </div>
         <div class={["flex items-stretch h-5", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
@@ -793,19 +793,19 @@ defmodule StashixWeb.SeriesLive do
       <section :if={@summary_info} class="max-w-3xl">
         <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@summary_info.text}</p>
         <p :if={@summary_info.source} class="mt-2 text-xs text-muted italic">
-          From issue {@summary_info.source}
+          {gettext("From issue %{issue}", issue: @summary_info.source)}
         </p>
       </section>
 
       <% series_age_rating = common_age_rating(@series.books) %>
       <.indicia>
-        <:item label="Pages" show={@total_pages > 0}>
+        <:item label={gettext("Pages")} show={@total_pages > 0}>
           {@total_pages
           |> Integer.to_string()
           |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")}
         </:item>
         <:item
-          label="Size"
+          label={gettext("Size")}
           show={
             User.ui_setting(@current_user, "extended_book_info") == "on" &&
               Formatters.format_file_size(@total_size) != nil
@@ -813,16 +813,18 @@ defmodule StashixWeb.SeriesLive do
         >
           {Formatters.format_file_size(@total_size)}
         </:item>
-        <:item label="Age Rating" show={series_age_rating != nil}>
+        <:item label={gettext("Age Rating")} show={series_age_rating != nil}>
           {Formatters.format_age_rating(series_age_rating)}
         </:item>
-        <:item label="Volume" show={@series.volume != nil}>Vol. {@series.volume}</:item>
-        <:item label="Language" show={@series.language != nil}>
+        <:item label={gettext("Volume")} show={@series.volume != nil}>
+          {gettext("Vol. %{volume}", volume: @series.volume)}
+        </:item>
+        <:item label={gettext("Language")} show={@series.language != nil}>
           {Formatters.language_name(@series.language)}
         </:item>
-        <:item label="Metadata" show={@series.metadata_locked}>
+        <:item label={gettext("Metadata")} show={@series.metadata_locked}>
           <span class="inline-flex items-center gap-1 text-warn/90">
-            <.icon name="lucide-lock" class="w-3 h-3" /> Locked
+            <.icon name="lucide-lock" class="w-3 h-3" /> {gettext("Locked")}
           </span>
         </:item>
       </.indicia>
@@ -842,25 +844,16 @@ defmodule StashixWeb.SeriesLive do
       />
 
       <%!-- Issues --%>
-      <.section title="Issues" count={issue_count}>
+      <.section title={gettext("Issues")} count={issue_count}>
         <:actions>
           <form id="issue-sort" phx-change="sort">
             <.ink_select
               id="issue-sort-input"
               name="value"
-              label="Sort issues"
+              label={gettext("Sort issues")}
               size="sm"
               value={@sort}
-              options={[
-                {"Issue # ↑", "issue_asc"},
-                {"Issue # ↓", "issue_desc"},
-                {"A → Z", "title_asc"},
-                {"Z → A", "title_desc"},
-                {"Year ↑", "year_asc"},
-                {"Year ↓", "year_desc"},
-                {"Date Added ↓", "added_desc"},
-                {"Date Added ↑", "added_asc"}
-              ]}
+              options={Enum.slice(sort_options(:issues), 2, 2) ++ sort_options(:titles)}
             />
           </form>
         </:actions>
@@ -909,18 +902,19 @@ defmodule StashixWeb.SeriesLive do
     <%= if @current_user.role == :admin && @show_push_publishers_dialog do %>
       <.dialog
         id="push-publishers-dialog"
-        title="Push publishers to issues"
+        title={gettext("Push publishers to issues")}
         on_close={JS.push("close_push_publishers_dialog")}
       >
         <:description>
-          Apply the series publisher(s) to all issues. Choose how to handle issues that already have publishers.
+          {gettext("Apply the series publisher(s) to all issues. Choose how to handle issues that already have publishers.")}
         </:description>
 
         <div class="space-y-2 mt-3">
           <%= for {mode, label, desc} <- [
-            {:replace, "Replace", "Remove each issue's current publishers and set them to match the series."},
-            {:merge, "Add", "Add the series publishers to each issue, keeping any they already have."},
-            {:fill, "Fill empty", "Only update issues that have no publisher set."}
+            {:replace, gettext("Replace"),
+             gettext("Remove each issue's current publishers and set them to match the series.")},
+            {:merge, gettext("Add"), gettext("Add the series publishers to each issue, keeping any they already have.")},
+            {:fill, gettext("Fill empty"), gettext("Only update issues that have no publisher set.")}
           ] do %>
             <label class={[
               "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
@@ -959,26 +953,28 @@ defmodule StashixWeb.SeriesLive do
                 name={if @show_push_preview, do: "lucide-chevron-down", else: "lucide-chevron-right"}
                 class="w-3.5 h-3.5"
               />
-              <span>Preview</span>
+              <span>{gettext("Preview")}</span>
               <span class={["ml-1 font-medium", if(affected_count > 0, do: "text-accent", else: "text-faint")]}>
                 <%= if affected_count == 0 do %>
-                  no changes
+                  {gettext("no changes")}
                 <% else %>
-                  {affected_count} of {total} {if total == 1, do: "issue", else: "issues"} will change
+                  {will_change(affected_count, total)}
                 <% end %>
               </span>
             </button>
 
             <div :if={@show_push_preview} class="mt-2 rounded-md border border-line overflow-hidden">
               <%= if affected_count == 0 do %>
-                <p class="px-3 py-4 text-sm text-muted text-center">All issues already match — no changes needed.</p>
+                <p class="px-3 py-4 text-sm text-muted text-center">
+                  {gettext("All issues already match — no changes needed.")}
+                </p>
               <% else %>
                 <%!-- header row --%>
                 <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-raised/60 border-b border-line text-[10px] font-semibold uppercase tracking-wider text-faint">
                   <span></span>
-                  <span class="col-span-1">Before</span>
+                  <span class="col-span-1">{gettext("Before")}</span>
                   <span></span>
-                  <span>After</span>
+                  <span>{gettext("After")}</span>
                 </div>
                 <div class="max-h-52 overflow-y-auto divide-y divide-line/80">
                   <%= for entry <- @push_publishers_preview.affected do %>
@@ -987,7 +983,7 @@ defmodule StashixWeb.SeriesLive do
                         {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
                       </span>
                       <span class="text-faint italic truncate">
-                        {if entry.from == [], do: "none", else: Enum.map_join(entry.from, ", ", & &1.name)}
+                        {if entry.from == [], do: gettext("none"), else: Enum.map_join(entry.from, ", ", & &1.name)}
                       </span>
                       <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
                       <span class="text-fg truncate">
@@ -998,9 +994,11 @@ defmodule StashixWeb.SeriesLive do
                 </div>
                 <%= if @push_publishers_preview.unchanged > 0 do %>
                   <p class="px-3 py-1.5 text-xs text-faint border-t border-line">
-                    {@push_publishers_preview.unchanged} {if @push_publishers_preview.unchanged == 1,
-                      do: "issue",
-                      else: "issues"} already up to date
+                    {ngettext(
+                      "1 issue already up to date",
+                      "%{count} issues already up to date",
+                      @push_publishers_preview.unchanged
+                    )}
                   </p>
                 <% end %>
               <% end %>
@@ -1010,10 +1008,10 @@ defmodule StashixWeb.SeriesLive do
 
         <.dialog_footer>
           <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_publishers_dialog">
-            Cancel
+            {gettext("Cancel")}
           </.ink_button>
           <.ink_button type="button" size="md" phx-click="push_publishers_to_issues">
-            Push publishers
+            {gettext("Push publishers")}
           </.ink_button>
         </.dialog_footer>
       </.dialog>
@@ -1035,23 +1033,23 @@ defmodule StashixWeb.SeriesLive do
     <%= if @current_user.role == :admin && @show_push_age_rating_dialog do %>
       <.dialog
         id="push-age-rating-dialog"
-        title="Push age rating to issues"
+        title={gettext("Push age rating to issues")}
         on_close={JS.push("close_push_age_rating_dialog")}
       >
         <:description>
-          Apply an age rating to all issues in this series.
+          {gettext("Apply an age rating to all issues in this series.")}
         </:description>
 
         <div class="space-y-4 mt-3">
           <div>
             <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">
-              Rating to apply
+              {gettext("Rating to apply")}
             </label>
             <form phx-change="set_push_age_rating_target">
               <.ink_select
                 id="push-age-rating-select"
                 name="rating"
-                label="Age rating"
+                label={gettext("Age rating")}
                 variant="field"
                 value={@push_age_rating_target}
                 options={Enum.map(@age_ratings, &{Formatters.format_age_rating(&1), Atom.to_string(&1)})}
@@ -1061,8 +1059,8 @@ defmodule StashixWeb.SeriesLive do
 
           <div class="space-y-2">
             <%= for {mode, label, desc} <- [
-              {:replace, "Replace", "Overwrite the age rating on all issues."},
-              {:fill, "Fill unknown", "Only update issues that are currently unrated."}
+              {:replace, gettext("Replace"), gettext("Overwrite the age rating on all issues.")},
+              {:fill, gettext("Fill unknown"), gettext("Only update issues that are currently unrated.")}
             ] do %>
               <label class={[
                 "flex items-start gap-3 rounded-md border p-3 cursor-pointer transition-colors",
@@ -1102,15 +1100,15 @@ defmodule StashixWeb.SeriesLive do
                 name={if @show_push_age_rating_preview, do: "lucide-chevron-down", else: "lucide-chevron-right"}
                 class="w-3.5 h-3.5"
               />
-              <span>Preview</span>
+              <span>{gettext("Preview")}</span>
               <span class={[
                 "ml-1 font-medium",
                 if(ar_affected > 0, do: "text-accent", else: "text-faint")
               ]}>
                 <%= if ar_affected == 0 do %>
-                  no changes
+                  {gettext("no changes")}
                 <% else %>
-                  {ar_affected} of {ar_total} {if ar_total == 1, do: "issue", else: "issues"} will change
+                  {will_change(ar_affected, ar_total)}
                 <% end %>
               </span>
             </button>
@@ -1118,14 +1116,14 @@ defmodule StashixWeb.SeriesLive do
             <div :if={@show_push_age_rating_preview} class="mt-2 rounded-md border border-line overflow-hidden">
               <%= if ar_affected == 0 do %>
                 <p class="px-3 py-4 text-sm text-muted text-center">
-                  All issues already match — no changes needed.
+                  {gettext("All issues already match — no changes needed.")}
                 </p>
               <% else %>
                 <div class="grid grid-cols-[2rem_1fr_auto_1fr] items-center gap-x-2 px-3 py-1.5 bg-raised/60 border-b border-line text-[10px] font-semibold uppercase tracking-wider text-faint">
                   <span></span>
-                  <span>Before</span>
+                  <span>{gettext("Before")}</span>
                   <span></span>
-                  <span>After</span>
+                  <span>{gettext("After")}</span>
                 </div>
                 <div class="max-h-52 overflow-y-auto divide-y divide-line/80">
                   <%= for entry <- @push_age_rating_preview.affected do %>
@@ -1145,9 +1143,11 @@ defmodule StashixWeb.SeriesLive do
                 </div>
                 <%= if @push_age_rating_preview.unchanged > 0 do %>
                   <p class="px-3 py-1.5 text-xs text-faint border-t border-line">
-                    {@push_age_rating_preview.unchanged} {if @push_age_rating_preview.unchanged == 1,
-                      do: "issue",
-                      else: "issues"} already up to date
+                    {ngettext(
+                      "1 issue already up to date",
+                      "%{count} issues already up to date",
+                      @push_age_rating_preview.unchanged
+                    )}
                   </p>
                 <% end %>
               <% end %>
@@ -1157,10 +1157,10 @@ defmodule StashixWeb.SeriesLive do
 
         <.dialog_footer>
           <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_age_rating_dialog">
-            Cancel
+            {gettext("Cancel")}
           </.ink_button>
           <.ink_button type="button" size="md" phx-click="push_age_rating_to_issues">
-            Push age rating
+            {gettext("Push age rating")}
           </.ink_button>
         </.dialog_footer>
       </.dialog>
@@ -1168,14 +1168,19 @@ defmodule StashixWeb.SeriesLive do
     """
   end
 
-  defp short_age_label(:unknown), do: "Unrated"
-  defp short_age_label(:everyone), do: "Everyone"
-  defp short_age_label(:teen), do: "Teen"
-  defp short_age_label(:teen_plus), do: "Teen+"
-  defp short_age_label(:mature), do: "Mature"
-  defp short_age_label(:adult), do: "Adult"
-  defp short_age_label(:explicit), do: "Explicit"
-  defp short_age_label(nil), do: "Unrated"
+  # Preview line of the push dialogs.
+  defp will_change(changed, total) do
+    ngettext("%{changed} of 1 issue will change", "%{changed} of %{count} issues will change", total, changed: changed)
+  end
+
+  defp short_age_label(:unknown), do: gettext("Unrated")
+  defp short_age_label(:everyone), do: gettext("Everyone")
+  defp short_age_label(:teen), do: gettext("Teen")
+  defp short_age_label(:teen_plus), do: gettext("Teen+")
+  defp short_age_label(:mature), do: gettext("Mature")
+  defp short_age_label(:adult), do: gettext("Adult")
+  defp short_age_label(:explicit), do: gettext("Explicit")
+  defp short_age_label(nil), do: gettext("Unrated")
   defp short_age_label(other), do: to_string(other)
 
   attr :language, :string, required: true
@@ -1184,18 +1189,22 @@ defmodule StashixWeb.SeriesLive do
 
   defp push_language_dialog(assigns) do
     ~H"""
-    <.dialog id="push-language-dialog" title="Push language to issues" on_close={JS.push("close_push_language_dialog")}>
+    <.dialog
+      id="push-language-dialog"
+      title={gettext("Push language to issues")}
+      on_close={JS.push("close_push_language_dialog")}
+    >
       <:description>
-        Set the language of every issue in this series. Issues that lock their language are skipped.
+        {gettext("Set the language of every issue in this series. Issues that lock their language are skipped.")}
       </:description>
 
       <div class="space-y-4 mt-3">
         <form id="push-language-form" phx-change="set_push_language">
-          <.field label="Language">
+          <.field label={gettext("Language")}>
             <.ink_select
               id="push-language-select"
               name="language"
-              label="Language"
+              label={gettext("Language")}
               variant="field"
               value={@language}
               options={Formatters.language_options(@language)}
@@ -1208,8 +1217,8 @@ defmodule StashixWeb.SeriesLive do
           <label
             :for={
               {mode, label, desc} <- [
-                {:replace, "Replace", "Overwrite the language on all issues."},
-                {:fill, "Fill empty", "Only set it on issues that have no language."}
+                {:replace, gettext("Replace"), gettext("Overwrite the language on all issues.")},
+                {:fill, gettext("Fill empty"), gettext("Only set it on issues that have no language.")}
               ]
             }
             class={[
@@ -1237,11 +1246,9 @@ defmodule StashixWeb.SeriesLive do
         <div class="rounded-md border border-line overflow-hidden">
           <p class="px-3 py-2 text-xs text-muted bg-raised/60 border-b border-line">
             <%= if affected == 0 do %>
-              All issues already match — no changes needed.
+              {gettext("All issues already match — no changes needed.")}
             <% else %>
-              {affected} of {affected + @preview.unchanged} {if affected + @preview.unchanged == 1,
-                do: "issue",
-                else: "issues"} will change
+              {will_change(affected, affected + @preview.unchanged)}
             <% end %>
           </p>
           <div :if={affected > 0} class="max-h-52 overflow-y-auto divide-y divide-line/80">
@@ -1252,7 +1259,7 @@ defmodule StashixWeb.SeriesLive do
               <span class="text-faint tabular-nums">
                 {if entry.book.issue_number, do: "##{entry.book.issue_number}", else: "—"}
               </span>
-              <span class="text-faint italic truncate">{Formatters.language_name(entry.from) || "None"}</span>
+              <span class="text-faint italic truncate">{Formatters.language_name(entry.from) || gettext("None")}</span>
               <.icon name="lucide-arrow-right" class="w-3 h-3 text-faint shrink-0" />
               <span class="text-fg truncate">{Formatters.language_name(entry.to)}</span>
             </div>
@@ -1261,9 +1268,9 @@ defmodule StashixWeb.SeriesLive do
       </div>
 
       <.dialog_footer>
-        <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_language_dialog">Cancel</.ink_button>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="close_push_language_dialog">{gettext("Cancel")}</.ink_button>
         <.ink_button type="button" size="md" phx-click="push_language_to_issues" disabled={affected == 0}>
-          Push to issues
+          {gettext("Push to issues")}
         </.ink_button>
       </.dialog_footer>
     </.dialog>
@@ -1277,12 +1284,13 @@ defmodule StashixWeb.SeriesLive do
     ~H"""
     <.dialog
       id="issue-numbers-dialog"
-      title="Issue numbers from filenames"
+      title={gettext("Issue numbers from filenames")}
       on_close={JS.push("close_issue_numbers_dialog")}
     >
       <:description>
-        Set each issue's number from its file name, and write it into the file so a rescan keeps it.
-        Issues that lock their number are skipped.
+        {gettext(
+          "Set each issue's number from its file name, and write it into the file so a rescan keeps it. Issues that lock their number are skipped."
+        )}
       </:description>
 
       <% affected = length(@preview.affected) %>
@@ -1291,11 +1299,14 @@ defmodule StashixWeb.SeriesLive do
       <div class="mt-3 rounded-md border border-line overflow-hidden">
         <p class="px-3 py-2 text-xs text-muted bg-raised/60 border-b border-line">
           <%= if affected == 0 do %>
-            All issues already match their file names — no changes needed.
+            {gettext("All issues already match their file names — no changes needed.")}
           <% else %>
-            {affected} of {total} {if total == 1, do: "issue differs", else: "issues differ"} from {if total == 1,
-              do: "its file name",
-              else: "their file names"}
+            {ngettext(
+              "%{changed} of 1 issue differs from its file name",
+              "%{changed} of %{count} issues differ from their file names",
+              total,
+              changed: affected
+            )}
           <% end %>
         </p>
         <div :if={affected > 0} class="max-h-72 overflow-y-auto divide-y divide-line/80">
@@ -1317,16 +1328,18 @@ defmodule StashixWeb.SeriesLive do
           </label>
         </div>
         <p :if={@preview.unparsed > 0} class="px-3 py-1.5 text-xs text-faint border-t border-line">
-          {@preview.unparsed} {if @preview.unparsed == 1,
-            do: "file has no number in its name",
-            else: "files have no number in their names"} — left as is
+          {ngettext(
+            "1 file has no number in its name — left as is",
+            "%{count} files have no number in their names — left as is",
+            @preview.unparsed
+          )}
         </p>
       </div>
 
       <.dialog_footer>
-        <.ink_button type="button" variant="ghost" size="md" phx-click="close_issue_numbers_dialog">Cancel</.ink_button>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="close_issue_numbers_dialog">{gettext("Cancel")}</.ink_button>
         <.ink_button type="button" size="md" phx-click="apply_issue_numbers" disabled={selected == 0}>
-          {if selected == 1, do: "Update 1 issue", else: "Update #{selected} issues"}
+          {ngettext("Update 1 issue", "Update %{count} issues", selected)}
         </.ink_button>
       </.dialog_footer>
     </.dialog>

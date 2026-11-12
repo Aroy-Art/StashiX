@@ -16,7 +16,7 @@ defmodule StashixWeb.AllPublishersLive do
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
-       page_title: "Publishers",
+       page_title: gettext("Publishers"),
        page: 1,
        publishers: [],
        stats_map: %{},
@@ -73,13 +73,13 @@ defmodule StashixWeb.AllPublishersLive do
   def render(assigns) do
     ~H"""
     <.page wide>
-      <.page_hero title="Publishers" eyebrow="Browse" count={@total > 0 && @total}>
+      <.page_hero title={gettext("Publishers")} eyebrow={gettext("Browse")} count={@total > 0 && @total}>
         <:meta>
           <span>
             <span class="text-fg font-semibold">{@total}</span>
-            {if @total == 1, do: "publisher", else: "publishers"}
+            {ngettext("publisher", "publishers", @total)}
           </span>
-          <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
+          <span :if={@total_pages > 1}>{gettext("page %{page} of %{count}", page: @page, count: @total_pages)}</span>
         </:meta>
       </.page_hero>
 
@@ -98,15 +98,15 @@ defmodule StashixWeb.AllPublishersLive do
           }
           stats={
             stats = Map.get(@stats_map, pub.id, empty)
-            [{"series", stats.series_count}, {"books", stats.books_count}, {"issues", stats.issues_count}]
+            count_stats(stats.series_count, stats.books_count, stats.issues_count)
           }
         />
       </div>
 
       <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
 
-      <.empty_state :if={!@loading && @publishers == []} ghost="0" title="No publishers yet">
-        Publishers appear once metadata has been matched.
+      <.empty_state :if={!@loading && @publishers == []} ghost="0" title={gettext("No publishers yet")}>
+        {gettext("Publishers appear once metadata has been matched.")}
       </.empty_state>
     </.page>
     """

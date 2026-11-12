@@ -258,6 +258,15 @@ defmodule StashixWeb.CollectionComponents do
     """
   end
 
+  @doc "`stats` for a collection card: series, books and issues, each labelled for its count."
+  def count_stats(series, books, issues) do
+    [
+      {ngettext("series", "series", series || 0), series},
+      {ngettext("book", "books", books || 0), books},
+      {ngettext("issue", "issues", issues || 0), issues}
+    ]
+  end
+
   defp section_label(:series), do: gettext("Series")
   defp section_label(:books), do: gettext("Books")
   defp section_label(:issues), do: gettext("Issues")

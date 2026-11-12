@@ -10,22 +10,11 @@ defmodule StashixWeb.AllIssuesLive do
 
   @page_size 48
 
-  @sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Issue # ↑", "issue_asc"},
-    {"Issue # ↓", "issue_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
   @impl true
   def mount(_params, _session, socket) do
     {:ok,
      assign(socket,
-       page_title: "All Issues",
+       page_title: gettext("All Issues"),
        sort: "title_asc",
        library_id: nil,
        page: 1,
@@ -33,7 +22,7 @@ defmodule StashixWeb.AllIssuesLive do
        total: 0,
        total_pages: 1,
        loading: true,
-       sort_options: @sort_options
+       sort_options: sort_options(:issues)
      )}
   end
 
@@ -106,20 +95,20 @@ defmodule StashixWeb.AllIssuesLive do
     ~H"""
     <% first = List.first(@books) %>
     <.page wide fade cover_src={first && ~p"/api/books/#{first.id}/cover?s=s"}>
-      <.page_hero title="Issues" eyebrow="Browse" count={@total > 0 && @total}>
+      <.page_hero title={gettext("Issues")} eyebrow={gettext("Browse")} count={@total > 0 && @total}>
         <:meta>
           <span>
             <span class="text-fg font-semibold">{@total}</span>
-            {if @total == 1, do: "issue", else: "issues"}
+            {ngettext("issue", "issues", @total)}
           </span>
-          <span :if={@total_pages > 1}>page {@page} of {@total_pages}</span>
+          <span :if={@total_pages > 1}>{gettext("page %{page} of %{count}", page: @page, count: @total_pages)}</span>
         </:meta>
       </.page_hero>
 
       <.browse_toolbar
         libraries={@sidebar_libraries}
         library_id={@library_id}
-        sort_options={@sort_options}
+        sort_options={sort_options(:issues)}
         sort={@sort}
       />
 
@@ -131,8 +120,10 @@ defmodule StashixWeb.AllIssuesLive do
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
       <% end %>
 
-      <.empty_state :if={!@loading && @books == []} ghost="0" title="No issues on this shelf">
-        {if @library_id, do: "Nothing in this library yet. Try another one.", else: "Scan a library to fill it."}
+      <.empty_state :if={!@loading && @books == []} ghost="0" title={gettext("No issues on this shelf")}>
+        {if @library_id,
+          do: gettext("Nothing in this library yet. Try another one."),
+          else: gettext("Scan a library to fill it.")}
       </.empty_state>
     </.page>
     """

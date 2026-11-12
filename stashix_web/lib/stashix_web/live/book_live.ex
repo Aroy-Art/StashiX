@@ -113,8 +113,8 @@ defmodule StashixWeb.BookLive do
 
   def handle_event("fetch_metadata", _params, socket) do
     case Metadata.enqueue_book(socket.assigns.book.id) do
-      {:ok, _} -> {:noreply, put_flash(socket, :info, "Looking up metadata in the background…")}
-      {:error, _} -> {:noreply, put_flash(socket, :error, "Could not queue metadata lookup")}
+      {:ok, _} -> {:noreply, put_flash(socket, :info, gettext("Looking up metadata in the background…"))}
+      {:error, _} -> {:noreply, put_flash(socket, :error, gettext("Could not queue metadata lookup"))}
     end
   end
 
@@ -185,7 +185,7 @@ defmodule StashixWeb.BookLive do
     {:noreply,
      socket
      |> reload_book()
-     |> put_flash(:info, "Metadata saved")
+     |> put_flash(:info, gettext("Metadata saved"))
      |> close_dialog(~p"/book/#{socket.assigns.book}")}
   end
 
@@ -193,7 +193,7 @@ defmodule StashixWeb.BookLive do
     {:noreply,
      socket
      |> reload_book()
-     |> put_flash(:info, "Metadata applied")
+     |> put_flash(:info, gettext("Metadata applied"))
      |> close_dialog(~p"/book/#{socket.assigns.book}")}
   end
 
@@ -245,19 +245,19 @@ defmodule StashixWeb.BookLive do
   # Scalar facts for the details grid; empty values are dropped by the grid.
   defp book_facts(d) do
     [
-      {"Stories", Enum.map_join(d.stories, ", ", & &1.name)},
-      {"Story Arcs",
+      {gettext("Stories"), Enum.map_join(d.stories, ", ", & &1.name)},
+      {gettext("Story Arcs"),
        Enum.map_join(d.story_arcs, ", ", fn a ->
          if a.arc_number, do: "#{a.name} ##{a.arc_number}", else: a.name
        end)},
-      {"Imprint", d.imprint && d.imprint.name},
-      {"Type", d.type not in [nil, "", "issue"] && String.capitalize(d.type)},
-      {"Collection", d.collection_title},
-      {"Alt. number", d.alternative_number},
-      {"Cover date", d.cover_date && Calendar.strftime(d.cover_date, "%B %Y")},
-      {"In stores", d.store_date && Calendar.strftime(d.store_date, "%Y-%m-%d")},
-      {"Price", Enum.map_join(d.prices, " / ", fn p -> "#{p.amount} #{p.country}" end)},
-      {"Community rating", community_rating(d)},
+      {gettext("Imprint"), d.imprint && d.imprint.name},
+      {gettext("Type"), d.type not in [nil, "", "issue"] && String.capitalize(d.type)},
+      {gettext("Collection"), d.collection_title},
+      {gettext("Alt. number"), d.alternative_number},
+      {gettext("Cover date"), d.cover_date && Calendar.strftime(d.cover_date, "%B %Y")},
+      {gettext("In stores"), d.store_date && Calendar.strftime(d.store_date, "%Y-%m-%d")},
+      {gettext("Price"), Enum.map_join(d.prices, " / ", fn p -> "#{p.amount} #{p.country}" end)},
+      {gettext("Community rating"), community_rating(d)},
       {"ISBN", d.isbn},
       {"UPC", d.upc}
     ]
@@ -267,7 +267,7 @@ defmodule StashixWeb.BookLive do
   defp community_rating(%{community_rating: nil}), do: nil
 
   defp community_rating(%{community_rating: rating, community_rating_count: count}) do
-    votes = if count && count > 0, do: " · #{count} #{if count == 1, do: "vote", else: "votes"}", else: ""
+    votes = if count && count > 0, do: " · " <> ngettext("1 vote", "%{count} votes", count), else: ""
     "#{Float.round(rating, 1)}#{votes}"
   end
 
@@ -307,7 +307,7 @@ defmodule StashixWeb.BookLive do
       <div class="min-w-0 flex-1">
         <.eyebrow size="sm" tone="muted" class={["flex items-center gap-1", @dir == :next && "justify-end"]}>
           <.icon :if={@dir == :prev} name="lucide-arrow-left" class="w-3 h-3" />
-          {if @dir == :prev, do: "Previous", else: "Next"}
+          {if @dir == :prev, do: gettext("Previous"), else: gettext("Next")}
           <.icon :if={@dir == :next} name="lucide-arrow-right" class="w-3 h-3" />
         </.eyebrow>
         <p
@@ -344,30 +344,30 @@ defmodule StashixWeb.BookLive do
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={
-        [{"Home", "/"}, {@library.name, ~p"/library/#{@library}"}] ++
+        [{gettext("Home"), "/"}, {@library.name, ~p"/library/#{@library}"}] ++
           if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series}"}], else: []) ++
           [{if(numbered, do: number_label, else: @book.title), nil}]
       }>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="book-admin-menu">
             <:trigger class="flex items-center gap-1.5 px-3 h-8 text-xs font-medium rounded-full bg-fg/5 hover:bg-fg/15 text-fg-soft hover:text-fg backdrop-blur-sm transition-colors">
-              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> Admin
+              <.icon name="lucide-settings" class="w-3.5 h-3.5" /> {gettext("Admin")}
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
-            <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">Edit metadata</.menu_item>
+            <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">{gettext("Edit metadata")}</.menu_item>
             <.needs_sources ready={@sources_ready} class="block">
               <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
-                Fetch metadata
+                {gettext("Fetch metadata")}
               </.menu_item>
               <.menu_item icon="lucide-scan-search" phx-click="open_identify_dialog" disabled={!@sources_ready}>
-                Identify…
+                {gettext("Identify…")}
               </.menu_item>
             </.needs_sources>
             <.menu_item
               icon={if @book.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"
             >
-              {if @book.metadata_locked, do: "Unlock metadata", else: "Lock metadata"}
+              {if @book.metadata_locked, do: gettext("Unlock metadata"), else: gettext("Lock metadata")}
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -376,7 +376,7 @@ defmodule StashixWeb.BookLive do
               tone="warning"
               phx-click="rescan_book"
             >
-              {if @scanning, do: "Scanning…", else: "Force rescan"}
+              {if @scanning, do: gettext("Scanning…"), else: gettext("Force rescan")}
             </.menu_item>
           </.ink_menu>
         </:actions>
@@ -430,12 +430,12 @@ defmodule StashixWeb.BookLive do
             style="--i:3"
           >
             <span :if={@book.year}>{@book.year}</span>
-            <span :if={@book.page_count > 0}>{@book.page_count} pages</span>
+            <span :if={@book.page_count > 0}>{ngettext("1 page", "%{count} pages", @book.page_count)}</span>
             <span :if={@fully_read} class="inline-flex items-center gap-1 text-success">
-              <.icon name="lucide-check" class="w-3.5 h-3.5" /> Read
+              <.icon name="lucide-check" class="w-3.5 h-3.5" /> {gettext("Read")}
             </span>
             <span :if={in_progress} class="text-accent">
-              Page {@progress + 1} of {@book.page_count}
+              {gettext("Page %{page} of %{count}", page: @progress + 1, count: @book.page_count)}
             </span>
           </div>
 
@@ -443,7 +443,7 @@ defmodule StashixWeb.BookLive do
           <.progress_bar
             :if={in_progress}
             value={(@progress + 1) / @book.page_count}
-            label="Reading progress"
+            label={gettext("Reading progress")}
             class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs"
             style="--i:3"
           />
@@ -454,7 +454,7 @@ defmodule StashixWeb.BookLive do
             class="rise flex items-center justify-center sm:justify-start gap-1.5 mt-5"
             style="--i:4"
           >
-            <.eyebrow tag="span" size="sm" tone="muted" class="mr-1">Format</.eyebrow>
+            <.eyebrow tag="span" size="sm" tone="muted" class="mr-1">{gettext("Format")}</.eyebrow>
             <%= for f <- @book.files do %>
               <%= if @selected_file && f.id == @selected_file.id do %>
                 <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-fg text-canvas">
@@ -481,13 +481,13 @@ defmodule StashixWeb.BookLive do
             }>
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
-                @fully_read -> "Read Again"
-                @progress > 0 -> "Continue"
-                true -> "Read"
+                @fully_read -> gettext("Read Again")
+                @progress > 0 -> gettext("Continue")
+                true -> gettext("Read")
               end}
               <:aside>
                 <.ink_menu id="read-options-menu">
-                  <:trigger class={split_aside_class()} label="More reading options">
+                  <:trigger class={split_aside_class()} label={gettext("More reading options")}>
                     <.icon name="lucide-chevron-down" class="w-4 h-4" />
                   </:trigger>
                   <.menu_item
@@ -495,13 +495,13 @@ defmodule StashixWeb.BookLive do
                     icon="lucide-rotate-ccw"
                     navigate={~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}"}
                   >
-                    Read from beginning
+                    {gettext("Read from beginning")}
                   </.menu_item>
                   <.menu_item :if={!@fully_read} icon="lucide-circle-check-big" phx-click="mark_read">
-                    Mark as read
+                    {gettext("Mark as read")}
                   </.menu_item>
                   <.menu_item :if={@fully_read || @progress > 0} icon="lucide-circle-x" phx-click="mark_unread">
-                    Mark as unread
+                    {gettext("Mark as unread")}
                   </.menu_item>
                 </.ink_menu>
               </:aside>
@@ -516,17 +516,17 @@ defmodule StashixWeb.BookLive do
       </section>
 
       <.indicia>
-        <:item label="Publisher" show={@book.publishers != []}>
+        <:item label={gettext("Publisher")} show={@book.publishers != []}>
           <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
             <span :if={idx > 0} class="text-muted"> / </span>
             <.link navigate={~p"/publisher/#{pub}"} class="hover:text-accent transition-colors">{pub.name}</.link>
           <% end %>
         </:item>
-        <:item label="Format" show={User.ui_setting(@current_user, "extended_book_info") == "on"}>
+        <:item label={gettext("Format")} show={User.ui_setting(@current_user, "extended_book_info") == "on"}>
           {if @selected_file, do: String.upcase(to_string(@selected_file.format)), else: "—"}
         </:item>
         <:item
-          label="Size"
+          label={gettext("Size")}
           show={
             User.ui_setting(@current_user, "extended_book_info") == "on" &&
               @selected_file != nil && @selected_file.file_size > 0
@@ -534,10 +534,10 @@ defmodule StashixWeb.BookLive do
         >
           {Formatters.format_file_size(@selected_file.file_size)}
         </:item>
-        <:item label="Language" show={@book.language != nil}>
+        <:item label={gettext("Language")} show={@book.language != nil}>
           {Formatters.language_name(@book.language)}
         </:item>
-        <:item label="Age Rating">{Formatters.format_age_rating(@book.age_rating)}</:item>
+        <:item label={gettext("Age Rating")}>{Formatters.format_age_rating(@book.age_rating)}</:item>
       </.indicia>
 
       <.details_panel
@@ -560,7 +560,7 @@ defmodule StashixWeb.BookLive do
       />
 
       <%!-- Prev / Next navigation --%>
-      <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label="Adjacent issues">
+      <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label={gettext("Adjacent issues")}>
         <.adjacent_card :if={@prev_book} book={@prev_book} dir={:prev} volume_counts={@volume_counts} />
         <div :if={!@prev_book}></div>
         <.adjacent_card :if={@next_book} book={@next_book} dir={:next} volume_counts={@volume_counts} />
@@ -571,15 +571,17 @@ defmodule StashixWeb.BookLive do
         <%= if @book.metadata_locked || @book.metadata_matched_at do %>
           <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
             <%= if @book.metadata_locked do %>
-              <span class="inline-flex items-center gap-1 text-warn/80" title="Excluded from automatic matching">
-                <.icon name="lucide-lock" class="w-3 h-3" /> Locked
+              <span class="inline-flex items-center gap-1 text-warn/80" title={gettext("Excluded from automatic matching")}>
+                <.icon name="lucide-lock" class="w-3 h-3" /> {gettext("Locked")}
               </span>
             <% end %>
             <%= if @book.metadata_matched_at do %>
               <span>
-                Metadata from {(Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
-                                  Stashix.Metadata.Sources.module(@book.metadata_source).name()) ||
-                  @book.metadata_source} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
+                {gettext("Metadata from %{source}",
+                  source:
+                    (Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
+                       Stashix.Metadata.Sources.module(@book.metadata_source).name()) || @book.metadata_source
+                )} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
               </span>
             <% end %>
           </div>

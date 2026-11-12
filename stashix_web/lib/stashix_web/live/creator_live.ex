@@ -19,38 +19,23 @@ defmodule StashixWeb.CreatorLive do
   @page_size 48
   @shelf_size 20
 
-  # {heading, url slug, tab label}
+  # {heading (the role group in creator_works), url slug}; tab_label/1 names the tab.
   @tabs [
-    {"Writer", "written", "Written"},
-    {"Artist", "art", "Art"},
-    {"Colorist", "colors", "Colors"},
-    {"Letterer", "letters", "Letters"},
-    {"Cover", "covers", "Covers"},
-    {"Editor", "edited", "Edited"},
-    {"Translator", "translated", "Translated"},
-    {"Other", "other", "Other"}
+    {"Writer", "written"},
+    {"Artist", "art"},
+    {"Colorist", "colors"},
+    {"Letterer", "letters"},
+    {"Cover", "covers"},
+    {"Editor", "edited"},
+    {"Translator", "translated"},
+    {"Other", "other"}
   ]
 
   # Headings a creator is rarely looked up for; the page opens on another tab when it can.
   @secondary ~w(Cover Editor Other)
 
-  # {kind, url slug, heading}
-  @kinds [{:series, "series", "Series"}, {:books, "books", "Books"}, {:issues, "issues", "Issues"}]
-
-  @series_sort_options [
-    {"Most issues", "count_desc"},
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"}
-  ]
-
-  @book_sort_options [
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"}
-  ]
+  # {kind, url slug}; kind_title/1 names it.
+  @kinds [{:series, "series"}, {:books, "books"}, {:issues, "issues"}]
 
   @impl true
   def mount(%{"id" => param}, _session, socket) do
@@ -58,8 +43,8 @@ defmodule StashixWeb.CreatorLive do
     works = Library.creator_works(socket.assigns.access, creator.id)
 
     tabs =
-      for {heading, slug, label} <- @tabs, list = works.groups[heading], list != [] do
-        %{heading: heading, slug: slug, label: label, count: Enum.sum(Enum.map(list, & &1.count))}
+      for {heading, slug} <- @tabs, list = works.groups[heading], list != [] do
+        %{heading: heading, slug: slug, label: tab_label(slug), count: Enum.sum(Enum.map(list, & &1.count))}
       end
 
     socket = CanonicalUrl.attach(socket, :creator)
@@ -74,7 +59,7 @@ defmodule StashixWeb.CreatorLive do
     lists = if tab, do: kind_lists(socket.assigns.works, tab.heading), else: %{}
 
     kind =
-      Enum.find_value(@kinds, fn {kind, slug, _} ->
+      Enum.find_value(@kinds, fn {kind, slug} ->
         if slug == params["kind"] and lists[kind] != [], do: kind
       end)
 
@@ -121,9 +106,16 @@ defmodule StashixWeb.CreatorLive do
     access = socket.assigns.access
 
     shelves =
-      for {kind, slug, title} <- @kinds, list = lists[kind] || [], list != [] do
+      for {kind, slug} <- @kinds, list = lists[kind] || [], list != [] do
         entries = list |> sort_entries(kind, default_sort(kind)) |> Enum.take(@shelf_size)
-        %{kind: kind, slug: slug, title: title, count: length(list), items: load_items(access, kind, entries)}
+
+        %{
+          kind: kind,
+          slug: slug,
+          title: kind_title(kind),
+          count: length(list),
+          items: load_items(access, kind, entries)
+        }
       end
 
     assign(socket, shelves: shelves, items: [])
@@ -131,7 +123,7 @@ defmodule StashixWeb.CreatorLive do
 
   defp assign_grid(socket, list, params) do
     kind = socket.assigns.kind
-    options = sort_options(kind)
+    options = creator_sort_options(kind)
     sort = if params["sort"] in Enum.map(options, &elem(&1, 1)), do: params["sort"], else: default_sort(kind)
     total_pages = max(1, ceil(length(list) / @page_size))
     page = params["page"] |> parse_page() |> min(total_pages)
@@ -148,8 +140,23 @@ defmodule StashixWeb.CreatorLive do
     )
   end
 
-  defp sort_options(:series), do: @series_sort_options
-  defp sort_options(_kind), do: @book_sort_options
+  defp creator_sort_options(:series) do
+    [{gettext("Most issues"), "count_desc"} | Enum.take(sort_options(:titles), 4)]
+  end
+
+  defp creator_sort_options(_kind) do
+    [a_z, z_a, year_up, year_down | _] = sort_options(:titles)
+    [year_up, year_down, a_z, z_a]
+  end
+
+  defp tab_label("written"), do: gettext("Written")
+  defp tab_label("art"), do: gettext("Art")
+  defp tab_label("colors"), do: gettext("Colors")
+  defp tab_label("letters"), do: gettext("Letters")
+  defp tab_label("covers"), do: gettext("Covers")
+  defp tab_label("edited"), do: gettext("Edited")
+  defp tab_label("translated"), do: gettext("Translated")
+  defp tab_label("other"), do: gettext("Other")
 
   defp default_sort(:series), do: "count_desc"
   defp default_sort(_kind), do: "year_asc"
@@ -200,8 +207,11 @@ defmodule StashixWeb.CreatorLive do
     end
   end
 
-  defp kind_slug(kind), do: Enum.find_value(@kinds, fn {k, slug, _} -> if k == kind, do: slug end)
-  defp kind_title(kind), do: Enum.find_value(@kinds, fn {k, _, title} -> if k == kind, do: title end)
+  defp kind_slug(kind), do: Enum.find_value(@kinds, fn {k, slug} -> if k == kind, do: slug end)
+
+  defp kind_title(:series), do: gettext("Series")
+  defp kind_title(:books), do: gettext("Books")
+  defp kind_title(:issues), do: gettext("Issues")
 
   defp grid_path(socket, overrides) do
     a = socket.assigns
@@ -237,8 +247,7 @@ defmodule StashixWeb.CreatorLive do
   defp book_subtitle(_books, entry, heading),
     do: join_parts([entry.year && to_string(entry.year), role_detail(entry.roles, heading)])
 
-  defp issues(1), do: "1 issue"
-  defp issues(n), do: "#{n} issues"
+  defp issues(n), do: ngettext("1 issue", "%{count} issues", n)
 
   defp cover_src(%{shelves: [%{kind: kind, items: items} | _]}), do: item_cover(kind, items)
   defp cover_src(%{kind: kind, items: items}) when not is_nil(kind), do: item_cover(kind, items)
@@ -252,21 +261,21 @@ defmodule StashixWeb.CreatorLive do
   def render(assigns) do
     ~H"""
     <.page wide fade cover_src={cover_src(assigns)}>
-      <.crumbs crumbs={[{"Home", "/"}, {@creator.name, nil}]} />
+      <.crumbs crumbs={[{gettext("Home"), "/"}, {@creator.name, nil}]} />
 
-      <.page_hero title={@creator.name} eyebrow="Creator">
+      <.page_hero title={@creator.name} eyebrow={gettext("Creator")}>
         <:meta>
           <span :if={@works.books > 0}>
             <span class="text-fg font-semibold">{@works.books}</span>
-            {if @works.books == 1, do: "book", else: "books"}
+            {ngettext("book", "books", @works.books)}
           </span>
           <span :if={years(@works)}>{years(@works)}</span>
-          <.text_link navigate={~p"/search?#{%{creator: [@creator.id]}}"}>Filter in search</.text_link>
+          <.text_link navigate={~p"/search?#{%{creator: [@creator.id]}}"}>{gettext("Filter in search")}</.text_link>
         </:meta>
       </.page_hero>
 
       <%= if @tab do %>
-        <.tabs label="Roles">
+        <.tabs label={gettext("Roles")}>
           <:tab
             :for={t <- @tabs}
             patch={~p"/creator/#{@creator}?#{%{role: t.slug}}"}
@@ -281,7 +290,8 @@ defmodule StashixWeb.CreatorLive do
           <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <.display_heading count={@total}>{kind_title(@kind)}</.display_heading>
             <.text_link patch={~p"/creator/#{@creator}?#{%{role: @tab.slug}}"}>
-              <.icon name="lucide-arrow-left" class="w-4 h-4 text-ink" /> All {String.downcase(@tab.label)}
+              <.icon name="lucide-arrow-left" class="w-4 h-4 text-ink" />
+              {gettext("All %{role}", role: String.downcase(@tab.label))}
             </.text_link>
           </div>
 
@@ -329,8 +339,8 @@ defmodule StashixWeb.CreatorLive do
           </.shelf>
         <% end %>
       <% else %>
-        <.empty_state ghost="0" title="No books by this creator">
-          None of their credits are on books you can see.
+        <.empty_state ghost="0" title={gettext("No books by this creator")}>
+          {gettext("None of their credits are on books you can see.")}
         </.empty_state>
       <% end %>
     </.page>

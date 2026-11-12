@@ -14,35 +14,6 @@ defmodule StashixWeb.LibraryLive do
   @page_size 48
   @refresh_ms 1_000
 
-  @series_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
-  @books_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
-  @issues_sort_options [
-    {"A → Z", "title_asc"},
-    {"Z → A", "title_desc"},
-    {"Issue # ↑", "issue_asc"},
-    {"Issue # ↓", "issue_desc"},
-    {"Year ↑", "year_asc"},
-    {"Year ↓", "year_desc"},
-    {"Date Added ↓", "added_desc"},
-    {"Date Added ↑", "added_asc"}
-  ]
-
   @impl true
   def mount(%{"id" => param}, _session, socket) do
     library_id = Slug.resolve!(Stashix.Library.Library, param)
@@ -65,7 +36,7 @@ defmodule StashixWeb.LibraryLive do
        total_pages: 1,
        page: 1,
        sort: "title_asc",
-       sort_options: @series_sort_options,
+       sort_options: sort_options(:titles),
        progress_map: %{},
        refresh_scheduled: false,
        loading: true
@@ -120,7 +91,7 @@ defmodule StashixWeb.LibraryLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @series_sort_options,
+            sort_options: sort_options(:titles),
             progress_map: %{},
             loading: false
           )
@@ -143,7 +114,7 @@ defmodule StashixWeb.LibraryLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @books_sort_options,
+            sort_options: sort_options(:titles),
             progress_map: progress_map,
             loading: false
           )
@@ -160,7 +131,7 @@ defmodule StashixWeb.LibraryLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: @issues_sort_options,
+            sort_options: sort_options(:issues),
             progress_map: progress_map,
             loading: false
           )
@@ -238,7 +209,7 @@ defmodule StashixWeb.LibraryLive do
       sort={assigns[:sort]}
       progress_map={assigns[:progress_map] || %{}}
       loading={assigns[:loading] || false}
-      empty_hint="Try scanning it."
+      empty_hint={gettext("Try scanning it.")}
     >
     </.collection_page>
     """
