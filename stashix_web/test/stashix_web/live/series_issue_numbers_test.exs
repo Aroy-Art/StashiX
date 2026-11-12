@@ -58,7 +58,7 @@ defmodule StashixWeb.SeriesIssueNumbersTest do
   end
 
   test "dialog updates the ticked issues only", %{conn: conn, series: series} = ctx do
-    {:ok, view, _} = live(conn, ~p"/series/#{series.id}")
+    {:ok, view, _} = live_canonical(conn, ~p"/series/#{series.id}")
 
     view |> element("[phx-click=open_issue_numbers_dialog]") |> render_click()
     assert render(view) =~ "2 of 4 issues differ"

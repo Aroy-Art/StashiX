@@ -11,7 +11,8 @@ defmodule StashixWeb.CreatorLive do
 
   import StashixWeb.CollectionComponents, only: [view_all: 1]
 
-  alias Stashix.{Formatters, Library}
+  alias Stashix.{Formatters, Library, Slug}
+  alias StashixWeb.Live.CanonicalUrl
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -52,14 +53,16 @@ defmodule StashixWeb.CreatorLive do
   ]
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
-    creator = Library.get_creator!(id)
+  def mount(%{"id" => param}, _session, socket) do
+    creator = Library.get_creator!(Slug.resolve!(Stashix.Library.Creator, param))
     works = Library.creator_works(socket.assigns.access, creator.id)
 
     tabs =
       for {heading, slug, label} <- @tabs, list = works.groups[heading], list != [] do
         %{heading: heading, slug: slug, label: label, count: Enum.sum(Enum.map(list, & &1.count))}
       end
+
+    socket = CanonicalUrl.attach(socket, :creator)
 
     {:ok, assign(socket, page_title: creator.name, creator: creator, works: works, tabs: tabs)}
   end
@@ -207,7 +210,7 @@ defmodule StashixWeb.CreatorLive do
       %{role: a.tab.slug, kind: kind_slug(a.kind), sort: a.sort, page: a.page}
       |> Map.merge(Map.new(overrides))
 
-    ~p"/creator/#{a.creator.id}?#{params}"
+    ~p"/creator/#{a.creator}?#{params}"
   end
 
   defp years(%{first_year: first, last_year: last}),
@@ -266,7 +269,7 @@ defmodule StashixWeb.CreatorLive do
         <.tabs label="Roles">
           <:tab
             :for={t <- @tabs}
-            patch={~p"/creator/#{@creator.id}?#{%{role: t.slug}}"}
+            patch={~p"/creator/#{@creator}?#{%{role: t.slug}}"}
             active={t.slug == @tab.slug}
             count={t.count}
           >
@@ -277,7 +280,7 @@ defmodule StashixWeb.CreatorLive do
         <%= if @kind do %>
           <div class="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
             <.display_heading count={@total}>{kind_title(@kind)}</.display_heading>
-            <.text_link patch={~p"/creator/#{@creator.id}?#{%{role: @tab.slug}}"}>
+            <.text_link patch={~p"/creator/#{@creator}?#{%{role: @tab.slug}}"}>
               <.icon name="lucide-arrow-left" class="w-4 h-4 text-ink" /> All {String.downcase(@tab.label)}
             </.text_link>
           </div>
@@ -305,7 +308,7 @@ defmodule StashixWeb.CreatorLive do
         <% else %>
           <.shelf :for={s <- @shelves} id={"creator-#{s.slug}"} title={s.title} count={s.count}>
             <:actions>
-              <.view_all to={~p"/creator/#{@creator.id}?#{%{role: @tab.slug, kind: s.slug}}"} />
+              <.view_all to={~p"/creator/#{@creator}?#{%{role: @tab.slug, kind: s.slug}}"} />
             </:actions>
             <%= for {record, entry} <- s.items do %>
               <.series_card

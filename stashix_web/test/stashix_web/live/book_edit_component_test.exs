@@ -31,7 +31,7 @@ defmodule StashixWeb.BookEditComponentTest do
   end
 
   defp open(conn, book) do
-    {:ok, view, _html} = live(conn, ~p"/book/#{book.id}?edit=true")
+    {:ok, view, _html} = live_canonical(conn, ~p"/book/#{book.id}?edit=true")
     view
   end
 

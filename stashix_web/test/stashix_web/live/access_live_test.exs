@@ -43,11 +43,11 @@ defmodule StashixWeb.AccessLiveTest do
   end
 
   test "direct links to hidden books 404", %{conn: conn, teen: teen, adult: adult} do
-    {:ok, _view, html} = live(conn, ~p"/book/#{teen.id}")
+    {:ok, _view, html} = live_canonical(conn, ~p"/book/#{teen.id}")
     assert html =~ "Teen Tales"
 
-    assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/book/#{adult.id}") end
-    assert_raise Ecto.NoResultsError, fn -> live(conn, ~p"/read/#{adult.id}") end
+    assert_raise Ecto.NoResultsError, fn -> live_canonical(conn, ~p"/book/#{adult.id}") end
+    assert_raise Ecto.NoResultsError, fn -> live_canonical(conn, ~p"/read/#{adult.id}") end
 
     assert_error_sent 404, fn -> get(conn, ~p"/api/books/#{adult.id}/cover") end
   end
@@ -58,14 +58,14 @@ defmodule StashixWeb.AccessLiveTest do
     for b <- [teen, adult],
         do: Stashix.Repo.insert!(%Stashix.Library.BookCredit{book_id: b.id, creator_id: creator.id, role: :Writer})
 
-    {:ok, _view, html} = live(conn, ~p"/creator/#{creator.id}")
+    {:ok, _view, html} = live_canonical(conn, ~p"/creator/#{creator.id}")
     assert html =~ "Teen Tales"
     refute html =~ "Grown Up Stories"
   end
 
   test "metadata edits and rescans from non-admins are ignored", %{conn: conn, teen: teen} do
     # The edit dialog (which owns saving) is never mounted for non-admins.
-    {:ok, view, _html} = live(conn, ~p"/book/#{teen.id}?edit=true")
+    {:ok, view, _html} = live_canonical(conn, ~p"/book/#{teen.id}?edit=true")
     refute has_element?(view, "#edit-metadata-dialog")
 
     render_hook(view, "toggle_metadata_lock", %{})

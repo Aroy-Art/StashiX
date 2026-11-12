@@ -38,7 +38,7 @@ defmodule StashixWeb.LibraryLiveTest do
   end
 
   test "a scan refresh keeps the current page and updates the totals", %{conn: conn, lib: lib} do
-    path = ~p"/library/#{lib.id}/books?#{%{page: 2, sort: "title_asc"}}"
+    path = ~p"/library/#{lib}/books?#{%{page: 2, sort: "title_asc"}}"
     {:ok, view, html} = live(conn, path)
     assert html =~ "page 2 of 2"
 
@@ -52,7 +52,7 @@ defmodule StashixWeb.LibraryLiveTest do
   end
 
   test "a finished scan refreshes the totals", %{conn: conn, lib: lib} do
-    {:ok, view, _html} = live(conn, ~p"/library/#{lib.id}/books")
+    {:ok, view, _html} = live_canonical(conn, ~p"/library/#{lib.id}/books")
 
     add_books(lib, 51..52)
     send(view.pid, {:scan_progress, %{library_id: lib.id, scanned: 2, total: 2, done: true}})
@@ -62,7 +62,7 @@ defmodule StashixWeb.LibraryLiveTest do
   end
 
   test "the activity menu lists queued scans", %{conn: conn, lib: lib} do
-    {:ok, view, html} = live(conn, ~p"/library/#{lib.id}/books")
+    {:ok, view, html} = live_canonical(conn, ~p"/library/#{lib.id}/books")
     refute html =~ "Queued"
 
     items = [%{kind: :series, label: "Saga", force: true}, %{kind: :file, label: "Saga 002.cbz"}]

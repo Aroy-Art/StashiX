@@ -27,7 +27,7 @@ defmodule StashixWeb.SeriesEditComponentTest do
   end
 
   test "saves new fields, alternative names and locks", %{conn: conn, series: series} do
-    {:ok, view, _} = live(conn, ~p"/series/#{series.id}?edit=true")
+    {:ok, view, _} = live_canonical(conn, ~p"/series/#{series.id}?edit=true")
 
     view |> element("button[phx-value-field=name][phx-click=toggle_lock]") |> render_click()
     view |> element("button[phx-click=row_add][phx-value-field=alternative_names]") |> render_click()
@@ -53,7 +53,7 @@ defmodule StashixWeb.SeriesEditComponentTest do
   end
 
   test "age rating still cascades to the issues", %{conn: conn, series: series} do
-    {:ok, view, _} = live(conn, ~p"/series/#{series.id}?edit=true")
+    {:ok, view, _} = live_canonical(conn, ~p"/series/#{series.id}?edit=true")
 
     view
     |> element("#edit-series-dialog form")
@@ -72,7 +72,7 @@ defmodule StashixWeb.SeriesEditComponentTest do
         locked_fields: ["language"]
       })
 
-    {:ok, view, _} = live(conn, ~p"/series/#{series.id}?edit=true")
+    {:ok, view, _} = live_canonical(conn, ~p"/series/#{series.id}?edit=true")
 
     # The button carries the dialog's unsaved value.
     view

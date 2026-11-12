@@ -34,6 +34,21 @@ defmodule StashixWeb.ConnCase do
     end
   end
 
+  @doc """
+  `Phoenix.LiveViewTest.live/2` that follows the redirect a detail page gives
+  a UUID (or stale slug) param on its way to the canonical slug URL.
+  """
+  defmacro live_canonical(conn, path) do
+    quote do
+      conn = unquote(conn)
+
+      case Phoenix.LiveViewTest.live(conn, unquote(path)) do
+        {:error, {:live_redirect, %{to: to}}} -> Phoenix.LiveViewTest.live(conn, to)
+        other -> other
+      end
+    end
+  end
+
   setup tags do
     Stashix.DataCase.setup_sandbox(tags)
     {:ok, conn: Phoenix.ConnTest.build_conn()}

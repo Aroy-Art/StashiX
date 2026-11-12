@@ -6,9 +6,9 @@ defmodule StashixWeb.ReaderLiveTest do
 
   import Phoenix.LiveViewTest
 
-  alias Stashix.{Accounts, Library}
+  alias Stashix.{Accounts, Library, Repo}
   alias Stashix.Auth.TokenHelper
-  alias Stashix.Library.Access
+  alias Stashix.Library.{Access, Series}
   alias Stashix.Scanner
 
   setup %{conn: conn} do
@@ -36,7 +36,7 @@ defmodule StashixWeb.ReaderLiveTest do
 
   test "paging past the last page shows the end card and marks the book read", ctx do
     %{conn: conn, user: user, first: first, second: second} = ctx
-    {:ok, view, html} = live(conn, ~p"/read/#{first.id}")
+    {:ok, view, html} = live_canonical(conn, ~p"/read/#{first.id}")
     refute html =~ "reader-end"
 
     render_hook(view, "next_page", %{})
@@ -60,29 +60,29 @@ defmodule StashixWeb.ReaderLiveTest do
   test "half issues render on the series, book and reader pages", %{conn: conn, second: second} do
     second |> Ecto.Changeset.change(issue_number: Decimal.new("1.5")) |> Stashix.Repo.update!()
 
-    {:ok, _view, html} = live(conn, ~p"/series/#{second.series_id}")
+    {:ok, _view, html} = live_canonical(conn, ~p"/series/#{second.series_id}")
     assert html =~ "#1.5"
-    {:ok, _view, html} = live(conn, ~p"/book/#{second.id}")
+    {:ok, _view, html} = live_canonical(conn, ~p"/book/#{second.id}")
     assert html =~ "#1.5"
-    {:ok, _view, html} = live(conn, ~p"/read/#{second.id}")
+    {:ok, _view, html} = live_canonical(conn, ~p"/read/#{second.id}")
     assert html =~ "#1.5"
   end
 
   test "closing saves the pending page and returns to the book page", ctx do
     %{conn: conn, user: user, first: first} = ctx
-    {:ok, view, _html} = live(conn, ~p"/read/#{first.id}")
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{first.id}")
 
     render_hook(view, "next_page", %{})
     assert Library.get_progress(user.id, first.id) == nil
 
     render_hook(view, "exit", %{"to" => "book"})
     assert_push_event(view, "reader:exit", %{to: to})
-    assert to == ~p"/book/#{first.id}"
+    assert to == ~p"/book/#{Repo.preload(first, :series)}"
     assert Library.get_progress(user.id, first.id).current_page == 1
   end
 
   test "the last issue offers no next issue", %{conn: conn, second: second} do
-    {:ok, view, _html} = live(conn, ~p"/read/#{second.id}")
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{second.id}")
     render_hook(view, "next_page", %{})
     html = render_hook(view, "next_page", %{})
 
@@ -90,7 +90,7 @@ defmodule StashixWeb.ReaderLiveTest do
     refute html =~ "Next issue"
     view |> element(~s|#reader-end button[phx-value-to="series"]|) |> render_click()
     assert_push_event(view, "reader:exit", %{to: to})
-    assert to == ~p"/series/#{second.series_id}"
+    assert to == ~p"/series/#{Repo.get!(Series, second.series_id)}"
 
     # Nothing to carry on into: paging forward again stays put.
     assert render_hook(view, "next_page", %{}) =~ "The End"
@@ -98,7 +98,7 @@ defmodule StashixWeb.ReaderLiveTest do
 
   test "webtoon layout shows every page in one strip and tracks the scrolled page", ctx do
     %{conn: conn, user: user, first: first, second: second} = ctx
-    {:ok, view, _html} = live(conn, ~p"/read/#{first.id}")
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{first.id}")
 
     render_click(view, "set_layout", %{"layout" => "webtoon"})
     assert has_element?(view, ~s|#webtoon-strip img[data-page="0"]|)

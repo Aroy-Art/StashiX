@@ -4,14 +4,16 @@
 defmodule StashixWeb.ReaderLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Accounts, Formatters, Library, Media.Extractor}
+  alias Stashix.{Accounts, Formatters, Library, Media.Extractor, Slug}
+  alias StashixWeb.Live.CanonicalUrl
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @progress_debounce_ms 2_000
 
   @impl true
-  def mount(%{"id" => id} = params, _session, socket) do
+  def mount(%{"id" => param} = params, _session, socket) do
+    id = Slug.resolve!(Stashix.Library.Book, param)
     book = Library.get_book!(socket.assigns.access, id) |> Stashix.Repo.preload([:files, :series])
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
@@ -45,6 +47,8 @@ defmodule StashixWeb.ReaderLive do
     page_layout = Map.get(settings, "page_layout", "single")
     direction = Map.get(settings, "direction", "ltr")
     fit_mode = Map.get(settings, "fit_mode", "page")
+
+    socket = CanonicalUrl.attach(socket, :book)
 
     {:ok,
      assign(socket,
@@ -151,8 +155,8 @@ defmodule StashixWeb.ReaderLive do
 
     path =
       if to == "series" and book.series_id,
-        do: ~p"/series/#{book.series_id}",
-        else: ~p"/book/#{book.id}"
+        do: ~p"/series/#{book.series}",
+        else: ~p"/book/#{book}"
 
     {:noreply, socket |> flush_progress() |> push_event("reader:exit", %{to: path})}
   end

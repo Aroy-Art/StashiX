@@ -4,7 +4,8 @@
 defmodule StashixWeb.SeriesLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Formatters, Library, Metadata, Scanner}
+  alias Stashix.{Formatters, Library, Metadata, Scanner, Slug}
+  alias StashixWeb.Live.CanonicalUrl
   alias Stashix.Accounts.User
   alias Stashix.Media.ImageResizer
   alias Stashix.Metadata.Roles
@@ -19,7 +20,8 @@ defmodule StashixWeb.SeriesLive do
   @age_ratings Ecto.Enum.values(Stashix.Library.Book, :age_rating)
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => param}, _session, socket) do
+    id = Slug.resolve!(Stashix.Library.Series, param)
     series = Library.get_series_with_books(socket.assigns.access, id)
     library = Library.get_readable_library!(socket.assigns.access, series.library_id)
 
@@ -38,6 +40,8 @@ defmodule StashixWeb.SeriesLive do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
       Metadata.subscribe(library.id)
     end
+
+    socket = CanonicalUrl.attach(socket, :series)
 
     {:ok,
      socket
@@ -165,11 +169,11 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_event("open_edit_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}?edit=true")}
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series}?edit=true")}
   end
 
   def handle_event("close_edit_dialog", _params, socket) do
-    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series.id}")}
+    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series}")}
   end
 
   def handle_event("fetch_metadata", _params, socket) do
@@ -183,11 +187,11 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_event("open_identify_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series.id}?identify=true")}
+    {:noreply, push_patch(socket, to: ~p"/series/#{socket.assigns.series}?identify=true")}
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
-    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series.id}")}
+    {:noreply, close_dialog(socket, ~p"/series/#{socket.assigns.series}")}
   end
 
   def handle_event("toggle_metadata_lock", _params, socket) do
@@ -475,7 +479,7 @@ defmodule StashixWeb.SeriesLive do
      socket
      |> assign(series: series, books: books, page_title: series.name, summary_info: derive_summary(series, books))
      |> put_flash(:info, "Series saved")
-     |> close_dialog(~p"/series/#{series.id}")}
+     |> close_dialog(~p"/series/#{series}")}
   end
 
   def handle_info({:identify_applied, :series, _id}, socket) do
@@ -483,7 +487,7 @@ defmodule StashixWeb.SeriesLive do
      socket
      |> reload_series()
      |> put_flash(:info, "Series metadata applied")
-     |> close_dialog(~p"/series/#{socket.assigns.series.id}")}
+     |> close_dialog(~p"/series/#{socket.assigns.series}")}
   end
 
   defp replace_book_cover(socket, book_id) do
@@ -616,7 +620,7 @@ defmodule StashixWeb.SeriesLive do
     <.page cover_src={has_cover && "#{cover_base}?s=s"}>
       <.crumbs crumbs={[
         {"Home", "/"},
-        {@library.name, ~p"/library/#{@library.id}"},
+        {@library.name, ~p"/library/#{@library}"},
         {@series.name, nil}
       ]}>
         <:actions :if={@current_user.role == :admin}>
@@ -716,7 +720,7 @@ defmodule StashixWeb.SeriesLive do
           <.eyebrow :if={@book_publishers != []} class="rise mb-3" style="--i:1">
             <%= for {pub, idx} <- Enum.with_index(@book_publishers) do %>
               <span :if={idx > 0} class="text-fg/25"> / </span>
-              <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-fg transition-colors">{pub.name}</.link>
+              <.link navigate={~p"/publisher/#{pub}"} class="hover:text-fg transition-colors">{pub.name}</.link>
             <% end %>
           </.eyebrow>
 
@@ -747,7 +751,7 @@ defmodule StashixWeb.SeriesLive do
           <%= if @continue_book do %>
             <% has_progress = (@progress_map[@continue_book.id] || 0) > 0 %>
             <div class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7" style="--i:4">
-              <.ink_button navigate={~p"/read/#{@continue_book.id}"}>
+              <.ink_button navigate={~p"/read/#{@continue_book}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {if has_progress, do: "Continue", else: "Start Reading"}
                 <span :if={lbl = Formatters.book_number_label(@continue_book, volume_counts)} class="text-ink">{lbl}</span>
@@ -755,7 +759,7 @@ defmodule StashixWeb.SeriesLive do
               <.text_link
                 :if={has_progress && first_book && first_book.id != @continue_book.id}
                 tone="subtle"
-                navigate={~p"/read/#{first_book.id}"}
+                navigate={~p"/read/#{first_book}"}
               >
                 <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Read from #1
               </.text_link>
@@ -776,7 +780,7 @@ defmodule StashixWeb.SeriesLive do
         <div class={["flex items-stretch h-5", if(issue_count <= 150, do: "gap-[2px]", else: "gap-0")]}>
           <.link
             :for={b <- issue_sorted}
-            navigate={~p"/book/#{b.id}"}
+            navigate={~p"/book/#{b}"}
             title={run_segment_title(b, @progress_map, volume_counts)}
             class="flex-1 min-w-0 rounded-[2px] overflow-hidden bg-fg/[0.07] transition-[filter] duration-100 hover:brightness-125"
           >
@@ -863,7 +867,7 @@ defmodule StashixWeb.SeriesLive do
         <.cover_grid cols="narrow">
           <%= for book <- @books do %>
             <.media_card
-              navigate={~p"/book/#{book.id}"}
+              navigate={~p"/book/#{book}"}
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"

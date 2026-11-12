@@ -49,7 +49,7 @@ defmodule StashixWeb.CreatorLiveTest do
   end
 
   test "groups a creator's work by role, opening on writing over covers", %{conn: conn, walt: walt} do
-    {:ok, view, html} = live(conn, ~p"/creator/#{walt.id}")
+    {:ok, view, html} = live_canonical(conn, ~p"/creator/#{walt.id}")
 
     assert html =~ "Walt Simonson"
     assert html =~ "1983–2001"
@@ -75,7 +75,7 @@ defmodule StashixWeb.CreatorLiveTest do
   end
 
   test "each role tab splits into series, books and issues shelves", %{conn: conn, walt: walt} do
-    {:ok, view, _html} = live(conn, ~p"/creator/#{walt.id}?role=covers")
+    {:ok, view, _html} = live_canonical(conn, ~p"/creator/#{walt.id}?role=covers")
 
     assert has_element?(view, "#creator-series-shelf", "Night Watch")
     assert has_element?(view, "#creator-books-shelf", "Sunny Days")
@@ -84,11 +84,11 @@ defmodule StashixWeb.CreatorLiveTest do
     refute has_element?(view, "#creator-issues-shelf", "Sunny Days")
 
     # the written tab has no standalone books, so no books shelf
-    {:ok, view, _html} = live(conn, ~p"/creator/#{walt.id}?role=written")
+    {:ok, view, _html} = live_canonical(conn, ~p"/creator/#{walt.id}?role=written")
     refute has_element?(view, "#creator-books-shelf")
 
     # view all opens a sortable grid of one kind
-    {:ok, view, html} = live(conn, ~p"/creator/#{walt.id}?role=covers&kind=issues&sort=year_desc")
+    {:ok, view, html} = live_canonical(conn, ~p"/creator/#{walt.id}?role=covers&kind=issues&sort=year_desc")
     refute has_element?(view, "[id$=-shelf]")
     assert html =~ "All covers"
     refute html =~ "Sunny Days"
@@ -98,7 +98,7 @@ defmodule StashixWeb.CreatorLiveTest do
   test "credit links on a book lead to the creator page", %{conn: conn, walt: walt} do
     book = Repo.get_by!(Stashix.Library.Book, title: "Dark Streets")
 
-    {:ok, view, _html} = live(conn, ~p"/book/#{book.id}")
+    {:ok, view, _html} = live_canonical(conn, ~p"/book/#{book.id}")
     assert has_element?(view, ~s(a[href="/creator/#{walt.id}"]))
   end
 end

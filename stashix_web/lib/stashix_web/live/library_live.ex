@@ -6,7 +6,8 @@ defmodule StashixWeb.LibraryLive do
 
   import StashixWeb.CollectionComponents
 
-  alias Stashix.Library
+  alias Stashix.{Library, Slug}
+  alias StashixWeb.Live.CanonicalUrl
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
@@ -43,12 +44,16 @@ defmodule StashixWeb.LibraryLive do
   ]
 
   @impl true
-  def mount(%{"id" => library_id}, _session, socket) do
+  def mount(%{"id" => param}, _session, socket) do
+    library_id = Slug.resolve!(Stashix.Library.Library, param)
+
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library_id}")
     end
 
     library = Library.get_readable_library!(socket.assigns.access, library_id)
+
+    socket = CanonicalUrl.attach(socket, :library)
 
     {:ok,
      socket
@@ -199,14 +204,14 @@ defmodule StashixWeb.LibraryLive do
   end
 
   defp sub_path(socket, page, sort) do
-    id = socket.assigns.library.id
+    library = socket.assigns.library
     params = %{page: page, sort: sort}
 
     case socket.assigns.live_action do
-      :series -> ~p"/library/#{id}/series?#{params}"
-      :books -> ~p"/library/#{id}/books?#{params}"
-      :issues -> ~p"/library/#{id}/issues?#{params}"
-      _ -> ~p"/library/#{id}"
+      :series -> ~p"/library/#{library}/series?#{params}"
+      :books -> ~p"/library/#{library}/books?#{params}"
+      :issues -> ~p"/library/#{library}/issues?#{params}"
+      _ -> ~p"/library/#{library}"
     end
   end
 
@@ -216,7 +221,7 @@ defmodule StashixWeb.LibraryLive do
     <.collection_page
       name={@library.name}
       kind="Library"
-      base_path={~p"/library/#{@library.id}"}
+      base_path={~p"/library/#{@library}"}
       live_action={@live_action}
       series_count={assigns[:series_count] || 0}
       books_count={assigns[:books_count] || 0}

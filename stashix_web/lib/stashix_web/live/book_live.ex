@@ -4,7 +4,8 @@
 defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
-  alias Stashix.{Formatters, Library, Metadata, Repo, Scanner}
+  alias Stashix.{Formatters, Library, Metadata, Repo, Scanner, Slug}
+  alias StashixWeb.Live.CanonicalUrl
   alias Stashix.Accounts.User
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
@@ -16,7 +17,8 @@ defmodule StashixWeb.BookLive do
   @admin_events ~w(fetch_metadata toggle_metadata_lock rescan_book)
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => param}, _session, socket) do
+    id = Slug.resolve!(Stashix.Library.Book, param)
     book = Library.get_book_with_series(socket.assigns.access, id)
     library = Library.get_readable_library!(socket.assigns.access, book.library_id)
 
@@ -31,6 +33,8 @@ defmodule StashixWeb.BookLive do
       Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{library.id}")
       Metadata.subscribe(library.id)
     end
+
+    socket = CanonicalUrl.attach(socket, :book)
 
     {:ok,
      socket
@@ -93,11 +97,11 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_event("open_edit_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}?edit=true")}
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book}?edit=true")}
   end
 
   def handle_event("close_edit_dialog", _params, socket) do
-    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book.id}")}
+    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book}")}
   end
 
   def handle_event("select_format", %{"format" => fmt}, socket) do
@@ -115,11 +119,11 @@ defmodule StashixWeb.BookLive do
   end
 
   def handle_event("open_identify_dialog", _params, socket) do
-    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book.id}?identify=true")}
+    {:noreply, push_patch(socket, to: ~p"/book/#{socket.assigns.book}?identify=true")}
   end
 
   def handle_event("close_identify_dialog", _params, socket) do
-    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book.id}")}
+    {:noreply, close_dialog(socket, ~p"/book/#{socket.assigns.book}")}
   end
 
   def handle_event("toggle_metadata_lock", _params, socket) do
@@ -182,7 +186,7 @@ defmodule StashixWeb.BookLive do
      socket
      |> reload_book()
      |> put_flash(:info, "Metadata saved")
-     |> close_dialog(~p"/book/#{socket.assigns.book.id}")}
+     |> close_dialog(~p"/book/#{socket.assigns.book}")}
   end
 
   def handle_info({:identify_applied, :book, _id}, socket) do
@@ -190,7 +194,7 @@ defmodule StashixWeb.BookLive do
      socket
      |> reload_book()
      |> put_flash(:info, "Metadata applied")
-     |> close_dialog(~p"/book/#{socket.assigns.book.id}")}
+     |> close_dialog(~p"/book/#{socket.assigns.book}")}
   end
 
   defp reload_book(socket) do
@@ -340,8 +344,8 @@ defmodule StashixWeb.BookLive do
     <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={
-        [{"Home", "/"}, {@library.name, ~p"/library/#{@library.id}"}] ++
-          if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series.id}"}], else: []) ++
+        [{"Home", "/"}, {@library.name, ~p"/library/#{@library}"}] ++
+          if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series}"}], else: []) ++
           [{if(numbered, do: number_label, else: @book.title), nil}]
       }>
         <:actions :if={@current_user.role == :admin}>
@@ -404,7 +408,7 @@ defmodule StashixWeb.BookLive do
           >
             <.sticker :if={numbered} size="lg">{number_label}</.sticker>
             <.eyebrow :if={@book.series && !standalone_volume?(@book)}>
-              <.link navigate={~p"/series/#{@book.series.id}"} class="hover:text-fg transition-colors">
+              <.link navigate={~p"/series/#{@book.series}"} class="hover:text-fg transition-colors">
                 {@book.series.name}
               </.link>
               <span :if={@book.series.start_year} class="text-muted tracking-normal font-normal ml-1">
@@ -472,8 +476,8 @@ defmodule StashixWeb.BookLive do
           <div :if={@book.page_count > 0 && @selected_file} class="rise relative z-10 mt-7" style="--i:5">
             <.split_button navigate={
               if @fully_read,
-                do: ~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}",
-                else: ~p"/read/#{@book.id}?#{[format: @selected_file.format]}"
+                do: ~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}",
+                else: ~p"/read/#{@book}?#{[format: @selected_file.format]}"
             }>
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
@@ -489,7 +493,7 @@ defmodule StashixWeb.BookLive do
                   <.menu_item
                     :if={@progress > 0 && !@fully_read}
                     icon="lucide-rotate-ccw"
-                    navigate={~p"/read/#{@book.id}?#{[page: 0, format: @selected_file.format]}"}
+                    navigate={~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}"}
                   >
                     Read from beginning
                   </.menu_item>
@@ -515,7 +519,7 @@ defmodule StashixWeb.BookLive do
         <:item label="Publisher" show={@book.publishers != []}>
           <%= for {pub, idx} <- Enum.with_index(@book.publishers) do %>
             <span :if={idx > 0} class="text-muted"> / </span>
-            <.link navigate={~p"/publisher/#{pub.id}"} class="hover:text-accent transition-colors">{pub.name}</.link>
+            <.link navigate={~p"/publisher/#{pub}"} class="hover:text-accent transition-colors">{pub.name}</.link>
           <% end %>
         </:item>
         <:item label="Format" show={User.ui_setting(@current_user, "extended_book_info") == "on"}>
