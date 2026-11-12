@@ -1,0 +1,68 @@
+## This file is a PO Template file.
+##
+## "msgid"s here are often extracted from source code.
+## Add new messages manually only if they're dynamic
+## messages that can't be statically extracted.
+##
+## Run "mix gettext.extract" to bring this file up to
+## date. Leave "msgstr"s empty as changing them here has no
+## effect: edit them in PO (.po) files instead.
+#
+msgid ""
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:94
+#, elixir-autogen, elixir-format
+msgid "Attempting to reconnect"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:178
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:184
+#, elixir-autogen, elixir-format
+msgid "Automatic follows your browser's language. Saved to your account, so it follows you to other devices."
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:85
+#, elixir-autogen, elixir-format
+msgid "Error!"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:106
+#, elixir-autogen, elixir-format
+msgid "Hang in there while we get back on track"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:182
+#: lib/stashix_web/live/settings_live.ex:192
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:101
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:84
+#, elixir-autogen, elixir-format
+msgid "Success!"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex:57
+#, elixir-autogen, elixir-format
+msgid "That is not one of the choices."
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:89
+#, elixir-autogen, elixir-format
+msgid "We can't find the internet"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex:63
+#, elixir-autogen, elixir-format
+msgid "close"
+msgstr ""

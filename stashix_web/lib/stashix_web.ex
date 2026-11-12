@@ -60,6 +60,9 @@ defmodule StashixWeb do
       use Phoenix.LiveView,
         layout: {StashixWeb.Layouts, :app}
 
+      # Runs before the view's own hooks, so they see the request's language.
+      on_mount StashixWeb.Locale
+
       unquote(html_helpers())
     end
   end

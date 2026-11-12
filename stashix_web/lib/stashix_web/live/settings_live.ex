@@ -50,6 +50,14 @@ defmodule StashixWeb.SettingsLive do
     end
   end
 
+  # The locale is read on a full page load (StashixWeb.Locale), so reload.
+  def handle_event("set_locale", %{"locale" => locale}, socket) do
+    case Accounts.update_ui_settings(socket.assigns.current_user, %{"locale" => locale}) do
+      {:ok, _user} -> {:noreply, redirect(socket, to: ~p"/settings")}
+      {:error, _changeset} -> {:noreply, put_flash(socket, :error, gettext("That is not one of the choices."))}
+    end
+  end
+
   def handle_event("validate_profile", %{"profile" => params}, socket) do
     changeset = socket.assigns.current_user |> User.profile_changeset(params) |> Map.put(:action, :validate)
     {:noreply, assign_profile_form(socket, changeset)}
@@ -162,6 +170,35 @@ defmodule StashixWeb.SettingsLive do
   end
 
   attr :current_user, :map, required: true
+
+  defp language_section(assigns) do
+    assigns =
+      assign(assigns,
+        locale: User.locale(assigns.current_user),
+        options: [{gettext("Automatic"), "auto"} | Enum.map(User.locales(), &{StashixWeb.Locale.name(&1), &1})]
+      )
+
+    ~H"""
+    <.section title={gettext("Language")}>
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
+        {gettext("Automatic follows your browser's language. Saved to your account, so it follows you to other devices.")}
+      </p>
+      <form id="ui-settings-locale" phx-change="set_locale" class="max-w-xs">
+        <.ink_select
+          id="ui-settings-locale-select"
+          name="locale"
+          value={@locale}
+          options={@options}
+          label={gettext("Language")}
+          variant="field"
+          align="start"
+        />
+      </form>
+    </.section>
+    """
+  end
+
+  attr :current_user, :map, required: true
   attr :preview_covers, :map, default: %{}
 
   defp ui_tab(assigns) do
@@ -174,6 +211,8 @@ defmodule StashixWeb.SettingsLive do
       )
 
     ~H"""
+    <.language_section current_user={@current_user} />
+
     <.section title="Theme">
       <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
         System follows your device's light or dark setting. Saved to your account, so it follows you to other devices.

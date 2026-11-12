@@ -112,9 +112,22 @@ defmodule Stashix.Accounts.User do
     end
   end
 
+  # Interface languages, from the Gettext config; see StashixWeb.Locale.
+  @locales Application.compile_env(:stashix, [StashixWeb.Gettext, :allowed_locales], ["en"])
+
+  @doc "Locales the interface is offered in."
+  def locales, do: @locales
+
+  @doc ~s(The account's interface language, or "auto" to follow the browser.)
+  def locale(%__MODULE__{ui_settings: settings}) do
+    value = Map.get(settings || %{}, "locale")
+    if value in @locales, do: value, else: "auto"
+  end
+
   # The library the home page's recent shelves are narrowed to; "" for all.
   # Free-form since libraries come and go; readers check it still exists.
   defp valid_ui_setting?("home_library", value), do: is_binary(value)
+  defp valid_ui_setting?("locale", value), do: value == "auto" or value in @locales
   defp valid_ui_setting?(key, value), do: value in Map.get(@ui_choices, key, [])
 
   @doc "Name, login name and birth date."

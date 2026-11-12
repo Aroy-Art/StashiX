@@ -61,6 +61,12 @@ config :stashix, StashixWeb.Endpoint,
   pubsub_server: Stashix.PubSub,
   live_view: [signing_salt: "l8B43e3a"]
 
+# Interface languages. A locale is offered in Settings once it is listed here
+# and has a priv/gettext/<locale> directory (`mix gettext.merge priv/gettext --locale <locale>`).
+config :stashix, StashixWeb.Gettext,
+  default_locale: "en",
+  allowed_locales: ~w(en)
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.17.11",
