@@ -304,6 +304,19 @@ defmodule StashixWeb.MetadataEditComponents do
     """
   end
 
+  @doc "Age rating choices for the dialogs' selects, as `{label, value}`."
+  def age_rating_options do
+    [
+      {gettext("Unknown"), "unknown"},
+      {gettext("Everyone"), "everyone"},
+      {gettext("Teen"), "teen"},
+      {gettext("Teen+"), "teen_plus"},
+      {gettext("Mature"), "mature"},
+      {gettext("Adult"), "adult"},
+      {gettext("Explicit"), "explicit"}
+    ]
+  end
+
   ## Draft helpers shared by the dialogs
 
   @doc "Indexed form params (`%{\"0\" => …, \"1\" => …}`) in order."

@@ -17,24 +17,7 @@ defmodule StashixWeb.SeriesEditComponent do
   alias Stashix.Library.Series
   alias Stashix.Metadata.Locks
 
-  @tabs [
-    {"general", "General"},
-    {"dates", "Years & counts"},
-    {"names", "Names & publishing"},
-    {"issues", "Issues"}
-  ]
-
   @scalars ~w(name sort_name summary volume language format status start_year end_year ongoing issue_count volume_count)
-
-  @age_ratings [
-    {"Unknown", "unknown"},
-    {"Everyone", "everyone"},
-    {"Teen", "teen"},
-    {"Teen+", "teen_plus"},
-    {"Mature", "mature"},
-    {"Adult", "adult"},
-    {"Explicit", "explicit"}
-  ]
 
   @impl true
   def update(%{series: series} = assigns, socket) do
@@ -162,7 +145,7 @@ defmodule StashixWeb.SeriesEditComponent do
       else
         {:error, %Ecto.Changeset{} = cs} ->
           cs
-          |> Ecto.Changeset.traverse_errors(fn {msg, _} -> msg end)
+          |> Ecto.Changeset.traverse_errors(&translate_error/1)
           |> Enum.map_join("; ", fn {f, m} -> "#{Phoenix.Naming.humanize(f)} #{Enum.join(m, ", ")}" end)
           |> Repo.rollback()
       end
@@ -196,19 +179,35 @@ defmodule StashixWeb.SeriesEditComponent do
   def render(assigns) do
     assigns =
       assign(assigns,
-        tabs: @tabs,
-        age_ratings: @age_ratings,
+        tabs: [
+          {"general", gettext("General")},
+          {"dates", gettext("Years & counts")},
+          {"names", gettext("Names & publishing")},
+          {"issues", gettext("Issues")}
+        ],
+        age_ratings: age_rating_options(),
         formats: Enum.map(Ecto.Enum.values(Series, :format), &{to_string(&1), to_string(&1)}),
-        statuses: Enum.map(~w(Ongoing Completed Cancelled Hiatus), &{&1, &1}),
+        statuses: [
+          {gettext("Ongoing"), "Ongoing"},
+          {gettext("Completed"), "Completed"},
+          {gettext("Cancelled"), "Cancelled"},
+          {gettext("Hiatus"), "Hiatus"}
+        ],
         current_rating: common_age_rating(assigns.series.books)
       )
 
     ~H"""
     <div>
-      <.dialog id="edit-series-dialog" title="Edit series metadata" size="lg" on_close={JS.push("close_edit_dialog")}>
+      <.dialog
+        id="edit-series-dialog"
+        title={gettext("Edit series metadata")}
+        size="lg"
+        on_close={JS.push("close_edit_dialog")}
+      >
         <:description>
-          Lock a field to keep rescans and metadata matching from changing it. The name, years and ongoing flag
-          otherwise follow the folder name on every scan.
+          {gettext(
+            "Lock a field to keep rescans and metadata matching from changing it. The name, years and ongoing flag otherwise follow the folder name on every scan."
+          )}
           <p :if={@folder} class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
             <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
             {@folder}
@@ -219,19 +218,19 @@ defmodule StashixWeb.SeriesEditComponent do
           <.edit_tabs tabs={@tabs} current={@tab} target={@myself} />
 
           <.edit_panel tab="general" current={@tab}>
-            <.edit_field label="Name" key="name" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Name")} key="name" locks={@locks} target={@myself} class="col-span-2">
               <.edit_input name="series[name]" value={@draft["name"]} locked={"name" in @locks} />
             </.edit_field>
-            <.edit_field label="Sort name" key="sort_name" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Sort name")} key="sort_name" locks={@locks} target={@myself} class="col-span-2">
               <.edit_input name="series[sort_name]" value={@draft["sort_name"]} locked={"sort_name" in @locks} />
             </.edit_field>
-            <.edit_field label="Summary" key="summary" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Summary")} key="summary" locks={@locks} target={@myself} class="col-span-2">
               <.edit_textarea name="series[summary]" rows="4" value={@draft["summary"]} locked={"summary" in @locks} />
             </.edit_field>
-            <.edit_field label="Volume" key="volume" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
               <.edit_input type="number" name="series[volume]" value={@draft["volume"]} locked={"volume" in @locks} />
             </.edit_field>
-            <.edit_field label="Language" key="language" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Language")} key="language" locks={@locks} target={@myself}>
               <.edit_language
                 id="edit-series-language"
                 name="series[language]"
@@ -247,29 +246,29 @@ defmodule StashixWeb.SeriesEditComponent do
                 phx-click="open_push_language_dialog"
                 phx-value-language={@draft["language"]}
               >
-                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues…
+                <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> {gettext("Push to all issues…")}
               </.ink_button>
             </.edit_field>
-            <.edit_field label="Format" key="format" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Format")} key="format" locks={@locks} target={@myself}>
               <.edit_select
                 name="series[format]"
                 value={@draft["format"]}
-                prompt="Unknown"
+                prompt={gettext("Unknown")}
                 options={@formats}
                 locked={"format" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Status" key="status" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Status")} key="status" locks={@locks} target={@myself}>
               <.edit_select
                 name="series[status]"
                 value={@draft["status"]}
-                prompt="Unknown"
+                prompt={gettext("Unknown")}
                 options={@statuses}
                 locked={"status" in @locks}
               />
             </.edit_field>
             <.edit_field
-              label="Ongoing (from the folder name)"
+              label={gettext("Ongoing (from the folder name)")}
               key="ongoing"
               locks={@locks}
               target={@myself}
@@ -277,7 +276,9 @@ defmodule StashixWeb.SeriesEditComponent do
             >
               <%= if "ongoing" in @locks do %>
                 <input type="hidden" name="series[ongoing]" value={@draft["ongoing"]} />
-                <p class="text-sm text-fg opacity-60">{if @draft["ongoing"] == "true", do: "Yes", else: "No"}</p>
+                <p class="text-sm text-fg opacity-60">
+                  {if @draft["ongoing"] == "true", do: gettext("Yes"), else: gettext("No")}
+                </p>
               <% else %>
                 <input type="hidden" name="series[ongoing]" value="false" />
                 <label class="inline-flex items-center gap-2 text-sm text-fg-soft cursor-pointer">
@@ -287,14 +288,14 @@ defmodule StashixWeb.SeriesEditComponent do
                     value="true"
                     checked={@draft["ongoing"] == "true"}
                     class="ink-check"
-                  /> Ongoing series
+                  /> {gettext("Ongoing series")}
                 </label>
               <% end %>
             </.edit_field>
           </.edit_panel>
 
           <.edit_panel tab="dates" current={@tab}>
-            <.edit_field label="Start year" key="start_year" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Start year")} key="start_year" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 name="series[start_year]"
@@ -302,10 +303,10 @@ defmodule StashixWeb.SeriesEditComponent do
                 locked={"start_year" in @locks}
               />
             </.edit_field>
-            <.edit_field label="End year" key="end_year" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("End year")} key="end_year" locks={@locks} target={@myself}>
               <.edit_input type="number" name="series[end_year]" value={@draft["end_year"]} locked={"end_year" in @locks} />
             </.edit_field>
-            <.edit_field label="Published issues" key="issue_count" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Published issues")} key="issue_count" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 min="0"
@@ -314,7 +315,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 locked={"issue_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Volumes" key="volume_count" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Volumes")} key="volume_count" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 min="0"
@@ -326,7 +327,13 @@ defmodule StashixWeb.SeriesEditComponent do
           </.edit_panel>
 
           <.edit_panel tab="names" current={@tab}>
-            <.edit_field label="Also known as" key="alternative_names" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              label={gettext("Also known as")}
+              key="alternative_names"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "alternative_names" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -334,7 +341,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 rows={@draft["alternative_names"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add name"
+                add_label={gettext("Add name")}
               >
                 <input
                   :if={row["external_id"]}
@@ -347,7 +354,7 @@ defmodule StashixWeb.SeriesEditComponent do
                   value={row["name"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Name"
+                  placeholder={gettext("Name")}
                 />
                 <.edit_input
                   name={"series[alternative_names][#{i}][lang]"}
@@ -360,14 +367,14 @@ defmodule StashixWeb.SeriesEditComponent do
               </.edit_rows>
             </.edit_field>
 
-            <.edit_field label="Publisher" key="publisher" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Publisher")} key="publisher" locks={@locks} target={@myself} class="col-span-2">
               <%= if "publisher" in @locks do %>
                 <input :for={id <- @draft["publisher_ids"]} type="hidden" name="series[publisher_ids][]" value={id} />
                 <p class="text-sm text-fg opacity-60">
                   {@all_publishers
                   |> Enum.filter(&(&1.id in @draft["publisher_ids"]))
                   |> Enum.map_join(", ", & &1.name)
-                  |> then(&if(&1 == "", do: "None", else: &1))}
+                  |> then(&if(&1 == "", do: gettext("None"), else: &1))}
                 </p>
               <% else %>
                 <div
@@ -382,7 +389,7 @@ defmodule StashixWeb.SeriesEditComponent do
                   <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
                   <input
                     type="text"
-                    placeholder="Search publishers…"
+                    placeholder={gettext("Search publishers…")}
                     autocomplete="off"
                     form=""
                     class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-ink"
@@ -397,7 +404,7 @@ defmodule StashixWeb.SeriesEditComponent do
                   phx-hook="PushPublishers"
                   data-picker-id={"pub-picker-series-#{@series.id}"}
                 >
-                  <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> Push to all issues…
+                  <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> {gettext("Push to all issues…")}
                 </.ink_button>
               <% end %>
             </.edit_field>
@@ -405,14 +412,14 @@ defmodule StashixWeb.SeriesEditComponent do
 
           <.edit_panel tab="issues" current={@tab}>
             <div class="col-span-2">
-              <.field label="Age rating of all issues">
+              <.field label={gettext("Age rating of all issues")}>
                 <.ink_select
                   id="edit-series-age-rating"
                   name="age_rating"
-                  label="Age rating"
+                  label={gettext("Age rating")}
                   variant="field"
                   value={@current_rating}
-                  prompt={if @series.books == [], do: "No issues", else: "Mixed — keep per-issue ratings"}
+                  prompt={if @series.books == [], do: gettext("No issues"), else: gettext("Mixed — keep per-issue ratings")}
                   options={@age_ratings}
                 />
               </.field>
@@ -420,17 +427,22 @@ defmodule StashixWeb.SeriesEditComponent do
               <% unknown_count = Enum.count(@series.books, &(&1.age_rating in [:unknown, nil])) %>
               <div :if={mixed} class="mt-2">
                 <.checkbox name="age_rating_only_unknown" unchecked_value="false" checked>
-                  Only update issues rated Unknown ({unknown_count})
+                  {gettext("Only update issues rated Unknown (%{count})", count: unknown_count)}
                 </.checkbox>
               </div>
               <p class="flex items-start gap-1.5 text-xs text-warn/80 mt-1.5">
                 <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
                 <%= if mixed do %>
-                  Issues have different ratings. Unchecking the box above overwrites the age rating of all {length(
-                    @series.books
-                  )} issues.
+                  {gettext(
+                    "Issues have different ratings. Unchecking the box above overwrites the age rating of all %{count} issues.",
+                    count: length(@series.books)
+                  )}
                 <% else %>
-                  Changing this overwrites the age rating of all {length(@series.books)} issues in this series.
+                  {ngettext(
+                    "Changing this overwrites the age rating of the 1 issue in this series.",
+                    "Changing this overwrites the age rating of all %{count} issues in this series.",
+                    length(@series.books)
+                  )}
                 <% end %>
               </p>
             </div>
@@ -439,8 +451,8 @@ defmodule StashixWeb.SeriesEditComponent do
           <p :if={@error} class="mt-4 text-sm font-medium text-danger">{@error}</p>
 
           <.dialog_footer>
-            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
-            <.ink_button type="submit" size="md" phx-disable-with="Saving…">Save changes</.ink_button>
+            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">{gettext("Cancel")}</.ink_button>
+            <.ink_button type="submit" size="md" phx-disable-with={gettext("Saving…")}>{gettext("Save changes")}</.ink_button>
           </.dialog_footer>
         </.form>
       </.dialog>

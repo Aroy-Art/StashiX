@@ -364,7 +364,7 @@ defmodule StashixWeb.IdentifyComponent do
        searching: false,
        loading_preview: false,
        applying: false,
-       error: "#{name} failed: #{inspect(reason)}"
+       error: gettext("%{task} failed: %{reason}", task: name, reason: inspect(reason))
      )}
   end
 
@@ -388,54 +388,54 @@ defmodule StashixWeb.IdentifyComponent do
   # Each row: %{key, label, current, new, selectable, default}. `key` is the
   # Apply field key (string) or nil for info-only rows. Selectable rows are
   # pre-checked when the current value is empty ("fill empty"); overwriting a
-  # populated field is opt-in.
+  # populated field is opt-in. Labels are translated where the rows are built.
 
   @book_rows [
-    {"title", "Title"},
-    {nil, "Series"},
-    {"issue_number", "Number"},
-    {"volume", "Volume"},
-    {"cover_date", "Cover date"},
-    {"store_date", "Store date"},
-    {"year", "Year"},
-    {"publisher", "Publisher"},
-    {"imprint", "Imprint"},
-    {"collection_title", "Collection title"},
-    {"alternative_number", "Alt. number"},
-    {"age_rating", "Age rating"},
-    {"language", "Language"},
-    {"page_count", "Pages"},
-    {"isbn", "ISBN"},
-    {"upc", "UPC"},
-    {"community_rating", "Rating"},
-    {"summary", "Summary"},
-    {"notes", "Notes"},
-    {"stories", "Stories"},
-    {"credits", "Credits"},
-    {"characters", "Characters"},
-    {"teams", "Teams"},
-    {"locations", "Locations"},
-    {"universes", "Universes"},
-    {"arcs", "Story arcs"},
-    {"genres", "Genres"},
-    {"tags", "Tags"},
-    {"reprints", "Reprints"},
-    {"prices", "Prices"},
-    {"urls", "Links"}
+    {"title", gettext_noop("Title")},
+    {nil, gettext_noop("Series")},
+    {"issue_number", gettext_noop("Number")},
+    {"volume", gettext_noop("Volume")},
+    {"cover_date", gettext_noop("Cover date")},
+    {"store_date", gettext_noop("Store date")},
+    {"year", gettext_noop("Year")},
+    {"publisher", gettext_noop("Publisher")},
+    {"imprint", gettext_noop("Imprint")},
+    {"collection_title", gettext_noop("Collection title")},
+    {"alternative_number", gettext_noop("Alt. number")},
+    {"age_rating", gettext_noop("Age rating")},
+    {"language", gettext_noop("Language")},
+    {"page_count", gettext_noop("Pages")},
+    {"isbn", gettext_noop("ISBN")},
+    {"upc", gettext_noop("UPC")},
+    {"community_rating", gettext_noop("Rating")},
+    {"summary", gettext_noop("Summary")},
+    {"notes", gettext_noop("Notes")},
+    {"stories", gettext_noop("Stories")},
+    {"credits", gettext_noop("Credits")},
+    {"characters", gettext_noop("Characters")},
+    {"teams", gettext_noop("Teams")},
+    {"locations", gettext_noop("Locations")},
+    {"universes", gettext_noop("Universes")},
+    {"arcs", gettext_noop("Story arcs")},
+    {"genres", gettext_noop("Genres")},
+    {"tags", gettext_noop("Tags")},
+    {"reprints", gettext_noop("Reprints")},
+    {"prices", gettext_noop("Prices")},
+    {"urls", gettext_noop("Links")}
   ]
 
   @series_rows [
-    {nil, "Name"},
-    {"sort_name", "Sort name"},
-    {"volume", "Volume"},
-    {"format", "Format"},
-    {"start_year", "Start year"},
-    {"end_year", "End year"},
-    {"ongoing", "Ongoing"},
-    {"issue_count", "Issues"},
-    {"publisher", "Publisher"},
-    {"language", "Language"},
-    {"summary", "Summary"}
+    {nil, gettext_noop("Name")},
+    {"sort_name", gettext_noop("Sort name")},
+    {"volume", gettext_noop("Volume")},
+    {"format", gettext_noop("Format")},
+    {"start_year", gettext_noop("Start year")},
+    {"end_year", gettext_noop("End year")},
+    {"ongoing", gettext_noop("Ongoing")},
+    {"issue_count", gettext_noop("Issues")},
+    {"publisher", gettext_noop("Publisher")},
+    {"language", gettext_noop("Language")},
+    {"summary", gettext_noop("Summary")}
   ]
 
   @child_assocs %{
@@ -484,6 +484,7 @@ defmodule StashixWeb.IdentifyComponent do
            normalize_title(m[:series]) == normalize_title(book.title))
 
     @book_rows
+    |> translate_labels()
     |> Enum.map(fn
       {nil, label} ->
         info_row(label, book.series && book.series.name, m[:series])
@@ -492,7 +493,7 @@ defmodule StashixWeb.IdentifyComponent do
         {current_raw, current} = book_current(book, "title")
         using_series = is_nil(m[:title]) and standalone
         new_raw = m[:title] || if standalone, do: m[:series]
-        hint = if using_series, do: "from series name"
+        hint = if using_series, do: gettext("from series name")
         row("title", label, current_raw, current, new_raw, display_new("title", new_raw), hint)
 
       {"issue_number", label} ->
@@ -537,6 +538,7 @@ defmodule StashixWeb.IdentifyComponent do
     series = Repo.preload(series, :publishers)
 
     @series_rows
+    |> translate_labels()
     |> Enum.map(fn
       {nil, label} ->
         info_row(label, series.name, m[:name])
@@ -629,12 +631,15 @@ defmodule StashixWeb.IdentifyComponent do
   defp join_or_nil([]), do: nil
   defp join_or_nil(list), do: Enum.join(list, ", ")
 
+  defp translate_labels(rows),
+    do: Enum.map(rows, fn {key, label} -> {key, Gettext.gettext(StashixWeb.Gettext, label)} end)
+
   defp fmt(nil), do: nil
   defp fmt(""), do: nil
   defp fmt(:unknown), do: nil
   defp fmt(%Decimal{} = d), do: Decimal.to_string(d, :normal)
-  defp fmt(true), do: "Yes"
-  defp fmt(false), do: "No"
+  defp fmt(true), do: gettext("Yes")
+  defp fmt(false), do: gettext("No")
   defp fmt(v) when is_binary(v) and byte_size(v) > 160, do: String.slice(v, 0, 160) <> "…"
   defp fmt(v), do: to_string(v)
 
@@ -649,25 +654,25 @@ defmodule StashixWeb.IdentifyComponent do
       <.dialog
         id={"#{@id}-dialog"}
         size="lg"
-        title={if @kind == :series, do: "Identify series", else: "Identify issue"}
+        title={if @kind == :series, do: gettext("Identify series"), else: gettext("Identify issue")}
         on_close={JS.push("close_identify_dialog")}
       >
         <:description>
-          Search a metadata source and pick the matching entry.
+          {gettext("Search a metadata source and pick the matching entry.")}
           <p :if={@kind == :issue && @target.files != []} class="mt-1 text-[11px] text-muted font-mono truncate">
             {@target.library.name <> "/" <> Path.relative_to(List.first(@target.files).path, @target.library.root_path)}
           </p>
         </:description>
         <div class="relative">
           <div :if={@known_ids != %{}} class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-            <span class="text-muted">Linked IDs:</span>
+            <span class="text-muted">{gettext("Linked IDs:")}</span>
             <button
               :for={{key, id} <- @known_ids}
               type="button"
               phx-click="lookup_known"
               phx-value-source={key}
               phx-target={@myself}
-              title="Look up this entry directly"
+              title={gettext("Look up this entry directly")}
               class="inline-flex items-center gap-1.5 rounded-md border border-edge bg-raised/60 px-2 py-1 text-fg-soft hover:border-violet-500 hover:text-fg transition-colors"
             >
               <.icon name="lucide-link" class="w-3 h-3" />
@@ -677,12 +682,18 @@ defmodule StashixWeb.IdentifyComponent do
 
           <%= if @sources == [] do %>
             <div class="rounded-lg border border-warn/40 bg-warn/10 p-4 text-sm text-warn">
-              No metadata source is enabled and configured. <.link
-                navigate={~p"/admin/metadata"}
-                class="underline hover:text-fg"
-              >
-                Set one up in Admin · Metadata
-              </.link>.
+              <.rich_text text={
+                gettext("No metadata source is enabled and configured. %{link}.", link: rich_marker("link"))
+              }>
+                <:part name="link">
+                  <.link
+                    navigate={~p"/admin/metadata"}
+                    class="underline hover:text-fg"
+                  >
+                    {gettext("Set one up in Admin · Metadata")}
+                  </.link>
+                </:part>
+              </.rich_text>
             </div>
           <% else %>
             <.form
@@ -692,30 +703,32 @@ defmodule StashixWeb.IdentifyComponent do
               phx-target={@myself}
               class="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end"
             >
-              <.field label="Source" class="col-span-2 sm:col-span-2">
+              <.field label={gettext("Source")} class="col-span-2 sm:col-span-2">
                 <.ink_select
                   id={"#{@id}-source"}
                   name="source"
-                  label="Source"
+                  label={gettext("Source")}
                   variant="field"
                   value={@source_key}
                   options={Enum.map(@sources, fn {key, name} -> {name, key} end)}
                 />
               </.field>
               <div class={if @kind == :series, do: "col-span-2 sm:col-span-3", else: "col-span-2 sm:col-span-2"}>
-                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Series</label>
+                <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">{gettext(
+                  "Series"
+                )}</label>
                 <input type="text" name="q[series_name]" value={@form[:series_name].value} class={input_class()} />
               </div>
               <%= if @kind == :issue do %>
-                <.field label="Number">
+                <.field label={gettext("Number")}>
                   <.text_input name="q[number]" value={@form[:number].value} />
                 </.field>
               <% end %>
-              <.field label="Year">
+              <.field label={gettext("Year")}>
                 <.text_input name="q[year]" value={@form[:year].value} />
               </.field>
               <div class="col-span-2 sm:col-span-6 flex items-center justify-end gap-4">
-                <label class="flex items-center gap-2 text-xs text-muted" title="Ignore cached responses">
+                <label class="flex items-center gap-2 text-xs text-muted" title={gettext("Ignore cached responses")}>
                   <input type="hidden" name="refresh" value="false" />
                   <input
                     type="checkbox"
@@ -723,7 +736,7 @@ defmodule StashixWeb.IdentifyComponent do
                     value="true"
                     checked={@refresh}
                     class="ink-check"
-                  /> Skip cache
+                  /> {gettext("Skip cache")}
                 </label>
                 <.ink_button
                   size="md"
@@ -733,7 +746,7 @@ defmodule StashixWeb.IdentifyComponent do
                   <.icon
                     name={if @searching, do: "lucide-loader-circle", else: "lucide-search"}
                     class={if @searching, do: "w-4 h-4 animate-spin", else: "w-4 h-4"}
-                  /> {if @searching, do: "Searching…", else: "Search"}
+                  /> {if @searching, do: gettext("Searching…"), else: gettext("Search")}
                 </.ink_button>
               </div>
             </.form>
@@ -744,11 +757,26 @@ defmodule StashixWeb.IdentifyComponent do
             >
               <.icon name="lucide-link" class="w-4 h-4 mt-0.5 flex-shrink-0" />
               <p>
-                <% {key, id} = @linked_lookup %> This {if @kind == :series, do: "series", else: "issue"} is already linked to
-                <span class="font-medium text-fg">{source_name(@sources, key)}</span>
-                <span class="font-mono">{"##{id}"}</span>
-                (from its file tags or an earlier match), so that entry was loaded directly — no search needed.
-                <span class="text-accent/70">Not the right match? Search above to pick a different one.</span>
+                <% {key, id} = @linked_lookup %>
+                <.rich_text text={
+                  if @kind == :series,
+                    do:
+                      gettext(
+                        "This series is already linked to %{source} %{id} (from its file tags or an earlier match), so that entry was loaded directly — no search needed.",
+                        source: rich_marker("source"),
+                        id: rich_marker("id")
+                      ),
+                    else:
+                      gettext(
+                        "This issue is already linked to %{source} %{id} (from its file tags or an earlier match), so that entry was loaded directly — no search needed.",
+                        source: rich_marker("source"),
+                        id: rich_marker("id")
+                      )
+                }>
+                  <:part name="source"><span class="font-medium text-fg">{source_name(@sources, key)}</span></:part>
+                  <:part name="id"><span class="font-mono">{"##{id}"}</span></:part>
+                </.rich_text>
+                <span class="text-accent/70">{gettext("Not the right match? Search above to pick a different one.")}</span>
               </p>
             </div>
 
@@ -774,7 +802,7 @@ defmodule StashixWeb.IdentifyComponent do
               ]}
             >
               <p :if={@candidates == [] and not @searching} class="text-sm text-muted py-6 text-center">
-                No results yet.
+                {gettext("No results yet.")}
               </p>
               <p
                 :if={@candidates == [] and @searching}
@@ -782,7 +810,7 @@ defmodule StashixWeb.IdentifyComponent do
                 class="flex items-center justify-center gap-2 text-sm text-muted py-6"
               >
                 <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
-                Searching {source_name(@sources, @source_key)}…
+                {gettext("Searching %{source}…", source: source_name(@sources, @source_key))}
               </p>
               <%= for {c, idx} <- Enum.with_index(@candidates) do %>
                 <button
@@ -817,7 +845,7 @@ defmodule StashixWeb.IdentifyComponent do
                         c.number && "##{c.number}",
                         c.year,
                         c.publisher,
-                        c.issue_count && "#{c.issue_count} issues"
+                        c.issue_count && ngettext("1 issue", "%{count} issues", c.issue_count)
                       ]
                       |> Enum.reject(&is_nil/1)
                       |> Enum.join(" · ")}
@@ -827,7 +855,7 @@ defmodule StashixWeb.IdentifyComponent do
                     :if={linked?(@known_ids, c)}
                     class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-accent flex-shrink-0"
                   >
-                    <.icon name="lucide-link" class="w-3 h-3" /> Linked
+                    <.icon name="lucide-link" class="w-3 h-3" /> {gettext("Linked")}
                   </span>
                   <span class="text-[10px] uppercase tracking-wide text-muted flex-shrink-0">
                     {source_name(@sources, c.source_key)}
@@ -848,7 +876,7 @@ defmodule StashixWeb.IdentifyComponent do
                     target="_blank"
                     rel="noopener noreferrer"
                     class="text-muted hover:text-fg flex-shrink-0"
-                    title="Open on source site"
+                    title={gettext("Open on source site")}
                   >
                     <.icon name="lucide-external-link" class="w-4 h-4" />
                   </a>
@@ -861,7 +889,7 @@ defmodule StashixWeb.IdentifyComponent do
                 :if={@loading_preview and wait_remaining(@wait_until) == 0}
                 class="flex items-center gap-2 text-sm text-muted py-4"
               >
-                <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" /> Loading details…
+                <.icon name="lucide-loader-circle" class="w-4 h-4 animate-spin" /> {gettext("Loading details…")}
               </p>
               <.rate_wait_note
                 :if={@loading_preview}
@@ -883,13 +911,13 @@ defmodule StashixWeb.IdentifyComponent do
                             MapSet.size(@selected_fields) > 0 and
                               MapSet.subset?(selectable_fields(@rows), @selected_fields)
                           }
-                          title="Select all"
+                          title={gettext("Select all")}
                           class="ink-check"
                         />
                       </th>
-                      <th class="text-left font-medium px-3 py-2 w-32">Field</th>
-                      <th class="text-left font-medium px-3 py-2">Current</th>
-                      <th class="text-left font-medium px-3 py-2">New</th>
+                      <th class="text-left font-medium px-3 py-2 w-32">{gettext("Field")}</th>
+                      <th class="text-left font-medium px-3 py-2">{gettext("Current")}</th>
+                      <th class="text-left font-medium px-3 py-2">{gettext("New")}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y divide-fg/10">
@@ -933,7 +961,9 @@ defmodule StashixWeb.IdentifyComponent do
                 </table>
               </div>
               <p :if={@preview} class="mt-2 text-xs text-muted">
-                Checked fields are written. Empty fields are selected by default; tick a filled field to overwrite it.
+                {gettext(
+                  "Checked fields are written. Empty fields are selected by default; tick a filled field to overwrite it."
+                )}
               </p>
             </div>
           <% end %>
@@ -947,7 +977,7 @@ defmodule StashixWeb.IdentifyComponent do
                   phx-click="toggle_queue_issues"
                   phx-target={@myself}
                   class="ink-check"
-                /> Then match all issues
+                /> {gettext("Then match all issues")}
               </label>
               <div
                 :if={@queue_issues}
@@ -960,12 +990,12 @@ defmodule StashixWeb.IdentifyComponent do
                     phx-click="toggle_overwrite_issue_titles"
                     phx-target={@myself}
                     class="ink-check"
-                  /> Overwrite existing issue titles
+                  /> {gettext("Overwrite existing issue titles")}
                 </label>
               </div>
             </div>
             <.ink_button variant="ghost" size="md" type="button" phx-click="close_identify_dialog">
-              Cancel
+              {gettext("Cancel")}
             </.ink_button>
             <.ink_button
               size="md"
@@ -976,9 +1006,11 @@ defmodule StashixWeb.IdentifyComponent do
             >
               <.icon :if={@applying} name="lucide-loader-circle" class="w-4 h-4 animate-spin" />
               <%= if @applying do %>
-                Applying…
+                {gettext("Applying…")}
               <% else %>
-                Apply {if @preview, do: "(#{MapSet.size(@selected_fields)})"}
+                {if @preview,
+                  do: gettext("Apply (%{count})", count: MapSet.size(@selected_fields)),
+                  else: gettext("Apply")}
               <% end %>
             </.ink_button>
           </div>
@@ -990,9 +1022,9 @@ defmodule StashixWeb.IdentifyComponent do
             class="absolute -inset-2 z-10 flex flex-col items-center justify-center gap-3 rounded-md bg-surface/85 text-sm text-fg-soft"
           >
             <.icon name="lucide-loader-circle" class="w-8 h-8 animate-spin text-ink" />
-            <p>Applying metadata…</p>
+            <p>{gettext("Applying metadata…")}</p>
             <p :if={@kind == :series and @queue_issues} class="text-xs text-muted">
-              Issues are queued for matching afterwards.
+              {gettext("Issues are queued for matching afterwards.")}
             </p>
           </div>
         </div>
@@ -1015,17 +1047,22 @@ defmodule StashixWeb.IdentifyComponent do
     >
       <.icon name="lucide-hourglass" class="w-4 h-4 mt-0.5 flex-shrink-0 animate-pulse" />
       <div>
-        <p>Waiting for {@source}'s rate limit, next request in {@secs}s…</p>
+        <p>
+          {gettext("Waiting for %{source}'s rate limit, next request in %{seconds}s…", source: @source, seconds: @secs)}
+        </p>
         <p :if={@limit} class="text-xs text-warn/70">
-          {@source} allows {rate_text(@limit)}. Searches can take several requests; cached results skip the wait.
+          {gettext("%{source} allows %{rate}. Searches can take several requests; cached results skip the wait.",
+            source: @source,
+            rate: rate_text(@limit)
+          )}
         </p>
       </div>
     </div>
     """
   end
 
-  defp rate_text({1, ms}), do: "one request every #{Float.round(ms / 1000, 1)}s"
-  defp rate_text({n, 3_600_000}), do: "#{n} requests per hour for this endpoint"
-  defp rate_text({n, 60_000}), do: "#{n} requests per minute"
-  defp rate_text({n, ms}), do: "#{n} requests per #{div(ms, 1000)}s"
+  defp rate_text({1, ms}), do: gettext("one request every %{seconds}s", seconds: Float.round(ms / 1000, 1))
+  defp rate_text({n, 3_600_000}), do: gettext("%{count} requests per hour for this endpoint", count: n)
+  defp rate_text({n, 60_000}), do: gettext("%{count} requests per minute", count: n)
+  defp rate_text({n, ms}), do: gettext("%{count} requests per %{seconds}s", count: n, seconds: div(ms, 1000))
 end

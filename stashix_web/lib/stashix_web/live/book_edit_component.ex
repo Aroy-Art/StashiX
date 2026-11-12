@@ -18,26 +18,7 @@ defmodule StashixWeb.BookEditComponent do
   alias Stashix.Library.{BookCredit, BookExternalId}
   alias Stashix.Metadata.{Importer, Locks, Record}
 
-  @tabs [
-    {"general", "General"},
-    {"dates", "Dates & IDs"},
-    {"people", "People"},
-    {"story", "Story"},
-    {"links", "Publishing & links"},
-    {"extras", "ComicInfo extras"}
-  ]
-
   @chip_keys ~w(genres tags stories characters teams locations reprints)
-
-  @age_ratings [
-    {"Unknown", "unknown"},
-    {"Everyone", "everyone"},
-    {"Teen", "teen"},
-    {"Teen+", "teen_plus"},
-    {"Mature", "mature"},
-    {"Adult", "adult"},
-    {"Explicit", "explicit"}
-  ]
 
   @impl true
   def update(%{book: book} = assigns, socket) do
@@ -224,7 +205,7 @@ defmodule StashixWeb.BookEditComponent do
       true ->
         case publisher_name(draft["publisher_ids"]) do
           nil ->
-            {:error, "An imprint needs a publisher"}
+            {:error, gettext("An imprint needs a publisher")}
 
           publisher ->
             with {:ok, imprint} <- Library.get_or_create_imprint(publisher, String.trim(draft["imprint"])),
@@ -331,7 +312,7 @@ defmodule StashixWeb.BookEditComponent do
 
   defp changeset_message(cs) do
     cs
-    |> Ecto.Changeset.traverse_errors(fn {msg, _} -> msg end)
+    |> Ecto.Changeset.traverse_errors(&translate_error/1)
     |> Enum.map_join("; ", fn {field, msgs} -> "#{Phoenix.Naming.humanize(field)} #{Enum.join(msgs, ", ")}" end)
   end
 
@@ -341,8 +322,15 @@ defmodule StashixWeb.BookEditComponent do
   def render(assigns) do
     assigns =
       assign(assigns,
-        tabs: @tabs,
-        age_ratings: @age_ratings,
+        tabs: [
+          {"general", gettext("General")},
+          {"dates", gettext("Dates & IDs")},
+          {"people", gettext("People")},
+          {"story", gettext("Story")},
+          {"links", gettext("Publishing & links")},
+          {"extras", gettext("ComicInfo extras")}
+        ],
+        age_ratings: age_rating_options(),
         roles: Enum.map(Ecto.Enum.values(BookCredit, :role), &{to_string(&1), to_string(&1)}),
         sources:
           BookExternalId
@@ -353,10 +341,11 @@ defmodule StashixWeb.BookEditComponent do
 
     ~H"""
     <div>
-      <.dialog id="edit-metadata-dialog" title="Edit metadata" size="lg" on_close={JS.push("close_edit_dialog")}>
+      <.dialog id="edit-metadata-dialog" title={gettext("Edit metadata")} size="lg" on_close={JS.push("close_edit_dialog")}>
         <:description>
-          Lock a field to keep rescans and metadata matching from changing it. Saving also writes the metadata to the
-          book's files.
+          {gettext(
+            "Lock a field to keep rescans and metadata matching from changing it. Saving also writes the metadata to the book's files."
+          )}
           <p :if={@file_path} class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
             <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
             {@file_path}
@@ -368,26 +357,26 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- General --%>
           <.edit_panel tab="general" current={@tab}>
-            <.edit_field label="Title" key="title" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Title")} key="title" locks={@locks} target={@myself} class="col-span-2">
               <.edit_input name="book[title]" value={@draft["title"]} locked={"title" in @locks} />
             </.edit_field>
-            <.edit_field label="Issue #" key="issue_number" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Issue #")} key="issue_number" locks={@locks} target={@myself}>
               <.edit_input name="book[issue_number]" value={@draft["issue_number"]} locked={"issue_number" in @locks} />
             </.edit_field>
-            <.edit_field label="Alternative #" key="alternative_number" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Alternative #")} key="alternative_number" locks={@locks} target={@myself}>
               <.edit_input
                 name="book[alternative_number]"
                 value={@draft["alternative_number"]}
                 locked={"alternative_number" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Volume" key="volume" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
               <.edit_input type="number" name="book[volume]" value={@draft["volume"]} locked={"volume" in @locks} />
             </.edit_field>
-            <.edit_field label="Year" key="year" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Year")} key="year" locks={@locks} target={@myself}>
               <.edit_input type="number" name="book[year]" value={@draft["year"]} locked={"year" in @locks} />
             </.edit_field>
-            <.edit_field label="Language" key="language" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Language")} key="language" locks={@locks} target={@myself}>
               <.edit_language
                 id="edit-book-language"
                 name="book[language]"
@@ -395,7 +384,7 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"language" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Age rating" key="age_rating" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Age rating")} key="age_rating" locks={@locks} target={@myself}>
               <.edit_select
                 name="book[age_rating]"
                 value={@draft["age_rating"]}
@@ -403,39 +392,39 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"age_rating" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Collection title" key="collection_title" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Collection title")} key="collection_title" locks={@locks} target={@myself}>
               <.edit_input
                 name="book[collection_title]"
                 value={@draft["collection_title"]}
                 locked={"collection_title" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Manga volume" key="manga_volume" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Manga volume")} key="manga_volume" locks={@locks} target={@myself}>
               <.edit_input name="book[manga_volume]" value={@draft["manga_volume"]} locked={"manga_volume" in @locks} />
             </.edit_field>
-            <.edit_field label="Summary" key="summary" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Summary")} key="summary" locks={@locks} target={@myself} class="col-span-2">
               <.edit_textarea name="book[summary]" rows="5" value={@draft["summary"]} locked={"summary" in @locks} />
             </.edit_field>
-            <.edit_field label="Notes" key="notes" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Notes")} key="notes" locks={@locks} target={@myself} class="col-span-2">
               <.edit_textarea name="book[notes]" value={@draft["notes"]} locked={"notes" in @locks} />
             </.edit_field>
           </.edit_panel>
 
           <%!-- Dates & IDs --%>
           <.edit_panel tab="dates" current={@tab}>
-            <.edit_field label="Cover date" key="cover_date" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Cover date")} key="cover_date" locks={@locks} target={@myself}>
               <.edit_input type="date" name="book[cover_date]" value={@draft["cover_date"]} locked={"cover_date" in @locks} />
             </.edit_field>
-            <.edit_field label="Store date" key="store_date" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Store date")} key="store_date" locks={@locks} target={@myself}>
               <.edit_input type="date" name="book[store_date]" value={@draft["store_date"]} locked={"store_date" in @locks} />
             </.edit_field>
-            <.edit_field label="ISBN" key="isbn" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("ISBN")} key="isbn" locks={@locks} target={@myself}>
               <.edit_input name="book[isbn]" value={@draft["isbn"]} locked={"isbn" in @locks} />
             </.edit_field>
-            <.edit_field label="UPC" key="upc" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("UPC")} key="upc" locks={@locks} target={@myself}>
               <.edit_input name="book[upc]" value={@draft["upc"]} locked={"upc" in @locks} />
             </.edit_field>
-            <.edit_field label="Community rating (0–5)" key="community_rating" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Community rating (0–5)")} key="community_rating" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 step="0.1"
@@ -446,7 +435,7 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"community_rating" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Rating count" key="community_rating_count" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Rating count")} key="community_rating_count" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 min="0"
@@ -455,7 +444,7 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"community_rating_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Source IDs" key="external_ids" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Source IDs")} key="external_ids" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "external_ids" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -463,7 +452,7 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["external_ids"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add ID"
+                add_label={gettext("Add ID")}
               >
                 <.edit_select
                   name={"book[external_ids][#{i}][source]"}
@@ -478,7 +467,7 @@ defmodule StashixWeb.BookEditComponent do
                   value={row["source_id"]}
                   locked={locked}
                   size="sm"
-                  placeholder="ID"
+                  placeholder={gettext("ID")}
                 />
                 <.primary_flag name={"book[external_ids][#{i}][is_primary]"} value={row["is_primary"]} locked={locked} />
               </.edit_rows>
@@ -487,7 +476,7 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- People --%>
           <.edit_panel tab="people" current={@tab}>
-            <.edit_field label="Credits" key="credits" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Credits")} key="credits" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "credits" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -495,14 +484,14 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["credits"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add credit"
+                add_label={gettext("Add credit")}
               >
                 <.edit_input
                   name={"book[credits][#{i}][creator]"}
                   value={row["creator"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Creator"
+                  placeholder={gettext("Creator")}
                 />
                 <.edit_select
                   name={"book[credits][#{i}][role]"}
@@ -515,7 +504,13 @@ defmodule StashixWeb.BookEditComponent do
               </.edit_rows>
             </.edit_field>
             <.chip_field
-              :for={{key, label} <- [{"characters", "Characters"}, {"teams", "Teams"}, {"locations", "Locations"}]}
+              :for={
+                {key, label} <- [
+                  {"characters", gettext("Characters")},
+                  {"teams", gettext("Teams")},
+                  {"locations", gettext("Locations")}
+                ]
+              }
               key={key}
               label={label}
               draft={@draft}
@@ -523,7 +518,7 @@ defmodule StashixWeb.BookEditComponent do
               nonce={@nonce}
               target={@myself}
             />
-            <.edit_field label="Universes" key="universes" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Universes")} key="universes" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "universes" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -531,7 +526,7 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["universes"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add universe"
+                add_label={gettext("Add universe")}
               >
                 <input
                   :if={row["external_id"]}
@@ -544,14 +539,14 @@ defmodule StashixWeb.BookEditComponent do
                   value={row["name"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Name"
+                  placeholder={gettext("Name")}
                 />
                 <.edit_input
                   name={"book[universes][#{i}][designation]"}
                   value={row["designation"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Designation"
+                  placeholder={gettext("Designation")}
                 />
               </.edit_rows>
             </.edit_field>
@@ -561,13 +556,13 @@ defmodule StashixWeb.BookEditComponent do
           <.edit_panel tab="story" current={@tab}>
             <.chip_field
               key="stories"
-              label="Stories (first is the title in MetronInfo)"
+              label={gettext("Stories (first is the title in MetronInfo)")}
               draft={@draft}
               locks={@locks}
               nonce={@nonce}
               target={@myself}
             />
-            <.edit_field label="Story arcs" key="arcs" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Story arcs")} key="arcs" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "arcs" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -575,7 +570,7 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["arcs"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add arc"
+                add_label={gettext("Add arc")}
               >
                 <input
                   :if={row["external_id"]}
@@ -588,7 +583,7 @@ defmodule StashixWeb.BookEditComponent do
                   value={row["name"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Arc"
+                  placeholder={gettext("Arc")}
                 />
                 <.edit_input
                   type="number"
@@ -603,7 +598,13 @@ defmodule StashixWeb.BookEditComponent do
               </.edit_rows>
             </.edit_field>
             <.chip_field
-              :for={{key, label} <- [{"genres", "Genres"}, {"tags", "Tags"}, {"reprints", "Reprints"}]}
+              :for={
+                {key, label} <- [
+                  {"genres", gettext("Genres")},
+                  {"tags", gettext("Tags")},
+                  {"reprints", gettext("Reprints")}
+                ]
+              }
               key={key}
               label={label}
               draft={@draft}
@@ -615,14 +616,14 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- Publishing & links --%>
           <.edit_panel tab="links" current={@tab}>
-            <.edit_field label="Publisher" key="publisher" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Publisher")} key="publisher" locks={@locks} target={@myself} class="col-span-2">
               <%= if "publisher" in @locks do %>
                 <input :for={id <- @draft["publisher_ids"]} type="hidden" name="book[publisher_ids][]" value={id} />
                 <p class="text-sm text-fg opacity-60">
                   {@all_publishers
                   |> Enum.filter(&(&1.id in @draft["publisher_ids"]))
                   |> Enum.map_join(", ", & &1.name)
-                  |> then(&if(&1 == "", do: "None", else: &1))}
+                  |> then(&if(&1 == "", do: gettext("None"), else: &1))}
                 </p>
               <% else %>
                 <div
@@ -637,7 +638,7 @@ defmodule StashixWeb.BookEditComponent do
                   <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
                   <input
                     type="text"
-                    placeholder="Search publishers…"
+                    placeholder={gettext("Search publishers…")}
                     autocomplete="off"
                     form=""
                     class="w-full rounded-md bg-raised border border-line-strong text-fg text-sm px-3 py-2 placeholder:text-faint focus:outline-none focus:border-ink"
@@ -646,16 +647,16 @@ defmodule StashixWeb.BookEditComponent do
               <% end %>
             </.edit_field>
             <.edit_field
-              label="Imprint"
+              label={gettext("Imprint")}
               key="imprint"
               locks={@locks}
               target={@myself}
-              hint="Belongs to the first publisher."
+              hint={gettext("Belongs to the first publisher.")}
             >
               <.edit_input name="book[imprint]" value={@draft["imprint"]} locked={"imprint" in @locks} />
             </.edit_field>
             <div></div>
-            <.edit_field label="Links" key="urls" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Links")} key="urls" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "urls" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -663,7 +664,7 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["urls"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add link"
+                add_label={gettext("Add link")}
               >
                 <.edit_input
                   type="url"
@@ -676,7 +677,7 @@ defmodule StashixWeb.BookEditComponent do
                 <.primary_flag name={"book[urls][#{i}][is_primary]"} value={row["is_primary"]} locked={locked} />
               </.edit_rows>
             </.edit_field>
-            <.edit_field label="Prices" key="prices" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Prices")} key="prices" locks={@locks} target={@myself} class="col-span-2">
               <% locked = "prices" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -684,7 +685,7 @@ defmodule StashixWeb.BookEditComponent do
                 rows={@draft["prices"]}
                 locked={locked}
                 target={@myself}
-                add_label="Add price"
+                add_label={gettext("Add price")}
               >
                 <.edit_input
                   type="number"
@@ -694,7 +695,7 @@ defmodule StashixWeb.BookEditComponent do
                   value={row["amount"]}
                   locked={locked}
                   size="sm"
-                  placeholder="Amount"
+                  placeholder={gettext("Amount")}
                 />
                 <.edit_input
                   name={"book[prices][#{i}][country]"}
@@ -710,14 +711,14 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- ComicInfo extras --%>
           <.edit_panel tab="extras" current={@tab}>
-            <.edit_field label="Alternate series" key="alternate_series" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Alternate series")} key="alternate_series" locks={@locks} target={@myself}>
               <.edit_input
                 name="book[alternate_series]"
                 value={@draft["alternate_series"]}
                 locked={"alternate_series" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Alternate count" key="alternate_count" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Alternate count")} key="alternate_count" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 min="1"
@@ -726,35 +727,50 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"alternate_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Series group" key="series_group" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Series group")} key="series_group" locks={@locks} target={@myself}>
               <.edit_input name="book[series_group]" value={@draft["series_group"]} locked={"series_group" in @locks} />
             </.edit_field>
-            <.edit_field label="Main character or team" key="main_character_or_team" locks={@locks} target={@myself}>
+            <.edit_field
+              label={gettext("Main character or team")}
+              key="main_character_or_team"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 name="book[main_character_or_team]"
                 value={@draft["main_character_or_team"]}
                 locked={"main_character_or_team" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Manga" key="manga" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Manga")} key="manga" locks={@locks} target={@myself}>
               <.edit_select
                 name="book[manga]"
                 value={@draft["manga"]}
-                prompt="Unknown"
-                options={[{"No", "No"}, {"Yes", "Yes"}, {"Yes, right to left", "YesAndRightToLeft"}]}
+                prompt={gettext("Unknown")}
+                options={[
+                  {gettext("No"), "No"},
+                  {gettext("Yes"), "Yes"},
+                  {gettext("Yes, right to left"), "YesAndRightToLeft"}
+                ]}
                 locked={"manga" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Black and white" key="black_and_white" locks={@locks} target={@myself}>
+            <.edit_field label={gettext("Black and white")} key="black_and_white" locks={@locks} target={@myself}>
               <.edit_select
                 name="book[black_and_white]"
                 value={@draft["black_and_white"]}
-                prompt="Unknown"
-                options={[{"No", "false"}, {"Yes", "true"}]}
+                prompt={gettext("Unknown")}
+                options={[{gettext("No"), "false"}, {gettext("Yes"), "true"}]}
                 locked={"black_and_white" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Scan information" key="scan_information" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              label={gettext("Scan information")}
+              key="scan_information"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_textarea
                 name="book[scan_information]"
                 rows="2"
@@ -762,7 +778,7 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"scan_information" in @locks}
               />
             </.edit_field>
-            <.edit_field label="Review" key="review" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field label={gettext("Review")} key="review" locks={@locks} target={@myself} class="col-span-2">
               <.edit_textarea name="book[review]" value={@draft["review"]} locked={"review" in @locks} />
             </.edit_field>
           </.edit_panel>
@@ -770,8 +786,8 @@ defmodule StashixWeb.BookEditComponent do
           <p :if={@error} class="mt-4 text-sm font-medium text-danger">{@error}</p>
 
           <.dialog_footer>
-            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">Cancel</.ink_button>
-            <.ink_button type="submit" size="md" phx-disable-with="Saving…">Save changes</.ink_button>
+            <.ink_button type="button" variant="ghost" size="md" phx-click="close_edit_dialog">{gettext("Cancel")}</.ink_button>
+            <.ink_button type="submit" size="md" phx-disable-with={gettext("Saving…")}>{gettext("Save changes")}</.ink_button>
           </.dialog_footer>
         </.form>
       </.dialog>
@@ -807,7 +823,7 @@ defmodule StashixWeb.BookEditComponent do
 
   defp primary_flag(assigns) do
     ~H"""
-    <label class="inline-flex items-center gap-1 text-xs text-fg-soft flex-shrink-0" title="Primary">
+    <label class="inline-flex items-center gap-1 text-xs text-fg-soft flex-shrink-0" title={gettext("Primary")}>
       <input type="hidden" name={@name} value={if @locked, do: @value, else: "false"} />
       <input
         :if={!@locked}
@@ -817,7 +833,7 @@ defmodule StashixWeb.BookEditComponent do
         checked={@value == "true"}
         class="ink-check"
       />
-      <.icon :if={@locked and @value == "true"} name="lucide-star" class="w-3.5 h-3.5" /> Primary
+      <.icon :if={@locked and @value == "true"} name="lucide-star" class="w-3.5 h-3.5" /> {gettext("Primary")}
     </label>
     """
   end

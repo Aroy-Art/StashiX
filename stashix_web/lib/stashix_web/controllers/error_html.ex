@@ -12,22 +12,21 @@ defmodule StashixWeb.ErrorHTML do
   """
   use StashixWeb, :html
 
-  @copy %{
-    "404" => {"This page isn't there", "Misfiled, or never printed."},
-    "403" => {"Not in your box", "This one belongs to someone else's collection."},
-    "401" => {"Sign in first", "The long box is locked."},
-    "500" => {"A page tore", "That one is on us. Give it a moment and try again."},
-    "503" => {"Back in a moment", "The shop is restocking the shelves."}
-  }
-
   def render(template, _assigns) do
     status = template |> String.split(".") |> hd()
 
     {title, caption} =
-      Map.get(@copy, status, {Phoenix.Controller.status_message_from_template(template), "Something went wrong."})
+      copy(status) || {Phoenix.Controller.status_message_from_template(template), gettext("Something went wrong.")}
 
     error_page(%{status: status, title: title, caption: caption})
   end
+
+  defp copy("404"), do: {gettext("This page isn't there"), gettext("Misfiled, or never printed.")}
+  defp copy("403"), do: {gettext("Not in your box"), gettext("This one belongs to someone else's collection.")}
+  defp copy("401"), do: {gettext("Sign in first"), gettext("The long box is locked.")}
+  defp copy("500"), do: {gettext("A page tore"), gettext("That one is on us. Give it a moment and try again.")}
+  defp copy("503"), do: {gettext("Back in a moment"), gettext("The shop is restocking the shelves.")}
+  defp copy(_status), do: nil
 
   attr :status, :string, required: true
   attr :title, :string, required: true
@@ -36,7 +35,7 @@ defmodule StashixWeb.ErrorHTML do
   defp error_page(assigns) do
     ~H"""
     <!DOCTYPE html>
-    <html lang="en" data-theme="system">
+    <html lang={StashixWeb.Locale.html_lang()} data-theme="system">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -81,7 +80,7 @@ defmodule StashixWeb.ErrorHTML do
                 <span class="sticker inline-block px-2 pt-0.5 bg-ink text-zinc-950 font-display font-black text-2xl leading-none rounded-sm tabular-nums">
                   {@status}
                 </span>
-                <span class="text-[11px] font-bold tracking-[0.2em] uppercase text-accent">Error</span>
+                <span class="text-[11px] font-bold tracking-[0.2em] uppercase text-accent">{gettext("Error")}</span>
               </p>
               <h1 class="mt-3 font-display font-black uppercase text-5xl md:text-7xl leading-[0.88] text-fg text-balance">
                 {@title}
@@ -94,7 +93,7 @@ defmodule StashixWeb.ErrorHTML do
                   href={~p"/"}
                   class="ink-btn inline-flex items-center gap-2.5 px-6 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase text-xl tracking-wide rounded-md"
                 >
-                  Back to the stash
+                  {gettext("Back to the stash")}
                 </a>
               </div>
             </div>
