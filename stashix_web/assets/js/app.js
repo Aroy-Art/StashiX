@@ -1430,6 +1430,32 @@ if (window.__stashixBooted) {
   // connect if there are any LiveViews on the page
   liveSocket.connect()
 
+  // Phoenix never leaves the LongPoll fallback on its own: reconnects stay on
+  // LongPoll, and sessionStorage makes every later load in the tab skip the
+  // WebSocket too. One slow WS attempt (server restart, proxy hiccup) would
+  // pin the tab to polling for good. While on LongPoll, probe the WebSocket
+  // endpoint now and then; once it answers, forget the fallback and swap back.
+  const socket = liveSocket.getSocket()
+  const LongPoll = socket.getLongPollTransport()
+  setInterval(() => {
+    if (socket.transport !== LongPoll || document.hidden || liveSocket.isUnloaded()) return
+    // Swapping drops in-flight pushes, so leave a running upload alone.
+    if (document.querySelector("input[data-phx-active-refs]:not([data-phx-active-refs=''])")) return
+
+    const probe = new WebSocket(socket.endPointURL())
+    const giveUp = setTimeout(() => probe.close(), 5000)
+    probe.onopen = () => {
+      clearTimeout(giveUp)
+      probe.close()
+      if (socket.transport !== LongPoll) return
+      sessionStorage.removeItem("phx:fallback:LongPoll")
+      // connect() runs the normal WS-first attempt again, LongPoll still the fallback.
+      socket.replaceTransport(WebSocket)
+      socket.connect()
+    }
+    probe.onerror = () => clearTimeout(giveUp)
+  }, 30000)
+
   // CSS is render-blocking so by the time this deferred script runs the page is
   // fully styled. Fade out the initial-load cover; fast loads never saw the
   // spinner (500 ms animation-delay), slow loads see it disappear cleanly.
