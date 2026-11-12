@@ -97,10 +97,10 @@
               scanning = not is_nil(progress) %>
               <div class="flex items-center">
                 <.nav_item
-                  navigate={"/library/#{lib.id}"}
+                  navigate={"/library/#{slug_param(lib)}"}
                   icon={if scanning, do: "lucide-loader-circle", else: "lucide-folder"}
                   icon_class={if scanning, do: "animate-spin text-ink"}
-                  active={under?(path, "/library/#{lib.id}")}
+                  active={under?(path, "/library/#{slug_param(lib)}")}
                   class="flex-1"
                 >
                   <span class="truncate">{lib.name}</span>
@@ -243,8 +243,8 @@
                       data-result
                       navigate={
                         if result.type == :series,
-                          do: ~p"/series/#{result.id}",
-                          else: ~p"/book/#{result.id}"
+                          do: ~p"/series/#{slug_param(result)}",
+                          else: ~p"/book/#{slug_param(result)}"
                       }
                       class="ink-menu-item flex items-center gap-3 px-2 py-1.5 rounded-sm text-sm text-fg-soft hover:bg-fg/[0.05] focus:bg-fg/[0.07] outline-none transition-colors"
                     >

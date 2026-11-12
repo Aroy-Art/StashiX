@@ -44,7 +44,7 @@ defmodule StashixWeb.ReaderLiveTest do
 
     render_hook(view, "next_page", %{})
     assert has_element?(view, "#reader-end")
-    assert has_element?(view, ~s|#reader-end a[href="/read/#{second.id}"]|)
+    assert has_element?(view, ~s|#reader-end a[href="#{~p"/read/#{Repo.preload(second, :series)}"}"]|)
     assert has_element?(view, ~s|#reader-end button[phx-value-to="book"]|)
     assert has_element?(view, ~s|#reader-end button[phx-value-to="series"]|)
     assert Library.get_progress(user.id, first.id).current_page == 1
@@ -54,7 +54,7 @@ defmodule StashixWeb.ReaderLiveTest do
 
     render_hook(view, "next_page", %{})
     render_hook(view, "next_page", %{})
-    assert_redirect(view, ~p"/read/#{second.id}")
+    assert_redirect(view, ~p"/read/#{Repo.preload(second, :series)}")
   end
 
   test "half issues render on the series, book and reader pages", %{conn: conn, second: second} do
@@ -116,7 +116,7 @@ defmodule StashixWeb.ReaderLiveTest do
     assert_push_event(view, "reader:scroll-to", %{page: :end})
 
     render_hook(view, "scroll_end", %{"visible" => true})
-    assert has_element?(view, ~s|#webtoon-end #reader-end a[href="/read/#{second.id}"]|)
+    assert has_element?(view, ~s|#webtoon-end #reader-end a[href="#{~p"/read/#{Repo.preload(second, :series)}"}"]|)
     assert Library.get_progress(user.id, first.id).current_page == 1
 
     render_hook(view, "scroll_end", %{"visible" => false})

@@ -99,6 +99,6 @@ defmodule StashixWeb.CreatorLiveTest do
     book = Repo.get_by!(Stashix.Library.Book, title: "Dark Streets")
 
     {:ok, view, _html} = live_canonical(conn, ~p"/book/#{book.id}")
-    assert has_element?(view, ~s(a[href="/creator/#{walt.id}"]))
+    assert has_element?(view, ~s(a[href="#{~p"/creator/#{walt}"}"]))
   end
 end

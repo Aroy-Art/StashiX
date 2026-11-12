@@ -296,7 +296,7 @@ defmodule StashixWeb.AdminLive.Publishers do
           <.data_table id="publisher-visibility" rows={@pub_vis_publishers}>
             <:col :let={p} label="Name">
               <.link
-                navigate={~p"/publisher/#{p.id}"}
+                navigate={~p"/publisher/#{slug_param(p)}"}
                 class={[
                   "hover:text-ink transition-colors",
                   (p.hidden || (p.canonical && p.canonical.hidden)) && "text-muted line-through"

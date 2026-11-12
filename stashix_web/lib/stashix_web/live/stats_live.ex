@@ -261,7 +261,7 @@ defmodule StashixWeb.StatsLive do
         %{
           "name" => name,
           "value" => bytes,
-          "link" => "/publisher/#{id}",
+          "link" => "/publisher/#{Stashix.Slug.to_param(name, id)}",
           "tooltip" => %{"formatter" => "#{name}: #{formatted}"}
         }
       end)

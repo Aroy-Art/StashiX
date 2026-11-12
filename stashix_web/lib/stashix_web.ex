@@ -99,6 +99,9 @@ defmodule StashixWeb do
       # Core UI components
       import StashixWeb.CoreComponents
 
+      # Slugged link params for structs and plain query maps
+      import StashixWeb.SlugParam
+
       # Shared "ink" design language components
       import StashixWeb.UI.Data
       import StashixWeb.UI.Dialog

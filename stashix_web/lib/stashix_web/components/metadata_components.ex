@@ -122,7 +122,7 @@ defmodule StashixWeb.MetadataComponents do
         <dd class="text-sm text-fg-soft leading-6">
           <.link
             :for={n <- Enum.take(names, @limit)}
-            navigate={"/creator/#{entry_id(n)}"}
+            navigate={"/creator/#{creator_param(entry_name(n), entry_id(n))}"}
             class="block truncate hover:text-fg hover:underline underline-offset-4 transition-colors"
           >
             {String.trim(entry_name(n))}
@@ -188,7 +188,7 @@ defmodule StashixWeb.MetadataComponents do
       <div class="min-w-0">
         <.link
           :if={@creator_id}
-          navigate={"/creator/#{@creator_id}"}
+          navigate={"/creator/#{creator_param(@name, @creator_id)}"}
           class="text-sm text-fg-soft leading-tight truncate hover:text-fg hover:underline transition-colors block"
         >{@name}</.link>
         <p :if={!@creator_id} class="text-sm text-fg-soft leading-tight truncate">{@name}</p>
@@ -287,6 +287,9 @@ defmodule StashixWeb.MetadataComponents do
   defp entry_id({_name, _count, id}), do: id
   defp entry_id({_name, id}) when is_binary(id), do: id
   defp entry_id(_), do: nil
+
+  defp creator_param(_name, nil), do: nil
+  defp creator_param(name, id), do: Stashix.Slug.to_param(name, id)
 
   @doc """
   Wraps controls that query metadata sources. Callers disable those controls

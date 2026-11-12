@@ -6,7 +6,7 @@ defmodule StashixWeb.AdminHealthLive do
 
   import Ecto.Query
 
-  alias Stashix.{Health, Library, Repo}
+  alias Stashix.{Health, Library, Repo, Slug}
   alias Stashix.Health.Workers.{IntegrityLibraryWorker, UnsupportedFilesWorker}
 
   on_mount {StashixWeb.Live.Hooks, :require_admin}
@@ -314,7 +314,7 @@ defmodule StashixWeb.AdminHealthLive do
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 pr-4 text-fg">
-            <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
+            <.link navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"} class="hover:underline">{row.title}</.link>
           </td>
           <td class="py-2 pr-4 text-muted font-mono text-xs truncate max-w-xs">{row.path}</td>
           <td class="py-2 text-muted text-xs">{format_dt(row.deleted_at)}</td>
@@ -335,7 +335,7 @@ defmodule StashixWeb.AdminHealthLive do
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 text-fg">
-            <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
+            <.link navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"} class="hover:underline">{row.title}</.link>
           </td>
         </tr>
       </tbody>
@@ -354,7 +354,7 @@ defmodule StashixWeb.AdminHealthLive do
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 text-fg">
-            <.link navigate={~p"/book/#{row.book_id}"} class="hover:underline">{row.title}</.link>
+            <.link navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"} class="hover:underline">{row.title}</.link>
           </td>
         </tr>
       </tbody>
@@ -374,7 +374,7 @@ defmodule StashixWeb.AdminHealthLive do
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 pr-4 text-fg">
-            <.link navigate={~p"/series/#{row.series_id}"} class="hover:underline">{row.name}</.link>
+            <.link navigate={~p"/series/#{Slug.to_param(row.name, row.series_id)}"} class="hover:underline">{row.name}</.link>
           </td>
           <td class="py-2 text-muted font-mono text-xs truncate max-w-sm">{row.path}</td>
         </tr>
@@ -392,7 +392,10 @@ defmodule StashixWeb.AdminHealthLive do
       >
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <.link navigate={~p"/book/#{row.book_id}"} class="text-fg font-medium hover:underline text-sm">
+            <.link
+              navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"}
+              class="text-fg font-medium hover:underline text-sm"
+            >
               {row.title}
             </.link>
             <details class="mt-0.5 group">

@@ -790,13 +790,16 @@ defmodule StashixWeb.AdminMetadataLive do
           </div>
           <div class="min-w-0 flex-1">
             <%= if review.book do %>
-              <.link navigate={~p"/book/#{review.book.id}"} class="text-sm text-fg hover:underline truncate block">
+              <.link navigate={~p"/book/#{slug_param(review.book)}"} class="text-sm text-fg hover:underline truncate block">
                 {(review.book.series && "#{review.book.series.name} ") || ""}{if review.book.issue_number,
                   do: "##{Stashix.Metadata.Matcher.format_number(review.book.issue_number)}",
                   else: review.book.title}
               </.link>
             <% else %>
-              <.link navigate={~p"/series/#{review.series.id}"} class="text-sm text-fg hover:underline truncate block">
+              <.link
+                navigate={~p"/series/#{slug_param(review.series)}"}
+                class="text-sm text-fg hover:underline truncate block"
+              >
                 {review.series.name} <span class="text-xs text-muted">(series)</span>
               </.link>
             <% end %>

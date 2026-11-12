@@ -290,7 +290,7 @@ defmodule StashixWeb.BookLive do
   defp adjacent_card(assigns) do
     ~H"""
     <.link
-      navigate={~p"/book/#{@book.id}"}
+      navigate={~p"/book/#{slug_param(@book)}"}
       class={[
         "group flex items-center gap-4 min-w-0 p-2 rounded-md bg-fg/[0.03] hover:bg-fg/[0.08] ring-1 ring-edge hover:ring-edge-hover transition-colors",
         @dir == :next && "flex-row-reverse text-right"

@@ -921,7 +921,7 @@ defmodule StashixWeb.SearchLive do
               <.media_card
                 :for={{b, i} <- Enum.with_index(@standalone_books)}
                 class={preview_class(i)}
-                navigate={~p"/book/#{b.id}"}
+                navigate={~p"/book/#{slug_param(b)}"}
                 title={book_title(b)}
                 cover_url={b.cover && ~p"/api/books/#{b.id}/cover"}
                 size="m"
@@ -946,7 +946,7 @@ defmodule StashixWeb.SearchLive do
               <.media_card
                 :for={{book, i} <- Enum.with_index(@books)}
                 class={if @params["type"] == "all", do: preview_class(i)}
-                navigate={~p"/book/#{book.id}"}
+                navigate={~p"/book/#{slug_param(book)}"}
                 title={book_title(book)}
                 cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                 size="m"

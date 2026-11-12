@@ -264,9 +264,9 @@ defmodule StashixWeb.HomeLive do
         ),
       progress: if(book.page_count && book.page_count > 1, do: min(page / (book.page_count - 1), 1.0)),
       cover: ~p"/api/books/#{book.id}/cover",
-      to: ~p"/book/#{book.id}",
-      primary: {"Continue", "lucide-play", ~p"/read/#{book.id}"},
-      secondary: {"Details", ~p"/book/#{book.id}"}
+      to: ~p"/book/#{slug_param(book)}",
+      primary: {"Continue", "lucide-play", ~p"/read/#{slug_param(book)}"},
+      secondary: {"Details", ~p"/book/#{slug_param(book)}"}
     }
   end
 
@@ -281,9 +281,9 @@ defmodule StashixWeb.HomeLive do
       meta: if(book.page_count && book.page_count > 0, do: ["#{book.page_count} pages"], else: []),
       progress: nil,
       cover: ~p"/api/books/#{book.id}/cover",
-      to: ~p"/book/#{book.id}",
-      primary: {"Start reading", "lucide-play", ~p"/read/#{book.id}"},
-      secondary: {"Details", ~p"/book/#{book.id}"}
+      to: ~p"/book/#{slug_param(book)}",
+      primary: {"Start reading", "lucide-play", ~p"/read/#{slug_param(book)}"},
+      secondary: {"Details", ~p"/book/#{slug_param(book)}"}
     }
   end
 
@@ -302,8 +302,8 @@ defmodule StashixWeb.HomeLive do
         ),
       progress: nil,
       cover: ~p"/api/series/#{series.id}/cover",
-      to: ~p"/series/#{series.id}",
-      primary: {"Browse series", "lucide-library", ~p"/series/#{series.id}"},
+      to: ~p"/series/#{slug_param(series)}",
+      primary: {"Browse series", "lucide-library", ~p"/series/#{slug_param(series)}"},
       secondary: nil
     }
   end
@@ -344,7 +344,7 @@ defmodule StashixWeb.HomeLive do
             <span :if={@hero.series} class="text-fg/25"> / </span>
             <.link
               :if={@hero.series}
-              navigate={~p"/series/#{@hero.series.id}"}
+              navigate={~p"/series/#{slug_param(@hero.series)}"}
               class="hover:text-fg transition-colors"
             >
               {@hero.series.name}
@@ -499,7 +499,7 @@ defmodule StashixWeb.HomeLive do
                 <.book_row :for={book <- @recommendations.books} book={book} />
                 <.media_row
                   :for={s <- @recommendations.series}
-                  navigate={~p"/series/#{s.id}"}
+                  navigate={~p"/series/#{slug_param(s)}"}
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   blurhash={s.cover_blurhash}
@@ -534,7 +534,7 @@ defmodule StashixWeb.HomeLive do
             ]}>
               <.collection_card
                 :for={data <- @libraries_data}
-                navigate={~p"/library/#{data.library.id}"}
+                navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
                 covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
                 stats={[{"series", data.series_count}, {"books", data.book_count}, {"issues", data.issue_count}]}

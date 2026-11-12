@@ -14,6 +14,7 @@ defmodule StashixWeb.CoreComponents do
   use Gettext, backend: StashixWeb.Gettext
 
   import StashixWeb.UI.Icon
+  import StashixWeb.SlugParam
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
   import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
@@ -340,7 +341,7 @@ defmodule StashixWeb.CoreComponents do
   def series_card(assigns) do
     ~H"""
     <.media_card
-      navigate={"/series/#{@series.id}"}
+      navigate={"/series/#{slug_param(@series)}"}
       title={@series.name}
       cover_url={"/api/series/#{@series.id}/cover"}
       size={@size}
@@ -392,7 +393,7 @@ defmodule StashixWeb.CoreComponents do
 
     ~H"""
     <.media_card
-      navigate={"/book/#{@book.id}"}
+      navigate={"/book/#{slug_param(@book)}"}
       title={@title}
       cover_url={"/api/books/#{@book.id}/cover"}
       size={@size}
@@ -520,7 +521,7 @@ defmodule StashixWeb.CoreComponents do
 
     ~H"""
     <.media_row
-      navigate={"/book/#{@book.id}"}
+      navigate={"/book/#{slug_param(@book)}"}
       title={@title}
       cover_url={"/api/books/#{@book.id}/cover"}
       eyebrow={@eyebrow}

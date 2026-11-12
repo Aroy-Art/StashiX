@@ -225,7 +225,7 @@ defmodule Stashix.Library do
 
   def get_adjacent_books(_access, %{series_id: nil}), do: {nil, nil}
 
-  def get_adjacent_books(access, %{id: id, series_id: series_id}) do
+  def get_adjacent_books(access, %{id: id, series_id: series_id} = book) do
     siblings =
       from(b in Access.books(access),
         left_join: c in BookCover,
@@ -249,8 +249,14 @@ defmodule Stashix.Library do
     prev = idx && idx > 0 && Enum.at(siblings, idx - 1)
     next = idx && Enum.at(siblings, idx + 1)
 
-    {prev || nil, next || nil}
+    {with_series(prev, book), with_series(next, book)}
   end
+
+  # Siblings share the book's series; carrying it gives their links the full slug.
+  defp with_series(sibling, %{series: %Series{} = series}) when is_map(sibling),
+    do: Map.put(sibling, :series, series)
+
+  defp with_series(sibling, _book), do: sibling || nil
 
   @doc "How many of `books` carry each volume, as `%{volume => count}`."
   def volume_counts(books), do: Enum.frequencies_by(books, & &1.volume)

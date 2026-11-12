@@ -250,7 +250,7 @@ defmodule StashixWeb.ReaderLive do
   defp next_href(user_id, next_book) do
     progress = Library.get_progress(user_id, next_book.id)
     finished = progress && next_book.page_count > 0 && progress.current_page >= next_book.page_count - 1
-    if finished, do: ~p"/read/#{next_book.id}?page=0", else: ~p"/read/#{next_book.id}"
+    if finished, do: ~p"/read/#{slug_param(next_book)}?page=0", else: ~p"/read/#{slug_param(next_book)}"
   end
 
   defp schedule_progress_save(socket) do

@@ -90,7 +90,7 @@ defmodule StashixWeb.AllPublishersLive do
         <.publisher_card
           :for={pub <- @publishers}
           id={"pub-#{pub.id}"}
-          navigate={~p"/publisher/#{pub.id}"}
+          navigate={~p"/publisher/#{slug_param(pub)}"}
           name={pub.name}
           covers={
             for {book_id, blurhash} <- Map.get(@covers_map, pub.id, []),
