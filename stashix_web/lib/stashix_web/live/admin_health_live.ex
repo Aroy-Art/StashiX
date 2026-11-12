@@ -26,7 +26,7 @@ defmodule StashixWeb.AdminHealthLive do
        integrity_jobs: integrity_jobs,
        active_section: nil,
        section_data: %{},
-       page_title: "Admin · Health"
+       page_title: gettext("Admin · Health")
      )}
   end
 
@@ -157,7 +157,7 @@ defmodule StashixWeb.AdminHealthLive do
     ~H"""
     <.page wide>
       <div class="space-y-8">
-        <.display_heading level={1} class="text-4xl!">Library Health</.display_heading>
+        <.display_heading level={1} class="text-4xl!">{gettext("Library Health")}</.display_heading>
 
         <div :for={lib <- @libraries} class="space-y-3">
           <% summary = Map.get(@summaries, lib.id, %{}) %>
@@ -177,7 +177,7 @@ defmodule StashixWeb.AdminHealthLive do
                   phx-click="run_unsupported_scan"
                   phx-value-library_id={lib.id}
                 >
-                  Scan unsupported files
+                  {gettext("Scan unsupported files")}
                 </.ink_button>
                 <.ink_button
                   variant="ghost"
@@ -187,7 +187,7 @@ defmodule StashixWeb.AdminHealthLive do
                   disabled={integrity_running}
                 >
                   <.icon :if={integrity_running} name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" />
-                  {if integrity_running, do: "Checking integrity…", else: "Check integrity"}
+                  {if integrity_running, do: gettext("Checking integrity…"), else: gettext("Check integrity")}
                 </.ink_button>
               </div>
             </div>
@@ -197,42 +197,42 @@ defmodule StashixWeb.AdminHealthLive do
               <.health_stat
                 library_id={lib.id}
                 section="missing_files"
-                label="Missing files"
+                label={gettext("Missing files")}
                 count={Map.get(summary, :missing_files, 0)}
                 active_section={@active_section}
               />
               <.health_stat
                 library_id={lib.id}
                 section="zero_page_books"
-                label="Zero pages"
+                label={gettext("Zero pages")}
                 count={Map.get(summary, :zero_page_books, 0)}
                 active_section={@active_section}
               />
               <.health_stat
                 library_id={lib.id}
                 section="books_without_cover"
-                label="No cover"
+                label={gettext("No cover")}
                 count={Map.get(summary, :books_without_cover, 0)}
                 active_section={@active_section}
               />
               <.health_stat
                 library_id={lib.id}
                 section="orphan_series"
-                label="Orphan series"
+                label={gettext("Orphan series")}
                 count={Map.get(summary, :orphan_series, 0)}
                 active_section={@active_section}
               />
               <.health_stat
                 library_id={lib.id}
                 section="integrity_errors"
-                label="Corrupt files"
+                label={gettext("Corrupt files")}
                 count={Map.get(summary, :integrity_errors, 0)}
                 active_section={@active_section}
               />
               <.health_stat
                 library_id={lib.id}
                 section="unsupported_files"
-                label="Unsupported"
+                label={gettext("Unsupported")}
                 count={Map.get(summary, :unsupported_files, 0)}
                 active_section={@active_section}
               />
@@ -252,11 +252,11 @@ defmodule StashixWeb.AdminHealthLive do
                     phx-click="hide_section"
                     class="text-muted hover:text-fg text-xs"
                   >
-                    Close
+                    {gettext("Close")}
                   </button>
                 </div>
                 <%= if data == [] do %>
-                  <p class="text-muted text-sm">All clear.</p>
+                  <p class="text-muted text-sm">{gettext("All clear.")}</p>
                 <% else %>
                   <.section_table section={section} data={data} />
                 <% end %>
@@ -306,9 +306,9 @@ defmodule StashixWeb.AdminHealthLive do
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-fg/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Path</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Missing since</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Title")}</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Path")}</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Missing since")}</th>
         </tr>
       </thead>
       <tbody>
@@ -329,7 +329,7 @@ defmodule StashixWeb.AdminHealthLive do
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-fg/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Title")}</th>
         </tr>
       </thead>
       <tbody>
@@ -348,7 +348,7 @@ defmodule StashixWeb.AdminHealthLive do
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-fg/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Title</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Title")}</th>
         </tr>
       </thead>
       <tbody>
@@ -367,8 +367,8 @@ defmodule StashixWeb.AdminHealthLive do
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-fg/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Series</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Expected path</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Series")}</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Expected path")}</th>
         </tr>
       </thead>
       <tbody>
@@ -426,9 +426,9 @@ defmodule StashixWeb.AdminHealthLive do
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-fg/10 text-left">
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">File path</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Extension</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Scanned</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("File path")}</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Extension")}</th>
+          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Scanned")}</th>
         </tr>
       </thead>
       <tbody>
@@ -442,37 +442,50 @@ defmodule StashixWeb.AdminHealthLive do
     """
   end
 
-  defp section_label(:missing_files), do: "Missing files"
-  defp section_label(:zero_page_books), do: "Books with zero pages"
-  defp section_label(:books_without_cover), do: "Books without a cover"
-  defp section_label(:orphan_series), do: "Orphaned series (folder gone)"
-  defp section_label(:integrity_errors), do: "Corrupt or unreadable archives"
-  defp section_label(:unsupported_files), do: "Unsupported file types"
+  defp section_label(:missing_files), do: gettext("Missing files")
+  defp section_label(:zero_page_books), do: gettext("Books with zero pages")
+  defp section_label(:books_without_cover), do: gettext("Books without a cover")
+  defp section_label(:orphan_series), do: gettext("Orphaned series (folder gone)")
+  defp section_label(:integrity_errors), do: gettext("Corrupt or unreadable archives")
+  defp section_label(:unsupported_files), do: gettext("Unsupported file types")
 
   defp format_dt(nil), do: "—"
   defp format_dt(dt), do: NaiveDateTime.to_string(dt) |> String.slice(0, 16)
 
   defp error_detail("File not found on disk"),
     do:
-      "The file was registered in the library but no longer exists at the expected path. Run a re-scan to remove or reassign it."
+      gettext(
+        "The file was registered in the library but no longer exists at the expected path. Run a re-scan to remove or reassign it."
+      )
 
   defp error_detail("Archive contains no readable pages"),
     do:
-      "The archive opened successfully but contains no image files. It may be empty or use an unsupported internal layout."
+      gettext(
+        "The archive opened successfully but contains no image files. It may be empty or use an unsupported internal layout."
+      )
 
   defp error_detail("CRC mismatch" <> _),
     do:
-      "One or more entries in the archive have a checksum mismatch, indicating file corruption. The download or copy may be incomplete."
+      gettext(
+        "One or more entries in the archive have a checksum mismatch, indicating file corruption. The download or copy may be incomplete."
+      )
 
-  @eocd_detail "The ZIP's internal file table (End of Central Directory) is missing. The file was likely cut off during download or copy — re-downloading it usually fixes this."
-  defp error_detail("Truncated ZIP" <> _), do: @eocd_detail
-  defp error_detail(":bad_eocd"), do: @eocd_detail
-  defp error_detail(":eocd_not_found"), do: @eocd_detail
+  defp error_detail("Truncated ZIP" <> _), do: eocd_detail()
+  defp error_detail(":bad_eocd"), do: eocd_detail()
+  defp error_detail(":eocd_not_found"), do: eocd_detail()
 
   defp error_detail("Not a valid archive" <> _),
     do:
-      "The file does not start with a valid ZIP, RAR, or 7-Zip signature. It may be mislabeled or have been truncated."
+      gettext(
+        "The file does not start with a valid ZIP, RAR, or 7-Zip signature. It may be mislabeled or have been truncated."
+      )
 
   defp error_detail("ZIP error: " <> detail), do: detail
   defp error_detail(_), do: nil
+
+  defp eocd_detail,
+    do:
+      gettext(
+        "The ZIP's internal file table (End of Central Directory) is missing. The file was likely cut off during download or copy — re-downloading it usually fixes this."
+      )
 end

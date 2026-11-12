@@ -28,12 +28,14 @@ defmodule StashixWeb.AdminLive.Publishers do
     <% alias_pub = Enum.find(@publishers, &(&1.id == @alias_source_id))
     master_pub = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
     <div class="space-y-6">
-      <.display_heading level={1} class="text-4xl!">Publishers</.display_heading>
+      <.display_heading level={1} class="text-4xl!">{gettext("Publishers")}</.display_heading>
 
       <%!-- Tab bar --%>
-      <.tabs label="Publisher tools">
-        <:tab patch={~p"/admin/publishers?tab=aliases"} active={@publisher_tab == "aliases"}>Aliases</:tab>
-        <:tab patch={~p"/admin/publishers?tab=visibility"} active={@publisher_tab == "visibility"}>Visibility</:tab>
+      <.tabs label={gettext("Publisher tools")}>
+        <:tab patch={~p"/admin/publishers?tab=aliases"} active={@publisher_tab == "aliases"}>{gettext("Aliases")}</:tab>
+        <:tab patch={~p"/admin/publishers?tab=visibility"} active={@publisher_tab == "visibility"}>
+          {gettext("Visibility")}
+        </:tab>
       </.tabs>
 
       <%!-- Aliases tab --%>
@@ -42,15 +44,17 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Set alias --%>
           <div class="space-y-4">
             <div>
-              <h2 class="text-base font-semibold text-fg mb-1">Link Publisher Alias</h2>
+              <h2 class="text-base font-semibold text-fg mb-1">{gettext("Link Publisher Alias")}</h2>
               <p class="text-sm text-muted">
-                Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master.
+                {gettext(
+                  "Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master."
+                )}
               </p>
             </div>
 
             <%!-- Alias source picker --%>
             <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted uppercase tracking-wide">Alias (will be hidden)</label>
+              <label class="text-xs font-medium text-muted uppercase tracking-wide">{gettext("Alias (will be hidden)")}</label>
               <%= if @alias_source_id do %>
                 <% src = Enum.find(@publishers, &(&1.id == @alias_source_id)) %>
                 <div class="flex items-center justify-between bg-surface border border-accent/40 rounded-lg px-3 py-2 text-sm">
@@ -67,7 +71,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                   <input
                     type="text"
                     value={@alias_source_query}
-                    placeholder="Search publishers…"
+                    placeholder={gettext("Search publishers…")}
                     phx-keyup="alias_source_input"
                     autocomplete="off"
                     class="w-full bg-surface border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-faint focus:outline-none focus:border-violet-500"
@@ -87,7 +91,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       onmousedown="event.preventDefault()"
                     >
                       <%= if src_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-muted">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-muted">{gettext("No publishers found")}</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(src_results) do %>
                           <button
@@ -111,7 +115,9 @@ defmodule StashixWeb.AdminLive.Publishers do
 
             <%!-- Alias target picker --%>
             <div class="space-y-1.5">
-              <label class="text-xs font-medium text-muted uppercase tracking-wide">Master (kept, shown in listings)</label>
+              <label class="text-xs font-medium text-muted uppercase tracking-wide">{gettext(
+                "Master (kept, shown in listings)"
+              )}</label>
               <%= if @alias_target_id do %>
                 <% tgt = Enum.find(@publishers, &(&1.id == @alias_target_id)) %>
                 <div class="flex items-center justify-between bg-surface border border-accent/40 rounded-lg px-3 py-2 text-sm">
@@ -128,7 +134,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                   <input
                     type="text"
                     value={@alias_target_query}
-                    placeholder="Search publishers…"
+                    placeholder={gettext("Search publishers…")}
                     phx-keyup="alias_target_input"
                     autocomplete="off"
                     class="w-full bg-surface border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-faint focus:outline-none focus:border-violet-500"
@@ -149,7 +155,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                       onmousedown="event.preventDefault()"
                     >
                       <%= if tgt_results == [] do %>
-                        <div class="px-3 py-2.5 text-sm text-muted">No publishers found</div>
+                        <div class="px-3 py-2.5 text-sm text-muted">{gettext("No publishers found")}</div>
                       <% else %>
                         <%= for {p, i} <- Enum.with_index(tgt_results) do %>
                           <button
@@ -177,25 +183,31 @@ defmodule StashixWeb.AdminLive.Publishers do
                 phx-click="preview_alias"
                 disabled={is_nil(@alias_source_id) || is_nil(@alias_target_id)}
               >
-                Link as Alias
+                {gettext("Link as Alias")}
               </.ink_button>
             <% else %>
               <div class="rounded-lg border border-accent/40 bg-accent/10 p-4 space-y-3">
-                <p class="text-sm text-accent font-medium">Confirm alias link</p>
+                <p class="text-sm text-accent font-medium">{gettext("Confirm alias link")}</p>
                 <p class="text-sm text-muted">
-                  <span class="text-fg font-medium">"{alias_pub && alias_pub.name}"</span>
-                  will become an alias of <span class="text-fg font-medium">"{master_pub && master_pub.name}"</span>.
-                  No data is deleted — this can be undone.
+                  <.rich_text text={
+                    gettext("%{alias} will become an alias of %{master}. No data is deleted — this can be undone.",
+                      alias: rich_marker("alias"),
+                      master: rich_marker("master")
+                    )
+                  }>
+                    <:part name="alias"><span class="text-fg font-medium">"{alias_pub && alias_pub.name}"</span></:part>
+                    <:part name="master"><span class="text-fg font-medium">"{master_pub && master_pub.name}"</span></:part>
+                  </.rich_text>
                 </p>
                 <div class="flex gap-2">
                   <.ink_button
                     size="md"
                     phx-click="confirm_set_alias"
                   >
-                    Confirm
+                    {gettext("Confirm")}
                   </.ink_button>
                   <.ink_button variant="ghost" size="md" phx-click="cancel_alias">
-                    Cancel
+                    {gettext("Cancel")}
                   </.ink_button>
                 </div>
               </div>
@@ -205,22 +217,22 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Current aliases --%>
           <div>
             <h3 class="text-sm font-medium text-muted mb-2">
-              Current aliases
+              {gettext("Current aliases")}
               <%= if @publishers_with_aliases != [] do %>
                 <span class="text-muted">({length(@publishers_with_aliases)})</span>
               <% end %>
             </h3>
             <.data_table id="publisher-aliases" rows={@publishers_with_aliases}>
-              <:col :let={p} label="Master">
+              <:col :let={p} label={gettext("Master")}>
                 <.link navigate={~p"/publisher/#{p.canonical_publisher_id}"} class="hover:text-ink transition-colors">
                   {p.canonical && p.canonical.name}
                 </.link>
               </:col>
-              <:col :let={p} label="Alias" class="text-muted">{p.name}</:col>
+              <:col :let={p} label={gettext("Alias")} class="text-muted">{p.name}</:col>
               <:action :let={p}>
-                <.ink_button variant="danger" size="md" phx-click="remove_alias" phx-value-id={p.id}>Remove</.ink_button>
+                <.ink_button variant="danger" size="md" phx-click="remove_alias" phx-value-id={p.id}>{gettext("Remove")}</.ink_button>
               </:action>
-              <:empty>No aliases configured</:empty>
+              <:empty>{gettext("No aliases configured")}</:empty>
             </.data_table>
           </div>
         </div>
@@ -242,7 +254,7 @@ defmodule StashixWeb.AdminLive.Publishers do
                 type="search"
                 name="q"
                 value={@pub_vis_search}
-                placeholder="Filter publishers…"
+                placeholder={gettext("Filter publishers…")}
                 autocomplete="off"
                 phx-change="pub_vis_search"
                 phx-debounce="200"
@@ -254,9 +266,12 @@ defmodule StashixWeb.AdminLive.Publishers do
           <%!-- Count + top pagination --%>
           <div class="flex items-center justify-between">
             <p class="text-xs text-muted">
-              {@pub_vis_total} publisher{if @pub_vis_total == 1, do: "", else: "s"}
               <%= if @pub_vis_search != "" do %>
-                matching <span class="text-muted">"{@pub_vis_search}"</span>
+                {ngettext("1 publisher matching \"%{query}\"", "%{count} publishers matching \"%{query}\"", @pub_vis_total,
+                  query: @pub_vis_search
+                )}
+              <% else %>
+                {ngettext("1 publisher", "%{count} publishers", @pub_vis_total)}
               <% end %>
             </p>
             <%= if total_pages > 1 do %>
@@ -294,7 +309,7 @@ defmodule StashixWeb.AdminLive.Publishers do
 
           <% no_stats = %{series_count: 0, books_count: 0, issues_count: 0} %>
           <.data_table id="publisher-visibility" rows={@pub_vis_publishers}>
-            <:col :let={p} label="Name">
+            <:col :let={p} label={gettext("Name")}>
               <.link
                 navigate={~p"/publisher/#{slug_param(p)}"}
                 class={[
@@ -305,27 +320,27 @@ defmodule StashixWeb.AdminLive.Publishers do
                 {p.name}
               </.link>
             </:col>
-            <:col :let={p} label="Status">
+            <:col :let={p} label={gettext("Status")}>
               <%= cond do %>
                 <% p.hidden -> %>
-                  <.chip>Hidden</.chip>
+                  <.chip>{gettext("Hidden")}</.chip>
                 <% p.canonical && p.canonical.hidden -> %>
-                  <.chip>Alias · hidden</.chip>
+                  <.chip>{gettext("Alias · hidden")}</.chip>
                 <% not is_nil(p.canonical_publisher_id) -> %>
-                  <.chip>Alias</.chip>
+                  <.chip>{gettext("Alias")}</.chip>
                 <% true -> %>
                   <span class="inline-flex px-2 py-0.5 rounded-md bg-ink/10 border border-ink/40 text-xs font-medium text-ink">
-                    Visible
+                    {gettext("Visible")}
                   </span>
               <% end %>
             </:col>
-            <:col :let={p} label="Series" align="right" class="text-muted">
+            <:col :let={p} label={gettext("Series")} align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).series_count}
             </:col>
-            <:col :let={p} label="Books" align="right" class="text-muted">
+            <:col :let={p} label={gettext("Books")} align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).books_count}
             </:col>
-            <:col :let={p} label="Issues" align="right" class="text-muted">
+            <:col :let={p} label={gettext("Issues")} align="right" class="text-muted">
               {Map.get(@pub_vis_stats, p.id, no_stats).issues_count}
             </:col>
             <:action :let={p}>
@@ -336,16 +351,18 @@ defmodule StashixWeb.AdminLive.Publishers do
                 phx-click="toggle_publisher_hidden"
                 phx-value-id={p.id}
               >
-                {if p.hidden, do: "Show", else: "Hide"}
+                {if p.hidden, do: gettext("Show"), else: gettext("Hide")}
               </.ink_button>
             </:action>
-            <:empty>No publishers found</:empty>
+            <:empty>{gettext("No publishers found")}</:empty>
           </.data_table>
 
           <%!-- Bottom pagination --%>
           <%= if total_pages > 1 do %>
             <div class="flex items-center justify-between pt-1">
-              <p class="text-xs text-muted">Page {@pub_vis_page} of {total_pages}</p>
+              <p class="text-xs text-muted">
+                {gettext("Page %{page} of %{count}", page: @pub_vis_page, count: total_pages)}
+              </p>
               <div class="flex gap-1">
                 <.ink_button
                   variant="ghost"

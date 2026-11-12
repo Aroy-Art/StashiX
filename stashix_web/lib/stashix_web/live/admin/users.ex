@@ -25,38 +25,38 @@ defmodule StashixWeb.AdminLive.Users do
     ~H"""
     <div class="space-y-4">
       <div class="flex items-center justify-between">
-        <.display_heading level={1} class="text-4xl!">Users</.display_heading>
+        <.display_heading level={1} class="text-4xl!">{gettext("Users")}</.display_heading>
         <.ink_button size="md" phx-click="toggle_user_form">
-          Add User
+          {gettext("Add User")}
         </.ink_button>
       </div>
 
       <%= if @show_user_form do %>
         <div class="bg-surface border border-edge rounded-lg p-6">
-          <h3 class="font-display font-black uppercase text-2xl leading-none text-fg mb-4">Create User</h3>
+          <h3 class="font-display font-black uppercase text-2xl leading-none text-fg mb-4">{gettext("Create User")}</h3>
           <form phx-submit="create_user" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <.field label="Email">
+            <.field label={gettext("Email")}>
               <.text_input type="email" name="email" required />
             </.field>
-            <.field label="Username">
+            <.field label={gettext("Username")}>
               <.text_input name="username" required />
             </.field>
-            <.field label="Password">
+            <.field label={gettext("Password")}>
               <.text_input type="password" name="password" required minlength="8" />
             </.field>
-            <.field label="Role">
+            <.field label={gettext("Role")}>
               <.ink_select
                 id="new-user-role"
                 name="role"
-                label="Role"
+                label={gettext("Role")}
                 variant="field"
                 value="user"
-                options={[{"User", "user"}, {"Admin", "admin"}]}
+                options={[{gettext("User"), "user"}, {gettext("Admin"), "admin"}]}
               />
             </.field>
             <div class="col-span-full flex gap-2 justify-end">
-              <.ink_button variant="ghost" size="md" type="button" phx-click="toggle_user_form">Cancel</.ink_button>
-              <.ink_button size="md" type="submit">Create</.ink_button>
+              <.ink_button variant="ghost" size="md" type="button" phx-click="toggle_user_form">{gettext("Cancel")}</.ink_button>
+              <.ink_button size="md" type="submit">{gettext("Create")}</.ink_button>
             </div>
           </form>
         </div>
@@ -74,7 +74,7 @@ defmodule StashixWeb.AdminLive.Users do
                 <p class="text-xs text-faint mt-0.5">
                   {if user.last_seen_at,
                     do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
-                    else: "Never seen"}
+                    else: gettext("Never seen")}
                 </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -85,7 +85,7 @@ defmodule StashixWeb.AdminLive.Users do
                     else: "bg-raised text-muted"
                   )
                 ]}>
-                  {user.role}
+                  {role_label(user.role)}
                 </span>
                 <%= if user.role != :admin do %>
                   <button
@@ -99,7 +99,7 @@ defmodule StashixWeb.AdminLive.Users do
                       )
                     ]}
                   >
-                    Perms
+                    {gettext("Perms")}
                   </button>
                 <% end %>
                 <%= if user.id != @current_user.id do %>
@@ -109,11 +109,11 @@ defmodule StashixWeb.AdminLive.Users do
                     phx-click="show_confirm"
                     phx-value-event="delete_user"
                     phx-value-id={user.id}
-                    phx-value-title="Delete User"
-                    phx-value-message={"Delete user \"#{user.username}\"? This cannot be undone."}
-                    phx-value-label="Delete"
+                    phx-value-title={gettext("Delete User")}
+                    phx-value-message={gettext("Delete user \"%{name}\"? This cannot be undone.", name: user.username)}
+                    phx-value-label={gettext("Delete")}
                   >
-                    Delete
+                    {gettext("Delete")}
                   </.ink_button>
                 <% end %>
               </div>
@@ -137,11 +137,17 @@ defmodule StashixWeb.AdminLive.Users do
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-fg/10">
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Username</th>
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Email</th>
-              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">Role</th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                {gettext("Username")}
+              </th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                {gettext("Email")}
+              </th>
+              <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                {gettext("Role")}
+              </th>
               <th class="hidden md:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                Last seen
+                {gettext("Last seen")}
               </th>
               <th class="px-4 py-3"></th>
             </tr>
@@ -160,13 +166,13 @@ defmodule StashixWeb.AdminLive.Users do
                       else: "bg-raised text-muted"
                     )
                   ]}>
-                    {user.role}
+                    {role_label(user.role)}
                   </span>
                 </td>
                 <td class="hidden md:table-cell px-4 py-3 text-muted text-xs">
                   {if user.last_seen_at,
                     do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
-                    else: "Never"}
+                    else: gettext("Never")}
                 </td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center gap-3 justify-end">
@@ -182,7 +188,7 @@ defmodule StashixWeb.AdminLive.Users do
                           )
                         ]}
                       >
-                        Permissions
+                        {gettext("Permissions")}
                       </button>
                     <% end %>
                     <%= if user.id != @current_user.id do %>
@@ -192,11 +198,11 @@ defmodule StashixWeb.AdminLive.Users do
                         phx-click="show_confirm"
                         phx-value-event="delete_user"
                         phx-value-id={user.id}
-                        phx-value-title="Delete User"
-                        phx-value-message={"Delete user \"#{user.username}\"? This cannot be undone."}
-                        phx-value-label="Delete"
+                        phx-value-title={gettext("Delete User")}
+                        phx-value-message={gettext("Delete user \"%{name}\"? This cannot be undone.", name: user.username)}
+                        phx-value-label={gettext("Delete")}
                       >
-                        Delete
+                        {gettext("Delete")}
                       </.ink_button>
                     <% end %>
                   </div>
@@ -222,6 +228,9 @@ defmodule StashixWeb.AdminLive.Users do
     """
   end
 
+  defp role_label(:admin), do: gettext("Admin")
+  defp role_label(:user), do: gettext("User")
+
   attr(:user, :any, required: true)
   attr(:libraries, :any, required: true)
   attr(:user_permissions, :any, required: true)
@@ -233,10 +242,10 @@ defmodule StashixWeb.AdminLive.Users do
     ~H"""
     <div class="space-y-2">
       <p class="text-xs font-medium text-muted uppercase tracking-wide mb-3">
-        Library Access for {@user.username}
+        {gettext("Library Access for %{name}", name: @user.username)}
       </p>
       <%= if @libraries == [] do %>
-        <p class="text-sm text-muted">No libraries configured.</p>
+        <p class="text-sm text-muted">{gettext("No libraries configured.")}</p>
       <% else %>
         <%= for lib <- @libraries do %>
           <% perm = Map.get(@user_permissions, lib.id)
@@ -256,7 +265,7 @@ defmodule StashixWeb.AdminLive.Users do
             </div>
             <div class="flex flex-wrap items-center gap-3">
               <%= if saved do %>
-                <span class="text-xs text-success font-medium">✓ Saved</span>
+                <span class="text-xs text-success font-medium">✓ {gettext("Saved")}</span>
               <% end %>
               <label class="flex items-center gap-2 cursor-pointer text-xs text-muted">
                 <input
@@ -265,13 +274,13 @@ defmodule StashixWeb.AdminLive.Users do
                   value="true"
                   checked={perm != nil && perm.can_read}
                   class="ink-check"
-                /> Can read
+                /> {gettext("Can read")}
               </label>
               <div class="w-40">
                 <.ink_select
                   id={"rating-#{@user.id}-#{lib.id}"}
                   name="max_age_rating"
-                  label="Maximum age rating"
+                  label={gettext("Maximum age rating")}
                   variant="field"
                   size="sm"
                   value={current_rating}
@@ -286,7 +295,7 @@ defmodule StashixWeb.AdminLive.Users do
                     else: "text-muted cursor-pointer"
                   )
                 ]}
-                title="Unrated books are shown under an age limit unless this is checked"
+                title={gettext("Unrated books are shown under an age limit unless this is checked")}
               >
                 <input
                   type="checkbox"
@@ -295,7 +304,7 @@ defmodule StashixWeb.AdminLive.Users do
                   checked={perm != nil && perm.hide_unrated}
                   disabled={current_rating == :unknown}
                   class="ink-check"
-                /> Hide unrated
+                /> {gettext("Hide unrated")}
               </label>
             </div>
           </form>

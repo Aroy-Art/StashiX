@@ -51,16 +51,16 @@ defmodule StashixWeb.AdminMetadataLive do
 
   defp apply_action(socket, :metadata_sources, _params) do
     socket
-    |> assign(page_title: "Admin · Metadata")
+    |> assign(page_title: gettext("Admin · Metadata"))
     |> load_sources()
   end
 
   defp apply_action(socket, :metadata_settings, _params) do
-    assign(socket, page_title: "Admin · Metadata Settings", settings: Settings.metadata())
+    assign(socket, page_title: gettext("Admin · Metadata Settings"), settings: Settings.metadata())
   end
 
   defp apply_action(socket, :metadata_review, params) do
-    socket = assign(socket, page_title: "Admin · Metadata Review") |> load_reviews()
+    socket = assign(socket, page_title: gettext("Admin · Metadata Review")) |> load_reviews()
 
     case params["identify"] do
       nil ->
@@ -75,7 +75,7 @@ defmodule StashixWeb.AdminMetadataLive do
   defp apply_action(socket, :metadata_jobs, _params) do
     socket
     |> assign(
-      page_title: "Admin · Metadata Jobs",
+      page_title: gettext("Admin · Metadata Jobs"),
       libraries: Library.list_libraries(%{role: :admin}),
       sources_ready: Sources.any_ready?(),
       summary_cleanup: nil
@@ -116,7 +116,7 @@ defmodule StashixWeb.AdminMetadataLive do
         {:noreply, load_sources(socket)}
 
       {:error, :untested} ->
-        {:noreply, put_flash(socket, :error, "Test the connection successfully before enabling this source")}
+        {:noreply, put_flash(socket, :error, gettext("Test the connection successfully before enabling this source"))}
     end
   end
 
@@ -156,7 +156,7 @@ defmodule StashixWeb.AdminMetadataLive do
         {:noreply, socket |> load_sources() |> mark_saved(key)}
 
       {:error, changeset} ->
-        {:noreply, put_flash(socket, :error, "Could not save: #{inspect(changeset.errors)}")}
+        {:noreply, put_flash(socket, :error, gettext("Could not save: %{errors}", errors: inspect(changeset.errors)))}
     end
   end
 
@@ -228,7 +228,7 @@ defmodule StashixWeb.AdminMetadataLive do
 
   def handle_event("match_library", %{"id" => id, "all" => all}, socket) do
     {:ok, _} = Metadata.enqueue_library(id, skip_matched: all != "true")
-    {:noreply, socket |> load_jobs() |> put_flash(:info, "Library queued for metadata matching")}
+    {:noreply, socket |> load_jobs() |> put_flash(:info, gettext("Library queued for metadata matching"))}
   end
 
   def handle_event("retry_failed", _params, socket) do
@@ -239,7 +239,14 @@ defmodule StashixWeb.AdminMetadataLive do
   def handle_event("clear_cache", _params, socket) do
     n = Metadata.clear_cache()
     images = Stashix.Metadata.ImageProxy.clear()
-    {:noreply, socket |> load_jobs() |> put_flash(:info, "Cleared #{n} cached responses and #{images} images")}
+
+    {:noreply,
+     socket
+     |> load_jobs()
+     |> put_flash(
+       :info,
+       gettext("Cleared %{responses} cached responses and %{images} images", responses: n, images: images)
+     )}
   end
 
   def handle_event("cancel_pending", _params, socket) do
@@ -262,7 +269,7 @@ defmodule StashixWeb.AdminMetadataLive do
      socket
      |> assign(summary_cleanup: nil)
      |> load_jobs()
-     |> put_flash(:info, "Cleaned #{books} book and #{series} series summaries")}
+     |> put_flash(:info, gettext("Cleaned %{books} book and %{series} series summaries", books: books, series: series))}
   end
 
   defp mark_saved(socket, key) do
@@ -309,7 +316,7 @@ defmodule StashixWeb.AdminMetadataLive do
   end
 
   def handle_info({:identify_applied, _kind, _id}, socket) do
-    {:noreply, socket |> put_flash(:info, "Metadata applied") |> close_dialog(~p"/admin/metadata/review")}
+    {:noreply, socket |> put_flash(:info, gettext("Metadata applied")) |> close_dialog(~p"/admin/metadata/review")}
   end
 
   # Poll the retried match jobs rather than wait on review events: a job that
@@ -359,15 +366,15 @@ defmodule StashixWeb.AdminMetadataLive do
   def render(assigns) do
     ~H"""
     <.page wide>
-      <.display_heading level={1} class="text-4xl!">Metadata</.display_heading>
+      <.display_heading level={1} class="text-4xl!">{gettext("Metadata")}</.display_heading>
 
-      <.tabs label="Metadata sections">
-        <:tab patch={~p"/admin/metadata"} active={@live_action == :metadata_sources}>Sources</:tab>
-        <:tab patch={~p"/admin/metadata/settings"} active={@live_action == :metadata_settings}>Settings</:tab>
+      <.tabs label={gettext("Metadata sections")}>
+        <:tab patch={~p"/admin/metadata"} active={@live_action == :metadata_sources}>{gettext("Sources")}</:tab>
+        <:tab patch={~p"/admin/metadata/settings"} active={@live_action == :metadata_settings}>{gettext("Settings")}</:tab>
         <:tab patch={~p"/admin/metadata/review"} active={@live_action == :metadata_review} count={@review_count}>
-          Review
+          {gettext("Review")}
         </:tab>
-        <:tab patch={~p"/admin/metadata/jobs"} active={@live_action == :metadata_jobs}>Jobs</:tab>
+        <:tab patch={~p"/admin/metadata/jobs"} active={@live_action == :metadata_jobs}>{gettext("Jobs")}</:tab>
       </.tabs>
 
       <%= if @live_action == :metadata_sources do %>
@@ -412,8 +419,9 @@ defmodule StashixWeb.AdminMetadataLive do
     ~H"""
     <div class="space-y-4 max-w-3xl">
       <p class="text-sm text-muted">
-        Sources are searched in priority order when matching automatically. Changes save automatically; credentials and cookies are stored encrypted.
-        A source can be enabled once its connection test succeeds.
+        {gettext(
+          "Sources are searched in priority order when matching automatically. Changes save automatically; credentials and cookies are stored encrypted. A source can be enabled once its connection test succeeds."
+        )}
       </p>
 
       <%= for {%{module: mod, config: row}, idx} <- Enum.with_index(@sources) do %>
@@ -432,7 +440,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-dir="up"
                 disabled={idx == 0}
                 class="text-muted hover:text-fg disabled:opacity-30"
-                title="Higher priority"
+                title={gettext("Higher priority")}
               >
                 <.icon name="lucide-chevron-up" class="w-4 h-4" />
               </button>
@@ -442,7 +450,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-dir="down"
                 disabled={idx == length(@sources) - 1}
                 class="text-muted hover:text-fg disabled:opacity-30"
-                title="Lower priority"
+                title={gettext("Lower priority")}
               >
                 <.icon name="lucide-chevron-down" class="w-4 h-4" />
               </button>
@@ -460,7 +468,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 </a>
                 <%= if not configured do %>
                   <span class="text-[10px] px-1.5 py-0.5 rounded bg-warn/15 text-warn">
-                    Needs configuration
+                    {gettext("Needs configuration")}
                   </span>
                 <% end %>
                 <%= case row.last_test_status do %>
@@ -469,7 +477,7 @@ defmodule StashixWeb.AdminMetadataLive do
                       class="text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success"
                       title={to_string(row.last_tested_at)}
                     >
-                      Connection OK
+                      {gettext("Connection OK")}
                     </span>
                   <% "error" -> %>
                     <span class="text-[10px] px-1.5 py-0.5 rounded bg-danger/15 text-danger" title={row.last_test_message}>
@@ -482,17 +490,17 @@ defmodule StashixWeb.AdminMetadataLive do
             </div>
             <div class="flex flex-col items-end gap-2">
               <.source_toggle
-                label="Enabled"
+                label={gettext("Enabled")}
                 on={row.enabled}
                 key={row.source_key}
                 field="enabled"
                 disabled={not row.enabled and row.last_test_status != "ok"}
                 title={
                   if not row.enabled and row.last_test_status != "ok",
-                    do: "Test the connection first"
+                    do: gettext("Test the connection first")
                 }
               />
-              <.source_toggle label="Auto-apply" on={row.auto_apply} key={row.source_key} field="auto_apply" />
+              <.source_toggle label={gettext("Auto-apply")} on={row.auto_apply} key={row.source_key} field="auto_apply" />
             </div>
           </div>
 
@@ -518,7 +526,7 @@ defmodule StashixWeb.AdminMetadataLive do
                       value=""
                       autocomplete="new-password"
                       phx-debounce="blur"
-                      placeholder={if has_value, do: "•••••••• saved — leave blank to keep", else: ""}
+                      placeholder={if has_value, do: gettext("•••••••• saved — leave blank to keep"), else: ""}
                       class={input_class()}
                     />
                   <% :cookies -> %>
@@ -526,7 +534,9 @@ defmodule StashixWeb.AdminMetadataLive do
                       name={"config[#{field.key}]"}
                       rows="3"
                       phx-debounce="blur"
-                      placeholder={if has_value, do: "Cookies saved — leave blank to keep", else: "name=value; other=value"}
+                      placeholder={
+                        if has_value, do: gettext("Cookies saved — leave blank to keep"), else: "name=value; other=value"
+                      }
                       class={[input_class(), "font-mono text-xs"]}
                     ></textarea>
                   <% :boolean -> %>
@@ -536,7 +546,7 @@ defmodule StashixWeb.AdminMetadataLive do
                       label={field.label}
                       variant="field"
                       value={to_string(value == true)}
-                      options={[{"Yes", "true"}, {"No", "false"}]}
+                      options={[{gettext("Yes"), "true"}, {gettext("No"), "false"}]}
                     />
                   <% _ -> %>
                     <input
@@ -551,7 +561,9 @@ defmodule StashixWeb.AdminMetadataLive do
               </div>
             <% end %>
             <div :if={Sources.spaced?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Min. seconds between requests</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">{gettext(
+                "Min. seconds between requests"
+              )}</label>
               <input
                 type="number"
                 min="0.1"
@@ -559,45 +571,51 @@ defmodule StashixWeb.AdminMetadataLive do
                 name="request_interval_s"
                 value={row.request_interval_ms && row.request_interval_ms / 1000}
                 phx-debounce="600"
-                placeholder={"Default: #{default_ms / 1000}"}
+                placeholder={gettext("Default: %{value}", value: default_ms / 1000)}
                 class={input_class()}
               />
-              <p class="text-xs text-muted mt-1">Requests closer together than this risk a temporary block.</p>
+              <p class="text-xs text-muted mt-1">{gettext("Requests closer together than this risk a temporary block.")}</p>
             </div>
             <div :if={not Sources.spaced?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Rate limit (requests / minute)</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">{gettext(
+                "Rate limit (requests / minute)"
+              )}</label>
               <input
                 type="number"
                 min="1"
                 name="rate_limit_per_minute"
                 value={row.rate_limit_per_minute}
                 phx-debounce="600"
-                placeholder={"Default: #{Float.round(default_n * 60_000 / default_ms, 1)}"}
+                placeholder={gettext("Default: %{value}", value: Float.round(default_n * 60_000 / default_ms, 1))}
                 class={input_class()}
               />
             </div>
             <div :if={Sources.endpoint_limits?(mod)}>
-              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">Requests per hour, per endpoint</label>
+              <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">{gettext(
+                "Requests per hour, per endpoint"
+              )}</label>
               <input
                 type="number"
                 min="1"
                 name="endpoint_limit_per_hour"
                 value={row.endpoint_limit_per_hour}
                 phx-debounce="600"
-                placeholder={"Default: #{mod.default_endpoint_limit_per_hour()}"}
+                placeholder={gettext("Default: %{value}", value: mod.default_endpoint_limit_per_hour())}
                 class={input_class()}
               />
-              <p class="text-xs text-muted mt-1">Each API endpoint (search, issues, issue, …) has its own quota.</p>
+              <p class="text-xs text-muted mt-1">
+                {gettext("Each API endpoint (search, issues, issue, …) has its own quota.")}
+              </p>
             </div>
             <div class="sm:col-span-2 flex items-center justify-end gap-3">
               <span
                 :if={MapSet.member?(@saved, row.source_key)}
                 class="inline-flex items-center gap-1 text-xs text-success"
               >
-                <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
+                <.icon name="lucide-check" class="w-3.5 h-3.5" /> {gettext("Saved")}
               </span>
               <span :if={not row.enabled and row.last_test_status != "ok"} class="text-xs text-muted">
-                Test the connection to enable
+                {gettext("Test the connection to enable")}
               </span>
               <.ink_button
                 variant="ghost"
@@ -608,9 +626,9 @@ defmodule StashixWeb.AdminMetadataLive do
                 disabled={MapSet.member?(@testing, row.source_key)}
               >
                 <%= if MapSet.member?(@testing, row.source_key) do %>
-                  <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" /> Testing…
+                  <.icon name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" /> {gettext("Testing…")}
                 <% else %>
-                  <.icon name="lucide-plug" class="w-3.5 h-3.5" /> Test connection
+                  <.icon name="lucide-plug" class="w-3.5 h-3.5" /> {gettext("Test connection")}
                 <% end %>
               </.ink_button>
             </div>
@@ -655,7 +673,10 @@ defmodule StashixWeb.AdminMetadataLive do
       class="max-w-xl space-y-5"
     >
       <div class="grid grid-cols-2 gap-4">
-        <.field label="Auto-match threshold (%)" hint="Minimum score to apply a match without review.">
+        <.field
+          label={gettext("Auto-match threshold (%)")}
+          hint={gettext("Minimum score to apply a match without review.")}
+        >
           <.text_input
             type="number"
             min="0"
@@ -665,7 +686,10 @@ defmodule StashixWeb.AdminMetadataLive do
             value={round(@settings["auto_match_threshold"] * 100)}
           />
         </.field>
-        <.field label="Required lead (%)" hint="How far ahead of the runner-up the best match must be.">
+        <.field
+          label={gettext("Required lead (%)")}
+          hint={gettext("How far ahead of the runner-up the best match must be.")}
+        >
           <.text_input
             type="number"
             min="0"
@@ -678,21 +702,24 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <.field
-        label="When applying a match automatically"
-        hint="In the Identify dialog you can pick exactly which fields to overwrite."
+        label={gettext("When applying a match automatically")}
+        hint={gettext("In the Identify dialog you can pick exactly which fields to overwrite.")}
       >
         <.ink_select
           id="settings-overwrite-mode"
           name="settings[overwrite_mode]"
-          label="When applying a match automatically"
+          label={gettext("When applying a match automatically")}
           variant="field"
           value={@settings["overwrite_mode"]}
-          options={[{"Only fill empty fields", "fill"}, {"Replace fields the source provides", "replace"}]}
+          options={[
+            {gettext("Only fill empty fields"), "fill"},
+            {gettext("Replace fields the source provides"), "replace"}
+          ]}
         />
       </.field>
 
       <div class="grid grid-cols-2 gap-4">
-        <.field label="Cache searches (hours)">
+        <.field label={gettext("Cache searches (hours)")}>
           <.text_input
             type="number"
             min="0"
@@ -701,7 +728,7 @@ defmodule StashixWeb.AdminMetadataLive do
             phx-debounce="600"
           />
         </.field>
-        <.field label="Cache issue/series details (days)">
+        <.field label={gettext("Cache issue/series details (days)")}>
           <.text_input
             type="number"
             min="0"
@@ -711,7 +738,7 @@ defmodule StashixWeb.AdminMetadataLive do
           />
         </.field>
         <p class="col-span-2 text-xs text-muted -mt-2">
-          Source responses are cached to save API requests. 0 disables caching.
+          {gettext("Source responses are cached to save API requests. 0 disables caching.")}
         </p>
       </div>
 
@@ -726,9 +753,15 @@ defmodule StashixWeb.AdminMetadataLive do
             class="ink-check"
           />
           <span>
-            Write metadata to files
+            {gettext("Write metadata to files")}
             <span class="block text-xs text-muted">
-              CBZ files get MetronInfo.xml embedded; other formats get a <code>&lt;book name&gt;.xml</code> sidecar.
+              <.rich_text text={
+                gettext("CBZ files get MetronInfo.xml embedded; other formats get a %{sidecar} sidecar.",
+                  sidecar: rich_marker("sidecar")
+                )
+              }>
+                <:part name="sidecar"><code>{gettext("<book name>.xml")}</code></:part>
+              </.rich_text>
             </span>
           </span>
         </label>
@@ -742,28 +775,32 @@ defmodule StashixWeb.AdminMetadataLive do
             class="ink-check"
           />
           <span>
-            Add ComicInfo.xml to CBZ files that have none
-            <span class="block text-xs text-muted">For readers that don't understand MetronInfo. An existing ComicInfo.xml is always kept up to date.</span>
+            {gettext("Add ComicInfo.xml to CBZ files that have none")}
+            <span class="block text-xs text-muted">
+              {gettext("For readers that don't understand MetronInfo. An existing ComicInfo.xml is always kept up to date.")}
+            </span>
           </span>
         </label>
         <.field
-          label="ComicInfo version"
-          hint="2.1 is a draft that adds Translator, Tags, story arc numbers and GTIN; some readers only accept 2.0."
+          label={gettext("ComicInfo version")}
+          hint={
+            gettext("2.1 is a draft that adds Translator, Tags, story arc numbers and GTIN; some readers only accept 2.0.")
+          }
         >
           <.ink_select
             id="settings-comicinfo-version"
             name="settings[comicinfo_version]"
-            label="ComicInfo version"
+            label={gettext("ComicInfo version")}
             variant="field"
             value={@settings["comicinfo_version"]}
-            options={[{"2.0 (stable)", "2.0"}, {"2.1 (draft)", "2.1"}, {"1.0", "1.0"}]}
+            options={[{gettext("2.0 (stable)"), "2.0"}, {gettext("2.1 (draft)"), "2.1"}, {"1.0", "1.0"}]}
           />
         </.field>
       </div>
 
       <p class="h-5 text-xs text-success">
         <span :if={@saved} class="inline-flex items-center gap-1">
-          <.icon name="lucide-check" class="w-3.5 h-3.5" /> Saved
+          <.icon name="lucide-check" class="w-3.5 h-3.5" /> {gettext("Saved")}
         </span>
       </p>
     </form>
@@ -778,7 +815,7 @@ defmodule StashixWeb.AdminMetadataLive do
     ~H"""
     <div class="space-y-3">
       <%= if @reviews == [] do %>
-        <p class="text-sm text-muted py-10 text-center">Nothing to review.</p>
+        <p class="text-sm text-muted py-10 text-center">{gettext("Nothing to review.")}</p>
       <% end %>
       <%= for review <- @reviews do %>
         <% top = List.first(review.candidates) %>
@@ -800,7 +837,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 navigate={~p"/series/#{slug_param(review.series)}"}
                 class="text-sm text-fg hover:underline truncate block"
               >
-                {review.series.name} <span class="text-xs text-muted">(series)</span>
+                {review.series.name} <span class="text-xs text-muted">{gettext("(series)")}</span>
               </.link>
             <% end %>
             <p class="text-xs text-muted truncate">
@@ -808,18 +845,22 @@ defmodule StashixWeb.AdminMetadataLive do
                 <% review.error -> %>
                   <span class="text-danger">{review.error}</span>
                 <% top -> %>
-                  Best: {top["title"] || top["series_name"]} · {round((top["score"] || 0) * 100)}% · {length(
-                    review.candidates
-                  )} candidates
+                  {ngettext(
+                    "Best: %{title} · %{score}% · 1 candidate",
+                    "Best: %{title} · %{score}% · %{count} candidates",
+                    length(review.candidates),
+                    title: top["title"] || top["series_name"],
+                    score: round((top["score"] || 0) * 100)
+                  )}
                 <% true -> %>
-                  No candidates found
+                  {gettext("No candidates found")}
               <% end %>
             </p>
             <%= case @retried[review.id] do %>
               <% :unmatched -> %>
-                <p class="text-xs text-warn">Retried — still no confident match</p>
+                <p class="text-xs text-warn">{gettext("Retried — still no confident match")}</p>
               <% :failed -> %>
-                <p class="text-xs text-danger">Match job failed — see the Jobs tab</p>
+                <p class="text-xs text-danger">{gettext("Match job failed — see the Jobs tab")}</p>
               <% nil -> %>
             <% end %>
             <%= if review.book && review.book.files != [] do %>
@@ -834,7 +875,7 @@ defmodule StashixWeb.AdminMetadataLive do
               patch={~p"/admin/metadata/review?identify=#{review.id}"}
               class="px-3 py-1.5 text-sm rounded-lg bg-violet-600 hover:bg-violet-500 text-white"
             >
-              Identify
+              {gettext("Identify")}
             </.link>
             <.ink_button
               variant="ghost"
@@ -845,13 +886,13 @@ defmodule StashixWeb.AdminMetadataLive do
               class={Map.has_key?(@retrying, review.id) && "cursor-wait gap-1.5"}
             >
               <%= if Map.has_key?(@retrying, review.id) do %>
-                <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 animate-spin" /> Matching…
+                <.icon name="lucide-refresh-cw" class="w-3.5 h-3.5 animate-spin" /> {gettext("Matching…")}
               <% else %>
-                Retry
+                {gettext("Retry")}
               <% end %>
             </.ink_button>
             <.ink_button variant="ghost" size="md" phx-click="skip_review" phx-value-id={review.id}>
-              Skip
+              {gettext("Skip")}
             </.ink_button>
           </div>
         </div>
@@ -871,18 +912,18 @@ defmodule StashixWeb.AdminMetadataLive do
     ~H"""
     <div class="space-y-8 max-w-3xl">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <%= for {queue, label} <- [{"metadata", "Matching"}, {"metadata_write", "File writes"}] do %>
+        <%= for {queue, label} <- [{"metadata", gettext("Matching")}, {"metadata_write", gettext("File writes")}] do %>
           <% counts = Map.get(@job_counts, queue, %{}) %>
           <div class="rounded-lg border border-edge bg-surface p-4">
             <h3 class="text-sm font-semibold text-fg mb-3">{label}</h3>
             <dl class="grid grid-cols-3 gap-2 text-center">
               <%= for {state, name, color} <- [
-                    {"available", "Queued", "text-fg-soft"},
-                    {"executing", "Running", "text-accent"},
-                    {"scheduled", "Waiting", "text-muted"},
-                    {"completed", "Done", "text-success"},
-                    {"retryable", "Retrying", "text-warn"},
-                    {"discarded", "Failed", "text-danger"}
+                    {"available", gettext("Queued"), "text-fg-soft"},
+                    {"executing", gettext("Running"), "text-accent"},
+                    {"scheduled", gettext("Waiting"), "text-muted"},
+                    {"completed", gettext("Done"), "text-success"},
+                    {"retryable", gettext("Retrying"), "text-warn"},
+                    {"discarded", gettext("Failed"), "text-danger"}
                   ] do %>
                 <div class="rounded-lg bg-raised/50 py-2">
                   <dd class={["text-lg font-semibold", color]}>{Map.get(counts, state, 0)}</dd>
@@ -896,18 +937,23 @@ defmodule StashixWeb.AdminMetadataLive do
 
       <div class="flex gap-2">
         <.ink_button variant="ghost" size="md" phx-click="retry_failed">
-          Retry failed
+          {gettext("Retry failed")}
         </.ink_button>
         <.ink_button variant="danger" size="md" phx-click="cancel_pending">
-          Cancel queued
+          {gettext("Cancel queued")}
         </.ink_button>
-        <.ink_button variant="ghost" size="md" phx-click="clear_cache" title="Delete cached source responses and images">
-          Clear cache ({@cache_count})
+        <.ink_button
+          variant="ghost"
+          size="md"
+          phx-click="clear_cache"
+          title={gettext("Delete cached source responses and images")}
+        >
+          {gettext("Clear cache (%{count})", count: @cache_count)}
         </.ink_button>
       </div>
 
       <div class="space-y-3">
-        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">Match a library</h2>
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">{gettext("Match a library")}</h2>
         <%= for lib <- @libraries do %>
           <div class="flex items-center justify-between rounded-lg border border-edge bg-surface px-4 py-3">
             <div>
@@ -922,7 +968,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-all="false"
                 disabled={!@sources_ready}
               >
-                Match unmatched
+                {gettext("Match unmatched")}
               </.ink_button>
               <.ink_button
                 variant="ghost"
@@ -932,7 +978,7 @@ defmodule StashixWeb.AdminMetadataLive do
                 phx-value-all="true"
                 disabled={!@sources_ready}
               >
-                Re-match all
+                {gettext("Re-match all")}
               </.ink_button>
             </.needs_sources>
           </div>
@@ -940,47 +986,58 @@ defmodule StashixWeb.AdminMetadataLive do
       </div>
 
       <div class="space-y-3">
-        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">Maintenance</h2>
+        <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">{gettext("Maintenance")}</h2>
         <div class="rounded-lg border border-edge bg-surface px-4 py-3 space-y-3">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <p class="text-fg text-sm font-medium">Clean up summaries</p>
+              <p class="text-fg text-sm font-medium">{gettext("Clean up summaries")}</p>
               <p class="text-muted text-xs">
-                Remove the "List of covers and their creators" table that older Comic Vine imports left at the end of summaries.
+                {gettext(
+                  "Remove the \"List of covers and their creators\" table that older Comic Vine imports left at the end of summaries."
+                )}
               </p>
             </div>
             <.ink_button :if={!@summary_cleanup} variant="ghost" size="md" phx-click="preview_summary_cleanup">
-              Preview cleanup
+              {gettext("Preview cleanup")}
             </.ink_button>
           </div>
 
           <div :if={@summary_cleanup} id="summary-cleanup-preview" class="space-y-3 border-t border-fg/10 pt-3">
             <%= if @summary_cleanup.books + @summary_cleanup.series == 0 do %>
-              <p class="text-sm text-muted">Nothing to clean up. No summaries contain a cover table.</p>
+              <p class="text-sm text-muted">{gettext("Nothing to clean up. No summaries contain a cover table.")}</p>
               <.ink_button variant="ghost" size="md" phx-click="cancel_summary_cleanup">
-                Close
+                {gettext("Close")}
               </.ink_button>
             <% else %>
               <p class="text-sm text-fg-soft">
-                This will rewrite the summary of <span class="font-semibold text-fg">{@summary_cleanup.books}</span>
-                books and <span class="font-semibold text-fg">{@summary_cleanup.series}</span>
-                series. Only the cover table at the end is removed; the rest of each summary is kept.
+                <.rich_text text={
+                  gettext(
+                    "This will rewrite the summary of %{books} books and %{series} series. Only the cover table at the end is removed; the rest of each summary is kept.",
+                    books: rich_marker("books"),
+                    series: rich_marker("series")
+                  )
+                }>
+                  <:part name="books"><span class="font-semibold text-fg">{@summary_cleanup.books}</span></:part>
+                  <:part name="series"><span class="font-semibold text-fg">{@summary_cleanup.series}</span></:part>
+                </.rich_text>
               </p>
               <p :if={@write_to_files and @summary_cleanup.books > 0} class="text-xs text-warn">
-                Writing metadata to files is on, so {@summary_cleanup.books} file writes will be queued.
+                {gettext("Writing metadata to files is on, so %{count} file writes will be queued.",
+                  count: @summary_cleanup.books
+                )}
               </p>
               <p :if={!@write_to_files} class="text-xs text-muted">
-                Writing metadata to files is off, so book files are not touched.
+                {gettext("Writing metadata to files is off, so book files are not touched.")}
               </p>
 
               <div class="space-y-2">
                 <%= for sample <- @summary_cleanup.samples do %>
                   <div class="rounded-lg bg-raised/50 p-3 text-xs space-y-1">
                     <p class="text-muted">
-                      <span class="text-muted">{sample.kind}</span> · {sample.label || "Untitled"}
+                      <span class="text-muted">{sample.kind}</span> · {sample.label || gettext("Untitled")}
                     </p>
                     <p class="text-fg-soft line-clamp-2">
-                      {if sample.kept == "", do: "(summary becomes empty)", else: sample.kept}
+                      {if sample.kept == "", do: gettext("(summary becomes empty)"), else: sample.kept}
                     </p>
                     <p class="text-danger line-through line-clamp-3">{sample.removed}</p>
                   </div>
@@ -989,7 +1046,7 @@ defmodule StashixWeb.AdminMetadataLive do
                   :if={@summary_cleanup.books + @summary_cleanup.series > length(@summary_cleanup.samples)}
                   class="text-xs text-muted"
                 >
-                  Showing {length(@summary_cleanup.samples)} examples.
+                  {gettext("Showing %{count} examples.", count: length(@summary_cleanup.samples))}
                 </p>
               </div>
 
@@ -998,10 +1055,10 @@ defmodule StashixWeb.AdminMetadataLive do
                   size="md"
                   phx-click="run_summary_cleanup"
                 >
-                  Clean {@summary_cleanup.books + @summary_cleanup.series} summaries
+                  {gettext("Clean %{count} summaries", count: @summary_cleanup.books + @summary_cleanup.series)}
                 </.ink_button>
                 <.ink_button variant="ghost" size="md" phx-click="cancel_summary_cleanup">
-                  Cancel
+                  {gettext("Cancel")}
                 </.ink_button>
               </div>
             <% end %>

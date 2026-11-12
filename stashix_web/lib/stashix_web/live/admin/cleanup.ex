@@ -23,38 +23,44 @@ defmodule StashixWeb.AdminLive.Cleanup do
     series_sel_count = MapSet.size(@selected_series)
     books_sel_count = MapSet.size(@selected_books) %>
     <div class="space-y-8">
-      <.display_heading level={1} class="text-4xl!">Cleanup</.display_heading>
+      <.display_heading level={1} class="text-4xl!">{gettext("Cleanup")}</.display_heading>
       <%!-- Series section --%>
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
-            Deleted Series <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_series)})</span>
+            {gettext("Deleted Series")} <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_series)})</span>
           </h2>
           <%= if series_sel_count > 0 do %>
             <div class="flex items-center gap-3">
-              <span class="text-sm text-muted">{series_sel_count} selected</span>
+              <span class="text-sm text-muted">{gettext("%{count} selected", count: series_sel_count)}</span>
               <.ink_button
                 size="md"
                 phx-click="batch_restore_series"
               >
-                Restore Selected
+                {gettext("Restore Selected")}
               </.ink_button>
               <.ink_button
                 variant="danger"
                 size="md"
                 phx-click="show_confirm"
                 phx-value-event="batch_purge_series"
-                phx-value-title="Purge Series"
-                phx-value-message={"Permanently delete #{series_sel_count} series and ALL their books? Book files on disk are never deleted. This cannot be undone."}
-                phx-value-label="Purge"
+                phx-value-title={gettext("Purge Series")}
+                phx-value-message={
+                  ngettext(
+                    "Permanently delete 1 series and ALL its books? Book files on disk are never deleted. This cannot be undone.",
+                    "Permanently delete %{count} series and ALL their books? Book files on disk are never deleted. This cannot be undone.",
+                    series_sel_count
+                  )
+                }
+                phx-value-label={gettext("Purge")}
               >
-                Purge Selected
+                {gettext("Purge Selected")}
               </.ink_button>
             </div>
           <% end %>
         </div>
         <%= if @deleted_series == [] do %>
-          <p class="text-muted text-sm">No deleted series.</p>
+          <p class="text-muted text-sm">{gettext("No deleted series.")}</p>
         <% else %>
           <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
@@ -69,13 +75,13 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     />
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Series
+                    {gettext("Series")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Library
+                    {gettext("Library")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Deleted
+                    {gettext("Deleted")}
                   </th>
                   <th class="px-4 py-3"></th>
                 </tr>
@@ -102,7 +108,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
                       <.ink_button variant="ghost" size="md" phx-click="restore_series" phx-value-id={s.id}>
-                        Restore
+                        {gettext("Restore")}
                       </.ink_button>
                       <.ink_button
                         variant="danger"
@@ -110,11 +116,16 @@ defmodule StashixWeb.AdminLive.Cleanup do
                         phx-click="show_confirm"
                         phx-value-event="purge_series"
                         phx-value-id={s.id}
-                        phx-value-title="Purge Series"
-                        phx-value-message={"Permanently delete \"#{s.name}\" and all its books? Book files on disk are never deleted. This cannot be undone."}
-                        phx-value-label="Purge"
+                        phx-value-title={gettext("Purge Series")}
+                        phx-value-message={
+                          gettext(
+                            "Permanently delete \"%{name}\" and all its books? Book files on disk are never deleted. This cannot be undone.",
+                            name: s.name
+                          )
+                        }
+                        phx-value-label={gettext("Purge")}
                       >
-                        Purge
+                        {gettext("Purge")}
                       </.ink_button>
                     </td>
                   </tr>
@@ -129,33 +140,39 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
-            Deleted Books <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_books)})</span>
+            {gettext("Deleted Books")} <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_books)})</span>
           </h2>
           <%= if books_sel_count > 0 do %>
             <div class="flex items-center gap-3">
-              <span class="text-sm text-muted">{books_sel_count} selected</span>
+              <span class="text-sm text-muted">{gettext("%{count} selected", count: books_sel_count)}</span>
               <.ink_button
                 size="md"
                 phx-click="batch_restore_books"
               >
-                Restore Selected
+                {gettext("Restore Selected")}
               </.ink_button>
               <.ink_button
                 variant="danger"
                 size="md"
                 phx-click="show_confirm"
                 phx-value-event="batch_purge_books"
-                phx-value-title="Purge Books"
-                phx-value-message={"Permanently delete #{books_sel_count} book(s)? Book files on disk are never deleted. This cannot be undone."}
-                phx-value-label="Purge"
+                phx-value-title={gettext("Purge Books")}
+                phx-value-message={
+                  ngettext(
+                    "Permanently delete 1 book? Book files on disk are never deleted. This cannot be undone.",
+                    "Permanently delete %{count} books? Book files on disk are never deleted. This cannot be undone.",
+                    books_sel_count
+                  )
+                }
+                phx-value-label={gettext("Purge")}
               >
-                Purge Selected
+                {gettext("Purge Selected")}
               </.ink_button>
             </div>
           <% end %>
         </div>
         <%= if @deleted_books == [] do %>
-          <p class="text-muted text-sm">No deleted books.</p>
+          <p class="text-muted text-sm">{gettext("No deleted books.")}</p>
         <% else %>
           <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
@@ -170,19 +187,19 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     />
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Title
+                    {gettext("Title")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Series
+                    {gettext("Series")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Library
+                    {gettext("Library")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Path
+                    {gettext("Path")}
                   </th>
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
-                    Deleted
+                    {gettext("Deleted")}
                   </th>
                   <th class="px-4 py-3"></th>
                 </tr>
@@ -218,7 +235,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
                       <.ink_button variant="ghost" size="md" phx-click="restore_book" phx-value-id={b.id}>
-                        Restore
+                        {gettext("Restore")}
                       </.ink_button>
                       <.ink_button
                         variant="danger"
@@ -226,11 +243,16 @@ defmodule StashixWeb.AdminLive.Cleanup do
                         phx-click="show_confirm"
                         phx-value-event="purge_book"
                         phx-value-id={b.id}
-                        phx-value-title="Purge Book"
-                        phx-value-message={"Permanently delete \"#{b.title}\"? Book files on disk are never deleted. This cannot be undone."}
-                        phx-value-label="Purge"
+                        phx-value-title={gettext("Purge Book")}
+                        phx-value-message={
+                          gettext(
+                            "Permanently delete \"%{name}\"? Book files on disk are never deleted. This cannot be undone.",
+                            name: b.title
+                          )
+                        }
+                        phx-value-label={gettext("Purge")}
                       >
-                        Purge
+                        {gettext("Purge")}
                       </.ink_button>
                     </td>
                   </tr>

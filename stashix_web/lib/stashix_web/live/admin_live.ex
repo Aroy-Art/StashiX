@@ -61,14 +61,14 @@ defmodule StashixWeb.AdminLive do
 
   defp apply_action(socket, :users, _params) do
     socket
-    |> assign(:page_title, "Admin · Users")
+    |> assign(:page_title, gettext("Admin · Users"))
     |> assign(:users, Accounts.list_users())
     |> assign(:libraries, Library.list_libraries(%{role: :admin}))
   end
 
   defp apply_action(socket, :libraries, _params) do
     socket
-    |> assign(:page_title, "Admin · Libraries")
+    |> assign(:page_title, gettext("Admin · Libraries"))
     |> assign(:libraries, Library.list_libraries(%{role: :admin}))
     |> assign(:file_watcher_status, Stashix.Scanner.FileWatcher.status())
     |> assign(:sources_ready, Stashix.Metadata.Sources.any_ready?())
@@ -76,7 +76,7 @@ defmodule StashixWeb.AdminLive do
 
   defp apply_action(socket, :cleanup, _params) do
     socket
-    |> assign(:page_title, "Admin · Cleanup")
+    |> assign(:page_title, gettext("Admin · Cleanup"))
     |> assign(:deleted_books, Library.list_all_deleted_books())
     |> assign(:deleted_series, Library.list_all_deleted_series())
     |> assign(:selected_books, MapSet.new())
@@ -88,7 +88,7 @@ defmodule StashixWeb.AdminLive do
       if Map.get(params, "tab") in ["aliases", "visibility"], do: params["tab"], else: "aliases"
 
     socket
-    |> assign(:page_title, "Admin · Publishers")
+    |> assign(:page_title, gettext("Admin · Publishers"))
     |> assign(:publisher_tab, tab)
     |> assign(:publishers, Library.list_publishers(Stashix.Library.Access.all()))
     |> assign(:publishers_with_aliases, Library.list_publishers_with_aliases())
@@ -132,24 +132,24 @@ defmodule StashixWeb.AdminLive do
          socket
          |> assign(:users, Accounts.list_users())
          |> assign(:show_user_form, false)
-         |> put_flash(:info, "User created")}
+         |> put_flash(:info, gettext("User created"))}
 
       {:error, changeset} ->
-        errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
+        errors = Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
         {:noreply, assign(socket, :errors, errors)}
     end
   end
 
   def handle_event("delete_user", %{"id" => id}, socket) do
     if id == socket.assigns.current_user.id do
-      {:noreply, put_flash(socket, :error, "Cannot delete yourself")}
+      {:noreply, put_flash(socket, :error, gettext("Cannot delete yourself"))}
     else
       user = Accounts.get_user!(id)
 
       case Accounts.delete_user(user) do
         {:ok, _} -> {:noreply, assign(socket, :users, Accounts.list_users())}
-        {:error, :last_admin} -> {:noreply, put_flash(socket, :error, "Cannot delete the last admin")}
-        {:error, _} -> {:noreply, put_flash(socket, :error, "Could not delete user")}
+        {:error, :last_admin} -> {:noreply, put_flash(socket, :error, gettext("Cannot delete the last admin"))}
+        {:error, _} -> {:noreply, put_flash(socket, :error, gettext("Could not delete user"))}
       end
     end
   end
@@ -165,10 +165,10 @@ defmodule StashixWeb.AdminLive do
          socket
          |> assign(:libraries, Library.list_libraries(%{role: :admin}))
          |> assign(:show_library_form, false)
-         |> put_flash(:info, "Library created")}
+         |> put_flash(:info, gettext("Library created"))}
 
       {:error, changeset} ->
-        errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
+        errors = Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
         {:noreply, assign(socket, :errors, errors)}
     end
   end
@@ -180,7 +180,7 @@ defmodule StashixWeb.AdminLive do
     {:noreply,
      socket
      |> assign(:libraries, Library.list_libraries(%{role: :admin}))
-     |> put_flash(:info, "Library \"#{library.name}\" and all its content deleted")}
+     |> put_flash(:info, gettext("Library \"%{name}\" and all its content deleted", name: library.name))}
   end
 
   def handle_event("scan_library", %{"id" => id}, socket) do
@@ -196,17 +196,18 @@ defmodule StashixWeb.AdminLive do
   def handle_event("match_library_metadata", %{"id" => id}, socket) do
     case Stashix.Metadata.enqueue_library(id) do
       {:ok, _} ->
-        {:noreply, put_flash(socket, :info, "Metadata matching queued — follow progress in Admin · Metadata · Jobs")}
+        {:noreply,
+         put_flash(socket, :info, gettext("Metadata matching queued — follow progress in Admin · Metadata · Jobs"))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Could not queue metadata matching")}
+        {:noreply, put_flash(socket, :error, gettext("Could not queue metadata matching"))}
     end
   end
 
   def handle_event("backfill_blurhashes", _params, socket) do
     Stashix.Scanner.backfill_blurhashes()
 
-    {:noreply, put_flash(socket, :info, "Blurhash backfill started — check server logs for progress")}
+    {:noreply, put_flash(socket, :info, gettext("Blurhash backfill started — check server logs for progress"))}
   end
 
   def handle_event("edit_library", %{"id" => id}, socket) do
@@ -227,10 +228,10 @@ defmodule StashixWeb.AdminLive do
          socket
          |> assign(:libraries, Library.list_libraries(%{role: :admin}))
          |> assign(:editing_library_id, nil)
-         |> put_flash(:info, "Library settings saved")}
+         |> put_flash(:info, gettext("Library settings saved"))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to save")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to save"))}
     end
   end
 
@@ -238,7 +239,7 @@ defmodule StashixWeb.AdminLive do
     confirm = %{
       title: params["title"],
       message: params["message"],
-      confirm_label: params["label"] || "Confirm",
+      confirm_label: params["label"] || gettext("Confirm"),
       event: params["event"],
       event_params: Map.take(params, ["ids", "id"])
     }
@@ -294,7 +295,7 @@ defmodule StashixWeb.AdminLive do
      socket
      |> assign(:deleted_books, Library.list_all_deleted_books())
      |> assign(:selected_books, MapSet.new())
-     |> put_flash(:info, "#{length(ids)} book(s) restored")}
+     |> put_flash(:info, ngettext("1 book restored", "%{count} books restored", length(ids)))}
   end
 
   def handle_event("batch_purge_books", _params, socket) do
@@ -305,7 +306,7 @@ defmodule StashixWeb.AdminLive do
      socket
      |> assign(:deleted_books, Library.list_all_deleted_books())
      |> assign(:selected_books, MapSet.new())
-     |> put_flash(:info, "#{length(ids)} book(s) permanently deleted")}
+     |> put_flash(:info, ngettext("1 book permanently deleted", "%{count} books permanently deleted", length(ids)))}
   end
 
   def handle_event("batch_restore_series", _params, socket) do
@@ -318,7 +319,7 @@ defmodule StashixWeb.AdminLive do
      |> assign(:deleted_books, Library.list_all_deleted_books())
      |> assign(:selected_series, MapSet.new())
      |> assign(:selected_books, MapSet.new())
-     |> put_flash(:info, "#{length(ids)} series restored")}
+     |> put_flash(:info, ngettext("1 series restored", "%{count} series restored", length(ids)))}
   end
 
   def handle_event("batch_purge_series", _params, socket) do
@@ -331,7 +332,7 @@ defmodule StashixWeb.AdminLive do
      |> assign(:deleted_books, Library.list_all_deleted_books())
      |> assign(:selected_series, MapSet.new())
      |> assign(:selected_books, MapSet.new())
-     |> put_flash(:info, "#{length(ids)} series permanently deleted")}
+     |> put_flash(:info, ngettext("1 series permanently deleted", "%{count} series permanently deleted", length(ids)))}
   end
 
   def handle_event("purge_book", %{"id" => id}, socket) do
@@ -341,7 +342,7 @@ defmodule StashixWeb.AdminLive do
     {:noreply,
      socket
      |> assign(:deleted_books, Library.list_all_deleted_books())
-     |> put_flash(:info, "Book permanently deleted")}
+     |> put_flash(:info, gettext("Book permanently deleted"))}
   end
 
   def handle_event("purge_series", %{"id" => id}, socket) do
@@ -352,7 +353,7 @@ defmodule StashixWeb.AdminLive do
      socket
      |> assign(:deleted_series, Library.list_all_deleted_series())
      |> assign(:deleted_books, Library.list_all_deleted_books())
-     |> put_flash(:info, "Series permanently deleted")}
+     |> put_flash(:info, gettext("Series permanently deleted"))}
   end
 
   def handle_event("restore_book", %{"id" => id}, socket) do
@@ -362,7 +363,7 @@ defmodule StashixWeb.AdminLive do
     {:noreply,
      socket
      |> assign(:deleted_books, Library.list_all_deleted_books())
-     |> put_flash(:info, "Book restored")}
+     |> put_flash(:info, gettext("Book restored"))}
   end
 
   def handle_event("restore_series", %{"id" => id}, socket) do
@@ -373,7 +374,7 @@ defmodule StashixWeb.AdminLive do
      socket
      |> assign(:deleted_series, Library.list_all_deleted_series())
      |> assign(:deleted_books, Library.list_all_deleted_books())
-     |> put_flash(:info, "Series and its books restored")}
+     |> put_flash(:info, gettext("Series and its books restored"))}
   end
 
   def handle_event("show_user_permissions", %{"id" => id}, socket) do
@@ -414,7 +415,7 @@ defmodule StashixWeb.AdminLive do
          |> update(:saved_permissions, &MapSet.put(&1, key))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to update permission")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to update permission"))}
     end
   end
 
@@ -514,13 +515,16 @@ defmodule StashixWeb.AdminLive do
            alias_target_id: nil,
            alias_pending: false
          )
-         |> put_flash(:info, "\"#{alias_pub.name}\" is now an alias for \"#{master_pub.name}\"")}
+         |> put_flash(
+           :info,
+           gettext("\"%{alias}\" is now an alias for \"%{master}\"", alias: alias_pub.name, master: master_pub.name)
+         )}
 
       {:error, :same_publisher} ->
-        {:noreply, put_flash(socket, :error, "A publisher cannot alias itself")}
+        {:noreply, put_flash(socket, :error, gettext("A publisher cannot alias itself"))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to set alias")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to set alias"))}
     end
   end
 
@@ -535,11 +539,14 @@ defmodule StashixWeb.AdminLive do
          |> load_vis_publishers()
          |> put_flash(
            :info,
-           if(pub.hidden, do: "\"#{pub.name}\" hidden", else: "\"#{pub.name}\" visible")
+           if(pub.hidden,
+             do: gettext("\"%{name}\" hidden", name: pub.name),
+             else: gettext("\"%{name}\" visible", name: pub.name)
+           )
          )}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to update publisher")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to update publisher"))}
     end
   end
 
@@ -554,10 +561,10 @@ defmodule StashixWeb.AdminLive do
         {:noreply,
          socket
          |> assign(publishers: publishers, publishers_with_aliases: publishers_with_aliases)
-         |> put_flash(:info, "Removed alias \"#{pub && pub.name}\"")}
+         |> put_flash(:info, gettext("Removed alias \"%{name}\"", name: pub && pub.name))}
 
       {:error, _} ->
-        {:noreply, put_flash(socket, :error, "Failed to remove alias")}
+        {:noreply, put_flash(socket, :error, gettext("Failed to remove alias"))}
     end
   end
 
