@@ -85,13 +85,47 @@ defmodule Stashix.SlugTest do
       assert Slug.resolve(Book, Phoenix.Param.to_param(series)) == :error
     end
 
-    test "reports a short id shared by two rows as ambiguous", %{lib: lib} do
-      for tail <- ["4e1a-9c2f-8d6b5a0e1f23", "5f2b-8d3e-7c5a4b9f0e12"] do
+    test "a short id shared by two rows is settled by the slug", %{lib: lib} do
+      saga = Repo.insert!(%Series{id: "a7f3b2c9-1b04-4e1a-9c2f-8d6b5a0e1f23", name: "Saga", library_id: lib.id})
+      paper = Repo.insert!(%Series{id: "a7f3b2c9-1b04-4f2b-8d3e-7c5a4b9f0e12", name: "Paper Girls", library_id: lib.id})
+
+      assert Slug.resolve(Series, "saga-a7f3b2c91b04") == {:ok, saga.id}
+      assert Slug.resolve(Series, "paper-girls-a7f3b2c91b04") == {:ok, paper.id}
+
+      # Without a slug that matches either, there's no telling them apart...
+      assert Slug.resolve(Series, "a7f3b2c91b04") == {:error, :ambiguous}
+      assert Slug.resolve(Series, "old-name-a7f3b2c91b04") == {:error, :ambiguous}
+      assert_raise Ecto.NoResultsError, fn -> Slug.resolve!(Series, "a7f3b2c91b04") end
+
+      # ...but full UUIDs always work.
+      assert Slug.resolve(Series, saga.id) == {:ok, saga.id}
+    end
+
+    test "colliding books match on their series slug or their title slug", %{lib: lib} do
+      series = Repo.insert!(%Series{name: "Saga", start_year: 2012, library_id: lib.id})
+
+      [one, two] =
+        for {tail, n} <- [{"4e1a-9c2f-8d6b5a0e1f23", 1}, {"4f2b-8d3e-7c5a4b9f0e12", 2}] do
+          Repo.insert!(%Book{
+            id: "a7f3b2c9-1b04-#{tail}",
+            library_id: lib.id,
+            series_id: series.id,
+            title: "Chapter #{n}",
+            issue_number: Decimal.new(n)
+          })
+        end
+
+      assert Slug.resolve(Book, "saga-2012-001-a7f3b2c91b04") == {:ok, one.id}
+      assert Slug.resolve(Book, "saga-2012-002-a7f3b2c91b04") == {:ok, two.id}
+      assert Slug.resolve(Book, "chapter-2-a7f3b2c91b04") == {:ok, two.id}
+    end
+
+    test "colliding rows with the same slug stay ambiguous", %{lib: lib} do
+      for tail <- ["4e1a-9c2f-8d6b5a0e1f23", "4f2b-8d3e-7c5a4b9f0e12"] do
         Repo.insert!(%Series{id: "a7f3b2c9-1b04-#{tail}", name: "Saga", library_id: lib.id})
       end
 
       assert Slug.resolve(Series, "saga-a7f3b2c91b04") == {:error, :ambiguous}
-      assert_raise Ecto.NoResultsError, fn -> Slug.resolve!(Series, "saga-a7f3b2c91b04") end
     end
 
     test "raises a 404 for unknown or malformed params" do

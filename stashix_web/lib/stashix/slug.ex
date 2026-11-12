@@ -16,7 +16,8 @@ defmodule Stashix.Slug do
 
   import Ecto.Query
 
-  alias Stashix.Repo
+  alias Stashix.{Formatters, Repo}
+  alias Stashix.Library.{Book, Creator, Library, Publisher, Series}
 
   @short_len 12
   @max_slug_len 60
@@ -35,6 +36,33 @@ defmodule Stashix.Slug do
       "" -> short(id)
       slug -> slug <> "-" <> short(id)
     end
+  end
+
+  @doc """
+  The canonical param for a library record; `Phoenix.Param` delegates here.
+
+  Issues read as "saga-2012-001"; standalone books, and books whose series
+  isn't preloaded, fall back to the title. Either form resolves, and the page
+  patches to the canonical one.
+  """
+  def param(%Series{} = s), do: to_param([s.name, s.start_year], s.id)
+
+  def param(%Book{series: %Series{} = s, issue_number: %Decimal{} = n} = b),
+    do: to_param([s.name, s.start_year, issue(n)], b.id)
+
+  def param(%Book{} = b), do: to_param([b.title], b.id)
+  def param(%Creator{} = c), do: to_param([c.name], c.id)
+  def param(%Publisher{} = p), do: to_param([p.name], p.id)
+  def param(%Library{} = l), do: to_param([l.name], l.id)
+
+  # 1 → "001", 1.5 → "001.5" (slugged to "001-5")
+  defp issue(n) do
+    [int | frac] = n |> Formatters.format_issue_number() |> String.split(".", parts: 2)
+    Enum.join([pad(int) | frac], ".")
+  end
+
+  defp pad(int) do
+    if int =~ ~r/\A\d+\z/, do: String.pad_leading(int, 3, "0"), else: int
   end
 
   @doc "The first #{@short_len} hex digits of a UUID."
@@ -91,7 +119,8 @@ defmodule Stashix.Slug do
   Resolves a URL param to the id of a `queryable` row.
 
   Raises `Ecto.NoResultsError` (a 404) when nothing matches, the param is
-  malformed, or a short id is ambiguous. Access checks are left to the
+  malformed, or a short id shared by several rows can't be settled by its
+  slug. Access checks are left to the
   caller's usual getter.
   """
   def resolve!(queryable, param) do
@@ -110,20 +139,39 @@ defmodule Stashix.Slug do
       {:range, lo, hi} ->
         from(r in queryable,
           where: r.id >= type(^lo, :binary_id) and r.id <= type(^hi, :binary_id),
-          select: r.id,
-          limit: 2
+          select: r.id
         )
         |> Repo.all()
         |> case do
           [id] -> {:ok, id}
           [] -> :error
-          [_, _] -> {:error, :ambiguous}
+          ids -> break_tie(queryable, ids, param)
         end
 
       :error ->
         :error
     end
   end
+
+  # Rows sharing a short id (about 1 in 56,000 for a 100k-row table) are told
+  # apart by the slug the param carries. A book matches on its series slug or
+  # its title slug, since links can be built with either.
+  defp break_tie(queryable, ids, param) do
+    from(r in queryable, where: r.id in ^ids)
+    |> Repo.all()
+    |> Enum.filter(&(param in slug_forms(&1)))
+    |> case do
+      [record] -> {:ok, record.id}
+      _ -> {:error, :ambiguous}
+    end
+  end
+
+  defp slug_forms(%Book{} = book) do
+    book = Repo.preload(book, :series)
+    Enum.uniq([param(book), param(%{book | series: nil})])
+  end
+
+  defp slug_forms(record), do: [param(record)]
 
   defp pad_uuid(hex, fill) do
     <<a::binary-8, b::binary-4, c::binary-4, d::binary-4, e::binary-12>> =
