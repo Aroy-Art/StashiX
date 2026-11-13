@@ -7,6 +7,7 @@ on:
       - "stashix_web/lib/**"
       - "stashix_web/config/**"
       - "stashix_web/test/**"
+      - "stashix_web/priv/gettext/**"
       - "stashix_web/mix.exs"
       - "stashix_web/.formatter.exs"
       - ".forgejo/workflows/format.yaml"
@@ -15,6 +16,7 @@ on:
       - "stashix_web/lib/**"
       - "stashix_web/config/**"
       - "stashix_web/test/**"
+      - "stashix_web/priv/gettext/**"
       - "stashix_web/mix.exs"
       - "stashix_web/.formatter.exs"
       - ".forgejo/workflows/format.yaml"
@@ -79,3 +81,13 @@ jobs:
         shell: sh
         working-directory: stashix_web
         run: mix format --check-formatted
+
+      # The .pot templates must list every gettext call in the code, or
+      # translators never see new strings. Fix with:
+      #   mix gettext.extract --merge --no-fuzzy
+      - name: check translations are extracted
+        shell: sh
+        working-directory: stashix_web
+        run: mix gettext.extract --check-up-to-date
+        env:
+          MIX_ENV: test
