@@ -317,7 +317,9 @@ defmodule StashixWeb.AdminHealthLive do
             <.link navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"} class="hover:underline">{row.title}</.link>
           </td>
           <td class="py-2 pr-4 text-muted font-mono text-xs truncate max-w-xs">{row.path}</td>
-          <td class="py-2 text-muted text-xs">{format_dt(row.deleted_at)}</td>
+          <td class="py-2 text-muted text-xs">
+            <.local_time id={"missing-#{row.book_file_id}"} value={row.deleted_at} format="datetime" />
+          </td>
         </tr>
       </tbody>
     </table>
@@ -405,7 +407,12 @@ defmodule StashixWeb.AdminHealthLive do
               <p class="text-faint font-mono text-xs mt-1 break-all">{row.file_path}</p>
             </details>
           </div>
-          <span class="text-faint text-xs whitespace-nowrap shrink-0 pt-0.5">{format_dt(row.checked_at)}</span>
+          <.local_time
+            id={"integrity-#{row.result_id}"}
+            value={row.checked_at}
+            format="datetime"
+            class="text-faint text-xs whitespace-nowrap shrink-0 pt-0.5"
+          />
         </div>
         <div class="flex items-start gap-2 pt-1">
           <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 text-danger shrink-0 mt-0.5" />
@@ -435,7 +442,9 @@ defmodule StashixWeb.AdminHealthLive do
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 pr-4 text-fg-soft font-mono text-xs truncate max-w-sm">{row.file_path}</td>
           <td class="py-2 pr-4 text-warn text-xs font-mono">{Path.extname(row.file_path)}</td>
-          <td class="py-2 text-muted text-xs">{format_dt(row.checked_at)}</td>
+          <td class="py-2 text-muted text-xs">
+            <.local_time id={"unsupported-#{row.result_id}"} value={row.checked_at} format="datetime" />
+          </td>
         </tr>
       </tbody>
     </table>
@@ -448,9 +457,6 @@ defmodule StashixWeb.AdminHealthLive do
   defp section_label(:orphan_series), do: gettext("Orphaned series (folder gone)")
   defp section_label(:integrity_errors), do: gettext("Corrupt or unreadable archives")
   defp section_label(:unsupported_files), do: gettext("Unsupported file types")
-
-  defp format_dt(nil), do: "—"
-  defp format_dt(dt), do: NaiveDateTime.to_string(dt) |> String.slice(0, 16)
 
   defp error_detail("File not found on disk"),
     do:

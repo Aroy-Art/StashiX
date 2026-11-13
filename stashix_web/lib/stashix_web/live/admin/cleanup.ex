@@ -104,7 +104,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     <td class="px-4 py-3 text-fg">{s.name}</td>
                     <td class="px-4 py-3 text-muted">{s.library.name}</td>
                     <td class="px-4 py-3 text-muted text-xs">
-                      {Calendar.strftime(s.deleted_at, "%Y-%m-%d %H:%M")}
+                      <.local_time id={"deleted-series-#{s.id}"} value={s.deleted_at} format="datetime" />
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
                       <.ink_button variant="ghost" size="md" phx-click="restore_series" phx-value-id={s.id}>
@@ -231,7 +231,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                       {b.files |> List.first() |> then(&(&1 && &1.path))}
                     </td>
                     <td class="px-4 py-3 text-muted text-xs">
-                      {Calendar.strftime(b.deleted_at, "%Y-%m-%d %H:%M")}
+                      <.local_time id={"deleted-book-#{b.id}"} value={b.deleted_at} format="datetime" />
                     </td>
                     <td class="px-4 py-3 text-right flex gap-3 justify-end">
                       <.ink_button variant="ghost" size="md" phx-click="restore_book" phx-value-id={b.id}>

@@ -558,7 +558,7 @@ defmodule StashixWeb.HomeLive do
                   <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
                 </:menu>
                 <.pill :if={data.total_size > 0} tag="span" static>
-                  {Stashix.Formatters.format_bytes(data.total_size)}
+                  {Format.bytes(data.total_size)}
                 </.pill>
                 <.scan_status
                   :if={@scan_progress[data.library.id]}

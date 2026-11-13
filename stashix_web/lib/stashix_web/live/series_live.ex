@@ -140,9 +140,12 @@ defmodule StashixWeb.SeriesLive do
     mod = Stashix.Metadata.Sources.module(series.metadata_source || "")
     name = (mod && mod.name()) || series.metadata_source
 
-    [name, Calendar.strftime(series.metadata_matched_at, "%Y-%m-%d")]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
+    assigns = %{name: name, matched_at: series.metadata_matched_at}
+
+    ~H"""
+    <span :if={@name}>{@name} ·</span>
+    <.local_time id="series-metadata-matched" value={@matched_at} />
+    """
   end
 
   defp relative_folder(series, library) do
@@ -808,10 +811,10 @@ defmodule StashixWeb.SeriesLive do
           label={gettext("Size")}
           show={
             User.ui_setting(@current_user, "extended_book_info") == "on" &&
-              Formatters.format_file_size(@total_size) != nil
+              Format.file_size(@total_size) != nil
           }
         >
-          {Formatters.format_file_size(@total_size)}
+          {Format.file_size(@total_size)}
         </:item>
         <:item label={gettext("Age Rating")} show={series_age_rating != nil}>
           {Formatters.format_age_rating(series_age_rating)}

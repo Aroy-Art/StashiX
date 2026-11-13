@@ -72,9 +72,13 @@ defmodule StashixWeb.AdminLive.Users do
                 <p class="text-fg font-medium truncate">{user.username}</p>
                 <p class="text-xs text-muted truncate">{user.email}</p>
                 <p class="text-xs text-faint mt-0.5">
-                  {if user.last_seen_at,
-                    do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
-                    else: gettext("Never seen")}
+                  <.local_time
+                    :if={user.last_seen_at}
+                    id={"user-seen-mobile-#{user.id}"}
+                    value={user.last_seen_at}
+                    format="datetime"
+                  />
+                  <span :if={!user.last_seen_at}>{gettext("Never seen")}</span>
                 </p>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -170,9 +174,13 @@ defmodule StashixWeb.AdminLive.Users do
                   </span>
                 </td>
                 <td class="hidden md:table-cell px-4 py-3 text-muted text-xs">
-                  {if user.last_seen_at,
-                    do: Calendar.strftime(user.last_seen_at, "%-d %b %Y, %H:%M"),
-                    else: gettext("Never")}
+                  <.local_time
+                    :if={user.last_seen_at}
+                    id={"user-seen-#{user.id}"}
+                    value={user.last_seen_at}
+                    format="datetime"
+                  />
+                  <span :if={!user.last_seen_at}>{gettext("Never")}</span>
                 </td>
                 <td class="px-4 py-3 text-right">
                   <div class="flex items-center gap-3 justify-end">

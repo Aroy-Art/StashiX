@@ -577,8 +577,6 @@ defmodule StashixWeb.SearchLive do
     end
   end
 
-  defp delimit(n), do: n |> Integer.to_string() |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
-
   defp book_title(%{type: "issue", issue_number: n} = book) when not is_nil(n),
     do: "##{n} – #{book.title}"
 
@@ -655,7 +653,7 @@ defmodule StashixWeb.SearchLive do
               style="--i:3"
             >
               <span>
-                <span class="text-fg font-semibold">{delimit(@count)}</span>
+                <span class="text-fg font-semibold">{Format.integer(@count)}</span>
                 {ngettext("result", "results", @count)}
               </span>
             </p>
@@ -808,7 +806,7 @@ defmodule StashixWeb.SearchLive do
 
               <div class="lg:hidden sticky bottom-0 px-5 py-4 bg-surface">
                 <.ink_button type="button" phx-click={close_filters()} class="w-full">
-                  {ngettext("Show 1 result", "Show %{number} results", @count, number: delimit(@count))}
+                  {ngettext("Show 1 result", "Show %{number} results", @count, number: Format.integer(@count))}
                 </.ink_button>
               </div>
             </.panel>
@@ -1018,7 +1016,7 @@ defmodule StashixWeb.SearchLive do
   defp results_heading(assigns) do
     ~H"""
     <div class="flex items-end justify-between gap-4 mb-4">
-      <.display_heading count={delimit(@total)}>{@title}</.display_heading>
+      <.display_heading count={Format.integer(@total)}>{@title}</.display_heading>
       <.text_link :if={@show_all} type="button" phx-click="set_type" phx-value-type={@show_all}>
         {gettext("Show all")} <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink" />
       </.text_link>
@@ -1053,7 +1051,7 @@ defmodule StashixWeb.SearchLive do
       ]}
     >
       <.rich_text text={show_more_label(@type, @total - shown)}>
-        <:part name="number"><span class="text-ink tabular-nums">{delimit(@total - shown)}</span></:part>
+        <:part name="number"><span class="text-ink tabular-nums">{Format.integer(@total - shown)}</span></:part>
       </.rich_text>
       <.icon name="lucide-arrow-right" class="w-4 h-4 text-ink transition-transform group-hover:translate-x-1" />
     </button>

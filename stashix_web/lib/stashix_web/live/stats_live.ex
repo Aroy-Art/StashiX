@@ -56,7 +56,7 @@ defmodule StashixWeb.StatsLive do
          total_pages: total_pages || 0,
          total_file_size: total_file_size || Decimal.new(0),
          metadata: metadata,
-         paper_weight: Stashix.Formatters.format_paper_weight(total_pages || 0),
+         paper_weight: Format.paper_weight(total_pages || 0),
          paper_sheets: Stashix.Formatters.paper_sheets(total_pages || 0)
        }
      )}
@@ -256,7 +256,7 @@ defmodule StashixWeb.StatsLive do
       |> Enum.filter(fn {_, _, size} -> size && Decimal.compare(size, 0) == :gt end)
       |> Enum.map(fn {id, name, size} ->
         bytes = Decimal.to_integer(size)
-        formatted = Stashix.Formatters.format_bytes(bytes)
+        formatted = Format.bytes(bytes)
 
         %{
           "name" => name,
@@ -630,19 +630,21 @@ defmodule StashixWeb.StatsLive do
 
       <.panel variant="indicia">
         <dl class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-8 gap-y-6 px-6 py-6">
-          <.figure label={gettext("Total")} note={gettext("books & issues")}>{format_number(@stats.total_books)}</.figure>
+          <.figure label={gettext("Total")} note={gettext("books & issues")}>{Format.compact(@stats.total_books)}</.figure>
           <.figure label={gettext("Unread")} note={pct(@stats.unread, @stats.total_books)} tone="text-fg-soft">
-            {format_number(@stats.unread)}
+            {Format.compact(@stats.unread)}
           </.figure>
           <.figure label={gettext("In progress")} note={pct(@stats.in_progress, @stats.total_books)} tone="text-accent">
-            {format_number(@stats.in_progress)}
+            {Format.compact(@stats.in_progress)}
           </.figure>
           <.figure label={gettext("Completed")} note={pct(@stats.completed, @stats.total_books)} tone="text-success">
-            {format_number(@stats.completed)}
+            {Format.compact(@stats.completed)}
           </.figure>
-          <.figure label={gettext("Pages")} note={gettext("across all files")}>{format_number(@stats.total_pages)}</.figure>
+          <.figure label={gettext("Pages")} note={gettext("across all files")}>
+            {Format.compact(@stats.total_pages)}
+          </.figure>
           <.figure label={gettext("Size")} note={gettext("total storage")}>
-            {Stashix.Formatters.format_bytes(Decimal.to_integer(@stats.total_file_size))}
+            {Format.bytes(Decimal.to_integer(@stats.total_file_size))}
           </.figure>
         </dl>
       </.panel>
@@ -657,13 +659,13 @@ defmodule StashixWeb.StatsLive do
             )
           }>
             <:part name="sheets">
-              <span class="font-display font-black text-xl tabular-nums">{format_number(@stats.paper_sheets)}</span>
+              <span class="font-display font-black text-xl tabular-nums">{Format.compact(@stats.paper_sheets)}</span>
             </:part>
             <:part name="weight"><span class="font-display font-black text-xl">{@stats.paper_weight}</span></:part>
           </.rich_text>
         </p>
         <p class="mt-3 text-xs text-muted tabular-nums">
-          {gettext("%{pages} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)", pages: format_number(@stats.total_pages))}
+          {gettext("%{pages} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)", pages: Format.compact(@stats.total_pages))}
         </p>
       </div>
 
@@ -753,12 +755,4 @@ defmodule StashixWeb.StatsLive do
 
   defp pct(_, 0), do: "—"
   defp pct(n, total), do: "#{round(n / total * 100)}%"
-
-  defp format_number(n) when n >= 1_000_000,
-    do: "#{:erlang.float_to_binary(n / 1_000_000, decimals: 1)}M"
-
-  defp format_number(n) when n >= 1_000,
-    do: "#{:erlang.float_to_binary(n / 1_000, decimals: 1)}K"
-
-  defp format_number(n), do: to_string(n)
 end

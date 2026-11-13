@@ -29,8 +29,9 @@ import "../vendor/blurhash"
 import InkMenu from "./hooks/ink_menu.js"
 import InkDialog from "./hooks/ink_dialog.js"
 import Shelf from "./hooks/shelf.js"
+import LocalTime from "./hooks/local_time.js"
 
-let Hooks = { InkMenu, InkDialog, Shelf }
+let Hooks = { InkMenu, InkDialog, Shelf, LocalTime }
 
 Hooks.Sidebar = {
   mounted() {

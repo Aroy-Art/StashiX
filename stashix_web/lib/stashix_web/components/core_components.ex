@@ -203,6 +203,36 @@ defmodule StashixWeb.CoreComponents do
   @doc "Placeholder value for `rich_text/1`."
   def rich_marker(name), do: <<0>> <> to_string(name) <> <<0>>
 
+  @doc """
+  A date or time, formatted by the browser in the page language and, for
+  times, the viewer's time zone (the `LocalTime` hook in assets/js/hooks).
+  The server renders a neutral ISO form until then.
+
+  Formats: `date` (12 Nov 2026), `datetime` (12 Nov 2026, 14:03), `month`
+  (November 2026), `month_short` (Nov 2026). Naive date-times are UTC.
+  """
+  attr :id, :string, required: true
+  attr :value, :any, required: true, doc: "a Date, DateTime or NaiveDateTime"
+  attr :format, :string, default: "date", values: ~w(date datetime month month_short)
+  attr :rest, :global
+
+  def local_time(assigns) do
+    assigns = assign(assigns, iso: iso8601(assigns.value), fallback: fallback_time(assigns.value, assigns.format))
+
+    ~H"""
+    <time id={@id} datetime={@iso} data-format={@format} phx-hook="LocalTime" {@rest}>{@fallback}</time>
+    """
+  end
+
+  defp iso8601(%NaiveDateTime{} = dt), do: dt |> DateTime.from_naive!("Etc/UTC") |> iso8601()
+  defp iso8601(%DateTime{} = dt), do: dt |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+  defp iso8601(%Date{} = d), do: Date.to_iso8601(d)
+
+  defp fallback_time(value, format) when format in ~w(month month_short), do: Calendar.strftime(value, "%Y-%m")
+  defp fallback_time(%Date{} = d, _format), do: Date.to_iso8601(d)
+  defp fallback_time(value, "datetime"), do: Calendar.strftime(value, "%Y-%m-%d %H:%M")
+  defp fallback_time(value, _format), do: Calendar.strftime(value, "%Y-%m-%d")
+
   def show(js \\ %JS{}, selector) do
     JS.show(js,
       to: selector,

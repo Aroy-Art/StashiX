@@ -51,8 +51,38 @@ defmodule StashixWeb.Locale do
     "zh_TW" => "繁體中文"
   }
 
+  # Digit group and decimal separators (from CLDR), looked up by the full
+  # locale and then by its language. Anything else gets English's.
+  @nbsp " "
+  @narrow_nbsp " "
+  @number_symbols %{
+    "cs" => {@nbsp, ","},
+    "da" => {".", ","},
+    "de" => {".", ","},
+    "es" => {".", ","},
+    "fi" => {@nbsp, ","},
+    "fr" => {@narrow_nbsp, ","},
+    "it" => {".", ","},
+    "nb" => {@nbsp, ","},
+    "nl" => {".", ","},
+    "pl" => {@nbsp, ","},
+    "pt" => {@nbsp, ","},
+    "pt_BR" => {".", ","},
+    "ru" => {@nbsp, ","},
+    "sv" => {@nbsp, ","},
+    "tr" => {".", ","},
+    "uk" => {@nbsp, ","}
+  }
+
   @doc "The locale's name in its own language, for the picker."
   def name(locale), do: Map.get(@names, locale, locale)
+
+  @doc "`{group_separator, decimal_separator}` for the current Gettext locale."
+  def number_symbols do
+    locale = Gettext.get_locale(@backend)
+    language = locale |> String.split("_") |> hd()
+    @number_symbols[locale] || @number_symbols[language] || {",", "."}
+  end
 
   @doc "The current Gettext locale as an HTML `lang` value (`pt_BR` → `pt-BR`)."
   def html_lang, do: @backend |> Gettext.get_locale() |> String.replace("_", "-")

@@ -254,9 +254,9 @@ defmodule StashixWeb.BookLive do
       {gettext("Type"), d.type not in [nil, "", "issue"] && String.capitalize(d.type)},
       {gettext("Collection"), d.collection_title},
       {gettext("Alt. number"), d.alternative_number},
-      {gettext("Cover date"), d.cover_date && Calendar.strftime(d.cover_date, "%B %Y")},
-      {gettext("In stores"), d.store_date && Calendar.strftime(d.store_date, "%Y-%m-%d")},
-      {gettext("Price"), Enum.map_join(d.prices, " / ", fn p -> "#{p.amount} #{p.country}" end)},
+      {gettext("Cover date"), d.cover_date && fact_date("book-cover-date", d.cover_date, "month")},
+      {gettext("In stores"), d.store_date && fact_date("book-store-date", d.store_date, "date")},
+      {gettext("Price"), Enum.map_join(d.prices, " / ", fn p -> "#{Format.decimal(p.amount)} #{p.country}" end)},
       {gettext("Community rating"), community_rating(d)},
       {"ISBN", d.isbn},
       {"UPC", d.upc}
@@ -264,11 +264,19 @@ defmodule StashixWeb.BookLive do
     |> Enum.map(fn {label, value} -> {label, value || nil} end)
   end
 
+  defp fact_date(id, date, format) do
+    assigns = %{id: id, date: date, format: format}
+
+    ~H"""
+    <.local_time id={@id} value={@date} format={@format} />
+    """
+  end
+
   defp community_rating(%{community_rating: nil}), do: nil
 
   defp community_rating(%{community_rating: rating, community_rating_count: count}) do
     votes = if count && count > 0, do: " · " <> ngettext("1 vote", "%{count} votes", count), else: ""
-    "#{Float.round(rating, 1)}#{votes}"
+    Format.decimal(rating * 1.0) <> votes
   end
 
   defp book_display_title(book), do: book.title
@@ -532,7 +540,7 @@ defmodule StashixWeb.BookLive do
               @selected_file != nil && @selected_file.file_size > 0
           }
         >
-          {Formatters.format_file_size(@selected_file.file_size)}
+          {Format.file_size(@selected_file.file_size)}
         </:item>
         <:item label={gettext("Language")} show={@book.language != nil}>
           {Formatters.language_name(@book.language)}
@@ -581,7 +589,7 @@ defmodule StashixWeb.BookLive do
                   source:
                     (Stashix.Metadata.Sources.module(@book.metadata_source || "") &&
                        Stashix.Metadata.Sources.module(@book.metadata_source).name()) || @book.metadata_source
-                )} · {Calendar.strftime(@book.metadata_matched_at, "%Y-%m-%d")}
+                )} · <.local_time id="book-metadata-matched" value={@book.metadata_matched_at} />
               </span>
             <% end %>
           </div>

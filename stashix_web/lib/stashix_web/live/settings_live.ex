@@ -375,7 +375,9 @@ defmodule StashixWeb.SettingsLive do
       <.stat_list class="px-6 py-5">
         <.stat label={gettext("Role")}>{role_label(@current_user.role)}</.stat>
         <.stat label={gettext("Email")}>{@current_user.email}</.stat>
-        <.stat label={gettext("Member since")}>{Calendar.strftime(@current_user.inserted_at, "%b %Y")}</.stat>
+        <.stat label={gettext("Member since")}>
+          <.local_time id="member-since" value={@current_user.inserted_at} format="month_short" />
+        </.stat>
       </.stat_list>
     </.panel>
     """
@@ -451,9 +453,12 @@ defmodule StashixWeb.SettingsLive do
                   {Session.device(session)}
                 </p>
                 <p class="text-xs text-muted">
-                  {last_seen(session)} · {gettext("signed in %{date}",
-                    date: Calendar.strftime(session.inserted_at, "%-d %b %Y")
-                  )}
+                  {last_seen(session)} ·
+                  <.rich_text text={gettext("signed in %{date}", date: rich_marker("date"))}>
+                    <:part name="date">
+                      <.local_time id={"session-#{session.id}-signed-in"} value={session.inserted_at} />
+                    </:part>
+                  </.rich_text>
                 </p>
                 <p :if={session.ip_address} class="text-xs text-muted">
                   {gettext("IP:")}

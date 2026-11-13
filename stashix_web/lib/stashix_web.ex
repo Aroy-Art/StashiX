@@ -105,6 +105,9 @@ defmodule StashixWeb do
       # Slugged link params for structs and plain query maps
       import StashixWeb.SlugParam
 
+      # Numbers in the user's locale
+      alias StashixWeb.Format
+
       # Shared "ink" design language components
       import StashixWeb.UI.Data
       import StashixWeb.UI.Dialog
