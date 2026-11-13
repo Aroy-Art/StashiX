@@ -252,7 +252,7 @@ Hooks.PublisherSearch = {
       if (!p) return ""
       return `<span class="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-violet-900/50 border border-violet-700/50 text-violet-300 text-xs">
         ${escapeHTML(p.name)}
-        <button type="button" data-remove-id="${escapeHTML(id)}" class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5">
+        <button type="button" data-remove-id="${escapeHTML(id)}" aria-label="${escapeHTML((this.el.dataset.removeLabel || "%{name}").replace("%{name}", () => p.name))}" class="flex items-center justify-center w-3.5 h-3.5 rounded-full hover:bg-violet-700 text-violet-400 hover:text-white transition-colors ml-0.5">
           <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </span>`
@@ -294,7 +294,7 @@ Hooks.PublisherSearch = {
 
     if (results.length === 0) {
       this.dropdownEl.innerHTML =
-        `<div class="px-3 py-2.5 text-sm text-gray-500">No publishers found</div>`
+        `<div class="px-3 py-2.5 text-sm text-gray-500">${escapeHTML(this.el.dataset.emptyLabel)}</div>`
     } else {
       this.dropdownEl.innerHTML = results.map((p, i) =>
         `<button type="button" data-pub-id="${escapeHTML(p.id)}" class="w-full text-left px-3 py-2 text-sm transition-colors ${i === 0 ? "bg-gray-700/60 text-white hover:bg-gray-700" : "text-gray-300 hover:bg-gray-700 hover:text-white"}">${escapeHTML(p.name)}</button>`
@@ -486,6 +486,10 @@ Hooks.CreatorCombobox = {
 // Two-handle year slider over the release-year histogram on the search page.
 // Handles snap to years that have books; bars/label update live while
 // dragging and "set_years" is pushed on release (null = no bound).
+// Picks the server-rendered plural form for n (see StashixWeb.Format.plural_table/1).
+const pluralize = ({forms, index}, n) =>
+  forms[index[n < 200 ? n : 100 + (n % 100)]].replace("%{count}", n)
+
 Hooks.YearRange = {
   mounted() {
     this.read()
@@ -528,6 +532,7 @@ Hooks.YearRange = {
     this.counts = JSON.parse(this.el.dataset.counts)
     this.min = +this.el.dataset.min
     this.max = +this.el.dataset.max
+    this.books = JSON.parse(this.el.dataset.books)
     this.lo = this.el.querySelector("[data-thumb=lo]")
     this.hi = this.el.querySelector("[data-thumb=hi]")
     this.from = +this.lo.value
@@ -557,8 +562,8 @@ Hooks.YearRange = {
     track.style.right = `${(this.max - hi) / span * 100}%`
 
     this.el.querySelector("[data-label]").textContent =
-      lo === this.min && hi === this.max ? "Any year" : `${lo} – ${hi}`
-    this.el.querySelector("[data-total]").textContent = `${total} books`
+      lo === this.min && hi === this.max ? this.el.dataset.anyYear : `${lo} – ${hi}`
+    this.el.querySelector("[data-total]").textContent = pluralize(this.books, total)
 
     // when both handles sit at the top end, keep the low one grabbable
     this.lo.style.zIndex = lo > this.min + span / 2 ? 3 : 1
@@ -1246,7 +1251,8 @@ Hooks.ReaderZoom = {
     const level = document.getElementById("reader-zoom-level")
     if (level) {
       const actual = this.actualSizeZoom()
-      level.textContent = `${Math.round((actual ? this.zoom / actual : this.zoom) * 100)}%`
+      level.textContent = new Intl.NumberFormat(document.documentElement.lang || undefined, {style: "percent"})
+        .format(Math.round((actual ? this.zoom / actual : this.zoom) * 100) / 100)
       level.style.display = zoomed ? "flex" : "none"
     }
   },

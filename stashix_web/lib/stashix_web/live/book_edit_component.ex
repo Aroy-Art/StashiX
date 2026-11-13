@@ -634,6 +634,8 @@ defmodule StashixWeb.BookEditComponent do
                   data-publishers={Jason.encode!(Enum.map(@all_publishers, &%{id: &1.id, name: &1.name}))}
                   data-selected-ids={Jason.encode!(@draft["publisher_ids"])}
                   data-input-name="book[publisher_ids][]"
+                  data-empty-label={gettext("No publishers found")}
+                  data-remove-label={gettext("Remove %{name}", name: "%{name}")}
                 >
                   <div class="pub-badges flex flex-wrap gap-1.5 mb-2" hidden></div>
                   <input

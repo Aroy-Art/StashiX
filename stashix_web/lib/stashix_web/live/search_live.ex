@@ -1129,6 +1129,8 @@ defmodule StashixWeb.SearchLive do
       data-counts={Jason.encode!(Map.new(@counts))}
       data-min={@first}
       data-max={@last}
+      data-any-year={gettext("Any year")}
+      data-books={Format.plural_table(&ngettext("1 book", "%{count} books", &1))}
       class="space-y-1.5"
     >
       <div class="flex items-baseline justify-between">

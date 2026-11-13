@@ -62,6 +62,17 @@ defmodule StashixWeb.FormatTest do
     assert Format.integer(1234) == "1,234"
   end
 
+  test "plural_table/1 gives each count its form, with a slot for the number" do
+    table = Format.plural_table(&Gettext.dngettext(StashixWeb.Gettext, "default", "1 book", "%{count} books", &1))
+    assert %{"forms" => forms, "index" => index} = Jason.decode!(table)
+
+    assert forms == ["%{count} books", "%{count} book"]
+    assert length(index) == 200
+    assert Enum.at(forms, Enum.at(index, 1)) == "%{count} book"
+    assert Enum.at(forms, Enum.at(index, 0)) == "%{count} books"
+    assert Enum.at(forms, Enum.at(index, 101)) == "%{count} books"
+  end
+
   describe "local_time/1" do
     test "renders a date as is, for the hook to format" do
       assigns = %{}

@@ -51,6 +51,22 @@ defmodule StashixWeb.Format do
   @doc "The weight of printing that many pages, see `Stashix.Formatters.format_paper_weight/1`."
   def paper_weight(pages), do: pages |> Formatters.format_paper_weight() |> localize()
 
+  @doc """
+  A plural message for a JS hook that counts on its own, as JSON:
+  `{"forms": [...], "index": [...]}`. `index[n]` picks the form for
+  `n` in 0..199, with `%{count}` where the number goes; a bigger `n` uses
+  `100 + rem(n, 100)`, since plural rules only look at the last two digits
+  and whether `n` is over 100. `render` is a one-arity `ngettext` call.
+
+      Format.plural_table(&ngettext("1 book", "%{count} books", &1))
+  """
+  def plural_table(render) do
+    templates = for n <- 0..199, do: n |> render.() |> String.replace(Integer.to_string(n), "%{count}")
+    forms = Enum.uniq(templates)
+    index = Enum.map(templates, fn t -> Enum.find_index(forms, &(&1 == t)) end)
+    Jason.encode!(%{forms: forms, index: index})
+  end
+
   # Swaps the decimal point of an English-formatted number for the locale's,
   # and groups its integer part.
   defp localize(nil), do: nil
