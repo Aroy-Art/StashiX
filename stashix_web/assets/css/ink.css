@@ -177,6 +177,11 @@
 .cover-stack:hover > .cover-stack-card[data-depth="2"] {
   transform: translate(28%, -2%) rotate(18deg);
 }
+/* Data saver from the browser hint (the account setting drops the stack
+   server-side): hidden lazy images are never fetched. */
+[data-data-saver="on"] .cover-stack > .cover-stack-card {
+  display: none;
+}
 .cover-stack > .cover-stack-top {
   transition: transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1);
   transform: rotate(-2deg);
@@ -564,12 +569,16 @@
   transform: translate(18%, -2%) rotate(12deg);
 }
 /* With a fan behind it the top cover tips the other way instead of lifting. */
-.media-card:hover .media-card-fan ~ .media-card-cover,
-.media-card:focus-visible .media-card-fan ~ .media-card-cover {
+.media-card:hover .media-card-fan:not([data-data-saver="on"] *) ~ .media-card-cover,
+.media-card:focus-visible .media-card-fan:not([data-data-saver="on"] *) ~ .media-card-cover {
   transform: rotate(-3deg) translateX(-3%);
   box-shadow:
     0 0 0 1px color-mix(in oklch, var(--color-ink) 70%, transparent),
     0 12px 24px -8px light-dark(rgb(0 0 0 / 0.2), rgb(0 0 0 / 0.8));
+}
+/* Data saver: no fan, so its covers are never fetched; the card lifts like a book's. */
+[data-data-saver="on"] .media-card-fan {
+  display: none;
 }
 @media (prefers-reduced-motion: reduce) {
   .media-card-fan {

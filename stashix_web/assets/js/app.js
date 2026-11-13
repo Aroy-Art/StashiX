@@ -1413,6 +1413,9 @@ if (window.__stashixBooted) {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" })
   })
 
+  // The browser's Save-Data hint turns data saver on for CSS too (series card fans).
+  if (navigator.connection?.saveData) document.documentElement.dataset.dataSaver = "on"
+
   initImagePrefetch()
 
   // Offline banner: show when the WebSocket drops, hide on reconnect.

@@ -712,10 +712,13 @@ defmodule StashixWeb.SeriesLive do
           alt={@series.name}
           blurhash={if @folder_cover?, do: @folder_cover_blurhash, else: has_cover && @cover_book.cover.blurhash}
           stack={
-            issue_sorted
-            |> Enum.filter(&(&1.cover && (@folder_cover? || !@cover_book || &1.id != @cover_book.id)))
-            |> Enum.take(2)
-            |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
+            if User.ui_setting(@current_user, "data_saver") == "on",
+              do: [],
+              else:
+                issue_sorted
+                |> Enum.filter(&(&1.cover && (@folder_cover? || !@cover_book || &1.id != @cover_book.id)))
+                |> Enum.take(2)
+                |> Enum.map(&~p"/api/books/#{&1.id}/cover?s=m")
           }
         />
 
