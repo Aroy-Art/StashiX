@@ -6,6 +6,8 @@ defmodule Stashix.Media.ExtractorTest do
 
   alias Stashix.Media.Extractor
 
+  import Stashix.PdfFixtures
+
   setup do
     tmp = Path.join(System.tmp_dir!(), "extractor_test_#{:erlang.unique_integer([:positive])}")
     File.mkdir_p!(tmp)
@@ -307,31 +309,6 @@ defmodule Stashix.Media.ExtractorTest do
     test "unsupported formats are an error", %{tmp: tmp} do
       assert {:error, :unsupported_format} = Extractor.list_pages(Path.join(tmp, "book.txt"))
     end
-  end
-
-  # A minimal blank PDF, one MediaBox per page (width x height in points).
-  defp make_pdf(path, boxes) do
-    n = length(boxes)
-    kids = Enum.map_join(3..(n + 2)//1, " ", &"#{&1} 0 R")
-
-    objs =
-      ["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [#{kids}] /Count #{n} >>"] ++
-        for {w, h} <- boxes, do: "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 #{w} #{h}] >>"
-
-    {body, offsets} =
-      objs
-      |> Enum.with_index(1)
-      |> Enum.reduce({"%PDF-1.4\n", []}, fn {obj, i}, {acc, offs} ->
-        {acc <> "#{i} 0 obj\n#{obj}\nendobj\n", [byte_size(acc) | offs]}
-      end)
-
-    xref =
-      "xref\n0 #{n + 3}\n0000000000 65535 f \n" <>
-        Enum.map_join(Enum.reverse(offsets), &(String.pad_leading("#{&1}", 10, "0") <> " 00000 n \n"))
-
-    trailer = "trailer\n<< /Size #{n + 3} /Root 1 0 R >>\nstartxref\n#{byte_size(body)}\n%%EOF\n"
-    File.write!(path, body <> xref <> trailer)
-    path
   end
 
   if System.find_executable("pdfinfo") && System.find_executable("pdftoppm") do

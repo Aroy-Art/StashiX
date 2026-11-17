@@ -6,7 +6,7 @@ defmodule Stashix.Scanner do
   require Logger
 
   alias Stashix.{Library, Metadata}
-  alias Stashix.Media.{Thumbnail, Extractor, ImageResizer}
+  alias Stashix.Media.{ContentKind, Thumbnail, Extractor, ImageResizer}
   alias Stashix.Metadata.{Parser, Importer, Locks}
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
@@ -496,7 +496,8 @@ defmodule Stashix.Scanner do
         file_hash: file_meta.file_hash,
         last_modified: file_meta.last_modified,
         page_count: page_count,
-        source_format: Map.get(parsed, :source_format)
+        source_format: Map.get(parsed, :source_format),
+        content_kind: ContentKind.detect(file_path)
       }
 
       case Library.create_book_file(file_attrs) do
@@ -544,6 +545,7 @@ defmodule Stashix.Scanner do
       file_size: file_meta.file_size,
       page_count: resolve_page_count(file_meta.metadata, path, book_file.page_count),
       source_format: Map.get(parsed, :source_format),
+      content_kind: ContentKind.detect(path),
       deleted_at: nil
     }
   end

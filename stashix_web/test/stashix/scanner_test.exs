@@ -288,6 +288,25 @@ defmodule Stashix.ScannerTest do
     end
   end
 
+  # ── content kind ──────────────────────────────────────────────────────────
+
+  describe "scan_sync/2 content kind" do
+    test "archives are images", %{lib: lib, tmp: tmp} do
+      write_cbz(tmp, "My Book.cbz")
+      Scanner.scan_sync(lib.id)
+      assert [%{content_kind: :images}] = Repo.all(Stashix.Library.BookFile)
+    end
+
+    if System.find_executable("pdftotext") do
+      test "a text PDF is text", %{lib: lib, tmp: tmp} do
+        prose = Enum.map_join(1..40, "\n", &"Line #{&1} of a page that is mostly running text.")
+        Stashix.PdfFixtures.make_pdf(Path.join(tmp, "Novel.pdf"), List.duplicate({612, 792, prose}, 2))
+        Scanner.scan_sync(lib.id)
+        assert [%{content_kind: :text}] = Repo.all(Stashix.Library.BookFile)
+      end
+    end
+  end
+
   # ── sidecar covers ────────────────────────────────────────────────────────
 
   describe "scan_sync/2 sidecar cover" do

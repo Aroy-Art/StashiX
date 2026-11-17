@@ -99,9 +99,13 @@ routing that Phase 3 reuses for EPUB.
   column scans never write, so it needs no lock; `Library.reader_kind/2`
   resolves override → detected → `:images`. "Reader" select in the edit
   dialog's ComicInfo extras tab.
-- [ ] Scanner: PDF detection — text layer present (`pdffonts` / `pdftotext`
+- [x] Scanner: PDF detection — text layer present (`pdffonts` / `pdftotext`
   on a few sampled pages) → `:text`, else `:images`; unsure → library kind,
   then `:images`. Override field in the book edit dialog, kept on rescan.
+  — `Media.ContentKind`: `pdftotext` over the first 6 pages, ≥ 400 non-space
+  chars/page → text, ≤ 40 → images, between → nil (OCR'd comics). The
+  library-kind tiebreak waits for `libraries.kind` (§8); nil reads as
+  images. Existing books need a forced rescan to get detected.
 - [ ] Reader routing: `/read/:id` picks `ReaderLive` or `TextReaderLive` from
   the effective `content_kind`.
 - [ ] `GET /api/books/:id/file` with `Range` support: parse header, `206` via
