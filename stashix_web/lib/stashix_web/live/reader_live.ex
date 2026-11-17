@@ -244,6 +244,10 @@ defmodule StashixWeb.ReaderLive do
   defp spread?(%{page_layout: layout, current_page: page, page_count: count}),
     do: (layout == "double" or (layout == "cover" and page > 0)) and page + 1 < count
 
+  # Pages share the screen width in a spread layout, even a lone last page.
+  defp half_page?(%{page_layout: layout, current_page: page}),
+    do: layout == "double" or (layout == "cover" and page > 0)
+
   defp last_page_showing?(%{page_count: count} = assigns) do
     last_visible = assigns.current_page + if(spread?(assigns), do: 1, else: 0)
     count > 0 and last_visible >= count - 1
@@ -738,11 +742,7 @@ defmodule StashixWeb.ReaderLive do
         >
           <div
             class="relative flex items-center justify-center h-full"
-            style={
-              if @page_layout in ["double"] || (@page_layout == "cover" && @current_page > 0),
-                do: "max-width: 50%",
-                else: "max-width: 100%"
-            }
+            style={if half_page?(assigns), do: "max-width: 50%", else: "max-width: 100%"}
           >
             <div
               class="absolute inset-0 flex items-center justify-center pointer-events-none"
@@ -753,6 +753,8 @@ defmodule StashixWeb.ReaderLive do
             <img
               id="reader-page-main"
               phx-hook="PageImage"
+              data-fit={@fit_mode}
+              data-half={half_page?(assigns) && "true"}
               src={
                 "/api/books/#{@book.id}/page/#{@current_page}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
               }
@@ -775,6 +777,8 @@ defmodule StashixWeb.ReaderLive do
               <img
                 id="reader-page-second"
                 phx-hook="PageImage"
+                data-fit={@fit_mode}
+                data-half={half_page?(assigns) && "true"}
                 src={
                   "/api/books/#{@book.id}/page/#{@current_page + 1}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
                 }
