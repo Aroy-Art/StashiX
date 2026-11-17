@@ -300,6 +300,26 @@ defmodule StashixWeb.ReaderLive do
   defp page_src(book, page, nil), do: "/api/books/#{book.id}/page/#{page}"
   defp page_src(book, page, format), do: "/api/books/#{book.id}/page/#{page}?format=#{format}"
 
+  # PDF pages are rendered server-side, so offer them at a few widths and let
+  # the browser pick from the layout (`page_sizes/2`) and the screen's pixel
+  # ratio. Archive pages are stored images: one size.
+  defp page_srcset(book, page, "pdf") do
+    Enum.map_join(Extractor.pdf_widths(), ", ", &"#{page_src(book, page, "pdf")}&w=#{&1} #{&1}w")
+  end
+
+  defp page_srcset(_book, _page, _format), do: nil
+
+  # Roughly how wide a page shows. Fit page / height is bounded by the screen
+  # height (pages are about 2:3); a spread splits the width in two.
+  defp page_sizes("webtoon", "width"), do: "100vw"
+  defp page_sizes("webtoon", _fit), do: "min(100vw, 48rem)"
+  defp page_sizes(layout, fit) when layout in ["double", "cover"], do: page_sizes_half(fit)
+  defp page_sizes(_single, "width"), do: "100vw"
+  defp page_sizes(_single, _fit), do: "min(100vw, 70vh)"
+
+  defp page_sizes_half("width"), do: "50vw"
+  defp page_sizes_half(_fit), do: "min(50vw, 70vh)"
+
   defp fit_modes do
     [
       {"page", gettext("Fit page"), "lucide-scan"},
@@ -609,6 +629,8 @@ defmodule StashixWeb.ReaderLive do
               class="webtoon-page"
               data-page={page}
               src={page_src(@book, page, @book_format)}
+              srcset={page_srcset(@book, page, @book_format)}
+              sizes={page_sizes("webtoon", @fit_mode)}
               alt={"Page #{page + 1}"}
               loading="lazy"
               decoding="async"
@@ -723,6 +745,8 @@ defmodule StashixWeb.ReaderLive do
               src={
                 "/api/books/#{@book.id}/page/#{@current_page}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
               }
+              srcset={page_srcset(@book, @current_page, @book_format)}
+              sizes={page_sizes(@page_layout, @fit_mode)}
               alt={"Page #{@current_page + 1}"}
               class="object-contain"
               style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
@@ -743,6 +767,8 @@ defmodule StashixWeb.ReaderLive do
                 src={
                   "/api/books/#{@book.id}/page/#{@current_page + 1}#{if @book_format, do: "?format=#{@book_format}", else: ""}"
                 }
+                srcset={page_srcset(@book, @current_page + 1, @book_format)}
+                sizes={page_sizes(@page_layout, @fit_mode)}
                 alt={"Page #{@current_page + 2}"}
                 class="object-contain"
                 style={"#{img_fit_style(@fit_mode)} opacity: 0; transition: opacity 0.15s ease;"}
@@ -759,7 +785,11 @@ defmodule StashixWeb.ReaderLive do
           <%= for offset <- preload_offsets(@page_layout) do %>
             <% p = @current_page + offset %>
             <%= if p >= 0 && p < @page_count do %>
-              <img src={"/api/books/#{@book.id}/page/#{p}#{if @book_format, do: "?format=#{@book_format}", else: ""}"} />
+              <img
+                src={"/api/books/#{@book.id}/page/#{p}#{if @book_format, do: "?format=#{@book_format}", else: ""}"}
+                srcset={page_srcset(@book, p, @book_format)}
+                sizes={page_sizes(@page_layout, @fit_mode)}
+              />
             <% end %>
           <% end %>
         </div>

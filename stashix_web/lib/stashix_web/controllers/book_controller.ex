@@ -101,7 +101,12 @@ defmodule StashixWeb.BookController do
     tags: ["Books", "Media"],
     parameters: [
       id: [in: :path, type: :integer, required: true],
-      n: [in: :path, type: :integer, required: true, description: "0-based page index"]
+      n: [in: :path, type: :integer, required: true, description: "0-based page index"],
+      w: [
+        in: :query,
+        type: :integer,
+        description: "PDF only: render to this width in pixels (rounded up to 480, 800, 1200, 1600 or 2400)"
+      ]
     ],
     responses: [
       ok: {"Page image binary", "image/jpeg", %OpenApiSpex.Schema{type: :string, format: :binary}},
@@ -114,7 +119,7 @@ defmodule StashixWeb.BookController do
     book_file = Library.get_preferred_book_file(book, format)
     page_index = String.to_integer(n)
 
-    case book_file && Extractor.get_page(book_file.path, page_index) do
+    case book_file && Extractor.get_page(book_file.path, page_index, width: parse_int(params["w"], nil)) do
       nil ->
         conn |> put_status(:not_found) |> json(%{error: "no file"})
 

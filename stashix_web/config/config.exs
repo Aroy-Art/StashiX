@@ -19,6 +19,7 @@ config :stashix,
   data_dir: "/tmp/stashix",
   thumbnail_dir: Path.join(repo_tmp, "thumbnails"),
   image_cache_dir: Path.join(repo_tmp, "cache/images/resized"),
+  page_cache_dir: Path.join(repo_tmp, "cache/pages"),
   metadata_image_dir: Path.join(repo_tmp, "cache/images/metadata"),
   # Shown on Settings → About. AGPL section 13: point this at your own source
   # if you run a modified version.
@@ -31,7 +32,11 @@ config :stashix, Oban,
   plugins: [
     {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
     {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
-    {Oban.Plugins.Cron, crontab: [{"17 4 * * *", Stashix.Metadata.Workers.PruneCacheWorker}]}
+    {Oban.Plugins.Cron,
+     crontab: [
+       {"17 4 * * *", Stashix.Metadata.Workers.PruneCacheWorker},
+       {"27 4 * * *", Stashix.Media.Workers.PruneRenderCacheWorker}
+     ]}
   ]
 
 config :stashix, :metadata_sources, [

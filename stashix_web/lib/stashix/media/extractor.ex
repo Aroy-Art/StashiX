@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule Stashix.Media.Extractor do
-  alias Stashix.Media.{Archive, PageCache}
+  alias Stashix.Media.{Archive, PageCache, RenderCache}
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
@@ -45,13 +45,25 @@ defmodule Stashix.Media.Extractor do
   """
   def cached_pages(book_path), do: PageCache.fetch(book_path, fn -> list_pages(book_path) end)
 
-  def get_page(book_path, page_index) do
+  # Rendered PDF page widths. A requested width rounds up to one of these, so
+  # the render cache holds a few sizes per page rather than one per screen.
+  @pdf_widths [480, 800, 1200, 1600, 2400]
+
+  @doc "Widths a PDF page can be rendered at (see `get_page/3`)."
+  def pdf_widths, do: @pdf_widths
+
+  @doc """
+  The page at `page_index`. `width:` renders PDF pages to that width (rounded
+  up to one of `pdf_widths/0`, cached on disk); without it they render at
+  150 dpi. Archive pages are always the stored image.
+  """
+  def get_page(book_path, page_index, opts \\ []) do
     case cached_pages(book_path) do
       {:ok, pages} ->
         page_name = Enum.at(pages, page_index)
 
         if page_name do
-          extract_page(book_path, page_name)
+          extract_page(book_path, page_name, opts[:width])
         else
           {:error, :page_not_found}
         end
@@ -107,9 +119,9 @@ defmodule Stashix.Media.Extractor do
     end
   end
 
-  defp extract_page(book_path, page_name) do
+  defp extract_page(book_path, page_name, width) do
     case book_path |> Path.extname() |> String.downcase() do
-      ".pdf" -> extract_pdf_page(book_path, page_name)
+      ".pdf" -> extract_pdf_page(book_path, page_name, width)
       ext when ext in @archive_exts -> extract_archive_page(book_path, page_name)
       _ -> {:error, :unsupported_format}
     end
@@ -122,16 +134,31 @@ defmodule Stashix.Media.Extractor do
     end
   end
 
-  # No output root: pdftoppm writes the one page to stdout. Empty output
-  # means the page is out of range (pdftoppm exits non-zero then too).
-  defp extract_pdf_page(path, page_name) do
+  defp extract_pdf_page(path, page_name, width) do
     page_num =
       case Regex.run(~r/page-(\d+)/, page_name) do
         [_, n] -> String.to_integer(n)
         _ -> 1
       end
 
-    args = ["-jpeg", "-r", "150", "-f", to_string(page_num), "-l", to_string(page_num), "--", path]
+    case pdf_width(width) do
+      nil ->
+        render_pdf_page(path, page_num, ["-r", "150"])
+
+      w ->
+        RenderCache.fetch(path, "p#{page_num}-w#{w}", fn ->
+          render_pdf_page(path, page_num, ["-scale-to-x", to_string(w), "-scale-to-y", "-1"])
+        end)
+    end
+  end
+
+  defp pdf_width(w) when is_integer(w) and w > 0, do: Enum.find(@pdf_widths, List.last(@pdf_widths), &(&1 >= w))
+  defp pdf_width(_), do: nil
+
+  # No output root: pdftoppm writes the one page to stdout. Empty output
+  # means the page is out of range (pdftoppm exits non-zero then too).
+  defp render_pdf_page(path, page_num, size_args) do
+    args = ["-jpeg"] ++ size_args ++ ["-f", to_string(page_num), "-l", to_string(page_num), "--", path]
 
     case System.cmd("pdftoppm", args, stderr_to_stdout: false) do
       {"", _} -> {:error, :page_not_found}

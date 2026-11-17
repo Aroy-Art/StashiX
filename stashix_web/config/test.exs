@@ -43,3 +43,6 @@ config :stashix, :rekey_vault_on_start, false
 
 # Metadata source HTTP calls are stubbed with Req.Test in tests
 config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}
+
+# Rendered pages go to a throwaway dir, not the repo's tmp/data
+config :stashix, page_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_pages")

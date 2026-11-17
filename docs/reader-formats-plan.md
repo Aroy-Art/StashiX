@@ -79,9 +79,14 @@ text PDFs and novels: a library switcher (comics/manga vs books) is planned
 - [x] `pdftoppm -singlefile` to stdout (or `vips pdfload`), no temp dir.
   — no output root at all is what makes pdftoppm write to stdout
   (`-singlefile -` writes a file named `-.jpg`).
-- [ ] Width-aware PDF raster (`?w=` → `-scale-to-x`, clamped, bucketed) with
-  an on-disk cache next to thumbnails.
-- [ ] Tests: page list cache hit/miss, invalidation, PDF page render.
+- [x] Width-aware PDF raster (`?w=` → `-scale-to-x`, clamped, bucketed) with
+  an on-disk cache next to thumbnails. — widths 480/800/1200/1600/2400;
+  `Media.RenderCache` in `PAGE_CACHE_DIR` (`<data>/cache/pages`), pruned
+  daily after 14 days unused. Reader sends `srcset`/`sizes` for PDF pages,
+  so the browser picks the width (DPR included).
+- [x] Tests: page list cache hit/miss, invalidation, PDF page render.
+  — `page_cache_test.exs`, `render_cache_test.exs`, PDF cases in
+  `extractor_test.exs` (generated PDFs, skipped without poppler).
 
 ## 4. Phase 2 — Text PDF reader (PDF.js in `TextReaderLive`)
 

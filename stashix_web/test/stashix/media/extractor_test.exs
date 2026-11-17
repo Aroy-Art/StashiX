@@ -349,6 +349,15 @@ defmodule Stashix.Media.ExtractorTest do
         assert portrait != landscape
         assert {:error, :page_not_found} = Extractor.get_page(pdf, 2)
       end
+
+      test "width: renders to the next width step up", %{tmp: tmp} do
+        pdf = make_pdf(Path.join(tmp, "book.pdf"), [{200, 300}])
+
+        assert {:ok, data} = Extractor.get_page(pdf, 0, width: 700)
+        assert {:ok, image} = Image.from_binary(data)
+        assert Image.width(image) == 800
+        assert Image.height(image) == 1200
+      end
     end
   end
 end

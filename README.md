@@ -64,6 +64,7 @@ Defaults in development:
 | `DATA_DIR`        | `/tmp/stashix`                         |
 | `THUMBNAIL_DIR`   | `<repo>/tmp/data/thumbnails`           |
 | `IMAGE_CACHE_DIR` | `<repo>/tmp/data/cache/images/resized` |
+| `PAGE_CACHE_DIR`  | `<repo>/tmp/data/cache/pages`          |
 
 All production settings are in the
 [configuration reference](https://stashix.net/docs/reference/configuration/).
