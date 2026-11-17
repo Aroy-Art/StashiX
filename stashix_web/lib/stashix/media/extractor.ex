@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule Stashix.Media.Extractor do
-  alias Stashix.Media.Archive
+  alias Stashix.Media.{Archive, PageCache}
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
@@ -38,8 +38,15 @@ defmodule Stashix.Media.Extractor do
     end
   end
 
+  @doc """
+  Like `list_pages/1`, but remembered per file (see `PageCache`). For serving
+  pages; checks that must read the file itself (scanner, integrity) use
+  `list_pages/1`.
+  """
+  def cached_pages(book_path), do: PageCache.fetch(book_path, fn -> list_pages(book_path) end)
+
   def get_page(book_path, page_index) do
-    case list_pages(book_path) do
+    case cached_pages(book_path) do
       {:ok, pages} ->
         page_name = Enum.at(pages, page_index)
 

@@ -82,7 +82,7 @@ defmodule StashixWeb.BookController do
     format = params["format"] && String.to_existing_atom(params["format"])
     book_file = Library.get_preferred_book_file(book, format)
 
-    case book_file && Extractor.list_pages(book_file.path) do
+    case book_file && Extractor.cached_pages(book_file.path) do
       nil ->
         conn |> put_status(:not_found) |> json(%{error: "no file"})
 

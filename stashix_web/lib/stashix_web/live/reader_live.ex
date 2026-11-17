@@ -20,7 +20,7 @@ defmodule StashixWeb.ReaderLive do
 
     pages =
       if book_file do
-        case Extractor.list_pages(book_file.path) do
+        case Extractor.cached_pages(book_file.path) do
           {:ok, p} -> p
           _ -> []
         end

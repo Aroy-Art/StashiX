@@ -23,6 +23,7 @@ defmodule Stashix.Application do
       Stashix.Metadata.RateLimiter,
       Stashix.Auth.LoginThrottle,
       Stashix.Library.SummaryCache,
+      Stashix.Media.PageCache,
       {Oban, Application.fetch_env!(:stashix, Oban)},
       StashixWeb.Endpoint,
       {Bandit, plug: StashixWeb.Plugs.MetricsPlug, scheme: :http, ip: metrics_ip, port: metrics_port}

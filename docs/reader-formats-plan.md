@@ -68,9 +68,14 @@ text PDFs and novels: a library switcher (comics/manga vs books) is planned
 
 ## 3. Phase 1 — Server fixes (no visible change)
 
-- [ ] Cache page lists in ETS keyed by `{path, mtime, size}`;
-  `Extractor.get_page/2` uses it. Invalidate on rescan.
-- [ ] PDF page count from `book.page_count` / cache, not `pdfinfo` per page.
+- [x] Cache page lists in ETS keyed by `{path, mtime, size}`;
+  `Extractor.get_page/2` uses it. Invalidate on rescan. — `Media.PageCache`;
+  stamp is `{mtime, size, inode}`, so a rescanned or replaced file just
+  misses (no explicit invalidation). `Extractor.cached_pages/1` serves the
+  reader and API; scanner and integrity checks keep the uncached
+  `list_pages/1`.
+- [x] PDF page count from `book.page_count` / cache, not `pdfinfo` per page.
+  — covered by the page list cache.
 - [ ] `pdftoppm -singlefile` to stdout (or `vips pdfload`), no temp dir.
 - [ ] Width-aware PDF raster (`?w=` → `-scale-to-x`, clamped, bucketed) with
   an on-disk cache next to thumbnails.
