@@ -31,9 +31,10 @@ import InkDialog from "./hooks/ink_dialog.js"
 import Shelf from "./hooks/shelf.js"
 import LocalTime from "./hooks/local_time.js"
 import PdfReader from "./hooks/pdf_reader.js"
+import EpubReader from "./hooks/epub_reader.js"
 import {exitReader} from "./reader_exit.js"
 
-let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, PdfReader }
+let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, PdfReader, EpubReader }
 
 Hooks.Sidebar = {
   mounted() {
@@ -663,28 +664,63 @@ Hooks.CoverImage = {
   }
 }
 
+// The server's fit styles are only a first guess: a percentage width inside a
+// shrink-to-fit wrapper resolves against the page's own natural size, so "fit
+// width" never got wider than the image and "fit page" never scaled a small
+// page up. Once a page has loaded, size it in pixels from the reading area.
 Hooks.PageImage = {
   mounted() {
     this.spinner = this.el.previousElementSibling
     this.el.addEventListener('load', () => this.reveal())
     this.el.addEventListener('error', () => this.reveal())
+    this.onResize = () => this.fit()
+    window.addEventListener('resize', this.onResize)
     if (this.el.complete && this.el.naturalWidth > 0) {
       this.reveal()
     } else {
       this.hide()
     }
   },
+  // Every patch puts the server's style back, so refit straight away. On a
+  // page turn the browser keeps painting the old page until the new one has
+  // loaded: hide it at once rather than fading it out at the server's size.
   updated() {
-    this.hide()
-    if (this.el.complete && this.el.naturalWidth > 0) this.reveal()
+    if (this.el.complete && this.el.naturalWidth > 0) {
+      this.reveal()
+    } else {
+      this.hide()
+    }
+  },
+  destroyed() {
+    window.removeEventListener('resize', this.onResize)
   },
   hide() {
+    this.el.style.transition = 'none'
     this.el.style.opacity = '0'
     if (this.spinner) this.spinner.style.display = 'flex'
   },
   reveal() {
+    this.fit()
+    this.el.style.transition = 'opacity 0.15s ease'
     this.el.style.opacity = '1'
     if (this.spinner) this.spinner.style.display = 'none'
+  },
+  fit() {
+    const img = this.el
+    const area = document.getElementById('reading-area')
+    if (!area || !img.naturalWidth || !img.naturalHeight) return
+    const width = area.clientWidth * (img.dataset.half ? 0.5 : 1)
+    const height = area.clientHeight
+    const ratio = img.naturalWidth / img.naturalHeight
+    let w
+    switch (img.dataset.fit) {
+      case 'width': w = width; break
+      case 'height': w = height * ratio; break
+      default: w = Math.min(width, height * ratio)
+    }
+    Object.assign(img.style, {
+      width: `${w}px`, height: `${w / ratio}px`, maxWidth: 'none', maxHeight: 'none'
+    })
   }
 }
 

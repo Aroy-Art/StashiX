@@ -14,9 +14,10 @@ import {exitReader} from "../reader_exit.js"
 // released as they scroll away.
 //
 // The server owns the chrome (bars, menus, contents and search panels) and
-// sends commands as events ("pdf:goto", "pdf:view", "pdf:zoom", "pdf:search");
-// the hook reports back what it sees ("pdf_loaded", "pdf_outline",
-// "page_changed", "pdf_search_results", "scroll_end", "set_overlay").
+// sends commands as events ("text:goto", "text:view", "text:zoom",
+// "text:search", shared with the EPUB hook); the hook reports back what it
+// sees ("loaded", "outline", "page_changed", "search_results", "scroll_end",
+// "set_overlay").
 //
 // Layouts: "scroll" (one column, scrolled natively), "paged" (one page) and
 // "spread" (two pages side by side), turned with keys, taps or the server.
@@ -67,14 +68,14 @@ const PdfReader = {
     this.setTheme(d.pageTheme)
 
     this.handleEvent("reader:exit", ({to}) => exitReader(this, to))
-    this.handleEvent("pdf:goto", ({page, query}) => {
+    this.handleEvent("text:goto", ({page, query}) => {
       if (query !== undefined) this.mark(query)
       this.goto(page)
     })
-    this.handleEvent("pdf:step", ({by}) => this.step(by))
-    this.handleEvent("pdf:view", (view) => this.setView(view))
-    this.handleEvent("pdf:zoom", ({by}) => this.setZoom(by === 0 ? 1 : this.zoom * (by > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)))
-    this.handleEvent("pdf:search", ({query}) => this.search(query))
+    this.handleEvent("text:step", ({by}) => this.step(by))
+    this.handleEvent("text:view", (view) => this.setView(view))
+    this.handleEvent("text:zoom", ({by}) => this.setZoom(by === 0 ? 1 : this.zoom * (by > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)))
+    this.handleEvent("text:search", ({query}) => this.search(query))
 
     this.onScroll = () => {
       if (this.frame == null) this.frame = requestAnimationFrame(() => this.scrolled())
@@ -94,7 +95,7 @@ const PdfReader = {
 
     this.open().catch((err) => {
       console.error("PdfReader:", err)
-      this.pushEvent("pdf_failed", {})
+      this.pushEvent("failed", {})
     })
   },
 
@@ -136,7 +137,7 @@ const PdfReader = {
     const first = await this.doc.getPage(1)
     const {width, height} = first.getViewport({scale: 1})
     this.build(width, height)
-    this.pushEvent("pdf_loaded", {page_count: this.count})
+    this.pushEvent("loaded", {page_count: this.count})
     this.outline()
   },
 
@@ -443,7 +444,7 @@ const PdfReader = {
     } catch (err) {
       console.error("PdfReader outline", err)
     }
-    this.pushEvent("pdf_outline", {items})
+    this.pushEvent("outline", {items})
   },
 
   async destPage(dest) {
@@ -480,11 +481,11 @@ const PdfReader = {
         found++
       }
       if (batch.length >= 20 || i % 25 === 24) {
-        this.pushEvent("pdf_search_results", {query, results: batch, scanned: i + 1, done: false})
+        this.pushEvent("search_results", {query, results: batch, scanned: i + 1, done: false})
         batch = []
       }
     }
-    if (token === this.searchToken) this.pushEvent("pdf_search_results", {query, results: batch, scanned: this.count, done: true})
+    if (token === this.searchToken) this.pushEvent("search_results", {query, results: batch, scanned: this.count, done: true})
   },
 
   mark(query) {

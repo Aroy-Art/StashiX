@@ -21,6 +21,10 @@ defmodule StashixWeb.Router do
     plug OpenApiSpex.Plug.PutApiSpec, module: StashixWeb.ApiSpec
   end
 
+  pipeline :reader_csp do
+    plug StashixWeb.Plugs.ReaderCSP
+  end
+
   pipeline :media do
     plug CORSPlug
     plug :fetch_session
@@ -150,7 +154,6 @@ defmodule StashixWeb.Router do
     live "/publisher/:id/issues", PublisherLive, :issues
     live "/search", SearchLive, :index
     live "/read/:id", ReaderLive, :show
-    live "/read/:id/text", TextReaderLive, :show
     live "/admin", AdminLive, :index
     live "/admin/users", AdminLive, :users
     live "/admin/libraries", AdminLive, :libraries
@@ -170,6 +173,17 @@ defmodule StashixWeb.Router do
     post "/settings/password", SettingsController, :update_password
     post "/settings/email", SettingsController, :update_email
     post "/settings/sessions/revoke", SettingsController, :revoke_sessions
+  end
+
+  # The text reader shows book content under its own CSP (see
+  # StashixWeb.Plugs.ReaderCSP). Its own live_session makes every visit a
+  # full page load, so that header always applies.
+  scope "/", StashixWeb do
+    pipe_through [:browser, :reader_csp]
+
+    live_session :text_reader do
+      live "/read/:id/text", TextReaderLive, :show
+    end
   end
 
   if Application.compile_env(:stashix, :dev_routes) do

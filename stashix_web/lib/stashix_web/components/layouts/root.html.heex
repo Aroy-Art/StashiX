@@ -62,11 +62,15 @@
       </svg>
       <button
         id="stx-loader-refresh"
-        onclick="window.location.reload()"
         style="display:none;padding:8px 20px;background:transparent;border:1px solid light-dark(rgba(0,0,0,0.2), rgba(255,255,255,0.2));border-radius:6px;color:light-dark(rgba(0,0,0,0.6), rgba(255,255,255,0.6));font-size:14px;cursor:pointer;font-family:inherit"
       >{gettext("Refresh page")}</button>
     </div>
-    <script>
+    <%!-- nonce: allowed under the text reader's CSP (StashixWeb.Plugs.ReaderCSP),
+         which also rules out inline handlers like onclick. --%>
+    <script nonce={@conn.assigns[:csp_nonce]}>
+      document.getElementById("stx-loader-refresh").addEventListener("click", function() {
+        window.location.reload();
+      });
       setTimeout(function() {
         var btn = document.getElementById("stx-loader-refresh");
         var loader = document.getElementById("stx-loader");

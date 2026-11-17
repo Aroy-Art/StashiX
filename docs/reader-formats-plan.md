@@ -164,11 +164,23 @@ routing that Phase 3 reuses for EPUB.
   instead of `Enum.sort/1`.
   — `Epub.pages/1`: each spine document's picture; falls back to the
   sorted image listing when the package can't be read.
-- [ ] Vendor foliate-js; `EpubReader` hook with a custom loader against the
+- [x] Vendor foliate-js; `EpubReader` hook with a custom loader against the
   entry endpoint.
-- [ ] Text reader UI: paginated / scrolled, font, size, line height, margins,
+  — pinned commit in `priv/static/vendor/foliate` (`scripts/update-foliate.sh`).
+  Browser-checked: opening fetched the package, nav, CSS and only the
+  chapter being read. The reader route runs under a nonce CSP in its own
+  `live_session` (`Plugs.ReaderCSP`): a book's `<script>` and `onerror`
+  were blocked.
+- [x] Text reader UI: paginated / scrolled, font, size, line height, margins,
   theme (light/dark/sepia from tokens), TOC, footnote popups.
-- [ ] Per-user text settings in `reader_settings` (separate keys from comic).
+  — pages (two columns when wide) or scroll; size via the +/− buttons and
+  keys; book's own / serif / sans; Paper / Sepia / Night shared with PDF.
+  Side taps turn pages. Footnotes open in a popup. Resume is exact (CFI in
+  localStorage) when this browser saved the spot, else by share of the book;
+  Phase 4 moves the CFI to the server.
+- [x] Per-user text settings in `reader_settings` (separate keys from comic).
+  — `epub_layout`, `epub_font`, `epub_spacing`, `epub_margins`,
+  `epub_size`; theme shared as `text_theme`.
 - [x] Scanner: EPUB `content_kind` detection (`rendition:layout`
   `pre-paginated` → `:images`); routing and override already exist (Phase 2).
   — also images when every spine document only wraps a picture (≤ 200
