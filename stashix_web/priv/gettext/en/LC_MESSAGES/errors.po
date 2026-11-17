@@ -11,8 +11,7 @@ msgstr ""
 "Language: en\n"
 
 ## From Ecto.Changeset.cast/4
-#: lib/stashix_web/live/setup_live.ex:51
-#: lib/stashix_web/live/setup_live.ex:53
+#: lib/stashix_web/live/setup_live.ex
 #, elixir-autogen
 msgid "can't be blank"
 msgstr ""
@@ -114,12 +113,12 @@ msgstr ""
 msgid "must be equal to %{number}"
 msgstr ""
 
-#: lib/stashix_web/live/setup_live.ex:57
+#: lib/stashix_web/live/setup_live.ex
 #, elixir-autogen, elixir-format
 msgid "must be at least 8 characters"
 msgstr ""
 
-#: lib/stashix_web/live/setup_live.ex:62
+#: lib/stashix_web/live/setup_live.ex
 #, elixir-autogen, elixir-format
 msgid "passwords do not match"
 msgstr ""

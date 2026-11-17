@@ -15,7 +15,10 @@ defmodule Stashix.MixProject do
       deps: deps(),
       listeners: [Phoenix.CodeReloader],
       docs: docs(),
-      package: package()
+      package: package(),
+      # File-only references in priv/gettext, so moving code around doesn't
+      # make the .pot stale (CI runs gettext.extract --check-up-to-date).
+      gettext: [write_reference_line_numbers: false]
     ]
   end
 
