@@ -122,53 +122,23 @@ defmodule Stashix.Media.Extractor do
     end
   end
 
-  defp extract_pdf_page(archive_path, page_name) do
+  # No output root: pdftoppm writes the one page to stdout. Empty output
+  # means the page is out of range (pdftoppm exits non-zero then too).
+  defp extract_pdf_page(path, page_name) do
     page_num =
       case Regex.run(~r/page-(\d+)/, page_name) do
         [_, n] -> String.to_integer(n)
         _ -> 1
       end
 
-    tmp = Path.join(System.tmp_dir!(), "stashix_pdf_#{:erlang.unique_integer([:positive])}")
-    File.mkdir_p!(tmp)
-    out_prefix = Path.join(tmp, "page")
+    args = ["-jpeg", "-r", "150", "-f", to_string(page_num), "-l", to_string(page_num), "--", path]
 
-    try do
-      case System.cmd(
-             "pdftoppm",
-             [
-               "-jpeg",
-               "-r",
-               "150",
-               "-f",
-               to_string(page_num),
-               "-l",
-               to_string(page_num),
-               archive_path,
-               out_prefix
-             ],
-             stderr_to_stdout: true
-           ) do
-        {_, 0} ->
-          case File.ls!(tmp) |> Enum.sort() |> List.first() do
-            nil ->
-              File.rm_rf!(tmp)
-              {:error, :page_not_found}
-
-            fname ->
-              data = File.read!(Path.join(tmp, fname))
-              File.rm_rf!(tmp)
-              {:ok, data}
-          end
-
-        {error, _} ->
-          File.rm_rf!(tmp)
-          {:error, error}
-      end
-    rescue
-      ErlangError ->
-        File.rm_rf!(tmp)
-        {:error, :pdftoppm_not_found}
+    case System.cmd("pdftoppm", args, stderr_to_stdout: false) do
+      {"", _} -> {:error, :page_not_found}
+      {data, 0} -> {:ok, data}
+      {_, status} -> {:error, {"pdftoppm", status}}
     end
+  rescue
+    ErlangError -> {:error, :pdftoppm_not_found}
   end
 end

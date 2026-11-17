@@ -76,7 +76,9 @@ text PDFs and novels: a library switcher (comics/manga vs books) is planned
   `list_pages/1`.
 - [x] PDF page count from `book.page_count` / cache, not `pdfinfo` per page.
   — covered by the page list cache.
-- [ ] `pdftoppm -singlefile` to stdout (or `vips pdfload`), no temp dir.
+- [x] `pdftoppm -singlefile` to stdout (or `vips pdfload`), no temp dir.
+  — no output root at all is what makes pdftoppm write to stdout
+  (`-singlefile -` writes a file named `-.jpg`).
 - [ ] Width-aware PDF raster (`?w=` → `-scale-to-x`, clamped, bucketed) with
   an on-disk cache next to thumbnails.
 - [ ] Tests: page list cache hit/miss, invalidation, PDF page render.
