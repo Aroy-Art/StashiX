@@ -1449,7 +1449,7 @@ defmodule Stashix.Library do
   def reader_kind(_book, _book_file), do: :images
 
   # Formats the text reader can open.
-  @text_formats [:pdf]
+  @text_formats [:pdf, :epub]
 
   @doc """
   The file of `book` (of `format`, when given) to open in the text reader,

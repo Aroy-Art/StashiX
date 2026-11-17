@@ -10,7 +10,7 @@ defmodule Stashix.Health.Workers.IntegrityFileWorker do
 
   alias Stashix.Repo
   alias Stashix.Library.{Book, BookFile}
-  alias Stashix.Media.Extractor
+  alias Stashix.Media.{Epub, Extractor}
   alias Stashix.Health
 
   @impl true
@@ -64,6 +64,11 @@ defmodule Stashix.Health.Workers.IntegrityFileWorker do
     cond do
       not File.exists?(path) ->
         {:error, "File not found on disk"}
+
+      # A text EPUB may have no pictures at all: it is readable when its
+      # package is.
+      String.downcase(Path.extname(path)) == ".epub" and match?({:ok, %{spine: [_ | _]}}, Epub.package(path)) ->
+        {:ok, nil}
 
       true ->
         case Extractor.list_pages(path) do

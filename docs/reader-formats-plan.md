@@ -154,19 +154,27 @@ routing that Phase 3 reuses for EPUB.
 - [ ] `GET /api/books/:id/epub/*entry`: one zip entry, content type from
   extension / OPF manifest; only names in the archive listing (no traversal);
   D5 headers; cache headers.
-- [ ] Keep zip central directory per open book in ETS (`:zip.zip_open`
+- [x] Keep zip central directory per open book in ETS (`:zip.zip_open`
   handle or offsets) so each entry read is a seek, not a re-list.
-- [ ] Spine order for image-only EPUBs (parse `container.xml` → OPF spine)
+  — `Media.Epub` keeps the `unzip` directory (and the parsed package) in
+  `PageCache`, now keyed by path and kind; each read opens the file itself.
+- [x] Spine order for image-only EPUBs (parse `container.xml` → OPF spine)
   instead of `Enum.sort/1`.
+  — `Epub.pages/1`: each spine document's picture; falls back to the
+  sorted image listing when the package can't be read.
 - [ ] Vendor foliate-js; `EpubReader` hook with a custom loader against the
   entry endpoint.
 - [ ] Text reader UI: paginated / scrolled, font, size, line height, margins,
   theme (light/dark/sepia from tokens), TOC, footnote popups.
 - [ ] Per-user text settings in `reader_settings` (separate keys from comic).
-- [ ] Scanner: EPUB `content_kind` detection (`rendition:layout`
+- [x] Scanner: EPUB `content_kind` detection (`rendition:layout`
   `pre-paginated` → `:images`); routing and override already exist (Phase 2).
-- [ ] Scanner: page count for text EPUBs is meaningless — store spine length
+  — also images when every spine document only wraps a picture (≤ 200
+  chars of text). Integrity check accepts text EPUBs without pictures.
+- [x] Scanner: page count for text EPUBs is meaningless — store spine length
   or estimated pages; book cards show % instead.
+  — stores foliate-js locations (linear content bytes / 1500), the unit the
+  reader reports progress in, so existing progress maths and cards work.
 
 ## 6. Phase 4 — Progress locators
 

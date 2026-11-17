@@ -297,6 +297,15 @@ defmodule Stashix.ScannerTest do
       assert [%{content_kind: :images}] = Repo.all(Stashix.Library.BookFile)
     end
 
+    test "a text EPUB is text, counted in reader locations", %{lib: lib, tmp: tmp} do
+      prose = String.duplicate("It was a dark and stormy night. ", 200)
+      epub = Stashix.EpubFixtures.make_epub(Path.join(tmp, "Novel.epub"), List.duplicate({:text, prose}, 4))
+      Scanner.scan_sync(lib.id)
+
+      assert [%{content_kind: :text, page_count: count}] = Repo.all(Stashix.Library.BookFile)
+      assert count == Stashix.Media.Epub.location_count(epub) and count > 1
+    end
+
     if System.find_executable("pdftotext") do
       test "a text PDF is text", %{lib: lib, tmp: tmp} do
         prose = Enum.map_join(1..40, "\n", &"Line #{&1} of a page that is mostly running text.")

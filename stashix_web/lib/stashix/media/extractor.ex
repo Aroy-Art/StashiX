@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 defmodule Stashix.Media.Extractor do
-  alias Stashix.Media.{Archive, PageCache, RenderCache}
+  alias Stashix.Media.{Archive, Epub, PageCache, RenderCache}
 
   @image_exts ~w(.jpg .jpeg .png .gif .webp)
 
@@ -33,6 +33,7 @@ defmodule Stashix.Media.Extractor do
   def list_pages(book_path) do
     case book_path |> Path.extname() |> String.downcase() do
       ".pdf" -> list_pdf_pages(book_path)
+      ".epub" -> list_epub_pages(book_path)
       ext when ext in @archive_exts -> list_archive_pages(book_path)
       _ -> {:error, :unsupported_format}
     end
@@ -89,6 +90,16 @@ defmodule Stashix.Media.Extractor do
         |> Enum.sort()
 
       {:ok, pages}
+    end
+  end
+
+  # An image EPUB's pages come in spine order. Without one (text, or a
+  # package that can't be read) its images are listed like a comic's, which
+  # at least shows a text book's cover.
+  defp list_epub_pages(path) do
+    case Epub.pages(path) do
+      nil -> list_archive_pages(path)
+      pages -> {:ok, pages}
     end
   end
 

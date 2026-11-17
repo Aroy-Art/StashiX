@@ -6,7 +6,7 @@ defmodule Stashix.Scanner do
   require Logger
 
   alias Stashix.{Library, Metadata}
-  alias Stashix.Media.{ContentKind, Thumbnail, Extractor, ImageResizer}
+  alias Stashix.Media.{ContentKind, Epub, Thumbnail, Extractor, ImageResizer}
   alias Stashix.Metadata.{Parser, Importer, Locks}
 
   @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
@@ -1012,8 +1012,14 @@ defmodule Stashix.Scanner do
 
   # The reader pages through what the extractor lists (credit pages excluded), so that
   # count wins over ComicInfo's PageCount — otherwise the last page is never reached.
+  # A text EPUB has no pages: its count is the text reader's locations.
   defp resolve_page_count(metadata, file_path, fallback) do
-    case Extractor.get_page_count(file_path) do
+    count =
+      if String.downcase(Path.extname(file_path)) == ".epub" and ContentKind.detect(file_path) == :text,
+        do: Epub.location_count(file_path),
+        else: Extractor.get_page_count(file_path)
+
+    case count do
       n when n > 0 ->
         n
 

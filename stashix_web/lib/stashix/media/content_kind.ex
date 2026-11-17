@@ -11,9 +11,11 @@ defmodule Stashix.Media.ContentKind do
   to none means scans. In between (an OCR'd comic with lettering picked up, a
   picture book) is `nil`, unknown, which reads as images.
 
-  EPUB is `nil` for now; its detection (fixed layout or not) comes with the
-  EPUB reader.
+  An EPUB is images when it is fixed layout or each spine document only
+  wraps a picture (see `Stashix.Media.Epub.content_kind/1`), else text.
   """
+
+  alias Stashix.Media.Epub
 
   @sample_pages 6
   # Average non-space characters per sampled page.
@@ -25,6 +27,7 @@ defmodule Stashix.Media.ContentKind do
     case path |> Path.extname() |> String.downcase() do
       ext when ext in ~w(.cbz .cbr .cb7) -> :images
       ".pdf" -> detect_pdf(path)
+      ".epub" -> Epub.content_kind(path)
       _ -> nil
     end
   end

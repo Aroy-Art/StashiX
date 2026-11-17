@@ -3,10 +3,11 @@
 
 defmodule Stashix.Media.PageCache do
   @moduledoc """
-  Remembers each book file's page list, so serving a page doesn't list the
-  whole archive (or run `pdfinfo`) again.
+  Remembers what is read out of each book file to serve it: the page list,
+  so serving a page doesn't list the whole archive (or run `pdfinfo`) again,
+  and for EPUB its zip directory and package (see `Stashix.Media.Epub`).
 
-  Entries are keyed by path and checked against the file's mtime, size and
+  Entries are keyed by path and kind, and checked against the file's mtime, size and
   inode on every lookup: a rescanned, replaced or rewritten file simply
   misses and is listed afresh, with no explicit invalidation. Errors are not
   cached. Entries unused for `@idle_ms` are swept.
@@ -20,34 +21,37 @@ defmodule Stashix.Media.PageCache do
   def start_link(opts \\ []), do: GenServer.start_link(__MODULE__, :ok, Keyword.put_new(opts, :name, __MODULE__))
 
   @doc """
-  The cached page list for `path`, computing it with `fun` when absent or the
-  file changed. Without the table (cache not started) it just calls `fun`.
+  The cached `kind` of value (`:pages` by default) for `path`, computing it
+  with `fun` when absent or the file changed. Without the table (cache not
+  started) it just calls `fun`.
   """
-  @spec fetch(Path.t(), (-> {:ok, [String.t()]} | {:error, term()})) :: {:ok, [String.t()]} | {:error, term()}
-  def fetch(path, fun) do
+  @spec fetch(Path.t(), atom(), (-> {:ok, term()} | {:error, term()})) :: {:ok, term()} | {:error, term()}
+  def fetch(path, kind \\ :pages, fun) do
+    key = {path, kind}
+
     with true <- :ets.whereis(@table) != :undefined,
          {:ok, stamp} <- stamp(path) do
-      case :ets.lookup(@table, path) do
-        [{^path, ^stamp, pages, _used}] ->
-          :ets.update_element(@table, path, {4, now()})
-          {:ok, pages}
+      case :ets.lookup(@table, key) do
+        [{^key, ^stamp, value, _used}] ->
+          :ets.update_element(@table, key, {4, now()})
+          {:ok, value}
 
         _ ->
-          store(path, stamp, fun.())
+          store(key, stamp, fun.())
       end
     else
       _ -> fun.()
     end
   end
 
-  @doc "Drops the entry for `path`."
+  @doc "Drops every entry for `path`."
   def delete(path) do
-    if :ets.whereis(@table) != :undefined, do: :ets.delete(@table, path)
+    if :ets.whereis(@table) != :undefined, do: :ets.match_delete(@table, {{path, :_}, :_, :_, :_})
     :ok
   end
 
-  defp store(path, stamp, {:ok, pages} = result) do
-    :ets.insert(@table, {path, stamp, pages, now()})
+  defp store(key, stamp, {:ok, value} = result) do
+    :ets.insert(@table, {key, stamp, value, now()})
     result
   end
 
