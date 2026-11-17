@@ -547,6 +547,34 @@ defmodule Stashix.ScannerTest do
       {:noreply, state} = scan_down(state, series_scan)
       assert state == %{table: nil, scanning: %{}, pending: %{}}
     end
+
+    test "a dead scan whose :DOWN never came no longer holds the queue", %{lib: lib, scan: scan, state: state} do
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      Process.exit(scan, :kill)
+      refute Process.alive?(scan)
+
+      {:reply, queued, state} = Scanner.handle_call(:queued, self(), state)
+      assert queued == %{}
+      assert state.scanning == %{}
+    end
+
+    test "queued scans can be dropped one by one or all at once", %{lib: lib, series: series, state: state} do
+      Phoenix.PubSub.subscribe(Stashix.PubSub, "scan:#{lib.id}")
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/a.cbz"}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan_file, lib.id, "/missing/b.cbz"}, state)
+      {:noreply, state} = Scanner.handle_cast({:scan, lib.id, true}, state)
+      {:reply, queued, state} = Scanner.handle_call(:queued, self(), state)
+      assert Enum.map(queued[lib.id], & &1.key) == ["file:/missing/a.cbz", "file:/missing/b.cbz", "library"]
+
+      {:noreply, state} = Scanner.handle_cast({:unqueue, lib.id, "library"}, state)
+      assert state.pending == %{lib.id => [{:file, "/missing/a.cbz"}, {:file, "/missing/b.cbz"}]}
+      assert_received {:scan_queue, %{items: [%{key: "file:/missing/a.cbz"}, %{key: "file:/missing/b.cbz"}]}}
+
+      {:noreply, state} = Scanner.handle_cast({:scan_series, series.id, false}, state)
+      {:noreply, state} = Scanner.handle_cast({:clear_queue, lib.id}, state)
+      assert state.pending == %{}
+      assert_received {:scan_queue, %{items: []}}
+    end
   end
 
   describe "scan_sync/2 force rescan" do

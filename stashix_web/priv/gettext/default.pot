@@ -4971,3 +4971,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Wide"
 msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format
+msgid "Clear queue"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format
+msgid "Remove from queue"
+msgstr ""

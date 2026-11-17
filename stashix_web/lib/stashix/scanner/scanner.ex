@@ -39,6 +39,16 @@ defmodule Stashix.Scanner do
     GenServer.cast(__MODULE__, {:cancel_scan, library_id})
   end
 
+  @doc "Drops a waiting scan (`key` from `queue_items/1`) without running it."
+  def unqueue(library_id, key) do
+    GenServer.cast(__MODULE__, {:unqueue, library_id, key})
+  end
+
+  @doc "Drops every scan waiting in a library."
+  def clear_queue(library_id) do
+    GenServer.cast(__MODULE__, {:clear_queue, library_id})
+  end
+
   def backfill_blurhashes do
     GenServer.cast(__MODULE__, :backfill_blurhashes)
   end
@@ -72,6 +82,7 @@ defmodule Stashix.Scanner do
 
   @impl true
   def handle_cast({:scan, library_id, force}, state) do
+    state = reap(state)
     {:noreply, state |> dispatch(library_id, {:library, force}) |> broadcast_queue(state, library_id)}
   end
 
@@ -98,10 +109,13 @@ defmodule Stashix.Scanner do
   end
 
   def handle_cast({:scan_file, library_id, file_path}, state) do
+    state = reap(state)
     {:noreply, state |> dispatch(library_id, {:file, file_path}) |> broadcast_queue(state, library_id)}
   end
 
   def handle_cast({:scan_series, series_id, force}, state) do
+    state = reap(state)
+
     case Library.get_series(series_id) do
       %{library_id: library_id} ->
         {:noreply, state |> dispatch(library_id, {:series, series_id, force}) |> broadcast_queue(state, library_id)}
@@ -109,6 +123,19 @@ defmodule Stashix.Scanner do
       nil ->
         {:noreply, state}
     end
+  end
+
+  def handle_cast({:unqueue, library_id, key}, state) do
+    new_state =
+      update_in(state, [:pending, Access.key(library_id, [])], fn jobs ->
+        Enum.reject(jobs, &(job_key(&1) == key))
+      end)
+
+    {:noreply, broadcast_queue(new_state, state, library_id)}
+  end
+
+  def handle_cast({:clear_queue, library_id}, state) do
+    {:noreply, state |> Map.update!(:pending, &Map.delete(&1, library_id)) |> broadcast_queue(state, library_id)}
   end
 
   def handle_cast({:scan_book, book_id}, state) do
@@ -149,9 +176,20 @@ defmodule Stashix.Scanner do
   # was waiting on it.
   @impl true
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
+    {:noreply, scan_ended(state, pid)}
+  end
+
+  @impl true
+  def handle_call(:queued, _from, state) do
+    state = reap(state)
+    queued = for {library_id, jobs} <- state.pending, jobs != [], into: %{}, do: {library_id, queue_items(jobs)}
+    {:reply, queued, state}
+  end
+
+  defp scan_ended(state, pid) do
     case Map.pop(state.scanning, pid) do
       {nil, _} ->
-        {:noreply, state}
+        state
 
       {{library_id, _kind}, scanning} ->
         {jobs, pending} = Map.pop(state.pending, library_id, [])
@@ -159,19 +197,23 @@ defmodule Stashix.Scanner do
         # them again.
         jobs = Enum.sort_by(jobs, &job_rank/1)
 
-        new_state =
-          %{state | scanning: scanning, pending: pending}
-          |> then(&Enum.reduce(jobs, &1, fn job, acc -> dispatch(acc, library_id, job) end))
-          |> broadcast_queue(state, library_id)
-
-        {:noreply, new_state}
+        %{state | scanning: scanning, pending: pending}
+        |> then(&Enum.reduce(jobs, &1, fn job, acc -> dispatch(acc, library_id, job) end))
+        |> broadcast_queue(state, library_id)
     end
   end
 
-  @impl true
-  def handle_call(:queued, _from, state) do
-    queued = for {library_id, jobs} <- state.pending, jobs != [], into: %{}, do: {library_id, queue_items(jobs)}
-    {:reply, queued, state}
+  # A scan whose :DOWN never arrived would hold its library's queue forever
+  # (seen in dev after a code reload mid-scan), so dead ones count as ended.
+  defp reap(state) do
+    Enum.reduce(state.scanning, state, fn {pid, entry}, acc ->
+      if Process.alive?(pid) do
+        acc
+      else
+        Logger.warning("Scanner: #{inspect(entry)} scan #{inspect(pid)} ended without a :DOWN; running its queue")
+        scan_ended(acc, pid)
+      end
+    end)
   end
 
   # Tells the activity menu when a library's queue changed.
@@ -193,18 +235,22 @@ defmodule Stashix.Scanner do
   defp job_rank({:series, _, _}), do: 1
   defp job_rank({:file, _}), do: 2
 
+  defp job_key({:library, _}), do: "library"
+  defp job_key({:series, series_id, _}), do: "series:#{series_id}"
+  defp job_key({:file, path}), do: "file:#{path}"
+
   @doc false
   def queue_items(jobs) do
     Enum.map(jobs, fn
-      {:library, force} ->
-        %{kind: :library, label: "Library", force: force}
+      {:library, force} = job ->
+        %{kind: :library, key: job_key(job), label: "Library", force: force}
 
-      {:file, path} ->
-        %{kind: :file, label: Path.basename(path)}
+      {:file, path} = job ->
+        %{kind: :file, key: job_key(job), label: Path.basename(path)}
 
-      {:series, series_id, force} ->
+      {:series, series_id, force} = job ->
         name = with %{name: name} <- Library.get_series(series_id), do: name
-        %{kind: :series, label: name || "Series", force: force}
+        %{kind: :series, key: job_key(job), label: name || "Series", force: force}
     end)
   end
 

@@ -222,7 +222,7 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_sidebar_scan(event, _params, %{assigns: %{current_user: %{role: role}}} = socket)
-       when event in ["sidebar_scan", "sidebar_force_scan"] and role != :admin do
+       when event in ["sidebar_scan", "sidebar_force_scan", "unqueue_scan", "clear_scan_queue"] and role != :admin do
     {:halt, socket}
   end
 
@@ -238,6 +238,16 @@ defmodule StashixWeb.Live.Hooks do
 
   defp handle_sidebar_scan("cancel_scan", %{"id" => id}, socket) do
     Stashix.Scanner.cancel_scan(id)
+    {:halt, socket}
+  end
+
+  defp handle_sidebar_scan("unqueue_scan", %{"id" => id, "key" => key}, socket) do
+    Stashix.Scanner.unqueue(id, key)
+    {:halt, socket}
+  end
+
+  defp handle_sidebar_scan("clear_scan_queue", %{"id" => id}, socket) do
+    Stashix.Scanner.clear_queue(id)
     {:halt, socket}
   end
 

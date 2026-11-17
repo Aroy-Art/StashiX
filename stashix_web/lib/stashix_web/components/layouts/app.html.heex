@@ -377,9 +377,19 @@
                   <span class="min-w-0 truncate font-display font-bold uppercase tracking-wide text-sm text-fg">
                     {Map.get(lib_names, lib_id, gettext("Library"))}
                   </span>
-                  <span class="font-display font-black text-sm leading-none tabular-nums text-muted">
-                    {length(items)}
-                  </span>
+                  <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="font-display font-black text-sm leading-none tabular-nums text-muted">
+                      {length(items)}
+                    </span>
+                    <button
+                      phx-click="clear_scan_queue"
+                      phx-value-id={lib_id}
+                      title={gettext("Clear queue")}
+                      class="p-0.5 rounded text-faint hover:text-danger hover:bg-fg/10 transition-colors"
+                    >
+                      <.icon name="lucide-x" class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <ul class="mt-1 space-y-0.5">
                   <li
@@ -408,6 +418,15 @@
                           item.label
                       end}
                     </span>
+                    <button
+                      phx-click="unqueue_scan"
+                      phx-value-id={lib_id}
+                      phx-value-key={item.key}
+                      title={gettext("Remove from queue")}
+                      class="ml-auto flex-shrink-0 p-0.5 rounded text-faint hover:text-danger hover:bg-fg/10 transition-colors"
+                    >
+                      <.icon name="lucide-x" class="w-3 h-3" />
+                    </button>
                   </li>
                   <li :if={length(items) > 5} class="pl-5 text-[11px] text-faint">
                     {gettext("+%{count} more", count: length(items) - 5)}
