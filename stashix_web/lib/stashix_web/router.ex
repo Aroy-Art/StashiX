@@ -148,6 +148,7 @@ defmodule StashixWeb.Router do
     live "/publisher/:id/issues", PublisherLive, :issues
     live "/search", SearchLive, :index
     live "/read/:id", ReaderLive, :show
+    live "/read/:id/text", TextReaderLive, :show
     live "/admin", AdminLive, :index
     live "/admin/users", AdminLive, :users
     live "/admin/libraries", AdminLive, :libraries

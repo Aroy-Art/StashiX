@@ -1,0 +1,528 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+ * SPDX-License-Identifier: AGPL-3.0-or-later
+ */
+
+import {exitReader} from "../reader_exit.js"
+
+// PdfReader: the text reader's PDF view, drawn by PDF.js.
+//
+// The file is never downloaded whole: PDF.js reads it from /api/books/:id/file
+// in byte ranges, fetching only what the pages on screen need. Every page gets
+// a placeholder sized from page 1 (corrected when the page itself loads), and
+// only pages near the viewport hold a canvas and a text layer; the rest are
+// released as they scroll away.
+//
+// The server owns the chrome (bars, menus, contents and search panels) and
+// sends commands as events ("pdf:goto", "pdf:view", "pdf:zoom", "pdf:search");
+// the hook reports back what it sees ("pdf_loaded", "pdf_outline",
+// "page_changed", "pdf_search_results", "scroll_end", "set_overlay").
+//
+// Layouts: "scroll" (one column, scrolled natively), "paged" (one page) and
+// "spread" (two pages side by side), turned with keys, taps or the server.
+
+const PDFJS = "/vendor/pdfjs/"
+let pdfjsPromise = null
+
+// A variable, not a literal, so esbuild leaves the import alone: PDF.js is
+// served as is from /vendor and only fetched when a text PDF is opened.
+const loadPdfjs = () => {
+  const url = `${PDFJS}pdf.min.mjs`
+  pdfjsPromise ||= import(url).then((lib) => {
+    lib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.mjs`
+    return lib
+  })
+  return pdfjsPromise
+}
+
+const GAP = 12              // px between pages in the scroll column
+const READING_LINE = 0.35   // fraction of the viewport height that "is" the page
+const REPORT_MS = 150
+const BAR_HIDE_PX = 48      // scrolled down this far in one go tucks the bars away
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 4
+const ZOOM_STEP = 1.2
+const ZONE_SIDE = 0.22      // paged layouts: side tap zones turn the page
+const MAX_RESULTS = 500
+const SNIPPET = 40          // characters of context each side of a search hit
+
+const PdfReader = {
+  mounted() {
+    const d = this.el.dataset
+    this.url = d.url
+    this.layout = d.layout
+    this.fit = d.fit
+    this.saver = d.saver === "true"
+    this.zoom = 1
+    this.page = Number(d.start) || 0
+    this.count = 0
+    this.slots = []          // placeholder per page: {el, w, h, state, task, ...}
+    this.highlight = null    // search query marked in text layers
+    this.searchToken = 0
+    this.lastTop = 0
+    this.travel = 0
+
+    this.column = this.el.querySelector("[data-pdf-pages]")
+    this.endEl = this.el.querySelector("[data-pdf-end]")
+    this.setTheme(d.pageTheme)
+
+    this.handleEvent("reader:exit", ({to}) => exitReader(this, to))
+    this.handleEvent("pdf:goto", ({page, query}) => {
+      if (query !== undefined) this.mark(query)
+      this.goto(page)
+    })
+    this.handleEvent("pdf:step", ({by}) => this.step(by))
+    this.handleEvent("pdf:view", (view) => this.setView(view))
+    this.handleEvent("pdf:zoom", ({by}) => this.setZoom(by === 0 ? 1 : this.zoom * (by > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)))
+    this.handleEvent("pdf:search", ({query}) => this.search(query))
+
+    this.onScroll = () => {
+      if (this.frame == null) this.frame = requestAnimationFrame(() => this.scrolled())
+    }
+    this.onKey = (e) => this.key(e)
+    this.onPointerDown = (e) => { this.down = {x: e.clientX, y: e.clientY} }
+    this.onClick = (e) => this.click(e)
+    this.el.addEventListener("scroll", this.onScroll, {passive: true})
+    this.el.addEventListener("pointerdown", this.onPointerDown)
+    this.el.addEventListener("click", this.onClick)
+    window.addEventListener("keydown", this.onKey)
+
+    this.resizeObserver = new ResizeObserver(() => {
+      clearTimeout(this.resizeTimer)
+      this.resizeTimer = setTimeout(() => this.relayout(), 120)
+    })
+
+    this.open().catch((err) => {
+      console.error("PdfReader:", err)
+      this.pushEvent("pdf_failed", {})
+    })
+  },
+
+  destroyed() {
+    this.el.removeEventListener("scroll", this.onScroll)
+    this.el.removeEventListener("pointerdown", this.onPointerDown)
+    this.el.removeEventListener("click", this.onClick)
+    window.removeEventListener("keydown", this.onKey)
+    this.resizeObserver.disconnect()
+    this.pageObserver?.disconnect()
+    this.endObserver?.disconnect()
+    clearTimeout(this.reportTimer)
+    clearTimeout(this.resizeTimer)
+    if (this.frame != null) cancelAnimationFrame(this.frame)
+    this.searchToken++
+    this.slots.forEach((s) => this.release(s))
+    this.loadingTask?.destroy()
+  },
+
+  async open() {
+    this.lib = await loadPdfjs()
+    this.loadingTask = this.lib.getDocument({
+      url: this.url,
+      // Ranges only: no background download of the rest of the file.
+      disableAutoFetch: true,
+      disableStream: true,
+      rangeChunkSize: 128 * 1024,
+      standardFontDataUrl: `${PDFJS}standard_fonts/`,
+      cMapUrl: `${PDFJS}cmaps/`,
+      cMapPacked: true,
+      wasmUrl: `${PDFJS}wasm/`,
+      iccUrl: `${PDFJS}iccs/`,
+      isEvalSupported: false,
+    })
+    this.doc = await this.loadingTask.promise
+    this.count = this.doc.numPages
+    this.page = Math.min(this.page, this.count - 1)
+
+    const first = await this.doc.getPage(1)
+    const {width, height} = first.getViewport({scale: 1})
+    this.build(width, height)
+    this.pushEvent("pdf_loaded", {page_count: this.count})
+    this.outline()
+  },
+
+  // One placeholder per page, all sized like page 1 until they load.
+  build(width, height) {
+    this.column.textContent = ""
+    this.slots = Array.from({length: this.count}, (_, i) => {
+      const el = document.createElement("div")
+      el.className = "pdf-page"
+      el.dataset.page = i
+      this.column.appendChild(el)
+      return {el, index: i, w: width, h: height, state: "empty"}
+    })
+
+    // Generous margin while scrolling so the next pages are ready; none in
+    // data saver, which only renders what is on screen.
+    this.pageObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        const slot = this.slots[Number(entry.target.dataset.page)]
+        slot.near = entry.isIntersecting
+        if (entry.isIntersecting) this.render(slot)
+        else this.release(slot)
+      }
+    }, {root: this.el, rootMargin: this.saver ? "0px" : "100% 0px"})
+    this.slots.forEach((s) => this.pageObserver.observe(s.el))
+
+    this.endObserver = new IntersectionObserver(([entry]) => {
+      if (this.layout === "scroll") this.pushEvent("scroll_end", {visible: entry.isIntersecting})
+    }, {root: this.el, threshold: 0.6})
+    this.endObserver.observe(this.endEl)
+
+    this.resizeObserver.observe(this.el)
+    this.relayout()
+    this.goto(this.page)
+  },
+
+  // ── layout ────────────────────────────────────────────────────────────
+
+  setView({layout, fit, theme}) {
+    if (theme) this.setTheme(theme)
+    if ((layout && layout !== this.layout) || (fit && fit !== this.fit)) {
+      this.layout = layout || this.layout
+      this.fit = fit || this.fit
+      this.relayout()
+      this.goto(this.page)
+    }
+  },
+
+  setTheme(theme) {
+    this.el.dataset.pageTheme = theme
+  },
+
+  setZoom(zoom) {
+    this.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+    this.relayout()
+    this.goto(this.page)
+  },
+
+  // Page scale from the fit mode and zoom; page 1 sets it for the whole book
+  // so pages keep one size.
+  scaleFor() {
+    const base = this.slots[0]
+    if (!base) return 1
+    const pad = this.el.clientWidth < 640 ? 8 : 32
+    const across = this.layout === "spread" ? 2 : 1
+    const width = (this.el.clientWidth - pad * 2 - (across - 1) * GAP) / across
+    const height = this.el.clientHeight - pad * 2
+    const fitWidth = width / base.w
+    const scale = this.fit === "page" ? Math.min(fitWidth, height / base.h) : fitWidth
+    return Math.max(0.1, scale * this.zoom)
+  },
+
+  relayout() {
+    if (!this.slots.length) return
+    const scale = this.scaleFor()
+    const changed = scale !== this.scale
+    this.scale = scale
+    this.el.dataset.layout = this.layout
+    this.column.style.setProperty("--total-scale-factor", scale)
+    this.slots.forEach((s) => this.size(s))
+    this.showPaged()
+    if (changed) this.slots.forEach((s) => { if (s.state !== "empty") this.rerender(s) })
+  },
+
+  size(slot) {
+    slot.el.style.width = `${Math.floor(slot.w * this.scale)}px`
+    slot.el.style.height = `${Math.floor(slot.h * this.scale)}px`
+  },
+
+  // Paged layouts show the current page (and its neighbour in a spread).
+  showPaged() {
+    const paged = this.layout !== "scroll"
+    const [a, b] = this.visiblePages()
+    this.slots.forEach((s) => {
+      s.el.hidden = paged && s.index !== a && s.index !== b
+    })
+  },
+
+  visiblePages() {
+    if (this.layout === "spread") {
+      const a = this.page - (this.page % 2)
+      return [a, a + 1 < this.count ? a + 1 : null]
+    }
+    return [this.page, null]
+  },
+
+  // ── rendering ─────────────────────────────────────────────────────────
+
+  async render(slot) {
+    if (slot.state !== "empty" || slot.el.hidden) return
+    slot.state = "rendering"
+    const scale = this.scale
+
+    try {
+      const page = slot.pdfPage || (slot.pdfPage = await this.doc.getPage(slot.index + 1))
+      const raw = page.getViewport({scale: 1})
+      if (raw.width !== slot.w || raw.height !== slot.h) {
+        slot.w = raw.width
+        slot.h = raw.height
+        this.size(slot)
+      }
+      if (slot.state !== "rendering" || scale !== this.scale) return
+
+      const viewport = page.getViewport({scale})
+      const ratio = this.saver ? 1 : Math.min(window.devicePixelRatio || 1, 2)
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.floor(viewport.width * ratio)
+      canvas.height = Math.floor(viewport.height * ratio)
+      canvas.className = "pdf-canvas"
+
+      slot.task = page.render({
+        canvasContext: canvas.getContext("2d"),
+        viewport,
+        transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null,
+      })
+      await slot.task.promise
+      if (slot.state !== "rendering") return
+
+      const text = document.createElement("div")
+      text.className = "textLayer"
+      slot.textLayer = new this.lib.TextLayer({
+        textContentSource: page.streamTextContent({includeMarkedContent: true, disableNormalization: true}),
+        container: text,
+        viewport,
+      })
+
+      slot.el.replaceChildren(canvas, text)
+      slot.state = "done"
+      await slot.textLayer.render()
+      this.markSlot(slot)
+    } catch (err) {
+      if (err?.name !== "RenderingCancelledException") console.error("PdfReader page", slot.index + 1, err)
+      if (slot.state === "rendering") slot.state = "empty"
+    }
+  },
+
+  rerender(slot) {
+    this.release(slot)
+    if (slot.near) this.render(slot)
+  },
+
+  // Frees the canvas (its pixels are the memory that adds up) and the text.
+  release(slot) {
+    slot.task?.cancel()
+    slot.task = null
+    slot.textLayer?.cancel()
+    slot.textLayer = null
+    const canvas = slot.el.querySelector("canvas")
+    if (canvas) canvas.width = canvas.height = 0
+    slot.el.replaceChildren()
+    slot.pdfPage?.cleanup()
+    slot.state = "empty"
+  },
+
+  // ── position ──────────────────────────────────────────────────────────
+
+  goto(page) {
+    if (!this.count) {
+      this.page = page
+      return
+    }
+    this.page = Math.max(0, Math.min(page, this.count - 1))
+    if (this.layout === "scroll") {
+      const slot = this.slots[this.page]
+      this.el.scrollTop = slot.el.offsetTop - GAP
+      this.lastTop = this.el.scrollTop
+    } else {
+      this.showPaged()
+      this.el.scrollTop = 0
+      this.el.scrollLeft = 0
+      this.visiblePages().forEach((i) => i != null && this.render(this.slots[i]))
+    }
+    this.report()
+  },
+
+  // Paged layouts: one page or one spread forward or back. Past the last
+  // page the server shows the end card; before the first nothing happens.
+  step(by) {
+    if (this.layout === "scroll") {
+      this.el.scrollBy({top: by * this.el.clientHeight * 0.85, behavior: "smooth"})
+      return
+    }
+    const size = this.layout === "spread" ? 2 : 1
+    const next = this.visiblePages()[0] + by * size
+    if (next >= this.count) this.pushEvent("paged_end", {})
+    else if (next >= 0) this.goto(next)
+  },
+
+  scrolled() {
+    this.frame = null
+    if (this.layout !== "scroll") return
+    const top = this.el.scrollTop
+
+    // Bars hide on a deliberate scroll down and come back on any scroll up.
+    const delta = top - this.lastTop
+    this.lastTop = top
+    this.travel = delta > 0 ? Math.max(this.travel, 0) + delta : 0
+    const barsShown = this.el.dataset.overlay === "true"
+    if (barsShown && this.travel > BAR_HIDE_PX) {
+      this.pushEvent("set_overlay", {visible: false})
+      this.el.dataset.overlay = "false"
+    } else if (!barsShown && delta < -8) {
+      this.pushEvent("set_overlay", {visible: true})
+      this.el.dataset.overlay = "true"
+    }
+
+    const page = this.pageAt(top + this.el.clientHeight * READING_LINE)
+    if (page !== this.page) {
+      this.page = page
+      this.report()
+    }
+  },
+
+  report() {
+    clearTimeout(this.reportTimer)
+    this.reportTimer = setTimeout(() => this.pushEvent("page_changed", {page: this.page}), REPORT_MS)
+  },
+
+  // Last page whose top edge sits above y (the column is sorted).
+  pageAt(y) {
+    let lo = 0, hi = this.slots.length - 1
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1
+      if (this.slots[mid].el.offsetTop <= y) lo = mid
+      else hi = mid - 1
+    }
+    return lo
+  },
+
+  // ── input ─────────────────────────────────────────────────────────────
+
+  key(e) {
+    if (e.target.closest?.("input, textarea, select, [contenteditable]")) return
+    if (e.ctrlKey || e.metaKey || e.altKey) return
+    const scroll = this.layout === "scroll"
+
+    if (e.key === "+" || e.key === "=") this.setZoom(this.zoom * ZOOM_STEP)
+    else if (e.key === "-") this.setZoom(this.zoom / ZOOM_STEP)
+    else if (e.key === "0") this.setZoom(1)
+    else if (e.key === "ArrowRight") scroll ? this.goto(this.page + 1) : this.step(1)
+    else if (e.key === "ArrowLeft") scroll ? this.goto(this.page - 1) : this.step(-1)
+    else if (e.key === "Home") this.goto(0)
+    else if (e.key === "End") this.goto(this.count - 1)
+    else if (e.key === "Escape") this.pushEvent("close_panel", {})
+    // Scroll layout: arrows, space and page keys scroll the column natively.
+    else if (!scroll && ["ArrowDown", "PageDown", " "].includes(e.key)) this.step(e.shiftKey ? -1 : 1)
+    else if (!scroll && ["ArrowUp", "PageUp"].includes(e.key)) this.step(-1)
+    else if (scroll && e.target === document.body && ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " "].includes(e.key)) {
+      // Keys go to the body until the column is focused; send them on.
+      this.el.focus({preventScroll: true})
+      return
+    } else return
+    e.preventDefault()
+  },
+
+  // A plain tap (not a drag, not a text selection) toggles the bars; in the
+  // paged layouts the sides turn the page.
+  click(e) {
+    if (e.target.closest("button, a, input")) return
+    if (this.down && Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 8) return
+    if (!window.getSelection()?.isCollapsed) return
+
+    if (this.layout !== "scroll") {
+      const x = e.clientX / this.el.clientWidth
+      if (x < ZONE_SIDE) return this.step(-1)
+      if (x > 1 - ZONE_SIDE) return this.step(1)
+    }
+    this.pushEvent("toggle_overlay", {})
+  },
+
+  // ── contents ──────────────────────────────────────────────────────────
+
+  async outline() {
+    const items = []
+    const walk = async (nodes, depth) => {
+      for (const node of nodes || []) {
+        if (items.length >= 2000) return
+        items.push({title: node.title, page: await this.destPage(node.dest), depth})
+        await walk(node.items, depth + 1)
+      }
+    }
+    try {
+      await walk(await this.doc.getOutline(), 0)
+    } catch (err) {
+      console.error("PdfReader outline", err)
+    }
+    this.pushEvent("pdf_outline", {items})
+  },
+
+  async destPage(dest) {
+    try {
+      const explicit = typeof dest === "string" ? await this.doc.getDestination(dest) : dest
+      if (!Array.isArray(explicit)) return null
+      const ref = explicit[0]
+      return typeof ref === "number" ? ref : await this.doc.getPageIndex(ref)
+    } catch (_) {
+      return null
+    }
+  },
+
+  // ── search ────────────────────────────────────────────────────────────
+
+  // Reads each page's text in turn (fetching the ranges it needs) and sends
+  // hits back a page batch at a time. A new query cancels the running one.
+  async search(query) {
+    const token = ++this.searchToken
+    this.mark(query)
+    const needle = (query || "").trim().toLocaleLowerCase()
+    if (!needle || !this.doc) return
+
+    let found = 0
+    let batch = []
+    for (let i = 0; i < this.count && found < MAX_RESULTS; i++) {
+      const page = await this.doc.getPage(i + 1)
+      const content = await page.getTextContent()
+      if (token !== this.searchToken) return
+      const text = content.items.map((item) => item.str + (item.hasEOL ? " " : "")).join("")
+      const lower = text.toLocaleLowerCase()
+      for (let at = lower.indexOf(needle); at !== -1 && found < MAX_RESULTS; at = lower.indexOf(needle, at + needle.length)) {
+        batch.push({page: i, before: text.slice(Math.max(0, at - SNIPPET), at), match: text.slice(at, at + needle.length), after: text.slice(at + needle.length, at + needle.length + SNIPPET)})
+        found++
+      }
+      if (batch.length >= 20 || i % 25 === 24) {
+        this.pushEvent("pdf_search_results", {query, results: batch, scanned: i + 1, done: false})
+        batch = []
+      }
+    }
+    if (token === this.searchToken) this.pushEvent("pdf_search_results", {query, results: batch, scanned: this.count, done: true})
+  },
+
+  mark(query) {
+    this.highlight = (query || "").trim().toLocaleLowerCase() || null
+    this.slots.forEach((s) => s.state === "done" && this.markSlot(s))
+  },
+
+  // Wraps each hit inside the text-layer runs in a .pdf-hit span. A run is
+  // drawn in one font scaled to its width, so the wrapped part lines up with
+  // the canvas. A hit split across two runs is not marked; the page is still
+  // found.
+  markSlot(slot) {
+    const needle = this.highlight
+    for (const span of slot.el.querySelectorAll(".textLayer span:not(.pdf-hit):not(.markedContent)")) {
+      const text = span.dataset.text ?? span.textContent
+      if (span.dataset.text !== undefined) {
+        span.textContent = text
+        delete span.dataset.text
+      }
+      if (!needle) continue
+      const lower = text.toLocaleLowerCase()
+      if (!lower.includes(needle)) continue
+
+      const parts = []
+      let from = 0
+      for (let at = lower.indexOf(needle); at !== -1; at = lower.indexOf(needle, at + needle.length)) {
+        parts.push(document.createTextNode(text.slice(from, at)))
+        const hit = document.createElement("span")
+        hit.className = "pdf-hit"
+        hit.textContent = text.slice(at, at + needle.length)
+        parts.push(hit)
+        from = at + needle.length
+      }
+      parts.push(document.createTextNode(text.slice(from)))
+      span.dataset.text = text
+      span.replaceChildren(...parts)
+    }
+  },
+}
+
+export default PdfReader

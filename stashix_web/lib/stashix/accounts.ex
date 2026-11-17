@@ -230,9 +230,11 @@ defmodule Stashix.Accounts do
     end
   end
 
+  # Merged into what is stored: the comic and the text reader each save only
+  # their own keys.
   def save_reader_settings(user, settings) do
     user
-    |> User.reader_settings_changeset(%{reader_settings: settings})
+    |> User.reader_settings_changeset(%{reader_settings: Map.merge(user.reader_settings || %{}, settings)})
     |> Repo.update()
   end
 

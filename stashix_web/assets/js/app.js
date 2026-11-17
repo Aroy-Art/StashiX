@@ -30,8 +30,10 @@ import InkMenu from "./hooks/ink_menu.js"
 import InkDialog from "./hooks/ink_dialog.js"
 import Shelf from "./hooks/shelf.js"
 import LocalTime from "./hooks/local_time.js"
+import PdfReader from "./hooks/pdf_reader.js"
+import {exitReader} from "./reader_exit.js"
 
-let Hooks = { InkMenu, InkDialog, Shelf, LocalTime }
+let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, PdfReader }
 
 Hooks.Sidebar = {
   mounted() {
@@ -714,27 +716,9 @@ Hooks.PageSlider = {
   }
 }
 
-// Path of the page the reader was opened from, i.e. the history entry right
-// below it. Leaving the reader for that same page pops back onto it instead of
-// stacking a second copy; anything else replaces the reader's entry. Either way
-// the reader is gone from the history, so "back" never reopens it.
-let pageBelowReader = null
-const pathOf = (href) => new URL(href, window.location.href).pathname
-const isReaderPath = (path) => path.startsWith("/read/")
-if (!isReaderPath(window.location.pathname)) pageBelowReader = window.location.pathname
-window.addEventListener("phx:navigate", ({detail}) => {
-  const path = pathOf(detail.href)
-  if (!isReaderPath(path)) pageBelowReader = path
-  // Reached by back/forward: what sits below is no longer the page we last saw.
-  else if (detail.pop) pageBelowReader = null
-})
-
 Hooks.ReaderKeyboard = {
   mounted() {
-    this.handleEvent("reader:exit", ({to}) => {
-      if (pageBelowReader === to) window.history.back()
-      else this.js().navigate(to, {replace: true})
-    })
+    this.handleEvent("reader:exit", ({to}) => exitReader(this, to))
     this.handleKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return
       // Webtoon strip: up/down scroll by a screen, left/right still jump a page.

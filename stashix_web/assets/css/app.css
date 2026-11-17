@@ -8,6 +8,7 @@
 @import "./tokens.css";
 @import "./ink.css";
 @import "./reader.css";
+@import "./text_reader.css";
 @import "./search.css";
 
 @custom-variant phx-click-loading (&:where(.phx-click-loading, .phx-click-loading *));

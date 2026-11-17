@@ -64,6 +64,11 @@ text PDFs and novels: a library switcher (comics/manga vs books) is planned
   detection is unsure, library kind (§7) breaks the tie. Per-book override in
   the edit dialog, and it survives rescans (`locked_fields`).
 
+- [x] **D9 — Text reader layout** (settled 2026-11-17). Continuous scroll by
+  default (one page and two pages in the View menu); contents and search in
+  one left side panel; page themes Paper / Sepia / Night in the View menu,
+  saved per user.
+
 ---
 
 ## 3. Phase 1 — Server fixes (no visible change)
@@ -106,8 +111,10 @@ routing that Phase 3 reuses for EPUB.
   chars/page → text, ≤ 40 → images, between → nil (OCR'd comics). The
   library-kind tiebreak waits for `libraries.kind` (§8); nil reads as
   images. Existing books need a forced rescan to get detected.
-- [ ] Reader routing: `/read/:id` picks `ReaderLive` or `TextReaderLive` from
+- [x] Reader routing: `/read/:id` picks `ReaderLive` or `TextReaderLive` from
   the effective `content_kind`.
+  — `Library.text_book_file/2`; `ReaderLive` redirects to `/read/:id/text`,
+  which sends books that open as pages back.
 - [x] `GET /api/books/:id/file` with `Range` support: parse header, `206` via
   `send_file/5`, `Accept-Ranges`, `Content-Range`, `ETag`, `416` on bad
   ranges, access check like `page/2`. OpenApiSpex operation.
@@ -119,15 +126,28 @@ routing that Phase 3 reuses for EPUB.
   `priv/static/vendor/pdfjs/` (6.5.438, Apache-2.0, ~5 MB with fonts, cmaps
   and wasm image decoders) and is imported at runtime, keeping it out of
   `app.js`. Update with `scripts/update-pdfjs.sh <version>`.
-- [ ] `TextReaderLive` shell: top/bottom bars, exit, progress save, end card
+- [x] `TextReaderLive` shell: top/bottom bars, exit, progress save, end card
   and next book — same "ink" chrome as `ReaderLive`, text-reader settings.
-- [ ] `PdfReader` hook: open document via range transport, render visible
+  — settings saved as `text_layout` / `text_fit` / `text_theme`;
+  `save_reader_settings` now merges, so the two readers keep each other's
+  keys. Exit handling shared via `assets/js/reader_exit.js`.
+- [x] `PdfReader` hook: open document via range transport, render visible
   page(s) to `<canvas>` at devicePixelRatio, text layer for selection.
-- [ ] Layouts: continuous scroll and paged (single / two-up); zoom and fit
+  — `assets/js/hooks/pdf_reader.js`; DPR capped at 2. Browser-checked:
+  a 1.6 MB PDF opened with 6 range requests of 128 KB.
+- [x] Layouts: continuous scroll and paged (single / two-up); zoom and fit
   width / fit page. Progress stays page-number based (+ `progression`).
-- [ ] Render only visible pages ± neighbours; release canvases far away.
-- [ ] Outline (TOC) panel and in-document search.
-- [ ] Data saver: lower render scale, no neighbour prefetch.
+  — scroll (default), one page, two pages (D9). `progression` waits for
+  Phase 4.
+- [x] Render only visible pages ± neighbours; release canvases far away.
+  — IntersectionObserver with a one-screen margin; pages leaving it free
+  their canvas and text layer.
+- [x] Outline (TOC) panel and in-document search.
+  — one left panel with Contents / Search tabs (D9), a bottom sheet on
+  phones. Search reads page text in turn, stops at 500 hits, and marks hits
+  inside the text layer.
+- [x] Data saver: lower render scale, no neighbour prefetch.
+  — pixel ratio 1, no margin. Not browser-checked.
 
 ## 5. Phase 3 — EPUB reader
 

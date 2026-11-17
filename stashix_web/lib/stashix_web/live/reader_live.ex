@@ -16,6 +16,17 @@ defmodule StashixWeb.ReaderLive do
     id = Slug.resolve!(Stashix.Library.Book, param)
     book = Library.get_book!(socket.assigns.access, id) |> Stashix.Repo.preload([:files, :series])
     format = params["format"] && String.to_existing_atom(params["format"])
+
+    # Text books open in the text reader; this one only shows pages.
+    if Library.text_book_file(book, format) do
+      {:ok, push_navigate(socket, to: ~p"/read/#{param}/text?#{Map.take(params, ["format", "page"])}", replace: true)}
+    else
+      mount_pages(book, format, params, socket)
+    end
+  end
+
+  defp mount_pages(book, format, params, socket) do
+    id = book.id
     book_file = Library.get_preferred_book_file(book, format)
 
     pages =
@@ -344,7 +355,7 @@ defmodule StashixWeb.ReaderLive do
   # The "ghost page" past the last one. It is pointer-events-none so the click
   # zones underneath keep working (left steps back, right carries on); only the
   # links take pointers, which ReaderZoom already leaves alone.
-  defp end_card(assigns) do
+  def end_card(assigns) do
     assigns =
       assign(assigns,
         label: Formatters.book_number_label(assigns.book, assigns.volume_counts),

@@ -1414,6 +1414,20 @@ defmodule Stashix.Library do
   def reader_kind(_book, %BookFile{content_kind: kind}) when kind != nil, do: kind
   def reader_kind(_book, _book_file), do: :images
 
+  # Formats the text reader can open.
+  @text_formats [:pdf]
+
+  @doc """
+  The file of `book` (of `format`, when given) to open in the text reader,
+  or nil when it opens as pages. Needs `files` preloaded.
+  """
+  def text_book_file(%Book{files: files} = book, format \\ nil) do
+    Enum.find(files, fn file ->
+      file.deleted_at == nil and file.format in @text_formats and format in [nil, file.format] and
+        reader_kind(book, file) == :text
+    end)
+  end
+
   def get_preferred_book_file(book, format \\ nil) do
     format_priority = [:cbz, :cbr, :cb7, :epub, :pdf]
 
