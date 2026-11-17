@@ -2324,20 +2324,49 @@ defmodule Stashix.Library do
     end)
   end
 
-  def total_size_for_series(access, series_id) do
-    result =
-      from(bf in BookFile,
-        join: b in ^Access.books(access),
-        on: b.id == bf.book_id,
-        where: b.series_id == ^series_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
-      )
-      |> Repo.aggregate(:sum, :file_size)
+  @doc """
+  Files of the series' visible, non-deleted books, in reading order (a book
+  with several formats keeps them together), each with its `:book` loaded.
+  """
+  def series_files(access, series_id) do
+    files_query = from(bf in BookFile, where: is_nil(bf.deleted_at), order_by: [asc: bf.format])
 
-    case result do
-      nil -> 0
-      %Decimal{} = d -> Decimal.to_integer(d)
-      n -> n
-    end
+    from(b in Access.books(access), where: b.series_id == ^series_id and is_nil(b.deleted_at))
+    |> Repo.all()
+    |> Repo.preload(files: files_query)
+    |> sort_reading_order()
+    |> Enum.flat_map(fn book -> Enum.map(book.files, &%{&1 | book: book}) end)
+  end
+
+  @doc """
+  The formats the series' visible issues come in: per format, how many issues
+  have a file in it and those files' total size.
+  """
+  def series_file_formats(access, series_id) do
+    from(bf in BookFile,
+      join: b in ^Access.books(access),
+      on: b.id == bf.book_id,
+      where: b.series_id == ^series_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at),
+      group_by: bf.format,
+      order_by: bf.format,
+      select: %{format: bf.format, issues: count(bf.book_id, :distinct), size: sum(bf.file_size)}
+    )
+    |> Repo.all()
+    |> Enum.map(fn row -> %{row | size: to_integer(row.size)} end)
+  end
+
+  defp to_integer(nil), do: 0
+  defp to_integer(%Decimal{} = d), do: Decimal.to_integer(d)
+  defp to_integer(n), do: n
+
+  def total_size_for_series(access, series_id) do
+    from(bf in BookFile,
+      join: b in ^Access.books(access),
+      on: b.id == bf.book_id,
+      where: b.series_id == ^series_id and is_nil(b.deleted_at) and is_nil(bf.deleted_at)
+    )
+    |> Repo.aggregate(:sum, :file_size)
+    |> to_integer()
   end
 
   def total_size(access, library_id) do

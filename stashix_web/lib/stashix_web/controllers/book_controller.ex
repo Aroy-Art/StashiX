@@ -10,6 +10,7 @@ defmodule StashixWeb.BookController do
   alias StashixWeb.{CreditJSON, Schemas}
 
   import StashixWeb.CoverHelper, only: [serve_cover: 3]
+  import StashixWeb.DownloadHelper, only: [requested_formats: 1, filter_formats: 2, send_files: 3]
 
   operation :index,
     summary: "List books in library",
@@ -161,6 +162,25 @@ defmodule StashixWeb.BookController do
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
     end
+  end
+
+  operation :download,
+    summary: "Download book files",
+    description: "One file is sent as itself; several are sent as a ZIP.",
+    tags: ["Books", "Media"],
+    parameters: [
+      id: [in: :path, type: :integer, required: true],
+      formats: [in: :query, type: :string, description: "Comma-separated formats (e.g. cbz,pdf); all when omitted"]
+    ],
+    responses: [
+      ok: {"File or ZIP", "application/octet-stream", %OpenApiSpex.Schema{type: :string, format: :binary}},
+      not_found: {"No matching file", "application/json", Schemas.Error}
+    ]
+
+  def download(conn, %{"id" => id} = params) do
+    book = conn.assigns.access |> Library.get_book_with_series(id)
+    files = filter_formats(book.files, requested_formats(params))
+    send_files(conn, files, book.title)
   end
 
   operation :progress,

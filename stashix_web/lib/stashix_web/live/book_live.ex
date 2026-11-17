@@ -337,6 +337,55 @@ defmodule StashixWeb.BookLive do
     """
   end
 
+  # One file downloads straight away; with several, a menu picks the format
+  # (or all of them, as a ZIP).
+  attr :book, :map, required: true
+
+  defp download_button(%{book: %{files: [file]}} = assigns) do
+    assigns = assign(assigns, file: file)
+
+    ~H"""
+    <.ink_button
+      variant="ghost"
+      href={~p"/api/books/#{@book.id}/download?#{[formats: @file.format]}"}
+      download
+    >
+      <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
+    </.ink_button>
+    """
+  end
+
+  defp download_button(assigns) do
+    ~H"""
+    <.ink_menu id="download-menu" align="start">
+      <:trigger class={ink_button_class("ghost")}>
+        <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
+        <.icon name="lucide-chevron-down" class="w-3.5 h-3.5" />
+      </:trigger>
+      <.menu_item
+        :for={f <- @book.files}
+        icon="lucide-file"
+        href={~p"/api/books/#{@book.id}/download?#{[formats: f.format]}"}
+        download
+      >
+        <span class="flex items-baseline justify-between gap-4">
+          {String.upcase(to_string(f.format))}
+          <span
+            :if={f.file_size > 0}
+            class="font-sans font-normal normal-case tracking-normal text-xs text-muted tabular-nums"
+          >
+            {Format.file_size(f.file_size)}
+          </span>
+        </span>
+      </.menu_item>
+      <.menu_separator />
+      <.menu_item icon="lucide-file-archive" href={~p"/api/books/#{@book.id}/download"} download>
+        {gettext("All formats (ZIP)")}
+      </.menu_item>
+    </.ink_menu>
+    """
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -480,13 +529,20 @@ defmodule StashixWeb.BookLive do
             <% end %>
           </div>
 
-          <%!-- Read button --%>
-          <div :if={@book.page_count > 0 && @selected_file} class="rise relative z-10 mt-7" style="--i:5">
-            <.split_button navigate={
-              if @fully_read,
-                do: ~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}",
-                else: ~p"/read/#{@book}?#{[format: @selected_file.format]}"
-            }>
+          <%!-- Read + download buttons --%>
+          <div
+            :if={@book.files != []}
+            class="rise relative z-10 flex items-center justify-center sm:justify-start gap-3 flex-wrap mt-7"
+            style="--i:5"
+          >
+            <.split_button
+              :if={@book.page_count > 0 && @selected_file}
+              navigate={
+                if @fully_read,
+                  do: ~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}",
+                  else: ~p"/read/#{@book}?#{[format: @selected_file.format]}"
+              }
+            >
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
                 @fully_read -> gettext("Read Again")
@@ -514,6 +570,7 @@ defmodule StashixWeb.BookLive do
                 </.ink_menu>
               </:aside>
             </.split_button>
+            <.download_button book={@book} />
           </div>
         </div>
       </header>

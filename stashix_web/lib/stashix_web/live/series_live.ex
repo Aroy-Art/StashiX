@@ -83,7 +83,9 @@ defmodule StashixWeb.SeriesLive do
        series_details: Library.series_details(socket.assigns.access, series.id),
        all_publishers: Library.list_all_publishers(),
        book_publishers: Library.series_book_publishers(series.id),
-       age_ratings: @age_ratings
+       age_ratings: @age_ratings,
+       file_formats: Library.series_file_formats(socket.assigns.access, series.id),
+       download_formats: nil
      )}
   end
 
@@ -165,6 +167,21 @@ defmodule StashixWeb.SeriesLive do
 
   def handle_event("sort", %{"value" => sort}, socket) do
     {:noreply, assign(socket, sort: sort, books: sort_books(socket.assigns.series.books, sort))}
+  end
+
+  def handle_event("open_download_dialog", _params, socket) do
+    {:noreply, assign(socket, download_formats: MapSet.new(socket.assigns.file_formats, & &1.format))}
+  end
+
+  def handle_event("close_download_dialog", _params, socket) do
+    {:noreply, assign(socket, download_formats: nil)}
+  end
+
+  # Unticking every box leaves `formats` out of the form entirely.
+  def handle_event("set_download_formats", params, socket) do
+    known = Map.new(socket.assigns.file_formats, &{to_string(&1.format), &1.format})
+    picked = params |> Map.get("formats", []) |> Enum.flat_map(&List.wrap(known[&1]))
+    {:noreply, assign(socket, download_formats: MapSet.new(picked))}
   end
 
   def handle_event("toggle_admin_menu", _, socket) do
@@ -450,7 +467,8 @@ defmodule StashixWeb.SeriesLive do
        folder_cover?: folder_cover != nil,
        folder_cover_blurhash: folder_cover && ImageResizer.blurhash(folder_cover),
        continue_book: find_continue_book(books, progress_map),
-       summary_info: derive_summary(series, books)
+       summary_info: derive_summary(series, books),
+       file_formats: Library.series_file_formats(socket.assigns.access, series.id)
      )}
   end
 
@@ -753,10 +771,14 @@ defmodule StashixWeb.SeriesLive do
             </span>
           </div>
 
-          <%!-- Read buttons --%>
-          <%= if @continue_book do %>
-            <% has_progress = (@progress_map[@continue_book.id] || 0) > 0 %>
-            <div class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7" style="--i:4">
+          <%!-- Read + download buttons --%>
+          <div
+            :if={@continue_book || @file_formats != []}
+            class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7"
+            style="--i:4"
+          >
+            <%= if @continue_book do %>
+              <% has_progress = (@progress_map[@continue_book.id] || 0) > 0 %>
               <.ink_button navigate={~p"/read/#{@continue_book}"}>
                 <.icon name="lucide-play" class="w-4 h-4" />
                 {if has_progress, do: gettext("Continue"), else: gettext("Start Reading")}
@@ -769,8 +791,27 @@ defmodule StashixWeb.SeriesLive do
               >
                 <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> {gettext("Read from #1")}
               </.text_link>
-            </div>
-          <% end %>
+            <% end %>
+            <%!-- One format downloads straight away; several open a picker --%>
+            <.ink_button
+              :if={length(@file_formats) == 1}
+              id="series-download"
+              variant="ghost"
+              href={~p"/api/series/#{@series.id}/download"}
+              download
+            >
+              <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
+            </.ink_button>
+            <.ink_button
+              :if={length(@file_formats) > 1}
+              id="series-download"
+              type="button"
+              variant="ghost"
+              phx-click="open_download_dialog"
+            >
+              <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download…")}
+            </.ink_button>
+          </div>
         </div>
       </header>
 
@@ -1023,6 +1064,13 @@ defmodule StashixWeb.SeriesLive do
       </.dialog>
     <% end %>
 
+    <.download_dialog
+      :if={@download_formats}
+      series={@series}
+      formats={@file_formats}
+      selected={@download_formats}
+    />
+
     <.push_language_dialog
       :if={@current_user.role == :admin && @push_language}
       language={@push_language}
@@ -1188,6 +1236,74 @@ defmodule StashixWeb.SeriesLive do
   defp short_age_label(:explicit), do: gettext("Explicit")
   defp short_age_label(nil), do: gettext("Unrated")
   defp short_age_label(other), do: to_string(other)
+
+  attr :series, :map, required: true
+  attr :formats, :list, required: true
+  attr :selected, :any, required: true
+
+  defp download_dialog(assigns) do
+    picked = Enum.filter(assigns.formats, &MapSet.member?(assigns.selected, &1.format))
+
+    assigns =
+      assign(assigns,
+        picked_size: picked |> Enum.map(& &1.size) |> Enum.sum(),
+        href:
+          picked != [] &&
+            ~p"/api/series/#{assigns.series.id}/download?#{[formats: Enum.map_join(picked, ",", & &1.format)]}"
+      )
+
+    ~H"""
+    <.dialog id="download-dialog" title={gettext("Download series")} on_close={JS.push("close_download_dialog")}>
+      <:description>
+        {gettext(
+          "Issues in this series come in more than one format. Pick the ones to download; an issue with several of them includes each."
+        )}
+      </:description>
+
+      <form id="download-formats-form" phx-change="set_download_formats" class="mt-3 space-y-2">
+        <label
+          :for={f <- @formats}
+          class={[
+            "flex items-center gap-3 rounded-md border p-3 cursor-pointer transition-colors",
+            if(MapSet.member?(@selected, f.format),
+              do: "border-ink bg-ink/10",
+              else: "border-line hover:border-line-strong"
+            )
+          ]}
+        >
+          <input
+            type="checkbox"
+            name="formats[]"
+            value={f.format}
+            checked={MapSet.member?(@selected, f.format)}
+            class="ink-check"
+          />
+          <span class="flex-1 text-sm font-display font-bold uppercase tracking-wide text-fg">
+            {String.upcase(to_string(f.format))}
+          </span>
+          <span class="text-xs text-muted tabular-nums">
+            {ngettext("1 issue", "%{count} issues", f.issues)}<span :if={f.size > 0}> · {Format.file_size(f.size)}</span>
+          </span>
+        </label>
+      </form>
+
+      <.dialog_footer>
+        <p :if={@href && @picked_size > 0} class="mr-auto text-xs text-muted tabular-nums">
+          {gettext("About %{size}", size: Format.file_size(@picked_size))}
+        </p>
+        <.ink_button type="button" variant="ghost" size="md" phx-click="close_download_dialog">
+          {gettext("Cancel")}
+        </.ink_button>
+        <.ink_button :if={@href} size="md" href={@href} download phx-click="close_download_dialog">
+          <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
+        </.ink_button>
+        <.ink_button :if={!@href} type="button" size="md" disabled>
+          <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
+        </.ink_button>
+      </.dialog_footer>
+    </.dialog>
+    """
+  end
 
   attr :language, :string, required: true
   attr :mode, :atom, required: true

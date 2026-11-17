@@ -49,6 +49,9 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
+  @doc "Classes of an `ink_button/1`, for a control that cannot be one (a menu trigger)."
+  def ink_button_class(variant \\ "primary", size \\ "lg"), do: button_class(variant, size)
+
   defp button_class("primary", size),
     do: [
       "ink-btn inline-flex items-center justify-center bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase tracking-wide rounded-md",
