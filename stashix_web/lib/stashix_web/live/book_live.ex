@@ -354,7 +354,7 @@ defmodule StashixWeb.BookLive do
       <.crumbs crumbs={
         [{gettext("Home"), "/"}, {@library.name, ~p"/library/#{@library}"}] ++
           if(@book.series, do: [{@book.series.name, ~p"/series/#{@book.series}"}], else: []) ++
-          [{if(numbered, do: number_label, else: @book.title), nil}]
+          [{if(numbered && @book.series, do: number_label, else: @book.title), nil}]
       }>
         <:actions :if={@current_user.role == :admin}>
           <.ink_menu id="book-admin-menu">
