@@ -48,6 +48,8 @@ defmodule Stashix.Library.Book do
     field :locked_fields, {:array, :string}, default: []
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string
+    # Reader override; nil follows the file's detected kind.
+    field :content_kind, Ecto.Enum, values: [:images, :text]
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -111,6 +113,7 @@ defmodule Stashix.Library.Book do
       :review,
       :black_and_white,
       :manga,
+      :content_kind,
       :locked_fields
     ])
     |> validate_required([:title, :library_id])

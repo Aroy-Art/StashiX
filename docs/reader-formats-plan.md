@@ -94,8 +94,11 @@ Scanned PDFs are not touched here: they stay in `ReaderLive` on
 server-rendered pages (D3). This phase also lays down `TextReaderLive` and the
 routing that Phase 3 reuses for EPUB.
 
-- [ ] Migration: `book_files.content_kind` (`:images | :text`, nullable =
-  unknown) + per-book override (D8).
+- [x] Migration: `book_files.content_kind` (`:images | :text`, nullable =
+  unknown) + per-book override (D8). — override is `books.content_kind`, a
+  column scans never write, so it needs no lock; `Library.reader_kind/2`
+  resolves override → detected → `:images`. "Reader" select in the edit
+  dialog's ComicInfo extras tab.
 - [ ] Scanner: PDF detection — text layer present (`pdffonts` / `pdftotext`
   on a few sampled pages) → `:text`, else `:images`; unsure → library kind,
   then `:images`. Override field in the book edit dialog, kept on rescan.

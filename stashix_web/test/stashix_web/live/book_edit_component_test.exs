@@ -68,6 +68,18 @@ defmodule StashixWeb.BookEditComponentTest do
     assert [%{name: "Batman", external_id: "10"}] = book.characters
   end
 
+  test "the reader override saves, and Automatic clears it", %{conn: conn, book: book} do
+    view = open(conn, book)
+    assert render(view) =~ ~s(name="book[content_kind]")
+
+    form(view) |> render_submit(%{"book" => %{"title" => "Old Title", "content_kind" => "text"}})
+    assert reload(book).content_kind == :text
+
+    view = open(conn, book)
+    form(view) |> render_submit(%{"book" => %{"title" => "Old Title", "content_kind" => ""}})
+    assert reload(book).content_kind == nil
+  end
+
   test "chips and rows are added and removed", %{conn: conn, book: book} do
     view = open(conn, book)
 

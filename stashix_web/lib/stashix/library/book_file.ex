@@ -18,6 +18,8 @@ defmodule Stashix.Library.BookFile do
     field :last_modified, :naive_datetime
     field :page_count, :integer, default: 0
     field :source_format, :string
+    # Detected at scan; see `Stashix.Media.ContentKind`.
+    field :content_kind, Ecto.Enum, values: [:images, :text]
     field :deleted_at, :naive_datetime
 
     belongs_to :book, Stashix.Library.Book
@@ -34,6 +36,7 @@ defmodule Stashix.Library.BookFile do
       :last_modified,
       :page_count,
       :source_format,
+      :content_kind,
       :deleted_at,
       :book_id
     ])

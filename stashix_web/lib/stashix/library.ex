@@ -1406,6 +1406,14 @@ defmodule Stashix.Library do
     |> Repo.one()
   end
 
+  @doc """
+  Which reader opens `book_file`: `:text` or `:images`. The book's override
+  wins, then the kind detected at scan; unknown reads as images.
+  """
+  def reader_kind(%Book{content_kind: kind}, _book_file) when kind != nil, do: kind
+  def reader_kind(_book, %BookFile{content_kind: kind}) when kind != nil, do: kind
+  def reader_kind(_book, _book_file), do: :images
+
   def get_preferred_book_file(book, format \\ nil) do
     format_priority = [:cbz, :cbr, :cb7, :epub, :pdf]
 

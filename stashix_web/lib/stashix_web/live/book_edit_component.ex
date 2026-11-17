@@ -53,6 +53,7 @@ defmodule StashixWeb.BookEditComponent do
     named = fn items -> Enum.map(items, &%{"name" => &1.name, "external_id" => Map.get(&1, :external_id)}) end
 
     Map.merge(scalars, %{
+      "content_kind" => str.(book.content_kind),
       "imprint" => (book.imprint && book.imprint.name) || "",
       "publisher_ids" => Enum.map(book.publishers, & &1.id),
       "genres" => named.(book.genres),
@@ -155,7 +156,10 @@ defmodule StashixWeb.BookEditComponent do
   # The form carries the whole draft; chips and rows come back indexed.
   defp from_params(draft, params) do
     scalars =
-      for key <- Locks.book_scalars() ++ ["imprint"], Map.has_key?(params, key), into: %{}, do: {key, params[key]}
+      for key <- Locks.book_scalars() ++ ["imprint", "content_kind"],
+          Map.has_key?(params, key),
+          into: %{},
+          do: {key, params[key]}
 
     lists =
       for key <- @chip_keys ++ Map.keys(@row_templates), into: %{} do
@@ -179,6 +183,8 @@ defmodule StashixWeb.BookEditComponent do
         {key, blank_to_nil(draft[key])}
       end
       |> Map.put("locked_fields", locks)
+      # Not file metadata, so never locked: scans don't write it.
+      |> Map.put("content_kind", blank_to_nil(draft["content_kind"]))
       |> then(&if frozen?.("publisher"), do: &1, else: Map.put(&1, "publisher_ids", draft["publisher_ids"] || []))
 
     Repo.transaction(fn ->
@@ -783,6 +789,19 @@ defmodule StashixWeb.BookEditComponent do
             <.edit_field label={gettext("Review")} key="review" locks={@locks} target={@myself} class="col-span-2">
               <.edit_textarea name="book[review]" value={@draft["review"]} locked={"review" in @locks} />
             </.edit_field>
+            <%!-- Not file metadata (scans never set it), so no lock toggle --%>
+            <div>
+              <.eyebrow tag="span" size="sm" tone="light" class="block mb-1.5">{gettext("Reader")}</.eyebrow>
+              <.edit_select
+                name="book[content_kind]"
+                value={@draft["content_kind"]}
+                prompt={gettext("Automatic")}
+                options={[{gettext("Comic reader (pages)"), "images"}, {gettext("Text reader"), "text"}]}
+              />
+              <p class="mt-1.5 text-xs text-muted">
+                {gettext("Automatic picks from the file: scanned pages open as a comic, text as a book.")}
+              </p>
+            </div>
           </.edit_panel>
 
           <p :if={@error} class="mt-4 text-sm font-medium text-danger">{@error}</p>
