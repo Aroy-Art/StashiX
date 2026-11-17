@@ -415,7 +415,7 @@ defmodule StashixWeb.AdminHealthLive do
           />
         </div>
         <div class="flex items-start gap-2 pt-1">
-          <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 text-danger shrink-0 mt-0.5" />
+          <.icon name="lucide-triangle-exclamation-point" class="w-3.5 h-3.5 text-danger shrink-0 mt-0.5" />
           <div class="min-w-0">
             <p class="text-danger text-xs font-mono">{row.error_message}</p>
             <p :if={error_detail(row.error_message)} class="text-muted text-xs mt-1">

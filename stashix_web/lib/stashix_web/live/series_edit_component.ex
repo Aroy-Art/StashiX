@@ -433,7 +433,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 </.checkbox>
               </div>
               <p class="flex items-start gap-1.5 text-xs text-warn/80 mt-1.5">
-                <.icon name="lucide-triangle-alert" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
+                <.icon name="lucide-triangle-exclamation-point" class="w-3.5 h-3.5 mt-px flex-shrink-0" />
                 <%= if mixed do %>
                   {gettext(
                     "Issues have different ratings. Unchecking the box above overwrites the age rating of all %{count} issues.",
