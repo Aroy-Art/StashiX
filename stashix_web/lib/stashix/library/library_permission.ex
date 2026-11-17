@@ -15,6 +15,8 @@ defmodule Stashix.Library.LibraryPermission do
     field :max_age_rating, Ecto.Enum, values: @age_ratings, default: :everyone
     # Unrated books are visible under an age limit unless this is set.
     field :hide_unrated, :boolean, default: false
+    # Downloading original files; reading in the browser does not need it.
+    field :can_download, :boolean, default: false
 
     belongs_to :user, Stashix.Accounts.User
     belongs_to :library, Stashix.Library.Library
@@ -24,7 +26,7 @@ defmodule Stashix.Library.LibraryPermission do
 
   def changeset(permission, attrs) do
     permission
-    |> cast(attrs, [:can_read, :max_age_rating, :hide_unrated, :user_id, :library_id])
+    |> cast(attrs, [:can_read, :max_age_rating, :hide_unrated, :can_download, :user_id, :library_id])
     |> validate_required([:user_id, :library_id])
     |> unique_constraint([:user_id, :library_id])
   end

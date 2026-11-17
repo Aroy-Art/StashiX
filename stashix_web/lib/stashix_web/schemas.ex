@@ -415,7 +415,8 @@ defmodule StashixWeb.Schemas do
         hide_unrated: %Schema{
           type: :boolean,
           description: "Hide unrated books when max_age_rating sets a limit (default false)"
-        }
+        },
+        can_download: %Schema{type: :boolean, description: "Allow downloading book files (default false)"}
       }
     })
   end

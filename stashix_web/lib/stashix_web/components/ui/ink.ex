@@ -49,9 +49,6 @@ defmodule StashixWeb.UI.Ink do
     """
   end
 
-  @doc "Classes of an `ink_button/1`, for a control that cannot be one (a menu trigger)."
-  def ink_button_class(variant \\ "primary", size \\ "lg"), do: button_class(variant, size)
-
   defp button_class("primary", size),
     do: [
       "ink-btn inline-flex items-center justify-center bg-violet-600 hover:bg-violet-500 text-white font-display font-extrabold uppercase tracking-wide rounded-md",
@@ -133,30 +130,39 @@ defmodule StashixWeb.UI.Ink do
 
   @doc """
   Underlined inline action. `accent` has the heavy violet underline used for
-  "Show all" / "Clear all"; `subtle` is a thin white one for secondary links.
+  "Show all" / "Clear all"; `subtle` is a thin white one for secondary links;
+  `ink` is a secondary link that should still catch the eye (Download): a
+  heavy aqua bar level with the bottom of the button next to it.
   """
-  attr :tone, :string, default: "accent", values: ~w(accent subtle)
+  attr :tone, :string, default: "accent", values: ~w(accent subtle ink)
   attr :class, :any, default: nil
   attr :rest, :global, include: @link_attrs ++ @button_attrs
   slot :inner_block, required: true
 
   def text_link(assigns) do
     ~H"""
-    <.clickable
-      class={[
-        "inline-flex items-center font-medium hover:text-fg underline underline-offset-4 transition-colors",
-        if(@tone == "accent",
-          do: "gap-1.5 text-sm md:text-base text-fg-soft decoration-2 decoration-accent hover:decoration-accent",
-          else: "gap-2 text-sm text-fg-soft decoration-fg/25 hover:decoration-fg"
-        ),
-        @class
-      ]}
-      {@rest}
-    >
+    <.clickable class={[text_link_class(@tone), @class]} {@rest}>
       {render_slot(@inner_block)}
     </.clickable>
     """
   end
+
+  @doc "Classes of a `text_link/1`, for a control that cannot be one (a menu trigger)."
+  # `ink` draws its underline as a bar under a link stretched to the row's
+  # height, nudged 2px below it so it lines up with the offset shadow of the
+  # button beside it (and takes that shadow's colour).
+  def text_link_class("ink"),
+    do:
+      "relative inline-flex items-center gap-2 self-stretch mx-3 py-1 text-sm font-medium text-fg-soft hover:text-fg transition-colors after:absolute after:-inset-x-2 after:-bottom-0.5 after:h-1 after:rounded-full after:bg-pop after:transition-[left,right] hover:after:-inset-x-3"
+
+  def text_link_class(tone),
+    do: [
+      "inline-flex items-center font-medium hover:text-fg underline underline-offset-4 transition-colors",
+      if(tone == "accent",
+        do: "gap-1.5 text-sm md:text-base text-fg-soft decoration-2 decoration-accent hover:decoration-accent",
+        else: "gap-2 text-sm text-fg-soft decoration-fg/25 hover:decoration-fg"
+      )
+    ]
 
   # ---------------------------------------------------------------------------
   # Type and labels

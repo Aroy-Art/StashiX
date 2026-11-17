@@ -49,6 +49,7 @@ defmodule StashixWeb.BookLive do
        next_book: next_book,
        volume_counts: volume_counts,
        selected_file: selected_file,
+       can_download: Stashix.Library.Access.can_download?(socket.assigns.access, book.library_id),
        scanning: false,
        show_admin_menu: false,
        sources_ready: socket.assigns.current_user.role == :admin && Stashix.Metadata.Sources.any_ready?(),
@@ -345,22 +346,25 @@ defmodule StashixWeb.BookLive do
     assigns = assign(assigns, file: file)
 
     ~H"""
-    <.ink_button
-      variant="ghost"
+    <.text_link
+      tone="ink"
       href={~p"/api/books/#{@book.id}/download?#{[formats: @file.format]}"}
       download
+      aria-label={gettext("Download")}
     >
-      <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
-    </.ink_button>
+      <.icon name="lucide-download" class="w-4 h-4" />
+      <span class="hidden sm:inline">{gettext("Download")}</span>
+    </.text_link>
     """
   end
 
   defp download_button(assigns) do
     ~H"""
-    <.ink_menu id="download-menu" align="start">
-      <:trigger class={ink_button_class("ghost")}>
-        <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
-        <.icon name="lucide-chevron-down" class="w-3.5 h-3.5" />
+    <.ink_menu id="download-menu" align="start" class="self-stretch">
+      <:trigger class={[text_link_class("ink"), "h-full"]} label={gettext("Download")}>
+        <.icon name="lucide-download" class="w-4 h-4" />
+        <span class="hidden sm:inline">{gettext("Download")}</span>
+        <.icon name="lucide-chevron-down" class="w-3.5 h-3.5 -ml-1" />
       </:trigger>
       <.menu_item
         :for={f <- @book.files}
@@ -531,8 +535,8 @@ defmodule StashixWeb.BookLive do
 
           <%!-- Read + download buttons --%>
           <div
-            :if={@book.files != []}
-            class="rise relative z-10 flex items-center justify-center sm:justify-start gap-3 flex-wrap mt-7"
+            :if={(@book.page_count > 0 && @selected_file) || (@can_download && @book.files != [])}
+            class="rise relative z-10 flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7"
             style="--i:5"
           >
             <.split_button
@@ -570,7 +574,7 @@ defmodule StashixWeb.BookLive do
                 </.ink_menu>
               </:aside>
             </.split_button>
-            <.download_button book={@book} />
+            <.download_button :if={@can_download} book={@book} />
           </div>
         </div>
       </header>

@@ -9,7 +9,6 @@ defmodule StashixWeb.SeriesController do
   alias StashixWeb.Schemas
 
   import StashixWeb.CoverHelper, only: [serve_cover: 3]
-  import StashixWeb.DownloadHelper, only: [requested_formats: 1, filter_formats: 2, send_files: 3]
 
   operation :index,
     summary: "List series in library",
@@ -74,25 +73,6 @@ defmodule StashixWeb.SeriesController do
           conn |> put_status(:not_found) |> json(%{error: "cover file missing"})
         end
     end
-  end
-
-  operation :download,
-    summary: "Download a series as a ZIP",
-    description: "Every visible issue's files in the chosen formats. A single file is sent as itself.",
-    tags: ["Series", "Media"],
-    parameters: [
-      id: [in: :path, type: :integer, required: true],
-      formats: [in: :query, type: :string, description: "Comma-separated formats (e.g. cbz,pdf); all when omitted"]
-    ],
-    responses: [
-      ok: {"ZIP archive", "application/zip", %OpenApiSpex.Schema{type: :string, format: :binary}},
-      not_found: {"No matching file", "application/json", Schemas.Error}
-    ]
-
-  def download(conn, %{"id" => id} = params) do
-    series = Library.get_series!(conn.assigns.access, id)
-    files = conn.assigns.access |> Library.series_files(series.id) |> filter_formats(requested_formats(params))
-    send_files(conn, files, series.name)
   end
 
   defp series_json(series) do

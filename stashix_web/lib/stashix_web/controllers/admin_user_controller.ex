@@ -176,7 +176,8 @@ defmodule StashixWeb.AdminUserController do
       library_id: params["library_id"],
       can_read: params["can_read"],
       max_age_rating: params["max_age_rating"],
-      hide_unrated: params["hide_unrated"]
+      hide_unrated: params["hide_unrated"],
+      can_download: params["can_download"]
     }
 
     # Omitted fields keep their current (or default) value.

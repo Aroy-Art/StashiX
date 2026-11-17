@@ -284,6 +284,15 @@ defmodule StashixWeb.AdminLive.Users do
                   class="ink-check"
                 /> {gettext("Can read")}
               </label>
+              <label class="flex items-center gap-2 cursor-pointer text-xs text-muted">
+                <input
+                  type="checkbox"
+                  name="can_download"
+                  value="true"
+                  checked={perm != nil && perm.can_download}
+                  class="ink-check"
+                /> {gettext("Can download")}
+              </label>
               <div class="w-40">
                 <.ink_select
                   id={"rating-#{@user.id}-#{lib.id}"}

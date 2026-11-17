@@ -85,6 +85,7 @@ defmodule StashixWeb.SeriesLive do
        book_publishers: Library.series_book_publishers(series.id),
        age_ratings: @age_ratings,
        file_formats: Library.series_file_formats(socket.assigns.access, series.id),
+       can_download: Stashix.Library.Access.can_download?(socket.assigns.access, series.library_id),
        download_formats: nil
      )}
   end
@@ -168,6 +169,9 @@ defmodule StashixWeb.SeriesLive do
   def handle_event("sort", %{"value" => sort}, socket) do
     {:noreply, assign(socket, sort: sort, books: sort_books(socket.assigns.series.books, sort))}
   end
+
+  def handle_event("open_download_dialog", _params, %{assigns: %{can_download: false}} = socket),
+    do: {:noreply, socket}
 
   def handle_event("open_download_dialog", _params, socket) do
     {:noreply, assign(socket, download_formats: MapSet.new(socket.assigns.file_formats, & &1.format))}
@@ -773,7 +777,7 @@ defmodule StashixWeb.SeriesLive do
 
           <%!-- Read + download buttons --%>
           <div
-            :if={@continue_book || @file_formats != []}
+            :if={@continue_book || (@can_download && @file_formats != [])}
             class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7"
             style="--i:4"
           >
@@ -793,24 +797,28 @@ defmodule StashixWeb.SeriesLive do
               </.text_link>
             <% end %>
             <%!-- One format downloads straight away; several open a picker --%>
-            <.ink_button
-              :if={length(@file_formats) == 1}
+            <.text_link
+              :if={@can_download && length(@file_formats) == 1}
               id="series-download"
-              variant="ghost"
+              tone="ink"
               href={~p"/api/series/#{@series.id}/download"}
               download
+              aria-label={gettext("Download")}
             >
-              <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download")}
-            </.ink_button>
-            <.ink_button
-              :if={length(@file_formats) > 1}
+              <.icon name="lucide-download" class="w-4 h-4" />
+              <span class="hidden sm:inline">{gettext("Download")}</span>
+            </.text_link>
+            <.text_link
+              :if={@can_download && length(@file_formats) > 1}
               id="series-download"
+              tone="ink"
               type="button"
-              variant="ghost"
               phx-click="open_download_dialog"
+              aria-label={gettext("Download…")}
             >
-              <.icon name="lucide-download" class="w-4 h-4" /> {gettext("Download…")}
-            </.ink_button>
+              <.icon name="lucide-download" class="w-4 h-4" />
+              <span class="hidden sm:inline">{gettext("Download…")}</span>
+            </.text_link>
           </div>
         </div>
       </header>

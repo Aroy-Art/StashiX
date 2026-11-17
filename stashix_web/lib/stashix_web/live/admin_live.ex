@@ -394,13 +394,15 @@ defmodule StashixWeb.AdminLive do
     can_read = Map.get(params, "can_read") == "true"
     max_age_rating = Map.get(params, "max_age_rating", "unknown")
     hide_unrated = Map.get(params, "hide_unrated") == "true"
+    can_download = Map.get(params, "can_download") == "true"
 
     attrs = %{
       user_id: user_id,
       library_id: library_id,
       can_read: can_read,
       max_age_rating: max_age_rating,
-      hide_unrated: hide_unrated
+      hide_unrated: hide_unrated,
+      can_download: can_download
     }
 
     case Library.set_library_permission(attrs) do

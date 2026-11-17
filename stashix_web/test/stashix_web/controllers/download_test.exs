@@ -22,7 +22,13 @@ defmodule StashixWeb.DownloadTest do
     {:ok, lib} = Library.create_library(%{name: "Comics", root_path: tmp})
 
     {:ok, _} =
-      Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_read: true, max_age_rating: :teen})
+      Library.set_library_permission(%{
+        user_id: user.id,
+        library_id: lib.id,
+        can_read: true,
+        max_age_rating: :teen,
+        can_download: true
+      })
 
     series = Repo.insert!(%Series{name: "Kickdown", library_id: lib.id})
 
@@ -49,6 +55,8 @@ defmodule StashixWeb.DownloadTest do
 
     %{
       conn: conn,
+      user: user,
+      lib: lib,
       series: series,
       # Same cbz filename in two folders, to check names are kept apart in the ZIP.
       first: book.(1, :teen, [{"a/Kickdown.cbz", "cbz one"}, {"a/Kickdown 1.pdf", "pdf one"}]),
@@ -123,5 +131,34 @@ defmodule StashixWeb.DownloadTest do
     # Unticking the last box sends no `formats` at all.
     render_hook(view, "set_download_formats", %{})
     assert has_element?(view, "#download-dialog button[disabled]", "Download")
+  end
+
+  describe "without download permission" do
+    setup %{user: user, lib: lib} do
+      {:ok, _} = Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_download: false})
+      :ok
+    end
+
+    test "downloads are refused", %{conn: conn, first: first, series: series} do
+      assert json_response(get(conn, ~p"/api/books/#{first.id}/download"), 403)
+      assert json_response(get(conn, ~p"/api/series/#{series.id}/download"), 403)
+    end
+
+    test "the pages offer no download", %{conn: conn, first: first, series: series} do
+      {:ok, view, _html} = live_canonical(conn, ~p"/book/#{first.id}")
+      refute has_element?(view, "#download-menu")
+      refute has_element?(view, ~s(a[href^="/api/books/#{first.id}/download"]))
+
+      {:ok, view, _html} = live_canonical(conn, ~p"/series/#{series.id}")
+      refute has_element?(view, "#series-download")
+    end
+  end
+
+  test "new permissions do not allow downloads", %{lib: lib} do
+    {:ok, other} = Accounts.create_user(%{email: "new@example.com", username: "newbie", password: "password1234"})
+    {:ok, _} = Library.set_library_permission(%{user_id: other.id, library_id: lib.id, can_read: true})
+
+    refute Stashix.Library.Access.can_download?(Stashix.Library.Access.for_user(other), lib.id)
+    assert Stashix.Library.Access.can_download?(Stashix.Library.Access.all(), lib.id)
   end
 end

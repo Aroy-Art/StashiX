@@ -12,6 +12,9 @@ defmodule Stashix.Library.Access do
   nil) stay visible under a limit unless the permission sets `hide_unrated`.
 
   Series are visible when they contain at least one visible, non-deleted book.
+
+  Downloading a book's files needs `can_download` on top of `can_read`; admins
+  can always download.
   """
 
   import Ecto.Query
@@ -22,10 +25,10 @@ defmodule Stashix.Library.Access do
   # Ascending; :unknown is not a rating but "unrated".
   @rating_order [:everyone, :teen, :teen_plus, :mature, :adult, :explicit]
 
-  defstruct all?: false, rules: []
+  defstruct all?: false, rules: [], downloads: []
 
   @type rule :: {library_id :: String.t(), ratings :: :all | [atom()], unrated? :: boolean()}
-  @type t :: %__MODULE__{all?: boolean(), rules: [rule()]}
+  @type t :: %__MODULE__{all?: boolean(), rules: [rule()], downloads: [String.t()]}
 
   @doc "Unrestricted access, for admins and internal callers."
   def all, do: %__MODULE__{all?: true}
@@ -33,12 +36,14 @@ defmodule Stashix.Library.Access do
   def for_user(%{role: :admin}), do: all()
 
   def for_user(%{id: user_id}) do
-    rules =
+    permissions =
       from(p in LibraryPermission, where: p.user_id == ^user_id and p.can_read == true)
       |> Repo.all()
-      |> Enum.map(&rule/1)
 
-    %__MODULE__{rules: rules}
+    %__MODULE__{
+      rules: Enum.map(permissions, &rule/1),
+      downloads: for(p <- permissions, p.can_download, do: p.library_id)
+    }
   end
 
   def for_user(_), do: %__MODULE__{}
@@ -56,6 +61,10 @@ defmodule Stashix.Library.Access do
 
   def can_read_library?(%__MODULE__{all?: true}, _library_id), do: true
   def can_read_library?(access, library_id), do: library_id in library_ids(access)
+
+  @doc "Whether the user may download files from the library's books."
+  def can_download?(%__MODULE__{all?: true}, _library_id), do: true
+  def can_download?(%__MODULE__{downloads: downloads}, library_id), do: library_id in downloads
 
   @doc "Books the user may see (deleted ones included; callers filter those)."
   def books(%__MODULE__{all?: true}), do: from(b in Book)

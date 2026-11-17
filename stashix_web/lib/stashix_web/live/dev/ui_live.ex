@@ -127,6 +127,9 @@ defmodule StashixWeb.Dev.UiLive do
             <.text_link tone="subtle" href="#">
               <.icon name="lucide-rotate-ccw" class="w-4 h-4" /> Subtle link
             </.text_link>
+            <.text_link tone="ink" href="#">
+              <.icon name="lucide-download" class="w-4 h-4" /> Ink link
+            </.text_link>
           </div>
         </div>
       </.specimen>
