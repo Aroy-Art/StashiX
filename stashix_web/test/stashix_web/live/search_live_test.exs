@@ -41,7 +41,7 @@ defmodule StashixWeb.SearchLiveTest do
     Repo.insert!(%BookCredit{book_id: alleys.id, creator_id: moore.id, role: :Artist})
     Repo.insert!(%BookCredit{book_id: alleys.id, creator_id: gibbons.id, role: :Writer})
 
-    %{conn: conn, moore: moore, gibbons: gibbons}
+    %{conn: conn, admin: admin, moore: moore, gibbons: gibbons}
   end
 
   test "type tabs show every type's count, whichever tab is open", %{conn: conn} do
@@ -298,5 +298,39 @@ defmodule StashixWeb.SearchLiveTest do
     assert render(view) =~ "Team: Minutemen"
     view |> element("#search-filters button[phx-click=clear_filters]") |> render_click()
     assert_patch(view, ~p"/search")
+  end
+
+  test "file format filter needs extended book info", %{conn: conn, admin: admin} do
+    alias Stashix.Library.Book
+
+    streets = Repo.get_by!(Book, title: "Dark Streets")
+    alleys = Repo.get_by!(Book, title: "Dark Alleys")
+    {:ok, _} = Library.create_book_file(%{book_id: streets.id, path: "/tmp/comics/streets.cbz", format: :cbz})
+    {:ok, _} = Library.create_book_file(%{book_id: alleys.id, path: "/tmp/comics/alleys.pdf", format: :pdf})
+
+    # off by default: no section, and the param is ignored
+    {:ok, view, html} = live(conn, ~p"/search?format=pdf&type=issue")
+    refute has_element?(view, "input[name='format[]']")
+    assert html =~ "Dark Streets"
+
+    {:ok, _} = Accounts.update_ui_settings(admin, %{"extended_book_info" => "on"})
+
+    {:ok, view, html} = live(conn, ~p"/search?format=pdf&type=issue")
+    assert has_element?(view, "input[name='format[]'][value=cbz]")
+    assert html =~ "Dark Alleys"
+    refute html =~ "Dark Streets"
+    assert render(view) =~ "PDF"
+
+    # formats are any-of; the series tab keeps series with a matching book
+    {:ok, _view, html} = live(conn, ~p"/search?#{%{format: ["cbz", "pdf"], type: "issue"}}")
+    assert html =~ "Dark Alleys"
+    assert html =~ "Dark Streets"
+
+    {:ok, _view, html} = live(conn, ~p"/search?format=pdf&type=series")
+    assert html =~ "Night Watch"
+
+    # a format nothing in the library has is dropped
+    {:ok, _view, html} = live(conn, ~p"/search?format=epub&type=issue")
+    assert html =~ "Dark Streets"
   end
 end

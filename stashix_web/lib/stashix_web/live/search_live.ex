@@ -5,6 +5,7 @@ defmodule StashixWeb.SearchLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Formatters, Library}
+  alias Stashix.Accounts.User
   alias Stashix.Library.{Book, BookCredit}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -21,7 +22,7 @@ defmodule StashixWeb.SearchLive do
   @credit_roles BookCredit |> Ecto.Enum.values(:role) |> Enum.map(&to_string/1)
 
   # URL params that count as filters (everything except q, type, sort, page).
-  @filter_keys ~w(from to age creator creator_match role library publisher genre tag character team location status series_status)
+  @filter_keys ~w(from to age format creator creator_match role library publisher genre tag character team location status series_status)
   # Name-based book facets, each with a typeahead picker; facets/0 has their labels.
   @facet_keys ~w(genre tag character team location)
   @max_facet_names 10
@@ -53,6 +54,12 @@ defmodule StashixWeb.SearchLive do
        facet_suggestions: [],
        year_counts: year_counts,
        years: Enum.map(year_counts, &elem(&1, 0)),
+       # File formats are extended book info; without it there's no format filter.
+       formats:
+         if(User.ui_setting(socket.assigns.current_user, "extended_book_info") == "on",
+           do: Enum.map(Library.book_formats_present(socket.assigns.access), &to_string/1),
+           else: []
+         ),
        types: types(),
        read_statuses: read_statuses(),
        series_statuses: series_statuses(),
@@ -68,7 +75,7 @@ defmodule StashixWeb.SearchLive do
 
   @impl true
   def handle_params(params, _uri, socket) do
-    params = normalize_params(params, socket.assigns.years)
+    params = normalize_params(params, socket.assigns)
     page = parse_int(params["page"]) || 1
 
     {:noreply,
@@ -170,7 +177,7 @@ defmodule StashixWeb.SearchLive do
   end
 
   def handle_event("remove_filter", %{"key" => key, "value" => value}, socket)
-      when key in ["age", "creator" | @facet_keys] do
+      when key in ["age", "format", "creator" | @facet_keys] do
     values = List.delete(socket.assigns.params[key] || [], value)
     {:noreply, patch(socket, Map.put(socket.assigns.params, key, values))}
   end
@@ -206,7 +213,7 @@ defmodule StashixWeb.SearchLive do
   # Any filter change resets pagination.
   defp patch(socket, params, opts \\ []) do
     push_patch(socket,
-      to: search_path(normalize_params(params, socket.assigns.years), 1),
+      to: search_path(normalize_params(params, socket.assigns), 1),
       replace: opts[:replace] || false
     )
   end
@@ -222,8 +229,9 @@ defmodule StashixWeb.SearchLive do
   end
 
   # Keep only known, well-formed params so the URL is the single source of truth.
-  # `years` are the release years present in the library; from/to must be one.
-  defp normalize_params(params, years) do
+  # from/to must be release years present in the library (`years`), and
+  # format one of the file formats on offer (`formats`).
+  defp normalize_params(params, %{years: years, formats: formats}) do
     q = params |> Map.get("q", "") |> to_string() |> String.trim()
 
     type = if params["type"] in @type_values, do: params["type"], else: "all"
@@ -238,6 +246,13 @@ defmodule StashixWeb.SearchLive do
       |> Map.get("age", [])
       |> List.wrap()
       |> Enum.filter(&(&1 in @age_rating_strings))
+      |> Enum.uniq()
+
+    format =
+      params
+      |> Map.get("format", [])
+      |> List.wrap()
+      |> Enum.filter(&(&1 in formats))
       |> Enum.uniq()
 
     {year_from, year_to} = normalize_year_range(params["from"], params["to"], years)
@@ -263,6 +278,7 @@ defmodule StashixWeb.SearchLive do
       "from" => year_from,
       "to" => year_to,
       "age" => age,
+      "format" => format,
       "library" => blank_to_nil(params["library"]),
       "publisher" => blank_to_nil(params["publisher"]),
       "creator" => creators,
@@ -388,6 +404,7 @@ defmodule StashixWeb.SearchLive do
       year_from: parse_int(params["from"]),
       year_to: parse_int(params["to"]),
       age_ratings: Enum.map(params["age"], &String.to_existing_atom/1),
+      formats: Enum.map(params["format"], &String.to_existing_atom/1),
       library_id: params["library"],
       publisher_id: params["publisher"],
       creator_ids: params["creator"],
@@ -441,6 +458,7 @@ defmodule StashixWeb.SearchLive do
       end
 
     ages = for a <- params["age"], do: {short_age_label(a), "age", a}
+    formats = for f <- params["format"], do: {String.upcase(f), "format", f}
 
     library =
       if id = params["library"] do
@@ -493,7 +511,7 @@ defmodule StashixWeb.SearchLive do
           name <- params[key],
           do: {gettext("%{facet}: %{name}", facet: title, name: name), key, name}
 
-    year ++ ages ++ creator ++ role ++ library ++ publisher ++ facets ++ status ++ series_status
+    year ++ ages ++ formats ++ creator ++ role ++ library ++ publisher ++ facets ++ status ++ series_status
   end
 
   # A facet param is a name or a list of names (chips on book pages link with one).
@@ -553,7 +571,7 @@ defmodule StashixWeb.SearchLive do
 
   defp filter_count(params) do
     Enum.count(@filter_keys, fn
-      k when k in ["age", "creator" | @facet_keys] -> params[k] != []
+      k when k in ["age", "format", "creator" | @facet_keys] -> params[k] != []
       "creator_match" -> false
       k -> params[k] != nil
     end)
@@ -774,6 +792,21 @@ defmodule StashixWeb.SearchLive do
                   value={@params["library"]}
                   options={Enum.map(@sidebar_libraries, &{&1.name, &1.id})}
                 />
+              </.filter_section>
+
+              <.filter_section :if={length(@formats) > 1} title={gettext("Format")}>
+                <div class="flex flex-wrap gap-1.5">
+                  <.pill :for={format <- @formats} active={format in @params["format"]}>
+                    <input
+                      type="checkbox"
+                      name="format[]"
+                      value={format}
+                      checked={format in @params["format"]}
+                      class="sr-only"
+                    />
+                    {String.upcase(format)}
+                  </.pill>
+                </div>
               </.filter_section>
 
               <.filter_section :if={@publishers != []} title={gettext("Publisher")}>

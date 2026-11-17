@@ -521,6 +521,7 @@ defmodule Stashix.Library do
   #   :publisher_id - canonical publisher UUID (aliases are included)
   #   :genre / :tag / :character / :team / :location - lists of names; a book
   #                   must have all of them
+  #   :formats      - list of file format atoms; a book needs a file in any of them
   #   :read_status  - "unread" | "in_progress" | "read" (requires :user_id)
   #   :user_id      - current user, for read status
   #   :sort         - "relevance" | "title_asc" | "title_desc" | "year_asc" |
@@ -592,6 +593,21 @@ defmodule Stashix.Library do
       select: {fragment("COALESCE(?, EXTRACT(YEAR FROM ?)::int)", b.year, b.cover_date), count(b.id)}
     )
     |> Repo.all()
+  end
+
+  @doc "File formats of the (non-deleted) books in `access`, in schema order."
+  def book_formats_present(access) do
+    present =
+      from(bf in BookFile,
+        join: b in ^Access.books(access),
+        on: b.id == bf.book_id and is_nil(b.deleted_at),
+        where: is_nil(bf.deleted_at),
+        distinct: true,
+        select: bf.format
+      )
+      |> Repo.all()
+
+    Enum.filter(Ecto.Enum.values(BookFile, :format), &(&1 in present))
   end
 
   @doc """
@@ -863,7 +879,7 @@ defmodule Stashix.Library do
   end
 
   # Shared by books and series-with-matching-books: age rating, library,
-  # publisher, genre/tag/character/team/location, creator/role. Expects the book binding to be named :book.
+  # publisher, genre/tag/character/team/location, creator/role, file format. Expects the book binding to be named :book.
   defp filter_book_attrs(query, filters) do
     query = filter_book_creators(query, filters[:creator_ids] || [], filters[:creator_match], filters[:role])
 
@@ -894,6 +910,24 @@ defmodule Stashix.Library do
         )
       else
         query
+      end
+
+    query =
+      case filters[:formats] do
+        [_ | _] = formats ->
+          where(
+            query,
+            [book: b],
+            exists(
+              from(bf in BookFile,
+                where: bf.book_id == parent_as(:book).id and is_nil(bf.deleted_at) and bf.format in ^formats,
+                select: 1
+              )
+            )
+          )
+
+        _ ->
+          query
       end
 
     Enum.reduce(@book_facets, query, fn {key, schema}, query ->
@@ -1027,7 +1061,7 @@ defmodule Stashix.Library do
 
     # Book-level filters: keep series that contain at least one matching book.
     book_filters =
-      Map.take(filters, [:age_ratings, :publisher_id, :creator_ids, :creator_match, :role | book_facets()])
+      Map.take(filters, [:age_ratings, :publisher_id, :creator_ids, :creator_match, :role, :formats | book_facets()])
 
     if Enum.any?(book_filters, fn {k, v} -> k != :creator_match and v not in [nil, []] end) do
       book_query =
