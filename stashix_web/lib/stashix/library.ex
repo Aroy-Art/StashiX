@@ -337,27 +337,43 @@ defmodule Stashix.Library do
     get_series!(access, id) |> Repo.preload([:publishers, books: {books_query, [:cover]}])
   end
 
-  @doc "Saves reading progress; `{:error, :not_found}` unless `access` can see the book."
-  def update_progress(access, user_id, book_id, page) do
-    if Repo.exists?(from(b in Access.books(access), where: b.id == ^book_id)),
-      do: put_progress(user_id, book_id, page),
-      else: {:error, :not_found}
+  @doc """
+  Saves reading progress; `{:error, :not_found}` unless `access` can see the book.
+
+  `page` is the page index (EPUB: location). Options:
+
+    * `:progression` - how far through the book, 0..1; worked out from `page`
+      and the book's page count when not given
+    * `:locator` - where exactly, see `Stashix.Library.ReadingProgress`
+  """
+  def update_progress(access, user_id, book_id, page, opts \\ []) do
+    case Repo.one(from(b in Access.books(access), where: b.id == ^book_id, select: b.page_count)) do
+      nil -> {:error, :not_found}
+      count -> put_progress(user_id, book_id, page, count, opts)
+    end
   end
 
-  defp put_progress(user_id, book_id, page) do
+  defp put_progress(user_id, book_id, page, count, opts) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    progression = clamp_progression(opts[:progression]) || ReadingProgress.progression(page, count)
+    locator = opts[:locator] && Map.put(opts[:locator], "progression", progression)
 
     Repo.insert(
       %ReadingProgress{
         user_id: user_id,
         book_id: book_id,
         current_page: page,
+        progression: progression,
+        locator: locator,
         updated_at: now
       },
-      on_conflict: [set: [current_page: page, updated_at: now]],
+      on_conflict: [set: [current_page: page, progression: progression, locator: locator, updated_at: now]],
       conflict_target: [:user_id, :book_id]
     )
   end
+
+  defp clamp_progression(p) when is_number(p), do: p |> max(0.0) |> min(1.0) |> Kernel.*(1.0)
+  defp clamp_progression(_), do: nil
 
   def get_progress(user_id, book_id) do
     Repo.get_by(ReadingProgress, user_id: user_id, book_id: book_id)
@@ -365,10 +381,11 @@ defmodule Stashix.Library do
 
   def progress_map(_user_id, []), do: %{}
 
+  @doc "Share read (0..1) of each started book in `book_ids`, by id."
   def progress_map(user_id, book_ids) do
     from(rp in ReadingProgress,
-      where: rp.user_id == ^user_id and rp.book_id in ^book_ids and rp.current_page > 0,
-      select: {rp.book_id, rp.current_page}
+      where: rp.user_id == ^user_id and rp.book_id in ^book_ids and rp.progression > 0.0,
+      select: {rp.book_id, rp.progression}
     )
     |> Repo.all()
     |> Map.new()
@@ -377,13 +394,12 @@ defmodule Stashix.Library do
   def in_progress_books(access, user_id, limit \\ 20) do
     results =
       from(rp in ReadingProgress,
-        where: rp.user_id == ^user_id and rp.current_page > 0,
+        where: rp.user_id == ^user_id and rp.progression > 0.0 and rp.progression < 1.0,
         join: b in ^Access.books(access),
         on: b.id == rp.book_id and is_nil(b.deleted_at),
-        where: b.page_count == 0 or rp.current_page < b.page_count - 1,
         order_by: [desc: rp.updated_at],
         limit: ^limit,
-        select: {b, rp.current_page}
+        select: {b, rp}
       )
       |> Repo.all()
 
@@ -399,22 +415,17 @@ defmodule Stashix.Library do
     loaded_map =
       Repo.preload(books, [:cover, [series: series_query]]) |> Map.new(&{&1.id, &1})
 
-    Enum.map(results, fn {book, current_page} ->
-      %{book: loaded_map[book.id], current_page: current_page}
+    Enum.map(results, fn {book, rp} ->
+      %{book: loaded_map[book.id], current_page: rp.current_page, progression: rp.progression}
     end)
   end
 
   def next_issue_books(access, user_id, limit \\ 20) do
     completed_by_series =
       from(rp in ReadingProgress,
-        where: rp.user_id == ^user_id and rp.current_page > 0,
+        where: rp.user_id == ^user_id and rp.progression >= 1.0,
         join: b in ^Access.books(access),
-        on:
-          b.id == rp.book_id and
-            is_nil(b.deleted_at) and
-            not is_nil(b.series_id) and
-            b.page_count > 0,
-        where: rp.current_page >= b.page_count - 1,
+        on: b.id == rp.book_id and is_nil(b.deleted_at) and not is_nil(b.series_id),
         group_by: b.series_id,
         order_by: [desc: max(rp.updated_at)],
         select: {b.series_id, max(b.issue_number)},
@@ -434,7 +445,7 @@ defmodule Stashix.Library do
         where: b.series_id in ^series_ids and is_nil(b.deleted_at),
         left_join: rp in ReadingProgress,
         on: rp.book_id == b.id and rp.user_id == ^user_id,
-        where: is_nil(rp.id) or rp.current_page == 0,
+        where: is_nil(rp.id) or rp.progression == 0.0,
         order_by: [asc: b.series_id, asc_nulls_last: b.issue_number],
         preload: [:cover, :series]
       )
@@ -967,21 +978,13 @@ defmodule Stashix.Library do
 
     case status do
       "unread" ->
-        where(query, [progress: rp], is_nil(rp.id) or rp.current_page == 0)
+        where(query, [progress: rp], is_nil(rp.id) or rp.progression == 0.0)
 
       "in_progress" ->
-        where(
-          query,
-          [book: b, progress: rp],
-          rp.current_page > 0 and rp.current_page < b.page_count - 1
-        )
+        where(query, [progress: rp], rp.progression > 0.0 and rp.progression < 1.0)
 
       "read" ->
-        where(
-          query,
-          [book: b, progress: rp],
-          not is_nil(rp.id) and b.page_count > 0 and rp.current_page >= b.page_count - 1
-        )
+        where(query, [progress: rp], rp.progression >= 1.0)
     end
   end
 
@@ -3042,19 +3045,12 @@ defmodule Stashix.Library do
           join: b in ^Access.books(access),
           on: rp.book_id == b.id,
           where: rp.user_id == ^user_id and is_nil(b.deleted_at),
-          select: {rp.current_page, b.page_count}
+          select: rp.progression
         )
         |> Repo.all()
 
-      in_progress =
-        Enum.count(progress_rows, fn {cur, pages} ->
-          pages && pages > 1 && cur > 0 && cur < pages - 1
-        end)
-
-      completed =
-        Enum.count(progress_rows, fn {cur, pages} ->
-          pages && pages > 0 && cur >= pages - 1
-        end)
+      in_progress = Enum.count(progress_rows, &(&1 > 0 and &1 < 1))
+      completed = Enum.count(progress_rows, &(&1 >= 1))
 
       unread = total - in_progress - completed
 

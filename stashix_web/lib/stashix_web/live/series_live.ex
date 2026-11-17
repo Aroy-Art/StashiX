@@ -551,13 +551,12 @@ defmodule StashixWeb.SeriesLive do
     in_progress =
       Enum.find(issue_sorted, fn b ->
         prog = progress_map[b.id]
-        prog && prog > 0 && b.page_count && prog < b.page_count - 1
+        prog && prog < 1
       end)
 
     in_progress ||
       Enum.find(issue_sorted, fn b ->
-        prog = progress_map[b.id]
-        is_nil(prog) || prog == 0
+        is_nil(progress_map[b.id])
       end)
   end
 
@@ -599,13 +598,7 @@ defmodule StashixWeb.SeriesLive do
     width <> bg
   end
 
-  defp book_progress(book, progress_map) do
-    prog = progress_map[book.id]
-
-    if prog && book.page_count && book.page_count > 1,
-      do: min(prog / (book.page_count - 1), 1.0),
-      else: nil
-  end
+  defp book_progress(book, progress_map), do: progress_map[book.id]
 
   defp run_segment_title(book, progress_map, volume_counts) do
     state =

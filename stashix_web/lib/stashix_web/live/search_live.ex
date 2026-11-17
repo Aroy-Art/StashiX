@@ -600,10 +600,7 @@ defmodule StashixWeb.SearchLive do
 
   defp book_title(book), do: book.title
 
-  defp book_progress(progress_map, book) do
-    prog = progress_map[book.id]
-    if prog && book.page_count && book.page_count > 1, do: prog / (book.page_count - 1)
-  end
+  defp book_progress(progress_map, book), do: progress_map[book.id]
 
   defp book_subtitle(%{type: "issue", series: %{name: name}}), do: name
   defp book_subtitle(book), do: book.year && to_string(book.year)

@@ -24,7 +24,7 @@ defmodule StashixWeb.BookLive do
 
     progress = Library.get_progress(socket.assigns.current_user.id, id)
     current_page = (progress && progress.current_page) || 0
-    fully_read = book.page_count > 0 && current_page >= book.page_count - 1
+    progression = (progress && progress.progression) || 0.0
     {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     volume_counts = Library.series_volume_counts(socket.assigns.access, book)
     selected_file = Library.get_preferred_book_file(book)
@@ -44,7 +44,8 @@ defmodule StashixWeb.BookLive do
        book: book,
        library: library,
        progress: current_page,
-       fully_read: fully_read,
+       progression: progression,
+       fully_read: progression >= 1,
        prev_book: prev_book,
        next_book: next_book,
        volume_counts: volume_counts,
@@ -84,13 +85,14 @@ defmodule StashixWeb.BookLive do
 
   def handle_event("mark_unread", _params, socket) do
     Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, 0)
-    {:noreply, assign(socket, progress: 0, fully_read: false)}
+    {:noreply, assign(socket, progress: 0, progression: 0.0, fully_read: false)}
   end
 
   def handle_event("mark_read", _params, socket) do
     book = socket.assigns.book
-    Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, book.id, book.page_count)
-    {:noreply, assign(socket, progress: book.page_count, fully_read: true)}
+    last = max(book.page_count - 1, 0)
+    Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, book.id, last, progression: 1.0)
+    {:noreply, assign(socket, progress: last, progression: 1.0, fully_read: true)}
   end
 
   def handle_event("toggle_admin_menu", _params, socket) do
@@ -143,7 +145,7 @@ defmodule StashixWeb.BookLive do
     book = Library.get_book_with_series(socket.assigns.access, socket.assigns.book.id)
     progress = Library.get_progress(socket.assigns.current_user.id, book.id)
     current_page = (progress && progress.current_page) || 0
-    fully_read = book.page_count > 0 && current_page >= book.page_count - 1
+    progression = (progress && progress.progression) || 0.0
     {prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     volume_counts = Library.series_volume_counts(socket.assigns.access, book)
 
@@ -155,7 +157,8 @@ defmodule StashixWeb.BookLive do
        scanning: false,
        book: book,
        progress: current_page,
-       fully_read: fully_read,
+       progression: progression,
+       fully_read: progression >= 1,
        page_title: book.title,
        prev_book: prev_book,
        next_book: next_book,
@@ -402,7 +405,7 @@ defmodule StashixWeb.BookLive do
           do: to_string(@book.volume),
           else: Formatters.format_issue_number(@book.issue_number)
         ) %>
-    <% in_progress = !@fully_read && @progress > 0 && @book.page_count > 0 %>
+    <% in_progress = !@fully_read && @progression > 0 %>
     <.page cover_src={@book.cover && ~p"/api/books/#{@book.id}/cover?s=s"}>
       <.crumbs crumbs={
         [{gettext("Home"), "/"}, {@library.name, ~p"/library/#{@library}"}] ++
@@ -495,7 +498,7 @@ defmodule StashixWeb.BookLive do
             <span :if={@fully_read} class="inline-flex items-center gap-1 text-success">
               <.icon name="lucide-check" class="w-3.5 h-3.5" /> {gettext("Read")}
             </span>
-            <span :if={in_progress} class="text-accent">
+            <span :if={in_progress && @book.page_count > 0} class="text-accent">
               {gettext("Page %{page} of %{count}", page: @progress + 1, count: @book.page_count)}
             </span>
           </div>
@@ -503,7 +506,7 @@ defmodule StashixWeb.BookLive do
           <%!-- Progress bar --%>
           <.progress_bar
             :if={in_progress}
-            value={(@progress + 1) / @book.page_count}
+            value={@progression}
             label={gettext("Reading progress")}
             class="rise h-1.5 mt-3 mx-auto sm:mx-0 max-w-xs"
             style="--i:3"
@@ -550,7 +553,7 @@ defmodule StashixWeb.BookLive do
               <.icon name="lucide-play" class="w-4 h-4" />
               {cond do
                 @fully_read -> gettext("Read Again")
-                @progress > 0 -> gettext("Continue")
+                @progression > 0 -> gettext("Continue")
                 true -> gettext("Read")
               end}
               <:aside>
@@ -559,7 +562,7 @@ defmodule StashixWeb.BookLive do
                     <.icon name="lucide-chevron-down" class="w-4 h-4" />
                   </:trigger>
                   <.menu_item
-                    :if={@progress > 0 && !@fully_read}
+                    :if={@progression > 0 && !@fully_read}
                     icon="lucide-rotate-ccw"
                     navigate={~p"/read/#{@book}?#{[page: 0, format: @selected_file.format]}"}
                   >
@@ -568,7 +571,7 @@ defmodule StashixWeb.BookLive do
                   <.menu_item :if={!@fully_read} icon="lucide-circle-check-big" phx-click="mark_read">
                     {gettext("Mark as read")}
                   </.menu_item>
-                  <.menu_item :if={@fully_read || @progress > 0} icon="lucide-circle-x" phx-click="mark_unread">
+                  <.menu_item :if={@fully_read || @progression > 0} icon="lucide-circle-x" phx-click="mark_unread">
                     {gettext("Mark as unread")}
                   </.menu_item>
                 </.ink_menu>

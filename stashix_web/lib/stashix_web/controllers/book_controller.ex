@@ -168,32 +168,50 @@ defmodule StashixWeb.BookController do
     end
   end
 
+  operation :show_progress,
+    summary: "Get reading progress",
+    description: "Where the user is in the book. A book never opened reads as page 0, progression 0.",
+    tags: ["Books"],
+    security: [%{"Bearer" => []}],
+    parameters: [id: [in: :path, type: :integer, required: true]],
+    responses: [
+      ok: {"Progress", "application/json", Schemas.Progress},
+      not_found: {"Not found", "application/json", Schemas.Error},
+      unauthorized: {"Unauthorized", "application/json", Schemas.Error}
+    ]
+
+  def show_progress(conn, %{"id" => id}) do
+    user = Guardian.Plug.current_resource(conn)
+    book = Library.get_book!(conn.assigns.access, id)
+    progress = Library.get_progress(user.id, book.id)
+    json(conn, progress_json(progress))
+  end
+
   operation :progress,
     summary: "Update reading progress",
+    description: """
+    `page` is the page index (EPUB: location). `progression` (0..1) defaults
+    to `page` over the page count; `locator` says where exactly, e.g.
+    `{"type": "epub", "cfi": "epubcfi(...)", "href": "OEBPS/ch3.xhtml"}`.
+    """,
     tags: ["Books"],
     security: [%{"Bearer" => []}],
     parameters: [id: [in: :path, type: :integer, required: true]],
     request_body: {"Progress", "application/json", Schemas.ProgressRequest, required: true},
     responses: [
-      ok:
-        {"Progress saved", "application/json",
-         %OpenApiSpex.Schema{
-           type: :object,
-           properties: %{
-             status: %OpenApiSpex.Schema{type: :string},
-             page: %OpenApiSpex.Schema{type: :integer}
-           }
-         }},
+      ok: {"Progress saved", "application/json", Schemas.Progress},
+      not_found: {"Not found", "application/json", Schemas.Error},
       unauthorized: {"Unauthorized", "application/json", Schemas.Error}
     ]
 
   def progress(conn, %{"id" => id} = params) do
     user = Guardian.Plug.current_resource(conn)
     page = parse_int(params["page"], 0)
+    opts = Stashix.Library.ReadingProgress.opts_from_params(params)
 
-    case Library.update_progress(conn.assigns.access, user.id, id, page) do
-      {:ok, _} ->
-        json(conn, %{status: "ok", page: page})
+    case Library.update_progress(conn.assigns.access, user.id, id, page, opts) do
+      {:ok, progress} ->
+        json(conn, Map.put(progress_json(progress), :status, "ok"))
 
       {:error, :not_found} ->
         conn |> put_status(:not_found) |> json(%{error: "not found"})
@@ -201,6 +219,17 @@ defmodule StashixWeb.BookController do
       {:error, reason} ->
         conn |> put_status(:unprocessable_entity) |> json(%{error: inspect(reason)})
     end
+  end
+
+  defp progress_json(nil), do: %{page: 0, progression: 0.0, locator: nil, updated_at: nil}
+
+  defp progress_json(progress) do
+    %{
+      page: progress.current_page,
+      progression: progress.progression,
+      locator: progress.locator,
+      updated_at: progress.updated_at
+    }
   end
 
   defp book_json(book) do

@@ -243,7 +243,7 @@ defmodule StashixWeb.HomeLive do
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
   # What the hero shows: the book being read, else a random pick, else nothing.
-  defp hero(%{continue_reading: [%{book: book, current_page: page} | _]}) do
+  defp hero(%{continue_reading: [%{book: book, current_page: page, progression: read} | _]}) do
     series = loaded(book.series)
     count = series && Map.get(series, :issue_count)
 
@@ -264,7 +264,7 @@ defmodule StashixWeb.HomeLive do
           ],
           &(&1 in [nil, false])
         ),
-      progress: if(book.page_count && book.page_count > 1, do: min(page / (book.page_count - 1), 1.0)),
+      progress: read,
       cover: ~p"/api/books/#{book.id}/cover",
       to: ~p"/book/#{slug_param(book)}",
       primary: {gettext("Continue"), "lucide-play", ~p"/read/#{slug_param(book)}"},
@@ -489,7 +489,7 @@ defmodule StashixWeb.HomeLive do
             >
               <.section :if={@also_reading != []} title={gettext("Also reading")} count={length(@also_reading)}>
                 <div class={["grid gap-2.5", length(@also_reading) > 1 && @queue_cols]}>
-                  <.book_row :for={%{book: book, current_page: page} <- @also_reading} book={book} read={page} />
+                  <.book_row :for={%{book: book, progression: read} <- @also_reading} book={book} read={read} />
                 </div>
               </.section>
 

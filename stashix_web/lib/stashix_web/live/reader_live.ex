@@ -211,7 +211,9 @@ defmodule StashixWeb.ReaderLive do
     page = socket.assigns.current_page
 
     if page > 0 do
-      Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, page)
+      Library.update_progress(socket.assigns.access, socket.assigns.current_user.id, socket.assigns.book.id, page,
+        locator: %{"type" => "image", "page" => page}
+      )
     end
 
     assign(socket, :save_timer, nil)
@@ -258,14 +260,20 @@ defmodule StashixWeb.ReaderLive do
   defp show_end(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
     %{access: access, current_user: user, book: book, page_count: count} = socket.assigns
-    Library.update_progress(access, user.id, book.id, count - 1)
+    last = max(count - 1, 0)
+
+    Library.update_progress(access, user.id, book.id, last,
+      progression: 1.0,
+      locator: %{"type" => "image", "page" => last}
+    )
+
     assign(socket, at_end: true, save_timer: nil)
   end
 
   # A finished next issue would resume on its last page; start it over instead.
   defp next_href(user_id, next_book) do
     progress = Library.get_progress(user_id, next_book.id)
-    finished = progress && next_book.page_count > 0 && progress.current_page >= next_book.page_count - 1
+    finished = progress && progress.progression >= 1
     if finished, do: ~p"/read/#{slug_param(next_book)}?page=0", else: ~p"/read/#{slug_param(next_book)}"
   end
 

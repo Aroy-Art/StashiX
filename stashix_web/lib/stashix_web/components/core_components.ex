@@ -450,11 +450,11 @@ defmodule StashixWeb.CoreComponents do
   @doc """
   `media_card/1` for a book. `as={:issue}` puts the issue number in the title
   and on a sticker and names the series underneath; the default shows the
-  year and the page count. `read` is the number of pages read so far.
+  year and the page count. `read` is the share of the book read so far, 0..1.
   """
   attr :book, :map, required: true
   attr :as, :atom, default: :book, values: [:book, :issue]
-  attr :read, :integer, default: nil
+  attr :read, :float, default: nil
   attr :size, :string, default: "m"
   attr :scope, :string, default: nil
   attr :subtitle, :string, default: nil, doc: "replaces the series name or year"
@@ -472,10 +472,7 @@ defmodule StashixWeb.CoreComponents do
         title: if(number, do: "#{number} – #{book.title}", else: book.title),
         subtitle: assigns.subtitle || (series && series.name) || year,
         badge: number,
-        progress:
-          if(assigns.read && book.page_count && book.page_count > 1,
-            do: assigns.read / (book.page_count - 1)
-          ),
+        progress: assigns.read,
         blurhash: Ecto.assoc_loaded?(book.cover) && book.cover && book.cover.blurhash
       )
 
@@ -583,9 +580,9 @@ defmodule StashixWeb.CoreComponents do
     if f <= 0.04045, do: f / 12.92, else: :math.pow((f + 0.055) / 1.055, 2.4)
   end
 
-  @doc "`media_row/1` for a book; `read` is the number of pages read so far."
+  @doc "`media_row/1` for a book; `read` is the share of the book read so far, 0..1."
   attr :book, :map, required: true
-  attr :read, :integer, default: nil
+  attr :read, :float, default: nil
   attr :class, :any, default: nil
 
   def book_row(assigns) do
@@ -600,10 +597,7 @@ defmodule StashixWeb.CoreComponents do
           [book.year, book.page_count && book.page_count > 0 && ngettext("1 page", "%{count} pages", book.page_count)]
           |> Enum.filter(& &1)
           |> Enum.join(" · "),
-        progress:
-          if(assigns.read && book.page_count && book.page_count > 1,
-            do: min(assigns.read / (book.page_count - 1), 1.0)
-          ),
+        progress: assigns.read,
         blurhash: Ecto.assoc_loaded?(book.cover) && book.cover && book.cover.blurhash
       )
 

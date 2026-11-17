@@ -55,11 +55,9 @@ defmodule StashixWeb.TextReaderLive do
     user = socket.assigns.current_user
     progress = Library.get_progress(user.id, book.id)
 
-    current_page =
-      case params["page"] do
-        "0" -> 0
-        _ -> (progress && progress.current_page) || 0
-      end
+    # ?page=0 starts over; else resume where the server has this reader.
+    progress = if params["page"] == "0", do: nil, else: progress
+    current_page = (progress && progress.current_page) || 0
 
     {_prev, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     settings = user.reader_settings || %{}
@@ -79,6 +77,10 @@ defmodule StashixWeb.TextReaderLive do
         ),
       page_count: book.page_count,
       current_page: current_page,
+      # Fixed at mount: the hook only reads it to open the book there.
+      start_cfi: start_cfi(progress, book_file.format),
+      locator: nil,
+      progression: nil,
       loaded: false,
       failed: false,
       at_end: false,
@@ -149,8 +151,11 @@ defmodule StashixWeb.TextReaderLive do
 
     socket = assign(socket, :current_target, string_or_nil(params["toc"]) || socket.assigns.current_target)
     page = clamp(page, socket.assigns.page_count)
+    locator = locator(socket.assigns.format, page, params)
+    moved? = locator != socket.assigns.locator
+    socket = assign(socket, locator: locator, progression: fraction(params))
 
-    if page == socket.assigns.current_page do
+    if page == socket.assigns.current_page and not moved? do
       {:noreply, socket}
     else
       # In the paged layouts a page turn back from the end card closes it.
@@ -368,7 +373,14 @@ defmodule StashixWeb.TextReaderLive do
 
   defp save_progress(socket) do
     %{current_page: page, access: access, current_user: user, book: book} = socket.assigns
-    if page > 0, do: Library.update_progress(access, user.id, book.id, page)
+
+    if page > 0 do
+      Library.update_progress(access, user.id, book.id, page,
+        locator: socket.assigns.locator,
+        progression: socket.assigns.progression
+      )
+    end
+
     assign(socket, :save_timer, nil)
   end
 
@@ -383,9 +395,29 @@ defmodule StashixWeb.TextReaderLive do
   defp show_end(socket) do
     if socket.assigns.save_timer, do: Process.cancel_timer(socket.assigns.save_timer)
     %{access: access, current_user: user, book: book, page_count: count} = socket.assigns
-    Library.update_progress(access, user.id, book.id, count - 1)
+    last = max(count - 1, 0)
+    # EPUB: the spot on the last page; PDF: the last page.
+    locator = socket.assigns.locator || locator(socket.assigns.format, last, %{})
+    Library.update_progress(access, user.id, book.id, last, progression: 1.0, locator: locator)
     assign(socket, at_end: true, save_timer: nil)
   end
+
+  defp start_cfi(%{locator: %{"type" => "epub", "cfi" => cfi}}, :epub) when is_binary(cfi), do: cfi
+  defp start_cfi(_progress, _format), do: nil
+
+  # Where the reader is, as saved with the progress (see `Stashix.Library.ReadingProgress`).
+  defp locator(:epub, _page, params) do
+    case params["cfi"] do
+      "epubcfi(" <> _ = cfi -> %{"type" => "epub", "cfi" => cfi, "href" => string_or_nil(params["href"])}
+      _ -> nil
+    end
+  end
+
+  defp locator(_pdf, page, _params), do: %{"type" => "pdf", "page" => page}
+
+  # EPUB reports how far through the book it is; PDF progress goes by page.
+  defp fraction(%{"fraction" => f}) when is_number(f), do: f |> max(0.0) |> min(1.0) |> Kernel.*(1.0)
+  defp fraction(_params), do: nil
 
   defp sync_page_count(book, count) when book.page_count != count do
     case Library.update_book(book, %{page_count: count}) do
@@ -398,7 +430,7 @@ defmodule StashixWeb.TextReaderLive do
 
   defp next_href(user_id, next_book) do
     progress = Library.get_progress(user_id, next_book.id)
-    finished = progress && next_book.page_count > 0 && progress.current_page >= next_book.page_count - 1
+    finished = progress && progress.progression >= 1
     if finished, do: ~p"/read/#{slug_param(next_book)}?page=0", else: ~p"/read/#{slug_param(next_book)}"
   end
 
@@ -603,8 +635,8 @@ defmodule StashixWeb.TextReaderLive do
           phx-hook="EpubReader"
           phx-update="ignore"
           data-url={@file_url}
-          data-book={@book.id}
           data-start={@current_page}
+          data-cfi={@start_cfi}
           data-total={@page_count}
           data-layout={@view_layout}
           data-page-theme={@theme}

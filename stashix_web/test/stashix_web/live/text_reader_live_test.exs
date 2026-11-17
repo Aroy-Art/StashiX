@@ -66,7 +66,9 @@ defmodule StashixWeb.TextReaderLiveTest do
 
     render_hook(view, "page_changed", %{"page" => 2})
     render_click(view, "exit", %{"to" => "book"})
-    assert Library.get_progress(user.id, book.id).current_page == 2
+
+    assert %{current_page: 2, progression: 0.5, locator: %{"type" => "pdf", "page" => 2}} =
+             Library.get_progress(user.id, book.id)
   end
 
   test "scrolling to the end marks the book read", %{conn: conn, user: user, text: book} do
@@ -75,7 +77,7 @@ defmodule StashixWeb.TextReaderLiveTest do
 
     render_hook(view, "scroll_end", %{"visible" => true})
     assert has_element?(view, "#reader-end")
-    assert Library.get_progress(user.id, book.id).current_page == 2
+    assert %{current_page: 2, progression: 1.0} = Library.get_progress(user.id, book.id)
   end
 
   test "view settings are saved next to the comic reader's", %{conn: conn, user: user, text: book} do
@@ -169,6 +171,38 @@ defmodule StashixWeb.TextReaderLiveTest do
 
       render_click(view, "exit", %{"to" => "book"})
       assert Library.get_progress(user.id, book.id).current_page == 13
+    end
+
+    test "the exact spot is saved and the book reopens there", %{conn: conn, user: user, epub: book} do
+      {view, html} = open(conn, book)
+      refute html =~ "data-cfi"
+      render_hook(view, "loaded", %{"page_count" => 40})
+
+      cfi = "epubcfi(/6/4!/4/2/1:120)"
+      params = %{"page" => 9, "total" => 40, "cfi" => cfi, "href" => "OEBPS/text/ch1.xhtml", "fraction" => 0.23}
+      render_hook(view, "page_changed", params)
+      render_click(view, "exit", %{"to" => "book"})
+
+      assert %{progression: 0.23, locator: %{"type" => "epub", "cfi" => ^cfi, "href" => "OEBPS/text/ch1.xhtml"}} =
+               Library.get_progress(user.id, book.id)
+
+      {view, _html} = open(conn, book)
+      assert has_element?(view, ~s|#epub-reader[data-cfi="#{cfi}"][data-start="9"]|)
+
+      # Starting over ignores it.
+      {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book.id}/text?page=0")
+      assert has_element?(view, ~s|#epub-reader[data-start="0"]|)
+      refute has_element?(view, "#epub-reader[data-cfi]")
+    end
+
+    test "turning pages inside one location still saves the spot", %{conn: conn, user: user, epub: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 40})
+      render_hook(view, "page_changed", %{"page" => 9, "cfi" => "epubcfi(/6/4!/4/2/1:0)", "fraction" => 0.2})
+      render_hook(view, "page_changed", %{"page" => 9, "cfi" => "epubcfi(/6/4!/4/8/1:0)", "fraction" => 0.21})
+      render_click(view, "exit", %{"to" => "book"})
+
+      assert %{locator: %{"cfi" => "epubcfi(/6/4!/4/8/1:0)"}} = Library.get_progress(user.id, book.id)
     end
 
     test "text size, font and spacing are saved and sent to the hook", %{conn: conn, user: user, epub: book} do

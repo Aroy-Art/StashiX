@@ -99,6 +99,7 @@ defmodule StashixWeb.Router do
 
     get "/books/:id", BookController, :show
     get "/books/:id/pages", BookController, :pages
+    get "/books/:id/progress", BookController, :show_progress
     put "/books/:id/progress", BookController, :progress
 
     get "/series/:id", SeriesController, :show

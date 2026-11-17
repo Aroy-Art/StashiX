@@ -396,9 +396,30 @@ defmodule StashixWeb.Schemas do
       title: "ProgressRequest",
       type: :object,
       properties: %{
-        page: %Schema{type: :integer, minimum: 0}
+        page: %Schema{type: :integer, minimum: 0},
+        progression: %Schema{type: :number, minimum: 0, maximum: 1},
+        locator: %Schema{type: :object, nullable: true}
       },
       required: [:page]
+    })
+  end
+
+  defmodule Progress do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Progress",
+      type: :object,
+      properties: %{
+        page: %Schema{type: :integer, description: "Page index; EPUB: foliate-js location"},
+        progression: %Schema{type: :number, description: "Share of the book read, 0..1"},
+        locator: %Schema{
+          type: :object,
+          nullable: true,
+          description: "Where exactly: type (image | pdf | epub), page, cfi, href, progression"
+        },
+        updated_at: %Schema{type: :string, format: :"date-time", nullable: true}
+      }
     })
   end
 

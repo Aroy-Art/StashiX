@@ -192,12 +192,27 @@ routing that Phase 3 reuses for EPUB.
 
 ## 6. Phase 4 — Progress locators
 
-- [ ] Migration: `reading_progress.locator :map`, `progression :float`.
+- [x] Migration: `reading_progress.locator :map`, `progression :float`.
   Backfill `progression = current_page / page_count`.
-- [ ] `Library.update_progress` accepts a locator; comic path keeps writing
+  — backfilled as `current_page / (page_count - 1)`, so the last page is
+  1.0 like the old "read" test (`current_page >= page_count - 1`); books
+  with ≤ 1 page and a page past 0 count as read.
+- [x] `Library.update_progress` accepts a locator; comic path keeps writing
   `current_page`.
-- [ ] Continue-reading rows and progress bars read `progression`.
-- [ ] API: progress endpoint accepts and returns the locator.
+  — `update_progress(access, user, book, page, locator:, progression:)`;
+  progression defaults from the page. Comic reader saves
+  `%{"type" => "image", "page" => n}`, PDF `"pdf"`, EPUB the CFI and
+  section href with foliate-js's fraction. The EPUB reader now resumes from
+  the server's CFI (localStorage dropped), so other devices open at the
+  exact spot. Browser-checked in a fresh profile.
+- [x] Continue-reading rows and progress bars read `progression`.
+  — also read status filters, "Up next", stats, the book page, series runs
+  and "start over" on the next book. An EPUB is read when the end card
+  shows (1.0), not at its last location.
+- [x] API: progress endpoint accepts and returns the locator.
+  — `GET /api/books/:id/progress` added; `PUT` and the channel's
+  `update_progress` take `locator` and `progression`. Unknown locator
+  fields are dropped (`ReadingProgress.opts_from_params/1`).
 
 ## 7. Phase 5 — Annotations, extra formats, offline, TTS
 

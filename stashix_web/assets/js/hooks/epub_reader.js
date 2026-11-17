@@ -20,7 +20,8 @@ import {exitReader} from "../reader_exit.js"
 // Takes the same commands as the PDF hook ("text:goto", "text:step",
 // "text:view", "text:search") and reports with the same events. Progress is
 // foliate-js locations (~1500 bytes each): "page_changed" carries the
-// location, the total and the contents entry it is under.
+// location, the total, the contents entry it is under and the exact spot
+// (CFI, section href, share of the book), which the server saves.
 
 const FOLIATE = "/vendor/foliate/"
 let foliatePromise = null
@@ -81,8 +82,8 @@ const EpubReader = {
   mounted() {
     const d = this.el.dataset
     this.url = d.url
-    this.bookId = d.book
     this.start = Number(d.start) || 0
+    this.startCfi = d.cfi || null
     this.total = Number(d.total) || 0
     this.settings = {
       layout: d.layout,
@@ -159,10 +160,9 @@ const EpubReader = {
     this.apply(this.settings)
     this.outline()
 
-    // Resume: at the exact spot when this browser saved it for the page the
-    // server has; else at the same share of the book.
-    const saved = this.savedSpot()
-    if (saved) await this.view.init({lastLocation: saved})
+    // Resume at the spot the server has; books saved before it kept one, at
+    // the same share of the book.
+    if (this.startCfi) await this.view.init({lastLocation: this.startCfi})
     else if (this.start > 0 && this.total > 0) await this.view.goToFraction(this.start / this.total)
     else await this.view.init({showTextStart: false})
   },
@@ -206,11 +206,16 @@ const EpubReader = {
       this.loaded = true
       this.pushEvent("loaded", {page_count: Math.max(location.total, 1)})
     }
-    this.saveSpot(cfi, location.current)
-
     clearTimeout(this.reportTimer)
     this.reportTimer = setTimeout(() => {
-      this.pushEvent("page_changed", {page: location.current, total: location.total, toc: tocItem?.href ?? null})
+      this.pushEvent("page_changed", {
+        page: location.current,
+        total: location.total,
+        toc: tocItem?.href ?? null,
+        cfi,
+        href: this.view.book.sections?.[section?.current]?.id ?? null,
+        fraction,
+      })
     }, REPORT_MS)
 
     // Scrolled flow: reaching the end of the last section shows the end card.
@@ -239,27 +244,6 @@ const EpubReader = {
     if (!this.view) return
     if (target) this.view.goTo(target)
     else if (page != null && this.location?.total) this.view.goToFraction(Math.min(page / this.location.total, 0.9999))
-  },
-
-  storageKey() {
-    return `stashix:epub:${this.bookId}`
-  },
-
-  saveSpot(cfi, page) {
-    try {
-      localStorage.setItem(this.storageKey(), JSON.stringify({cfi, page}))
-    } catch (_) {}
-  },
-
-  savedSpot() {
-    try {
-      const saved = JSON.parse(localStorage.getItem(this.storageKey()) || "null")
-      // Only when it is where the server says the reader is (no other
-      // device has moved on since).
-      return saved && saved.page === this.start ? saved.cfi : null
-    } catch (_) {
-      return null
-    }
   },
 
   // ── input ─────────────────────────────────────────────────────────────
