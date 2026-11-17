@@ -151,9 +151,11 @@ routing that Phase 3 reuses for EPUB.
 
 ## 5. Phase 3 — EPUB reader
 
-- [ ] `GET /api/books/:id/epub/*entry`: one zip entry, content type from
+- [x] `GET /api/books/:id/epub/*entry`: one zip entry, content type from
   extension / OPF manifest; only names in the archive listing (no traversal);
   D5 headers; cache headers.
+  — `EpubController`, plus `GET /api/books/:id/epub` listing entries and
+  sizes (the loader's `getSize`). Text books only, like `/file`.
 - [x] Keep zip central directory per open book in ETS (`:zip.zip_open`
   handle or offsets) so each entry read is a seek, not a re-list.
   — `Media.Epub` keeps the `unzip` directory (and the parsed package) in
