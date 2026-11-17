@@ -108,9 +108,12 @@ routing that Phase 3 reuses for EPUB.
   images. Existing books need a forced rescan to get detected.
 - [ ] Reader routing: `/read/:id` picks `ReaderLive` or `TextReaderLive` from
   the effective `content_kind`.
-- [ ] `GET /api/books/:id/file` with `Range` support: parse header, `206` via
+- [x] `GET /api/books/:id/file` with `Range` support: parse header, `206` via
   `send_file/5`, `Accept-Ranges`, `Content-Range`, `ETag`, `416` on bad
   ranges, access check like `page/2`. OpenApiSpex operation.
+  — `BookFileController`. Serves only files that open in the text reader
+  (settled 2026-11-17): they can't be read any other way, while comics and
+  scans stay behind `can_download`. Several ranges → whole file (200).
 - [ ] Vendor PDF.js (`pdf.min.mjs` + worker) in `assets/vendor/`; serve the
   worker from `priv/static`.
 - [ ] `TextReaderLive` shell: top/bottom bars, exit, progress save, end card

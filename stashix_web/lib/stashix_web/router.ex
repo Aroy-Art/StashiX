@@ -74,6 +74,7 @@ defmodule StashixWeb.Router do
 
     get "/books/:id/cover", BookController, :cover
     get "/books/:id/page/:n", BookController, :page
+    get "/books/:id/file", BookFileController, :show
     get "/books/:id/download", DownloadController, :book
     get "/series/:id/cover", SeriesController, :cover
     get "/series/:id/download", DownloadController, :series
