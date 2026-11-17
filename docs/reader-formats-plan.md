@@ -114,8 +114,11 @@ routing that Phase 3 reuses for EPUB.
   — `BookFileController`. Serves only files that open in the text reader
   (settled 2026-11-17): they can't be read any other way, while comics and
   scans stay behind `can_download`. Several ranges → whole file (200).
-- [ ] Vendor PDF.js (`pdf.min.mjs` + worker) in `assets/vendor/`; serve the
-  worker from `priv/static`.
+- [x] Vendor PDF.js (`pdf.min.mjs` + worker) in `assets/vendor/`; serve the
+  worker from `priv/static`. — all of it lives in
+  `priv/static/vendor/pdfjs/` (6.5.438, Apache-2.0, ~5 MB with fonts, cmaps
+  and wasm image decoders) and is imported at runtime, keeping it out of
+  `app.js`. Update with `scripts/update-pdfjs.sh <version>`.
 - [ ] `TextReaderLive` shell: top/bottom bars, exit, progress save, end card
   and next book — same "ink" chrome as `ReaderLive`, text-reader settings.
 - [ ] `PdfReader` hook: open document via range transport, render visible
