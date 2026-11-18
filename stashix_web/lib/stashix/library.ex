@@ -1428,10 +1428,8 @@ defmodule Stashix.Library do
     |> Repo.all()
   end
 
-  @supported_extensions ~w(.cbz .cbr .cb7 .epub .pdf)
-
   def get_book_by_stem(dir, stem) do
-    candidates = Enum.map(@supported_extensions, &Path.join(dir, stem <> &1))
+    candidates = Enum.map(Stashix.Media.Formats.extensions(), &Path.join(dir, stem <> &1))
 
     from(bf in BookFile,
       join: b in Book,
@@ -1452,7 +1450,7 @@ defmodule Stashix.Library do
   def reader_kind(_book, _book_file), do: :images
 
   # Formats the text reader can open.
-  @text_formats [:pdf, :epub]
+  @text_formats [:pdf, :epub, :mobi, :azw3, :azw, :fb2, :fbz]
 
   @doc """
   The file of `book` (of `format`, when given) to open in the text reader,
@@ -1466,7 +1464,7 @@ defmodule Stashix.Library do
   end
 
   def get_preferred_book_file(book, format \\ nil) do
-    format_priority = [:cbz, :cbr, :cb7, :epub, :pdf]
+    format_priority = [:cbz, :cbr, :cb7, :epub, :azw3, :mobi, :azw, :fb2, :fbz, :pdf]
 
     files =
       case book.files do

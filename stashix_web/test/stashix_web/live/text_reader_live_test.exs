@@ -243,4 +243,48 @@ defmodule StashixWeb.TextReaderLiveTest do
       assert_push_event(view, "text:goto", %{target: "epubcfi(/6/4!/4/2)", query: "whale"})
     end
   end
+
+  describe "Kindle and FictionBook" do
+    setup %{epub: epub, tmp_dir: tmp} do
+      ebook = fn title, format, path ->
+        {:ok, b} = Library.create_book(%{title: title, library_id: epub.library_id, page_count: 30})
+        Repo.insert!(%BookFile{book_id: b.id, path: path, format: format, file_size: 1, content_kind: :text})
+        b
+      end
+
+      %{
+        mobi: ebook.("Kindle", :azw3, Stashix.EbookFixtures.make_mobi(Path.join(tmp, "k.azw3"))),
+        fb2: ebook.("Fiction", :fb2, Stashix.EbookFixtures.make_fb2(Path.join(tmp, "f.fb2"))),
+        locked: ebook.("Locked", :mobi, Stashix.EbookFixtures.make_mobi(Path.join(tmp, "l.mobi"), encryption: 2))
+      }
+    end
+
+    test "open in the foliate view from the file, and save their spot", %{conn: conn, user: user, mobi: book} do
+      {view, _html} = open(conn, book)
+      url = "/api/books/#{book.id}/file?format=azw3"
+      assert has_element?(view, ~s|#epub-reader[data-format="azw3"][data-url="#{url}"]|)
+
+      render_hook(view, "loaded", %{"page_count" => 30})
+      cfi = "epubcfi(/6/6!/4/2/1:0)"
+      render_hook(view, "page_changed", %{"page" => 4, "cfi" => cfi, "href" => 2, "fraction" => 0.15})
+      render_click(view, "exit", %{"to" => "book"})
+
+      assert %{progression: 0.15, locator: %{"type" => "mobi", "cfi" => ^cfi, "href" => nil}} =
+               Library.get_progress(user.id, book.id)
+
+      {view, _html} = open(conn, book)
+      assert has_element?(view, ~s|#epub-reader[data-cfi="#{cfi}"]|)
+    end
+
+    test "FictionBook opens there too", %{conn: conn, fb2: book} do
+      {view, _html} = open(conn, book)
+      assert has_element?(view, ~s|#epub-reader[data-format="fb2"]|)
+    end
+
+    test "a DRM-protected book says so instead of opening", %{conn: conn, locked: book} do
+      {view, html} = open(conn, book)
+      refute has_element?(view, "#epub-reader")
+      assert html =~ "DRM-protected"
+    end
+  end
 end

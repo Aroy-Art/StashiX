@@ -13,6 +13,10 @@ defmodule Stashix.Library.ReadingProgress do
       %{"type" => "image", "page" => 12}
       %{"type" => "pdf", "page" => 12}
       %{"type" => "epub", "cfi" => "epubcfi(/6/8!/4/2/1:0)", "href" => "OEBPS/ch3.xhtml"}
+      %{"type" => "mobi" | "fb2", "cfi" => "epubcfi(/6/4!/4/10/1:0)", "href" => "3"}
+
+  (Kindle and FictionBook books are laid out by foliate-js like EPUB, so
+  their spot is a CFI over foliate-js's sections too.)
 
   each with `"progression"` too (the Readium locator shape, for OPDS and
   Kobo sync later).
@@ -41,7 +45,7 @@ defmodule Stashix.Library.ReadingProgress do
     |> unique_constraint([:user_id, :book_id])
   end
 
-  @locator_types ~w(image pdf epub)
+  @locator_types ~w(image pdf epub mobi fb2)
 
   @doc """
   `Stashix.Library.update_progress/5` options from client params

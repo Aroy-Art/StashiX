@@ -12,8 +12,6 @@ defmodule Stashix.Health.Workers.UnsupportedFilesWorker do
   alias Stashix.Library.Library
   alias Stashix.Health
 
-  @supported ~w(.cbz .cbr .cb7 .epub .pdf)
-
   # Extensions to silently ignore — metadata and sidecar files that are never
   # content and would flood results if shown.
   @ignored ~w(.xml .jpg .jpeg .png .webp .gif .nfo .txt .db .ini .bak .opf .ds_store)
@@ -73,6 +71,6 @@ defmodule Stashix.Health.Workers.UnsupportedFilesWorker do
 
   defp unsupported?(path) do
     ext = path |> Path.extname() |> String.downcase()
-    ext not in @supported and ext not in @ignored and ext != ""
+    not Stashix.Media.Formats.supported?(path) and ext not in @ignored and ext != ""
   end
 end

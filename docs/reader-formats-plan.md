@@ -234,12 +234,22 @@ In scope (settled 2026-11-17). Order inside the phase is open.
 
 ### MOBI / AZW3 / FB2
 
-- [ ] Add formats to `@supported_formats`, `BookFile` enum, `Archive`/
+- [x] Add formats to `@supported_formats`, `BookFile` enum, `Archive`/
   `Extractor` routing (MOBI/AZW3 are not zips: serve via `/file` + `Range`,
   foliate-js parses client-side; FB2 is single XML, `.fb2.zip` via entries).
-- [ ] Metadata + cover extraction for each (EXTH records, FB2
-  `<description>`).
-- [ ] DRM'd files: detect and show a clear "can't open" instead of failing.
+  *Done:* `.mobi .azw3 .azw .fb2 .fbz .fb2.zip`, all named in one place
+  (`Stashix.Media.Formats`). Kindle books open from byte ranges (the hook
+  hands foliate-js a File stand-in whose slices are `Range` requests); FB2
+  is fetched whole, `.fbz`/`.fb2.zip` unzipped by `/file`. Always text.
+  Locator `type` is `mobi` / `fb2`, with a CFI as for EPUB.
+- [x] Metadata + cover extraction for each (EXTH records, FB2
+  `<description>`). *Done:* `Stashix.Media.Mobi` / `Stashix.Media.Fb2`
+  (title, authors, translators, FB2 sequence → series + number, summary,
+  publisher, year, language, ISBN, genres; cover as the thumbnail).
+  CP1251 FB2 descriptions keep only their ASCII (no decoder in Erlang).
+- [x] DRM'd files: detect and show a clear "can't open" instead of failing.
+  *Done:* PalmDOC encryption flag → the reader says the book is
+  DRM-protected; the integrity check flags it, and KFX `.azw` as unreadable.
 
 ### Offline reading
 

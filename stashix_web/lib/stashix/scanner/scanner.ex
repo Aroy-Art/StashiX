@@ -6,10 +6,9 @@ defmodule Stashix.Scanner do
   require Logger
 
   alias Stashix.{Library, Metadata}
-  alias Stashix.Media.{ContentKind, Epub, Thumbnail, Extractor, ImageResizer}
+  alias Stashix.Media.{ContentKind, Epub, Fb2, Formats, Mobi, Thumbnail, Extractor, ImageResizer}
   alias Stashix.Metadata.{Parser, Importer, Locks}
 
-  @supported_formats ~w(.cbz .cbr .cb7 .epub .pdf)
   @ets_table :scan_tasks
   @metadata_concurrency 16
   @collect_concurrency 16
@@ -452,7 +451,7 @@ defmodule Stashix.Scanner do
     stat = File.stat!(file_path)
     file_hash = compute_hash(file_path, stat.size)
     last_modified = NaiveDateTime.from_erl!(stat.mtime)
-    filename = Path.basename(file_path, Path.extname(file_path))
+    filename = Formats.stem(file_path)
     parsed = Parser.parse_filename(filename)
     comicinfo = Parser.parse_comicinfo(file_path)
 
@@ -501,14 +500,8 @@ defmodule Stashix.Scanner do
   defp create_book_from_meta(%{file_path: file_path, parsed: parsed} = file_meta, library, cache) do
     {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
 
-    format =
-      file_path
-      |> Path.extname()
-      |> String.downcase()
-      |> String.trim_leading(".")
-      |> String.to_atom()
-
-    stem = Path.basename(file_path, Path.extname(file_path))
+    format = Formats.format(file_path)
+    stem = Formats.stem(file_path)
     dir = Path.dirname(file_path)
     existing_book = Library.get_book_by_stem(dir, stem)
 
@@ -644,7 +637,7 @@ defmodule Stashix.Scanner do
     from_file = fn field, default -> Map.get(file, field, current.(field, default)) end
 
     %{
-      title: Map.get(metadata, :title) || Path.basename(path, Path.extname(path)),
+      title: Map.get(metadata, :title) || Formats.stem(path),
       issue_number: if(series, do: Map.get(file, :issue_number) || Map.get(parsed, :issue_number)),
       volume: Map.get(metadata, :volume),
       year: Map.get(metadata, :year),
@@ -1044,7 +1037,7 @@ defmodule Stashix.Scanner do
         {:ok, {subdirs, entries}}, {all_dirs, all_files} ->
           supported =
             Enum.filter(entries, fn p ->
-              String.downcase(Path.extname(p)) in @supported_formats
+              Formats.supported?(p)
             end)
 
           {all_dirs ++ subdirs, all_files ++ supported}
@@ -1058,12 +1051,18 @@ defmodule Stashix.Scanner do
 
   # The reader pages through what the extractor lists (credit pages excluded), so that
   # count wins over ComicInfo's PageCount — otherwise the last page is never reached.
-  # A text EPUB has no pages: its count is the text reader's locations.
+  # A text EPUB, Kindle or FictionBook book has no pages: its count is the
+  # text reader's locations.
   defp resolve_page_count(metadata, file_path, fallback) do
+    format = Formats.format(file_path)
+
     count =
-      if String.downcase(Path.extname(file_path)) == ".epub" and ContentKind.detect(file_path) == :text,
-        do: Epub.location_count(file_path),
-        else: Extractor.get_page_count(file_path)
+      cond do
+        format == :epub and ContentKind.detect(file_path) == :text -> Epub.location_count(file_path)
+        Formats.mobi?(format) -> Mobi.location_count(file_path)
+        Formats.fb2?(format) -> Fb2.location_count(file_path)
+        true -> Extractor.get_page_count(file_path)
+      end
 
     case count do
       n when n > 0 ->
@@ -1151,7 +1150,7 @@ defmodule Stashix.Scanner do
 
   @doc false
   def find_sidecar_image(file_path) do
-    base = Path.rootname(file_path)
+    base = Path.join(Path.dirname(file_path), Formats.stem(file_path))
 
     Enum.find_value(~w(.jpg .jpeg .png .webp), fn ext ->
       path = base <> ext

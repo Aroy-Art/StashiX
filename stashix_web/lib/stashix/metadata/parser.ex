@@ -68,7 +68,18 @@ defmodule Stashix.Metadata.Parser do
     case archive_path |> Path.extname() |> String.downcase() do
       ".pdf" -> parse_pdf_metadata(archive_path)
       ext when ext in [".cbz", ".cbr", ".cb7", ".epub"] -> merge_embedded(Container.read_xml(archive_path))
-      _ -> %{}
+      _ -> parse_ebook(archive_path)
+    end
+  end
+
+  # Kindle (EXTH) and FictionBook (`<description>`) metadata.
+  defp parse_ebook(path) do
+    format = Stashix.Media.Formats.format(path)
+
+    cond do
+      Stashix.Media.Formats.mobi?(format) -> Stashix.Media.Mobi.metadata(path)
+      Stashix.Media.Formats.fb2?(format) -> Stashix.Media.Fb2.metadata(path)
+      true -> %{}
     end
   end
 

@@ -10,7 +10,7 @@ defmodule Stashix.Health.Workers.IntegrityFileWorker do
 
   alias Stashix.Repo
   alias Stashix.Library.{Book, BookFile}
-  alias Stashix.Media.{Epub, Extractor}
+  alias Stashix.Media.{Epub, Extractor, Fb2, Formats, Mobi}
   alias Stashix.Health
 
   @impl true
@@ -69,6 +69,21 @@ defmodule Stashix.Health.Workers.IntegrityFileWorker do
       # package is.
       String.downcase(Path.extname(path)) == ".epub" and match?({:ok, %{spine: [_ | _]}}, Epub.package(path)) ->
         {:ok, nil}
+
+      # Kindle and FictionBook books have no pages to list: readable when
+      # their headers are, and not locked.
+      Formats.mobi?(Formats.format(path)) ->
+        case Mobi.header(path) do
+          {:ok, %{encryption: 0}} -> {:ok, nil}
+          {:ok, _} -> {:error, "DRM-protected"}
+          {:error, _} -> {:error, "Not a readable Kindle book (KFX or damaged)"}
+        end
+
+      Formats.fb2?(Formats.format(path)) ->
+        case Fb2.read(path) do
+          {:ok, xml} -> if xml =~ "<FictionBook", do: {:ok, nil}, else: {:error, "Not a FictionBook file"}
+          {:error, reason} -> {:error, format_error(reason)}
+        end
 
       true ->
         case Extractor.list_pages(path) do

@@ -8,7 +8,6 @@ defmodule Stashix.Scanner.FileWatcher do
   alias Stashix.Library
 
   @debounce_ms 5_000
-  @supported_exts ~w(.cbz .cbr .cb7 .epub .pdf)
   @sidecar_exts ~w(.jpg .jpeg .png .webp .xml)
   # Events for paths Stashix itself just wrote (metadata write-back) are ignored
   # for this long, so our own writes don't trigger a re-import.
@@ -137,9 +136,7 @@ defmodule Stashix.Scanner.FileWatcher do
     end
   end
 
-  defp supported_file?(path) do
-    String.downcase(Path.extname(path)) in @supported_exts
-  end
+  defp supported_file?(path), do: Stashix.Media.Formats.supported?(path)
 
   defp sidecar_file?(path) do
     String.downcase(Path.extname(path)) in @sidecar_exts
@@ -148,7 +145,7 @@ defmodule Stashix.Scanner.FileWatcher do
   defp find_comic_for_sidecar(sidecar_path) do
     base = Stashix.Metadata.Sidecar.stem(sidecar_path)
 
-    Enum.find_value(@supported_exts, fn ext ->
+    Enum.find_value(Stashix.Media.Formats.extensions(), fn ext ->
       candidate = base <> ext
       if File.exists?(candidate), do: candidate
     end)

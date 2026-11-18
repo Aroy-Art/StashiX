@@ -306,6 +306,29 @@ defmodule Stashix.ScannerTest do
       assert count == Stashix.Media.Epub.location_count(epub) and count > 1
     end
 
+    test "Kindle and FictionBook books are text, with their own metadata and cover", %{lib: lib, tmp: tmp} do
+      jpeg = Image.new!(8, 12, color: :red) |> Image.write!(:memory, suffix: ".jpg")
+
+      Stashix.EbookFixtures.make_mobi(Path.join(tmp, "melville_moby.azw3"),
+        title: "Moby Dick",
+        exth: [{100, "Herman Melville"}],
+        cover: jpeg,
+        text: String.duplicate("x", 3000)
+      )
+
+      Stashix.EbookFixtures.make_fb2(Path.join(tmp, "austen.fb2.zip"), zip: true, title: "Emma")
+      Scanner.scan_sync(lib.id)
+
+      files = Repo.all(Stashix.Library.BookFile) |> Repo.preload(:book) |> Map.new(&{&1.format, &1})
+
+      assert %{
+               azw3: %{content_kind: :text, page_count: 2, book: %{title: "Moby Dick"} = moby},
+               fbz: %{content_kind: :text, book: %{title: "Emma"}}
+             } = files
+
+      assert Repo.get_by(BookCover, book_id: moby.id)
+    end
+
     if System.find_executable("pdftotext") do
       test "a text PDF is text", %{lib: lib, tmp: tmp} do
         prose = Enum.map_join(1..40, "\n", &"Line #{&1} of a page that is mostly running text.")

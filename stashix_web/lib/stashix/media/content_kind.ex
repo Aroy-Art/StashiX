@@ -13,9 +13,10 @@ defmodule Stashix.Media.ContentKind do
 
   An EPUB is images when it is fixed layout or each spine document only
   wraps a picture (see `Stashix.Media.Epub.content_kind/1`), else text.
+  Kindle and FictionBook books are text: there is no page reader for them.
   """
 
-  alias Stashix.Media.Epub
+  alias Stashix.Media.{Epub, Formats}
 
   @sample_pages 6
   # Average non-space characters per sampled page.
@@ -24,10 +25,11 @@ defmodule Stashix.Media.ContentKind do
 
   @spec detect(Path.t()) :: :images | :text | nil
   def detect(path) do
-    case path |> Path.extname() |> String.downcase() do
-      ext when ext in ~w(.cbz .cbr .cb7) -> :images
-      ".pdf" -> detect_pdf(path)
-      ".epub" -> Epub.content_kind(path)
+    case Formats.format(path) do
+      format when format in [:cbz, :cbr, :cb7] -> :images
+      :pdf -> detect_pdf(path)
+      :epub -> Epub.content_kind(path)
+      format when format in [:mobi, :azw3, :azw, :fb2, :fbz] -> :text
       _ -> nil
     end
   end

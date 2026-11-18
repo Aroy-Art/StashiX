@@ -5,13 +5,18 @@
 
 import {exitReader} from "../reader_exit.js"
 
-// EpubReader: the text reader's EPUB view, laid out by foliate-js.
+// EpubReader: the text reader's view for books foliate-js lays out: EPUB,
+// Kindle (MOBI, AZW3) and FictionBook.
 //
-// The book is never downloaded whole: foliate-js asks a loader for entries
-// as it needs them (the package, then each chapter, its styles and
-// pictures), and the loader fetches them one at a time from
-// /api/books/:id/epub/<entry>. The entry list with sizes comes first, so
-// foliate-js can size the book for progress without reading it.
+// The book is never downloaded whole where the format allows it:
+// - EPUB: foliate-js asks a loader for entries as it needs them (the
+//   package, then each chapter, its styles and pictures), and the loader
+//   fetches them one at a time from /api/books/:id/epub/<entry>. The entry
+//   list with sizes comes first, so foliate-js can size the book for
+//   progress without reading it.
+// - Kindle: foliate-js reads records out of a File; here a stand-in whose
+//   slices are byte ranges of /api/books/:id/file.
+// - FictionBook: one XML document, fetched whole (the server unzips .fbz).
 //
 // Book content is untrusted HTML shown in blob: iframes that run as this
 // page; the page's CSP (StashixWeb.Plugs.ReaderCSP) is what stops its
@@ -30,12 +35,37 @@ let foliatePromise = null
 // is served as is from /vendor and only fetched when an EPUB is opened.
 // view.js registers <foliate-view>.
 const loadFoliate = () => {
-  const [view, epub, notes] = ["view.js", "epub.js", "footnotes.js"].map((f) => FOLIATE + f)
-  foliatePromise ||= Promise.all([import(view), import(epub), import(notes)]).then(([, {EPUB}, {FootnoteHandler}]) => ({
-    EPUB,
-    FootnoteHandler,
-  }))
+  const [view, notes] = ["view.js", "footnotes.js"].map((f) => FOLIATE + f)
+  foliatePromise ||= Promise.all([import(view), import(notes)]).then(([, {FootnoteHandler}]) => ({FootnoteHandler}))
   return foliatePromise
+}
+const foliate = (file) => import(FOLIATE + file)
+
+const fetchOK = async (url, init = {}) => {
+  const r = await fetch(url, {credentials: "same-origin", ...init})
+  if (!r.ok) throw new Error(`${url}: ${r.status}`)
+  return r
+}
+
+// What foliate-js's MOBI reader needs of a File: its size, and slices it
+// can read. Each slice is one Range request; the header and record table
+// come first, then a record at a time as pages are laid out.
+const remoteFile = async (url) => {
+  const head = await fetchOK(url, {headers: {Range: "bytes=0-0"}})
+  const size = Number(head.headers.get("content-range")?.split("/")[1])
+  if (!size) throw new Error("no size")
+  const slice = (start = 0, end = size) => {
+    start = Math.max(0, start)
+    end = Math.min(size, end)
+    return {
+      size: Math.max(0, end - start),
+      arrayBuffer: () =>
+        end <= start
+          ? Promise.resolve(new ArrayBuffer(0))
+          : fetchOK(url, {headers: {Range: `bytes=${start}-${end - 1}`}}).then((r) => r.arrayBuffer()),
+    }
+  }
+  return {size, slice, name: url}
 }
 
 const THEMES = {
@@ -120,28 +150,8 @@ const EpubReader = {
   },
 
   async open() {
-    const {EPUB, FootnoteHandler} = await loadFoliate()
-    const {entries} = await fetch(this.url, {credentials: "same-origin"}).then((r) => {
-      if (!r.ok) throw new Error(`entries: ${r.status}`)
-      return r.json()
-    })
-
-    // Entry names are paths inside the zip; each segment is encoded on its own.
-    const entryURL = (name) => `${this.url}/${name.split("/").map(encodeURIComponent).join("/")}`
-    const fetchEntry = async (name) => {
-      const r = await fetch(entryURL(name), {credentials: "same-origin"})
-      if (!r.ok) throw new Error(`${name}: ${r.status}`)
-      return r
-    }
-    // Same contract as foliate-js's own zip loader: null for a missing entry.
-    const loader = {
-      loadText: (name) => (name in entries ? fetchEntry(name).then((r) => r.text()) : null),
-      loadBlob: (name, type) =>
-        name in entries ? fetchEntry(name).then((r) => r.blob()).then((b) => (type ? new Blob([b], {type}) : b)) : null,
-      getSize: (name) => entries[name] ?? 0,
-    }
-
-    this.book = await new EPUB(loader).init()
+    const {FootnoteHandler} = await loadFoliate()
+    this.book = await this.makeBook()
     this.view = document.createElement("foliate-view")
     this.view.className = "epub-view"
     this.el.append(this.view)
@@ -165,6 +175,42 @@ const EpubReader = {
     if (this.startCfi) await this.view.init({lastLocation: this.startCfi})
     else if (this.start > 0 && this.total > 0) await this.view.goToFraction(this.start / this.total)
     else await this.view.init({showTextStart: false})
+  },
+
+  async makeBook() {
+    switch (this.el.dataset.format) {
+      case "mobi":
+      case "azw3":
+      case "azw": {
+        const [{MOBI}, fflate] = await Promise.all([foliate("mobi.js"), foliate("vendor/fflate.js")])
+        return new MOBI({unzlib: fflate.unzlibSync}).open(await remoteFile(this.url))
+      }
+      case "fb2":
+      case "fbz": {
+        const {makeFB2} = await foliate("fb2.js")
+        return makeFB2(await fetchOK(this.url).then((r) => r.blob()))
+      }
+      default:
+        return this.makeEPUB()
+    }
+  },
+
+  async makeEPUB() {
+    const {EPUB} = await foliate("epub.js")
+    const {entries} = await fetchOK(this.url).then((r) => r.json())
+
+    // Entry names are paths inside the zip; each segment is encoded on its own.
+    const entryURL = (name) => `${this.url}/${name.split("/").map(encodeURIComponent).join("/")}`
+    // Same contract as foliate-js's own zip loader: null for a missing entry.
+    const loader = {
+      loadText: (name) => (name in entries ? fetchOK(entryURL(name)).then((r) => r.text()) : null),
+      loadBlob: (name, type) =>
+        name in entries
+          ? fetchOK(entryURL(name)).then((r) => r.blob()).then((b) => (type ? new Blob([b], {type}) : b))
+          : null,
+      getSize: (name) => entries[name] ?? 0,
+    }
+    return new EPUB(loader).init()
   },
 
   // ── settings ──────────────────────────────────────────────────────────

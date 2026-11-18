@@ -11,6 +11,11 @@ defmodule StashixWeb.TextReaderLive do
   - EPUB: laid out by foliate-js from entries fetched one at a time (the
     `EpubReader` hook). Progress is foliate-js locations (about 1500 bytes
     of text each), which the scanner also counts as the book's pages.
+  - Kindle (MOBI, AZW3) and FictionBook: the same hook and foliate-js, from
+    byte ranges of the file (FB2: the whole XML). DRM-protected books
+    don't open; the view says so instead.
+
+  `engine` is which of the two hooks reads the book: `:pdf` or `:foliate`.
 
   The hook owns the content; this view owns the chrome (bars, View menu,
   contents and search panel, end card) and progress. Both hooks take the same
@@ -62,7 +67,8 @@ defmodule StashixWeb.TextReaderLive do
     {_prev, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     settings = user.reader_settings || %{}
 
-    epub? = book_file.format == :epub
+    engine = if book_file.format == :pdf, do: :pdf, else: :foliate
+    drm? = Stashix.Media.Formats.mobi?(book_file.format) and Stashix.Media.Mobi.drm?(book_file.path)
 
     socket
     |> CanonicalUrl.attach(:book)
@@ -70,8 +76,9 @@ defmodule StashixWeb.TextReaderLive do
       page_title: gettext("Reading: %{title}", title: book.title),
       book: book,
       format: book_file.format,
+      engine: engine,
       file_url:
-        if(epub?,
+        if(book_file.format == :epub,
           do: ~p"/api/books/#{book.id}/epub",
           else: ~p"/api/books/#{book.id}/file?#{[format: book_file.format]}"
         ),
@@ -82,13 +89,17 @@ defmodule StashixWeb.TextReaderLive do
       locator: nil,
       progression: nil,
       loaded: false,
-      failed: false,
+      # :drm when the book is locked; true when the hook couldn't open it.
+      failed: if(drm?, do: :drm, else: false),
       at_end: false,
       next_book: next_book,
       volume_counts: Library.series_volume_counts(socket.assigns.access, book),
       next_href: next_book && next_href(user.id, next_book),
       view_layout:
-        if(epub?, do: setting(settings, "epub_layout", @epub_layouts), else: setting(settings, "text_layout", @layouts)),
+        if(engine == :foliate,
+          do: setting(settings, "epub_layout", @epub_layouts),
+          else: setting(settings, "text_layout", @layouts)
+        ),
       fit: setting(settings, "text_fit", @fits),
       theme: setting(settings, "text_theme", @themes),
       font: setting(settings, "epub_font", @fonts),
@@ -230,7 +241,7 @@ defmodule StashixWeb.TextReaderLive do
   def handle_event("step", %{"by" => by}, socket), do: {:noreply, push_event(socket, "text:step", %{by: to_int(by)})}
 
   # EPUB: the zoom buttons change the text size instead.
-  def handle_event("zoom", %{"by" => by}, %{assigns: %{format: :epub}} = socket) do
+  def handle_event("zoom", %{"by" => by}, %{assigns: %{engine: :foliate}} = socket) do
     size =
       case to_int(by) do
         0 -> 100
@@ -243,7 +254,7 @@ defmodule StashixWeb.TextReaderLive do
   def handle_event("zoom", %{"by" => by}, socket), do: {:noreply, push_event(socket, "text:zoom", %{by: to_int(by)})}
 
   def handle_event("set_layout", %{"layout" => layout}, socket) do
-    allowed = if socket.assigns.format == :epub, do: @epub_layouts, else: @layouts
+    allowed = if socket.assigns.engine == :foliate, do: @epub_layouts, else: @layouts
 
     if layout in allowed,
       do: {:noreply, socket |> assign(view_layout: layout, at_end: false) |> view_changed()},
@@ -305,7 +316,7 @@ defmodule StashixWeb.TextReaderLive do
 
   ## Helpers
 
-  defp view_changed(%{assigns: %{format: :epub}} = socket) do
+  defp view_changed(%{assigns: %{engine: :foliate}} = socket) do
     a = socket.assigns
 
     Accounts.save_reader_settings(a.current_user, %{
@@ -402,18 +413,30 @@ defmodule StashixWeb.TextReaderLive do
     assign(socket, at_end: true, save_timer: nil)
   end
 
-  defp start_cfi(%{locator: %{"type" => "epub", "cfi" => cfi}}, :epub) when is_binary(cfi), do: cfi
+  # A CFI saved by this book's format (not one from another file of the book).
+  defp start_cfi(%{locator: %{"type" => type, "cfi" => cfi}}, format) when is_binary(cfi) do
+    if type == locator_type(format), do: cfi
+  end
+
   defp start_cfi(_progress, _format), do: nil
 
   # Where the reader is, as saved with the progress (see `Stashix.Library.ReadingProgress`).
-  defp locator(:epub, _page, params) do
+  defp locator(:pdf, page, _params), do: %{"type" => "pdf", "page" => page}
+
+  defp locator(format, _page, params) do
     case params["cfi"] do
-      "epubcfi(" <> _ = cfi -> %{"type" => "epub", "cfi" => cfi, "href" => string_or_nil(params["href"])}
+      "epubcfi(" <> _ = cfi -> %{"type" => locator_type(format), "cfi" => cfi, "href" => string_or_nil(params["href"])}
       _ -> nil
     end
   end
 
-  defp locator(_pdf, page, _params), do: %{"type" => "pdf", "page" => page}
+  defp locator_type(format) do
+    cond do
+      Stashix.Media.Formats.mobi?(format) -> "mobi"
+      Stashix.Media.Formats.fb2?(format) -> "fb2"
+      true -> to_string(format)
+    end
+  end
 
   # EPUB reports how far through the book it is; PDF progress goes by page.
   defp fraction(%{"fraction" => f}) when is_number(f), do: f |> max(0.0) |> min(1.0) |> Kernel.*(1.0)
@@ -441,7 +464,7 @@ defmodule StashixWeb.TextReaderLive do
   defp layout_icon("spread"), do: "lucide-columns-2"
   defp layout_icon(_scroll), do: "lucide-gallery-vertical-end"
 
-  defp layouts(:epub), do: [{"paged", gettext("Pages")}, {"scroll", gettext("Scroll")}]
+  defp layouts(:foliate), do: [{"paged", gettext("Pages")}, {"scroll", gettext("Scroll")}]
 
   defp layouts(_pdf),
     do: [{"scroll", gettext("Scroll")}, {"paged", gettext("One page")}, {"spread", gettext("Two pages")}]
@@ -543,7 +566,7 @@ defmodule StashixWeb.TextReaderLive do
 
             <.menu_label>{gettext("Layout")}</.menu_label>
             <.menu_item
-              :for={{layout, label} <- layouts(@format)}
+              :for={{layout, label} <- layouts(@engine)}
               icon={layout_icon(layout)}
               active={@view_layout == layout}
               phx-click="set_layout"
@@ -552,7 +575,7 @@ defmodule StashixWeb.TextReaderLive do
               {label}
             </.menu_item>
 
-            <%= if @format == :epub do %>
+            <%= if @engine == :foliate do %>
               <.menu_label class="mt-2">{gettext("Font")}</.menu_label>
               <.menu_item
                 :for={{font, label} <- fonts()}
@@ -611,7 +634,7 @@ defmodule StashixWeb.TextReaderLive do
             <%= cond do %>
               <% @at_end -> %>
                 <span class="font-display font-black uppercase tracking-wide text-xl text-ink">{gettext("End")}</span>
-              <% @format == :epub -> %>
+              <% @engine == :foliate -> %>
                 <span class="font-display font-black text-xl text-fg">{percent(@current_page, @page_count)}</span>
                 <span class="text-muted text-xs">%</span>
               <% true -> %>
@@ -629,12 +652,13 @@ defmodule StashixWeb.TextReaderLive do
       <div class={["absolute inset-0", @panel && "sm:left-80"]}>
         <%!-- EPUB: foliate-js lays the book out inside; same rule on data-*. --%>
         <div
-          :if={@format == :epub}
+          :if={@engine == :foliate and @failed != :drm}
           id="epub-reader"
           class="epub-reader"
           phx-hook="EpubReader"
           phx-update="ignore"
           data-url={@file_url}
+          data-format={@format}
           data-start={@current_page}
           data-cfi={@start_cfi}
           data-total={@page_count}
@@ -648,7 +672,7 @@ defmodule StashixWeb.TextReaderLive do
         >
         </div>
         <div
-          :if={@format != :epub}
+          :if={@engine != :foliate}
           id="pdf-reader"
           class="pdf-scroller"
           phx-hook="PdfReader"
@@ -668,10 +692,17 @@ defmodule StashixWeb.TextReaderLive do
       </div>
 
       <div :if={!@loaded} class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-        <%= if @failed do %>
-          <p class="px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold">{gettext("This book could not be opened.")}</p>
-        <% else %>
-          <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-ink/50" />
+        <%= cond do %>
+          <% @failed == :drm -> %>
+            <p class="max-w-sm px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold text-center">
+              {gettext("This book is DRM-protected and can't be opened here.")}
+            </p>
+          <% @failed -> %>
+            <p class="px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold">
+              {gettext("This book could not be opened.")}
+            </p>
+          <% true -> %>
+            <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-ink/50" />
         <% end %>
       </div>
 
@@ -684,7 +715,7 @@ defmodule StashixWeb.TextReaderLive do
         style="top: 64px; right: 16px; z-index: 25;"
       >
         <.segmented vertical class="reader-ctl-float">
-          <%= if @format == :epub do %>
+          <%= if @engine == :foliate do %>
             <.segment icon="lucide-a-arrow-up" title={gettext("Larger text (+)")} phx-click="zoom" phx-value-by="1" />
             <.segment icon="lucide-a-arrow-down" title={gettext("Smaller text (-)")} phx-click="zoom" phx-value-by="-1" />
             <.segment icon="lucide-type" title={gettext("Normal text size (0)")} phx-click="zoom" phx-value-by="0" />
@@ -702,7 +733,7 @@ defmodule StashixWeb.TextReaderLive do
         outline={@outline}
         current_page={@current_page}
         current_target={@current_target}
-        format={@format}
+        engine={@engine}
         query={@search_query}
         results={@search_results}
         scanned={@search_scanned}
@@ -749,7 +780,7 @@ defmodule StashixWeb.TextReaderLive do
   attr :outline, :list, default: nil
   attr :current_page, :integer, required: true
   attr :current_target, :string, default: nil
-  attr :format, :atom, required: true
+  attr :engine, :atom, required: true
   attr :query, :string, required: true
   attr :results, :list, required: true
   attr :scanned, :integer, required: true
@@ -847,7 +878,7 @@ defmodule StashixWeb.TextReaderLive do
               {ngettext("1 match", "%{count} matches", length(@results))}
             <% end %>
           <% else %>
-            <%= if @format == :epub do %>
+            <%= if @engine == :foliate do %>
               {gettext("Searching…")}
             <% else %>
               {gettext("Searching… page %{page} of %{count}", page: @scanned, count: @page_count)}

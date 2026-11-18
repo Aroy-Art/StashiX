@@ -9,6 +9,9 @@ defmodule StashixWeb.BookFileController do
   Only files that open in the text reader (`Stashix.Library.reader_kind/2`)
   are served: those can't be read any other way. Comics and scanned PDFs go
   through the page endpoint, so `can_download` still guards their files.
+
+  A zipped FictionBook (`.fbz`, `.fb2.zip`) is sent unzipped, as the XML
+  the reader parses.
   """
   use StashixWeb, :controller
   use OpenApiSpex.ControllerSpecs
@@ -16,7 +19,14 @@ defmodule StashixWeb.BookFileController do
   alias Stashix.Library
   alias StashixWeb.Schemas
 
-  @content_types %{pdf: "application/pdf", epub: "application/epub+zip"}
+  @content_types %{
+    pdf: "application/pdf",
+    epub: "application/epub+zip",
+    mobi: "application/x-mobipocket-ebook",
+    azw: "application/vnd.amazon.ebook",
+    azw3: "application/vnd.amazon.mobi8-ebook",
+    fb2: "application/x-fictionbook+xml"
+  }
 
   operation :show,
     summary: "Stream a text book's file",
@@ -53,6 +63,9 @@ defmodule StashixWeb.BookFileController do
       Library.reader_kind(book, book_file) != :text ->
         conn |> put_status(:forbidden) |> json(%{error: "not a text book"})
 
+      book_file.format == :fbz ->
+        send_unzipped_fb2(conn, book_file.path)
+
       true ->
         case File.stat(book_file.path, time: :posix) do
           {:ok, %File.Stat{type: :regular, size: size, mtime: mtime}} ->
@@ -68,6 +81,21 @@ defmodule StashixWeb.BookFileController do
           _ ->
             not_found(conn)
         end
+    end
+  end
+
+  defp send_unzipped_fb2(conn, path) do
+    case Stashix.Media.Fb2.read(path) do
+      {:ok, xml} ->
+        conn
+        |> put_resp_content_type(@content_types.fb2, nil)
+        |> put_resp_header("x-content-type-options", "nosniff")
+        |> put_resp_header("content-disposition", "inline")
+        |> put_resp_header("cache-control", "private, max-age=86400")
+        |> send_resp(200, xml)
+
+      _ ->
+        not_found(conn)
     end
   end
 

@@ -33,7 +33,7 @@ defmodule StashixWeb.BookFileControllerTest do
       b
     end
 
-    %{conn: conn, text: book.("Novel", :text), scan: book.("Scan", :images)}
+    %{conn: conn, lib: lib, text: book.("Novel", :text), scan: book.("Scan", :images)}
   end
 
   defp get_file(conn, book, range \\ nil) do
@@ -65,6 +65,24 @@ defmodule StashixWeb.BookFileControllerTest do
     conn = get_file(conn, book, "bytes=300-400")
     assert conn.status == 416
     assert get_resp_header(conn, "content-range") == ["bytes */256"]
+  end
+
+  test "Kindle books stream by range; zipped FictionBook comes unzipped", %{conn: conn, lib: lib, tmp_dir: tmp} do
+    {:ok, mobi} = Library.create_book(%{title: "Moby", library_id: lib.id})
+    path = Stashix.EbookFixtures.make_mobi(Path.join(tmp, "Moby.azw3"))
+    Repo.insert!(%BookFile{book_id: mobi.id, path: path, format: :azw3, file_size: 1, content_kind: :text})
+
+    resp = conn |> put_req_header("range", "bytes=60-67") |> get(~p"/api/books/#{mobi.id}/file")
+    assert response(resp, 206) == "BOOKMOBI"
+    assert get_resp_header(resp, "content-type") == ["application/vnd.amazon.mobi8-ebook"]
+
+    {:ok, fb2} = Library.create_book(%{title: "Emma", library_id: lib.id})
+    path = Stashix.EbookFixtures.make_fb2(Path.join(tmp, "Emma.fbz"), zip: true, title: "Emma")
+    Repo.insert!(%BookFile{book_id: fb2.id, path: path, format: :fbz, file_size: 1, content_kind: :text})
+
+    resp = get(conn, ~p"/api/books/#{fb2.id}/file")
+    assert response(resp, 200) =~ "<book-title>Emma</book-title>"
+    assert get_resp_header(resp, "content-type") == ["application/x-fictionbook+xml"]
   end
 
   test "an override to text opens the file", %{conn: conn, scan: book} do

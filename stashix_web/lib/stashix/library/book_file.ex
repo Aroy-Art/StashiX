@@ -8,11 +8,9 @@ defmodule Stashix.Library.BookFile do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @book_formats [:cbz, :cbr, :cb7, :epub, :pdf]
-
   schema "book_files" do
     field :path, :string
-    field :format, Ecto.Enum, values: @book_formats
+    field :format, Ecto.Enum, values: Stashix.Media.Formats.all()
     field :file_size, :integer, default: 0
     field :file_hash, :string
     field :last_modified, :naive_datetime

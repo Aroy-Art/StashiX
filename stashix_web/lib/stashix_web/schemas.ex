@@ -254,7 +254,7 @@ defmodule StashixWeb.Schemas do
         id: %Schema{type: :string, format: :uuid},
         title: %Schema{type: :string},
         path: %Schema{type: :string},
-        format: %Schema{type: :string, enum: ["cbz", "cbr", "pdf", "epub"]},
+        format: %Schema{type: :string, enum: Enum.map(Stashix.Media.Formats.all(), &to_string/1)},
         issue_number: %Schema{type: :number, nullable: true},
         volume: %Schema{type: :integer, nullable: true},
         year: %Schema{type: :integer, nullable: true},
@@ -416,7 +416,7 @@ defmodule StashixWeb.Schemas do
         locator: %Schema{
           type: :object,
           nullable: true,
-          description: "Where exactly: type (image | pdf | epub), page, cfi, href, progression"
+          description: "Where exactly: type (image | pdf | epub | mobi | fb2), page, cfi, href, progression"
         },
         updated_at: %Schema{type: :string, format: :"date-time", nullable: true}
       }
