@@ -5,6 +5,7 @@
 
 import {exitReader} from "../reader_exit.js"
 import {AnnotationBar, HIGHLIGHT_COLORS} from "../annotation_bar.js"
+import {ReadAloud, sentences, supported as speechSupported} from "../read_aloud.js"
 
 // PdfReader: the text reader's PDF view, drawn by PDF.js.
 //
@@ -98,6 +99,18 @@ const PdfReader = {
     })
     this.annotations = new Map()
     this.bar = new AnnotationBar(this.el, (action, color) => this.barAction(action, color))
+    // Read-aloud: page by page from the text layer's content; the page being
+    // read is brought into view as it starts.
+    this.aloud = new ReadAloud({
+      next: () => this.ttsPage(this.ttsAt + 1),
+      onState: ({playing}) => this.pushEvent("tts_state", {playing}),
+    })
+    this.handleEvent("text:tts", (cmd) => this.tts(cmd))
+    if (speechSupported()) {
+      this.onVoices = () => this.pushEvent("tts_voices", {voices: ReadAloud.voices()})
+      speechSynthesis.addEventListener?.("voiceschanged", this.onVoices)
+      setTimeout(this.onVoices, 300)
+    }
     this.onSelect = (e) => (e.type === "keyup" && !e.shiftKey ? null : setTimeout(() => this.selected(), 10))
     this.el.addEventListener("pointerup", this.onSelect)
     this.el.addEventListener("keyup", this.onSelect)
@@ -125,6 +138,8 @@ const PdfReader = {
   },
 
   destroyed() {
+    this.aloud.stop()
+    if (this.onVoices) speechSynthesis.removeEventListener?.("voiceschanged", this.onVoices)
     this.bar.destroy()
     this.el.removeEventListener("pointerup", this.onSelect)
     this.el.removeEventListener("keyup", this.onSelect)
@@ -460,6 +475,38 @@ const PdfReader = {
       if (x > 1 - ZONE_SIDE) return this.step(1)
     }
     this.pushEvent("toggle_overlay", {})
+  },
+
+  // ── read-aloud ────────────────────────────────────────────────────────
+
+  async tts({action, rate, voice, by}) {
+    if (!this.doc || !speechSupported()) return
+    if (rate && rate !== this.aloud.rate) this.aloud.setRate(rate)
+    if (voice !== undefined && (voice || null) !== this.aloud.voiceName) this.aloud.setVoice(voice)
+    if (action === "play") {
+      if (this.aloud.segments.length) return this.aloud.resume()
+      this.aloud.play(await this.ttsPage(this.page))
+    } else if (action === "pause") this.aloud.pause()
+    else if (action === "stop") this.aloud.stop()
+    else if (action === "skip") this.aloud.skip(by)
+  },
+
+  // A page's sentences, from the next page with any text; null past the end.
+  async ttsPage(page) {
+    for (let i = page; i < this.count; i++) {
+      const content = await (await this.doc.getPage(i + 1)).getTextContent()
+      const text = content.items.map((it) => (it.str || "") + (it.hasEOL ? " " : "")).join("")
+      const list = sentences(text, document.documentElement.lang)
+      if (!list.length) continue
+      this.ttsAt = i
+      return list.map((t, n) => ({text: t, onStart: n === 0 ? () => this.ttsShow(i) : null}))
+    }
+    return null
+  },
+
+  ttsShow(page) {
+    const [a, b] = this.visiblePages()
+    if (this.layout === "scroll" ? page !== this.page : page !== a && page !== b) this.goto(page)
   },
 
   // ── annotations ───────────────────────────────────────────────────────

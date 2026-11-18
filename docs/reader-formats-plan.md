@@ -286,9 +286,15 @@ UI settled 2026-11-18:
 
 ### Read-aloud (TTS)
 
-- [ ] foliate-js TTS via Web Speech API: play/pause, speed, voice, follows
-  and highlights the current sentence, page turns along.
-- [ ] Text PDFs: same from the PDF.js text layer.
+- [x] foliate-js TTS via Web Speech API: play/pause, speed, voice, follows
+  and highlights the current sentence, page turns along. *Done:*
+  `assets/js/read_aloud.js` speaks one sentence per utterance (Web Speech
+  has no SSML marks, and many browsers never fire boundaries), so the
+  highlight (CSS Custom Highlight API) keeps in step everywhere; speed
+  and voice are reader settings.
+- [x] Text PDFs: same from the PDF.js text layer. *Done:* page text by
+  sentences, the page brought into view as it starts; no per-sentence
+  highlight in PDFs yet.
 
 ---
 

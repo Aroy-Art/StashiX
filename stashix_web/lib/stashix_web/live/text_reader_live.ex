@@ -40,6 +40,7 @@ defmodule StashixWeb.TextReaderLive do
   @margins ~w(normal narrow wide)
   @text_sizes [80, 90, 100, 110, 120, 135, 150, 175, 200]
   @panels ~w(contents search notes)
+  @tts_rates [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
   @annotation_events ~w(annotate annotation_color annotation_edit annotation_note annotation_cancel annotation_delete)
 
   @impl true
@@ -120,7 +121,14 @@ defmodule StashixWeb.TextReaderLive do
       search_done: true,
       save_timer: nil,
       # The bookmark at the spot showing, if any (EPUB: the hook says).
-      bookmark_here: nil
+      bookmark_here: nil,
+      # Read-aloud: controls open, playing, the browser's voices (nil until
+      # the hook says), and the reader's rate and voice.
+      tts_open: false,
+      tts_playing: false,
+      tts_voices: nil,
+      tts_rate: if(settings["tts_rate"] in @tts_rates, do: settings["tts_rate"], else: 1.0),
+      tts_voice: settings["tts_voice"]
     )
     |> ReaderAnnotations.init()
   end
@@ -181,6 +189,48 @@ defmodule StashixWeb.TextReaderLive do
       at_end = socket.assigns.at_end and socket.assigns.view_layout == "scroll"
       {:noreply, socket |> assign(current_page: page, at_end: at_end) |> pdf_bookmark() |> schedule_progress_save()}
     end
+  end
+
+  ## Read-aloud (the hooks speak; see assets/js/read_aloud.js)
+
+  def handle_event("tts_toggle", _params, %{assigns: %{tts_open: true}} = socket),
+    do: {:noreply, socket |> assign(tts_open: false) |> push_event("text:tts", %{action: "stop"})}
+
+  def handle_event("tts_toggle", _params, socket),
+    do: {:noreply, assign(socket, tts_open: true, overlay_visible: true)}
+
+  def handle_event("tts_play", _params, socket), do: {:noreply, push_tts(socket, "play")}
+  def handle_event("tts_pause", _params, socket), do: {:noreply, push_event(socket, "text:tts", %{action: "pause"})}
+
+  def handle_event("tts_skip", %{"by" => by}, socket),
+    do: {:noreply, push_event(socket, "text:tts", %{action: "skip", by: to_int(by)})}
+
+  def handle_event("tts_settings", params, socket) do
+    rate =
+      case Float.parse(to_string(params["rate"])) do
+        {r, _} when r in @tts_rates -> r
+        _ -> socket.assigns.tts_rate
+      end
+
+    voice = string_or_nil(params["voice"])
+
+    {:noreply,
+     socket
+     |> assign(tts_rate: rate, tts_voice: voice)
+     |> save_settings(%{"tts_rate" => rate, "tts_voice" => voice})
+     |> push_tts(nil)}
+  end
+
+  def handle_event("tts_state", %{"playing" => playing}, socket) when is_boolean(playing),
+    do: {:noreply, assign(socket, :tts_playing, playing)}
+
+  def handle_event("tts_voices", %{"voices" => voices}, socket) when is_list(voices) do
+    voices =
+      for %{"name" => name, "lang" => lang} <- voices,
+          is_binary(name) and is_binary(lang),
+          do: %{name: name, lang: lang}
+
+    {:noreply, assign(socket, :tts_voices, voices)}
   end
 
   ## Annotations (see `StashixWeb.Live.ReaderAnnotations`)
@@ -363,6 +413,20 @@ defmodule StashixWeb.TextReaderLive do
 
   ## Helpers
 
+  defp push_tts(socket, action) do
+    %{tts_rate: rate, tts_voice: voice} = socket.assigns
+    push_event(socket, "text:tts", %{action: action, rate: rate, voice: voice || ""})
+  end
+
+  # The browser's voices, the book's language first.
+  defp tts_voice_options(voices, lang) do
+    lang = to_string(lang)
+    {mine, rest} = Enum.split_with(voices, &(lang != "" and String.starts_with?(String.downcase(&1.lang), lang)))
+    Enum.map(mine ++ rest, &{"#{&1.name} (#{&1.lang})", &1.name})
+  end
+
+  defp tts_rate_label(rate), do: "#{:erlang.float_to_binary(rate, [:compact, decimals: 2])}×"
+
   # Hook params to a locator: a CFI (range) in a foliate book, a page and
   # its text rects in a PDF.
   defp annotation_locator(%{assigns: %{engine: :pdf}}, params),
@@ -383,7 +447,8 @@ defmodule StashixWeb.TextReaderLive do
   defp view_changed(%{assigns: %{engine: :foliate}} = socket) do
     a = socket.assigns
 
-    Accounts.save_reader_settings(a.current_user, %{
+    socket
+    |> save_settings(%{
       "epub_layout" => a.view_layout,
       "epub_font" => a.font,
       "epub_spacing" => a.spacing,
@@ -391,20 +456,24 @@ defmodule StashixWeb.TextReaderLive do
       "epub_size" => a.text_size,
       "text_theme" => a.theme
     })
-
-    push_event(socket, "text:view", epub_view(a))
+    |> push_event("text:view", epub_view(a))
   end
 
   defp view_changed(socket) do
     %{view_layout: layout, fit: fit, theme: theme} = socket.assigns
 
-    Accounts.save_reader_settings(socket.assigns.current_user, %{
-      "text_layout" => layout,
-      "text_fit" => fit,
-      "text_theme" => theme
-    })
+    socket
+    |> save_settings(%{"text_layout" => layout, "text_fit" => fit, "text_theme" => theme})
+    |> push_event("text:view", %{layout: layout, fit: fit, theme: theme})
+  end
 
-    push_event(socket, "text:view", %{layout: layout, fit: fit, theme: theme})
+  # Saved on top of the settings saved so far this visit, not the ones read
+  # at mount.
+  defp save_settings(socket, settings) do
+    case Accounts.save_reader_settings(socket.assigns.current_user, settings) do
+      {:ok, user} -> assign(socket, :current_user, user)
+      _ -> socket
+    end
   end
 
   defp epub_view(a),
@@ -639,6 +708,14 @@ defmodule StashixWeb.TextReaderLive do
 
           <.segmented>
             <.segment
+              id="tts-toggle"
+              icon="lucide-headphones"
+              title={gettext("Read aloud")}
+              active={@tts_open}
+              disabled={!@loaded}
+              phx-click="tts_toggle"
+            />
+            <.segment
               id="bookmark-toggle"
               icon={if @bookmark_here, do: "lucide-bookmark-check", else: "lucide-bookmark"}
               title={if @bookmark_here, do: gettext("Remove bookmark"), else: gettext("Bookmark this page")}
@@ -848,6 +925,63 @@ defmodule StashixWeb.TextReaderLive do
         next_href={@next_href}
         volume_counts={@volume_counts}
       />
+
+      <%!-- Read-aloud controls, above the scrubber --%>
+      <div
+        :if={@tts_open}
+        id="tts-controls"
+        class="absolute z-30 left-1/2 -translate-x-1/2 bottom-16 flex flex-wrap items-center justify-center gap-2 max-w-[calc(100vw-2rem)] px-2 py-1.5 rounded-xl bg-zinc-950/95 ring-1 ring-fg/10 shadow-xl"
+      >
+        <%= if @tts_voices == [] do %>
+          <p class="px-2 text-sm text-muted">{gettext("This browser has no voices to read aloud with.")}</p>
+        <% else %>
+          <.segmented>
+            <.segment icon="lucide-skip-back" title={gettext("Previous sentence")} phx-click="tts_skip" phx-value-by="-1" />
+            <.segment
+              :if={!@tts_playing}
+              id="tts-play"
+              icon="lucide-play"
+              title={gettext("Read aloud")}
+              phx-click="tts_play"
+            />
+            <.segment :if={@tts_playing} id="tts-pause" icon="lucide-pause" title={gettext("Pause")} phx-click="tts_pause" />
+            <.segment icon="lucide-skip-forward" title={gettext("Next sentence")} phx-click="tts_skip" phx-value-by="1" />
+          </.segmented>
+          <form id="tts-settings" phx-change="tts_settings" class="flex items-center gap-2">
+            <select
+              name="rate"
+              aria-label={gettext("Speed")}
+              class="h-8 pl-2 pr-7 rounded-md bg-fg/5 ring-1 ring-fg/15 text-sm text-fg"
+            >
+              <option :for={rate <- [0.75, 1.0, 1.25, 1.5, 1.75, 2.0]} value={rate} selected={rate == @tts_rate}>
+                {tts_rate_label(rate)}
+              </option>
+            </select>
+            <select
+              :if={@tts_voices}
+              name="voice"
+              aria-label={gettext("Voice")}
+              class="h-8 max-w-[14rem] pl-2 pr-7 rounded-md bg-fg/5 ring-1 ring-fg/15 text-sm text-fg truncate"
+            >
+              <option value="">{gettext("Default voice")}</option>
+              <option
+                :for={{label, name} <- tts_voice_options(@tts_voices, @book.language)}
+                value={name}
+                selected={name == @tts_voice}
+              >
+                {label}
+              </option>
+            </select>
+          </form>
+        <% end %>
+        <button
+          phx-click="tts_toggle"
+          title={gettext("Stop reading aloud")}
+          class="p-1.5 rounded-md text-muted hover:text-fg hover:bg-fg/10"
+        >
+          <.icon name="lucide-x" class="w-4 h-4" />
+        </button>
+      </div>
 
       <%!-- Bottom bar: scrubber --%>
       <div class={[

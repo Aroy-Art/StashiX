@@ -5,6 +5,7 @@
 
 import {exitReader} from "../reader_exit.js"
 import {AnnotationBar, HIGHLIGHT_COLORS} from "../annotation_bar.js"
+import {ReadAloud, ssmlSegments, supported as speechSupported} from "../read_aloud.js"
 
 // EpubReader: the text reader's view for books foliate-js lays out: EPUB,
 // Kindle (MOBI, AZW3) and FictionBook.
@@ -109,6 +110,7 @@ const bookCSS = ({theme, font, spacing, size}) => {
     ${t.scheme === "dark" ? `body * { color: inherit !important; background-color: transparent !important; }
       img, svg { filter: brightness(0.85); }` : ""}
     aside[epub|type~="footnote"], aside[epub|type~="endnote"], aside[epub|type~="rearnote"] { display: none; }
+    ::highlight(stashix-tts) { background-color: ${t.scheme === "dark" ? "rgb(56 189 248 / 0.35)" : "rgb(250 204 21 / 0.45)"}; }
   `
 }
 
@@ -144,6 +146,23 @@ const EpubReader = {
     this.annotations = new Map()
     this.bar = new AnnotationBar(this.el, (action, color) => this.barAction(action, color))
 
+    // Read-aloud: the server's controls send "text:tts"; the hook says when
+    // playback starts or stops, and which voices the browser has.
+    this.aloud = new ReadAloud({
+      next: () => this.ttsNext(),
+      onState: ({playing}) => {
+        if (!playing) this.ttsUnhighlight()
+        this.pushEvent("tts_state", {playing})
+      },
+    })
+    this.handleEvent("text:tts", (cmd) => this.tts(cmd))
+    if (speechSupported()) {
+      const voices = () => this.pushEvent("tts_voices", {voices: ReadAloud.voices()})
+      speechSynthesis.addEventListener?.("voiceschanged", voices)
+      this.onVoices = voices
+      setTimeout(voices, 300)
+    }
+
     this.onKey = (e) => this.key(e)
     window.addEventListener("keydown", this.onKey)
 
@@ -154,6 +173,8 @@ const EpubReader = {
   },
 
   destroyed() {
+    this.aloud.stop()
+    if (this.onVoices) speechSynthesis.removeEventListener?.("voiceschanged", this.onVoices)
     this.bar.destroy()
     window.removeEventListener("keydown", this.onKey)
     clearTimeout(this.reportTimer)
@@ -502,6 +523,58 @@ const EpubReader = {
       this.bookmarkHere = here
       this.pushEvent("bookmark_here", {id: here})
     }
+  },
+
+  // ── read-aloud ────────────────────────────────────────────────────────
+
+  async tts({action, rate, voice, by}) {
+    if (!this.view || !speechSupported()) return
+    if (rate && rate !== this.aloud.rate) this.aloud.setRate(rate)
+    if (voice !== undefined && (voice || null) !== this.aloud.voiceName) this.aloud.setVoice(voice)
+    if (action === "play") {
+      if (this.aloud.segments.length) return this.aloud.resume()
+      // From the top of the page showing.
+      await this.ttsInit()
+      const range = this.view.lastLocation?.range
+      this.aloud.play(this.ttsSegments(range ? this.view.tts.from(range) : this.view.tts.start()))
+    } else if (action === "pause") this.aloud.pause()
+    else if (action === "stop") this.aloud.stop()
+    else if (action === "skip") this.aloud.skip(by)
+  },
+
+  ttsInit() {
+    return this.view.initTTS("sentence", (range) => this.ttsHighlight(range))
+  },
+
+  ttsSegments(ssml) {
+    if (!ssml) return []
+    const tts = this.view.tts
+    return ssmlSegments(ssml).map((s) => ({...s, onStart: () => s.mark && tts.setMark(s.mark)}))
+  },
+
+  // The next block of the section, or the first of the next section.
+  async ttsNext() {
+    const ssml = this.view?.tts?.next()
+    if (ssml) return this.ttsSegments(ssml)
+    if (!this.view || this.lastSection()) return null
+    await this.view.renderer.nextSection()
+    await this.ttsInit()
+    return this.ttsSegments(this.view.tts.start()) || []
+  },
+
+  // The sentence being read: highlighted, and kept on screen (turning the
+  // page when it runs over).
+  ttsHighlight(range) {
+    const win = range.startContainer.ownerDocument.defaultView
+    if (win?.CSS?.highlights && win.Highlight) {
+      win.CSS.highlights.set("stashix-tts", new win.Highlight(range))
+      this.ttsWindow = win
+    }
+    this.view.renderer.scrollToAnchor(range)
+  },
+
+  ttsUnhighlight() {
+    this.ttsWindow?.CSS?.highlights?.delete("stashix-tts")
   },
 
   // ── footnotes ─────────────────────────────────────────────────────────

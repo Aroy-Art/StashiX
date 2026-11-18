@@ -244,6 +244,49 @@ defmodule StashixWeb.TextReaderLiveTest do
     end
   end
 
+  describe "read-aloud" do
+    test "controls drive the hook; speed and voice are saved", %{conn: conn, user: user, epub: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 40})
+      view |> element("#tts-toggle") |> render_click()
+
+      # No voices yet: the controls wait for the hook's list.
+      render_hook(view, "tts_voices", %{
+        "voices" => [%{"name" => "Anna", "lang" => "de-DE"}, %{"name" => "Sam", "lang" => "en-US"}]
+      })
+
+      assert view |> element("#tts-settings select[name=voice] option:nth-child(2)") |> render() =~ "Sam (en-US)"
+
+      view |> element("#tts-play") |> render_click()
+      assert_push_event(view, "text:tts", %{action: "play", rate: 1.0, voice: ""})
+
+      render_hook(view, "tts_state", %{"playing" => true})
+      assert has_element?(view, "#tts-pause")
+      view |> element("#tts-pause") |> render_click()
+      assert_push_event(view, "text:tts", %{action: "pause"})
+
+      view |> form("#tts-settings", %{"rate" => "1.5", "voice" => "Anna"}) |> render_change()
+      assert_push_event(view, "text:tts", %{rate: 1.5, voice: "Anna"})
+      assert %{"tts_rate" => 1.5, "tts_voice" => "Anna"} = Accounts.get_user!(user.id).reader_settings
+
+      # Later view changes keep them.
+      render_click(view, "set_font", %{"font" => "serif"})
+      assert %{"tts_rate" => 1.5, "epub_font" => "serif"} = Accounts.get_user!(user.id).reader_settings
+
+      view |> element("#tts-toggle") |> render_click()
+      assert_push_event(view, "text:tts", %{action: "stop"})
+      refute has_element?(view, "#tts-controls")
+    end
+
+    test "a browser without voices says so", %{conn: conn, epub: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 40})
+      view |> element("#tts-toggle") |> render_click()
+      render_hook(view, "tts_voices", %{"voices" => []})
+      assert has_element?(view, "#tts-controls", "no voices")
+    end
+  end
+
   describe "annotations" do
     test "a highlight from the hook is saved, listed, noted and removed", %{conn: conn, user: user, epub: book} do
       {view, _html} = open(conn, book)
