@@ -132,6 +132,79 @@ defmodule StashixWeb.ReaderLiveTest do
     refute has_element?(view, "#reader-end")
   end
 
+  describe "annotations" do
+    test "a region marked on the page is saved and listed; mark mode toggles", %{conn: conn, user: user, first: book} do
+      {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book.id}")
+      assert has_element?(view, ~s|#annot-layer[phx-hook="ImageAnnotations"][data-mark="false"]|)
+
+      render_hook(view, "annotations_load", %{})
+      assert_push_event(view, "annotations:all", %{items: []})
+
+      view |> element("#mark-toggle") |> render_click()
+      assert has_element?(view, ~s|#annot-layer[data-mark="true"]|)
+
+      render_hook(view, "annotate", %{
+        "kind" => "highlight",
+        "color" => "pink",
+        "page" => 1,
+        "rect" => [0.1, 0.2, 0.3, 0.4]
+      })
+
+      assert [
+               %{
+                 id: id,
+                 color: "pink",
+                 progression: 1.0,
+                 locator: %{"type" => "image", "page" => 1, "rect" => [0.1, 0.2, 0.3, 0.4]}
+               }
+             ] =
+               Stashix.Annotations.list(user.id, book.id)
+
+      assert_push_event(view, "annotations:put", %{item: %{id: ^id}})
+
+      view |> element("button[title=Notes]") |> render_click()
+      assert has_element?(view, "#reader-notes-panel #note-#{id}", "Page 2")
+
+      view |> element("#note-#{id} button[phx-click=annotation_goto]") |> render_click()
+      assert has_element?(view, ~s|#reader-page-main[data-page="1"]|)
+    end
+
+    test "the book page lists them, and each opens the reader there", %{conn: conn, user: user, first: book} do
+      params = %{
+        "kind" => "highlight",
+        "color" => "green",
+        "locator" => %{"type" => "image", "page" => 1, "rect" => [0, 0, 0.5, 0.5]},
+        "note" => "Big splash"
+      }
+
+      {:ok, a} = Stashix.Annotations.create(Access.all(), user.id, book, params)
+
+      {:ok, view, _html} = live_canonical(conn, ~p"/book/#{book.id}")
+      assert has_element?(view, "#book-highlights", "Big splash")
+      assert has_element?(view, ~s|#book-highlights a[href$="?at=#{a.id}"]|)
+      assert has_element?(view, ~s|#book-highlights a[href="/api/books/#{book.id}/annotations/export?format=md"]|)
+
+      {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book.id}?at=#{a.id}")
+      assert has_element?(view, ~s|#reader-page-main[data-page="1"]|)
+    end
+
+    test "the bookmark button bookmarks the page showing", %{conn: conn, user: user, first: book} do
+      {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book.id}")
+      view |> element("#bookmark-toggle") |> render_click()
+
+      assert [%{kind: :bookmark, locator: %{"type" => "image", "page" => 0}}] =
+               Stashix.Annotations.list(user.id, book.id)
+
+      assert has_element?(view, ~s|#bookmark-toggle[title="Remove bookmark"]|)
+
+      render_hook(view, "next_page", %{})
+      assert has_element?(view, ~s|#bookmark-toggle[title="Bookmark this page"]|)
+      render_hook(view, "prev_page", %{})
+      view |> element("#bookmark-toggle") |> render_click()
+      assert Stashix.Annotations.list(user.id, book.id) == []
+    end
+  end
+
   defp write_cbz(dir, filename, pages) do
     files = for i <- 1..pages, do: {String.to_charlist("page#{i}.jpg"), "fake jpeg #{filename} #{i}"}
     {:ok, {_, data}} = :zip.create(String.to_charlist(Path.join(dir, filename)), files, [:memory])

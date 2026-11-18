@@ -137,9 +137,7 @@ defmodule StashixWeb.Live.ReaderAnnotations do
     <div class="flex-1 min-h-0 flex flex-col">
       <%= if @annotations == [] do %>
         <p class="px-4 py-3 text-sm text-muted">
-          {gettext(
-            "No highlights, notes or bookmarks yet. Select text to highlight it, or bookmark a page from the top bar."
-          )}
+          {gettext("No highlights, notes or bookmarks yet.")}
         </p>
       <% else %>
         <ol id="reader-notes" class="flex-1 overflow-y-auto overscroll-contain py-1">

@@ -5,11 +5,12 @@ defmodule StashixWeb.ReaderLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Accounts, Formatters, Library, Media.Extractor, Slug}
-  alias StashixWeb.Live.CanonicalUrl
+  alias StashixWeb.Live.{CanonicalUrl, ReaderAnnotations}
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
 
   @progress_debounce_ms 2_000
+  @annotation_events ~w(annotate annotation_color annotation_edit annotation_note annotation_cancel annotation_delete)
 
   @impl true
   def mount(%{"id" => param} = params, _session, socket) do
@@ -19,7 +20,8 @@ defmodule StashixWeb.ReaderLive do
 
     # Text books open in the text reader; this one only shows pages.
     if Library.text_book_file(book, format) do
-      {:ok, push_navigate(socket, to: ~p"/read/#{param}/text?#{Map.take(params, ["format", "page"])}", replace: true)}
+      {:ok,
+       push_navigate(socket, to: ~p"/read/#{param}/text?#{Map.take(params, ["format", "page", "at"])}", replace: true)}
     else
       mount_pages(book, format, params, socket)
     end
@@ -45,11 +47,16 @@ defmodule StashixWeb.ReaderLive do
     user = socket.assigns.current_user
     progress = Library.get_progress(user.id, id)
 
+    # ?page=0 starts over; ?at=<annotation> opens on its page.
+    at = params["at"] && Stashix.Annotations.get(user.id, params["at"])
+
     current_page =
-      case Map.get(params, "page") do
-        "0" -> 0
-        _ -> (progress && progress.current_page) || 0
+      cond do
+        params["page"] == "0" -> 0
+        match?(%{locator: %{"page" => p}} when is_integer(p), at) and at.book_id == id -> at.locator["page"]
+        true -> (progress && progress.current_page) || 0
       end
+      |> min(max(length(pages) - 1, 0))
 
     {_prev_book, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     volume_counts = Library.series_volume_counts(socket.assigns.access, book)
@@ -78,11 +85,62 @@ defmodule StashixWeb.ReaderLive do
        fit_mode: fit_mode,
        data_saver: Accounts.User.ui_setting(user, "data_saver") == "on",
        overlay_visible: true,
-       save_timer: nil
-     ), layout: false}
+       save_timer: nil,
+       book_file: book_file,
+       # Notes panel open; mark mode (drag a region on the page).
+       panel: nil,
+       marking: false
+     )
+     |> ReaderAnnotations.init(), layout: false}
   end
 
   @impl true
+  # Annotations (see `StashixWeb.Live.ReaderAnnotations`): regions on a page.
+  def handle_event(event, params, socket) when event in @annotation_events do
+    locator = fn p -> %{"type" => "image", "page" => p["page"], "rect" => p["rect"]} end
+    params = Map.put(params, "fraction", fraction(params["page"], socket.assigns.page_count))
+
+    case ReaderAnnotations.handle_event(event, params, socket, locator, socket.assigns.book_file) do
+      :unhandled -> {:noreply, socket}
+      result -> result
+    end
+  end
+
+  # The layer hook asks once it is mounted.
+  def handle_event("annotations_load", _params, socket), do: {:noreply, ReaderAnnotations.push_all(socket)}
+
+  def handle_event("annotation_goto", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.annotations, &(&1.id == id)) do
+      %{locator: %{"page" => page}} -> handle_event("goto_page", %{"page" => to_string(page)}, socket)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_mark", _params, socket) do
+    {:noreply, assign(socket, marking: !socket.assigns.marking, overlay_visible: true)}
+  end
+
+  # Bookmarks the page showing (the left one of a spread), or drops its bookmark.
+  def handle_event("toggle_bookmark", _params, socket) do
+    case bookmark_here(socket.assigns) do
+      nil ->
+        page = socket.assigns.current_page
+        params = %{"kind" => "bookmark", "page" => page, "rect" => nil}
+        {:reply, _, socket} = handle_event("annotate", params, socket)
+        {:noreply, socket}
+
+      %{id: id} ->
+        handle_event("annotation_delete", %{"id" => id}, socket)
+    end
+  end
+
+  def handle_event("open_panel", %{"panel" => "notes"}, socket) do
+    panel = if socket.assigns.panel == "notes", do: nil, else: "notes"
+    {:noreply, assign(socket, panel: panel, overlay_visible: true)}
+  end
+
+  def handle_event("close_panel", _params, socket), do: {:noreply, assign(socket, :panel, nil)}
+
   # The end card sits one step past the last page; stepping back just closes it.
   def handle_event("prev_page", _params, %{assigns: %{at_end: true}} = socket) do
     socket = assign(socket, :at_end, false)
@@ -237,6 +295,15 @@ defmodule StashixWeb.ReaderLive do
   end
 
   defp sync_page_count(book, _count), do: book
+
+  defp fraction(page, count) when is_integer(page) and count > 1, do: min(page / (count - 1), 1.0)
+  defp fraction(_page, _count), do: 0.0
+
+  # A bookmark on a page showing (both pages of a spread).
+  defp bookmark_here(assigns) do
+    pages = if spread?(assigns), do: [assigns.current_page, assigns.current_page + 1], else: [assigns.current_page]
+    Enum.find(assigns.annotations, &(&1.kind == :bookmark and &1.locator["page"] in pages))
+  end
 
   defp webtoon?(%{page_layout: layout}), do: layout == "webtoon"
 
@@ -533,6 +600,31 @@ defmodule StashixWeb.ReaderLive do
 
         <%!-- Right: controls + page counter --%>
         <div class="flex items-center gap-2 flex-shrink-0">
+          <%!-- Notes, bookmark, mark mode --%>
+          <.segmented>
+            <.segment
+              icon="lucide-notebook-pen"
+              title={gettext("Notes")}
+              active={@panel == "notes"}
+              phx-click="open_panel"
+              phx-value-panel="notes"
+            />
+            <.segment
+              id="bookmark-toggle"
+              icon={if bookmark_here(assigns), do: "lucide-bookmark-check", else: "lucide-bookmark"}
+              title={if bookmark_here(assigns), do: gettext("Remove bookmark"), else: gettext("Bookmark this page")}
+              active={bookmark_here(assigns) != nil}
+              phx-click="toggle_bookmark"
+            />
+            <.segment
+              id="mark-toggle"
+              icon="lucide-highlighter"
+              title={if @marking, do: gettext("Stop marking (Esc)"), else: gettext("Mark a region")}
+              active={@marking}
+              phx-click="toggle_mark"
+            />
+          </.segmented>
+
           <%!-- View menu: layout, plus fit and direction on small screens.
                Modal, so the tap that closes it does not also turn the page. --%>
           <.ink_menu id="reader-view-menu" modal panel_class="w-60" class="ink-segmented group">
@@ -760,6 +852,7 @@ defmodule StashixWeb.ReaderLive do
             </div>
             <img
               id="reader-page-main"
+              data-page={@current_page}
               phx-hook="PageImage"
               data-fit={@fit_mode}
               data-half={half_page?(assigns) && "true"}
@@ -784,6 +877,7 @@ defmodule StashixWeb.ReaderLive do
               </div>
               <img
                 id="reader-page-second"
+                data-page={@current_page + 1}
                 phx-hook="PageImage"
                 data-fit={@fit_mode}
                 data-half={half_page?(assigns) && "true"}
@@ -817,6 +911,42 @@ defmodule StashixWeb.ReaderLive do
           <% end %>
         </div>
       </div>
+
+      <%!-- Region highlights over the pages; takes the pointer in mark mode
+           only. Its boxes and the bar are the hook's. --%>
+      <div
+        id="annot-layer"
+        class="img-annot-layer"
+        phx-hook="ImageAnnotations"
+        phx-update="ignore"
+        data-mark={to_string(@marking)}
+      >
+      </div>
+      <p
+        :if={@marking}
+        class="absolute z-30 left-1/2 -translate-x-1/2 bottom-16 px-3 py-1.5 rounded-md bg-ink text-zinc-950 text-sm font-semibold pointer-events-none"
+      >
+        {gettext("Drag a box on the page to mark it")}
+      </p>
+
+      <aside
+        :if={@panel == "notes"}
+        id="reader-notes-panel"
+        class="absolute z-40 inset-x-0 bottom-0 top-[45dvh] sm:top-12 sm:right-auto sm:w-80 flex flex-col bg-zinc-950/95 backdrop-blur-md ring-1 ring-fg/10"
+        aria-label={gettext("Notes")}
+      >
+        <div class="flex items-center px-4 py-2 border-b border-fg/10">
+          <span class="font-display font-bold uppercase tracking-wide text-sm text-fg">{gettext("Notes")}</span>
+          <button
+            phx-click="close_panel"
+            title={gettext("Close")}
+            class="ml-auto p-1.5 rounded-md text-muted hover:text-fg hover:bg-fg/10"
+          >
+            <.icon name="lucide-x" class="w-4 h-4" />
+          </button>
+        </div>
+        <ReaderAnnotations.notes_list annotations={@annotations} editing_note={@editing_note} book={@book} />
+      </aside>
 
       <%!-- Bottom bar: scrubber --%>
       <div class={[

@@ -5,7 +5,7 @@ defmodule StashixWeb.BookLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Formatters, Library, Metadata, Repo, Scanner, Slug}
-  alias StashixWeb.Live.CanonicalUrl
+  alias StashixWeb.Live.{CanonicalUrl, ReaderAnnotations}
   alias Stashix.Accounts.User
   alias Stashix.Metadata.Roles
   import StashixWeb.MetadataComponents
@@ -57,6 +57,7 @@ defmodule StashixWeb.BookLive do
        show_edit_dialog: false,
        show_identify_dialog: false,
        external_ids: load_external_ids(book),
+       annotations: Stashix.Annotations.list(socket.assigns.current_user.id, book.id),
        book_details: Library.get_book_details(socket.assigns.access, book.id),
        all_publishers: Library.list_all_publishers()
      )}
@@ -631,6 +632,8 @@ defmodule StashixWeb.BookLive do
         notes={@book.notes}
       />
 
+      <.highlights :if={@annotations != []} book={@book} annotations={@annotations} />
+
       <%!-- Prev / Next navigation --%>
       <nav :if={@prev_book || @next_book} class="grid grid-cols-2 gap-3" aria-label={gettext("Adjacent issues")}>
         <.adjacent_card :if={@prev_book} book={@prev_book} dir={:prev} volume_counts={@volume_counts} />
@@ -684,4 +687,63 @@ defmodule StashixWeb.BookLive do
     />
     """
   end
+
+  attr :book, :map, required: true
+  attr :annotations, :list, required: true
+
+  # The reader's own highlights, notes and bookmarks in this book; each opens
+  # the reader there (`?at=`).
+  defp highlights(assigns) do
+    ~H"""
+    <section id="book-highlights" class="max-w-3xl" aria-labelledby="book-highlights-title">
+      <div class="flex items-baseline gap-3 mb-3">
+        <h2 id="book-highlights-title" class="font-display font-black uppercase tracking-wide text-xl text-fg">
+          {gettext("Your highlights")}
+          <span class="ml-1 text-muted font-bold text-base tabular-nums">{length(@annotations)}</span>
+        </h2>
+        <span class="ml-auto text-xs text-muted">{gettext("Export")}</span>
+        <a
+          href={~p"/api/books/#{@book.id}/annotations/export?format=md"}
+          class="text-xs text-fg-soft hover:text-fg underline"
+        >
+          Markdown
+        </a>
+        <a
+          href={~p"/api/books/#{@book.id}/annotations/export?format=json"}
+          class="text-xs text-fg-soft hover:text-fg underline"
+        >
+          JSON
+        </a>
+      </div>
+      <ol class="divide-y divide-fg/10 border-y border-fg/10">
+        <li :for={a <- @annotations}>
+          <.link navigate={~p"/read/#{@book}?#{[at: a.id]}"} class="flex gap-3 py-3 px-1 hover:bg-fg/5 transition-colors">
+            <span class={["w-1 self-stretch rounded-full flex-shrink-0", highlight_swatch(a)]} aria-hidden="true"></span>
+            <span class="flex-1 min-w-0">
+              <span class="block text-[11px] uppercase tracking-[0.14em] text-muted">
+                {ReaderAnnotations.where_label(a)}
+              </span>
+              <img
+                :if={a.preview}
+                src={~p"/api/annotations/#{a.id}/preview"}
+                alt=""
+                loading="lazy"
+                class="mt-1.5 max-h-40 rounded-sm ring-1 ring-fg/10"
+              />
+              <span :if={a.text} class="mt-1 block text-[15px] text-fg-soft leading-6 line-clamp-4">{a.text}</span>
+              <span :if={a.note} class="mt-1 block text-sm text-fg whitespace-pre-line">{a.note}</span>
+              <span :if={a.kind == :bookmark} class="mt-1 inline-flex items-center gap-1 text-sm text-fg-soft">
+                <.icon name="lucide-bookmark" class="w-3.5 h-3.5" /> {gettext("Bookmark")}
+              </span>
+            </span>
+          </.link>
+        </li>
+      </ol>
+    </section>
+    """
+  end
+
+  defp highlight_swatch(%{kind: :highlight, color: color}), do: ReaderAnnotations.color_bg(color)
+  defp highlight_swatch(%{kind: :bookmark}), do: "bg-ink"
+  defp highlight_swatch(_note), do: "bg-fg/30"
 end

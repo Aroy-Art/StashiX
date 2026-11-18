@@ -51,7 +51,7 @@ defmodule StashixWeb.TextReaderLive do
     case Library.text_book_file(book, format) do
       nil ->
         # Opens as pages after all (override changed, file gone): comic reader.
-        {:ok, push_navigate(socket, to: ~p"/read/#{param}?#{Map.take(params, ["page"])}", replace: true)}
+        {:ok, push_navigate(socket, to: ~p"/read/#{param}?#{Map.take(params, ["page", "at"])}", replace: true)}
 
       book_file ->
         {:ok, mount_text(socket, book, book_file, params), layout: false}
@@ -62,9 +62,10 @@ defmodule StashixWeb.TextReaderLive do
     user = socket.assigns.current_user
     progress = Library.get_progress(user.id, book.id)
 
-    # ?page=0 starts over; else resume where the server has this reader.
+    # ?page=0 starts over; ?at=<annotation> opens at one of the user's
+    # highlights; else resume where the server has this reader.
     progress = if params["page"] == "0", do: nil, else: progress
-    current_page = (progress && progress.current_page) || 0
+    {current_page, start_cfi} = start_at(user, book, book_file.format, params["at"], progress)
 
     {_prev, next_book} = Library.get_adjacent_books(socket.assigns.access, book)
     settings = user.reader_settings || %{}
@@ -87,7 +88,7 @@ defmodule StashixWeb.TextReaderLive do
       page_count: book.page_count,
       current_page: current_page,
       # Fixed at mount: the hook only reads it to open the book there.
-      start_cfi: start_cfi(progress, book_file.format),
+      start_cfi: start_cfi,
       locator: nil,
       progression: nil,
       loaded: false,
@@ -474,6 +475,21 @@ defmodule StashixWeb.TextReaderLive do
     locator = socket.assigns.locator || locator(socket.assigns.format, last, %{})
     Library.update_progress(access, user.id, book.id, last, progression: 1.0, locator: locator)
     assign(socket, at_end: true, save_timer: nil)
+  end
+
+  defp start_at(user, book, format, at, progress) do
+    resume = {(progress && progress.current_page) || 0, start_cfi(progress, format)}
+
+    case at && Stashix.Annotations.get(user.id, at) do
+      %{book_id: id, locator: %{"cfi" => cfi, "type" => type}} when id == book.id ->
+        if type == locator_type(format), do: {elem(resume, 0), cfi}, else: resume
+
+      %{book_id: id, locator: %{"page" => page}} when id == book.id and is_integer(page) and format == :pdf ->
+        {max(page, 0), nil}
+
+      _ ->
+        resume
+    end
   end
 
   # A CFI saved by this book's format (not one from another file of the book).

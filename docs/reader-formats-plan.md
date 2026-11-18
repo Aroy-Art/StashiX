@@ -242,16 +242,20 @@ UI settled 2026-11-18:
   overlays for EPUB/MOBI/FB2, rects in page shares under the PDF text
   layer; Notes tab with inline note editing
   (`StashixWeb.Live.ReaderAnnotations`).
-- [ ] Image reader: highlight a **region** on a page — locator
+- [x] Image reader: highlight a **region** on a page — locator
   `%{"type" => "image", "page" => n, "rect" => [x, y, w, h]}` in 0..1 page
   coordinates so it survives fit modes and zoom; drawn as an overlay in
-  single/double/webtoon; note attached to the region.
-- [ ] Bookmarks (page or CFI) in both readers. *Text reader done:* top-bar
-  toggle; a bookmark is the range showing when made, and is "here" when it
-  overlaps the range showing now.
-- [ ] Export (Markdown / JSON); later mapped to Kobo/OPDS where possible.
+  single/double/webtoon; note attached to the region. *Done:* mark mode
+  (`ImageAnnotations` hook): the layer places its boxes from the page
+  images each frame, so they follow fit, zoom, pan and scroll; the crop
+  preview is cut server-side when the region is saved.
+- [x] Bookmarks (page or CFI) in both readers. *Done:* top-bar toggle; in
+  foliate-js books a bookmark is the range showing when made, and is
+  "here" when it overlaps the range showing now.
+- [x] Export (Markdown / JSON); later mapped to Kobo/OPDS where possible.
   *Done:* `/api/books/:id/annotations/export?format=md|json`, linked from
-  the Notes tab; the book page section is still to come.
+  the Notes tab and the book page's "Your highlights" section, whose
+  entries open the reader there (`/read/:id?at=<annotation>`).
 
 ### MOBI / AZW3 / FB2
 

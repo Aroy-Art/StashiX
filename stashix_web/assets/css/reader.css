@@ -151,3 +151,19 @@ a.reader-end-page:hover {
     }
   }
 }
+
+/* ── Region highlights (assets/js/hooks/image_annotations.js) ─────────── */
+
+.img-annot-layer { position: absolute; inset: 0; z-index: 15; pointer-events: none; overflow: hidden; }
+.img-annot-layer.img-annot-marking { pointer-events: auto; cursor: crosshair; touch-action: none; }
+.img-annot-layer .annot-bar { pointer-events: auto; cursor: default; }
+.img-annot {
+  position: absolute;
+  pointer-events: none;
+  border: 2px solid var(--c);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--c) 22%, transparent);
+}
+.img-annot[hidden] { display: none; }
+.img-annot-note { border-style: dashed; border-color: rgb(161 161 170); background: none; }
+.img-annot-draft { border: 2px dashed var(--color-ink, #22d3ee); background: rgb(255 255 255 / 0.08); }

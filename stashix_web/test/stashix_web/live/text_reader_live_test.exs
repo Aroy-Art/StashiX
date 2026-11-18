@@ -314,6 +314,20 @@ defmodule StashixWeb.TextReaderLiveTest do
       assert Enum.filter(Stashix.Annotations.list(user.id, book.id), &(&1.kind == :bookmark)) == []
     end
 
+    test "?at= opens at a highlight", %{conn: conn, user: user, epub: book, text: pdf} do
+      cfi = "epubcfi(/6/4!/4/2,/1:0,/1:4)"
+      params = %{"kind" => "highlight", "color" => "yellow", "locator" => %{"type" => "epub", "cfi" => cfi}}
+      {:ok, a} = Stashix.Annotations.create(Stashix.Library.Access.all(), user.id, book, params)
+      {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book.id}/text?at=#{a.id}")
+      assert has_element?(view, ~s|#epub-reader[data-cfi="#{cfi}"]|)
+
+      params = %{"kind" => "bookmark", "locator" => %{"type" => "pdf", "page" => 2}}
+      {:ok, b} = Stashix.Annotations.create(Stashix.Library.Access.all(), user.id, pdf, params)
+      {:error, {:live_redirect, %{to: to}}} = live(conn, ~p"/read/#{pdf.id}?at=#{b.id}")
+      {:ok, view, _html} = live_canonical(conn, to)
+      assert has_element?(view, ~s|#pdf-reader[data-start="2"]|)
+    end
+
     test "EPUB: the hook says which bookmark is showing", %{conn: conn, user: user, epub: book} do
       {view, _html} = open(conn, book)
       render_hook(view, "loaded", %{"page_count" => 40})
