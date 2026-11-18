@@ -4,6 +4,7 @@
  */
 
 import {exitReader} from "../reader_exit.js"
+import {AnnotationBar, HIGHLIGHT_COLORS} from "../annotation_bar.js"
 
 // PdfReader: the text reader's PDF view, drawn by PDF.js.
 //
@@ -21,6 +22,11 @@ import {exitReader} from "../reader_exit.js"
 //
 // Layouts: "scroll" (one column, scrolled natively), "paged" (one page) and
 // "spread" (two pages side by side), turned with keys, taps or the server.
+//
+// Highlights: selecting text in a page's text layer brings up the
+// annotation bar; a highlight is saved as the selection's boxes on that page
+// in shares of the page ("rects"), drawn under the text layer, so they hold
+// at any zoom.
 
 const PDFJS = "/vendor/pdfjs/"
 let pdfjsPromise = null
@@ -76,6 +82,25 @@ const PdfReader = {
     this.handleEvent("text:view", (view) => this.setView(view))
     this.handleEvent("text:zoom", ({by}) => this.setZoom(by === 0 ? 1 : this.zoom * (by > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)))
     this.handleEvent("text:search", ({query}) => this.search(query))
+    this.handleEvent("annotations:all", ({items}) => {
+      this.annotations = new Map(items.map((a) => [a.id, a]))
+      this.slots.forEach((s) => this.drawAnnotations(s))
+    })
+    this.handleEvent("annotations:put", ({item}) => {
+      this.annotations.set(item.id, item)
+      this.redrawPage(item.locator?.page)
+    })
+    this.handleEvent("annotations:remove", ({id}) => {
+      const page = this.annotations.get(id)?.locator?.page
+      this.annotations.delete(id)
+      if (this.bar.annotation === id) this.bar.hide()
+      this.redrawPage(page)
+    })
+    this.annotations = new Map()
+    this.bar = new AnnotationBar(this.el, (action, color) => this.barAction(action, color))
+    this.onSelect = (e) => (e.type === "keyup" && !e.shiftKey ? null : setTimeout(() => this.selected(), 10))
+    this.el.addEventListener("pointerup", this.onSelect)
+    this.el.addEventListener("keyup", this.onSelect)
 
     this.onScroll = () => {
       if (this.frame == null) this.frame = requestAnimationFrame(() => this.scrolled())
@@ -100,6 +125,9 @@ const PdfReader = {
   },
 
   destroyed() {
+    this.bar.destroy()
+    this.el.removeEventListener("pointerup", this.onSelect)
+    this.el.removeEventListener("keyup", this.onSelect)
     this.el.removeEventListener("scroll", this.onScroll)
     this.el.removeEventListener("pointerdown", this.onPointerDown)
     this.el.removeEventListener("click", this.onClick)
@@ -284,8 +312,11 @@ const PdfReader = {
         viewport,
       })
 
-      slot.el.replaceChildren(canvas, text)
+      slot.annots = document.createElement("div")
+      slot.annots.className = "pdf-annots"
+      slot.el.replaceChildren(canvas, slot.annots, text)
       slot.state = "done"
+      this.drawAnnotations(slot)
       await slot.textLayer.render()
       this.markSlot(slot)
     } catch (err) {
@@ -308,6 +339,7 @@ const PdfReader = {
     const canvas = slot.el.querySelector("canvas")
     if (canvas) canvas.width = canvas.height = 0
     slot.el.replaceChildren()
+    slot.annots = null
     slot.pdfPage?.cleanup()
     slot.state = "empty"
   },
@@ -401,7 +433,7 @@ const PdfReader = {
     else if (e.key === "ArrowLeft") scroll ? this.goto(this.page - 1) : this.step(-1)
     else if (e.key === "Home") this.goto(0)
     else if (e.key === "End") this.goto(this.count - 1)
-    else if (e.key === "Escape") this.pushEvent("close_panel", {})
+    else if (e.key === "Escape") this.bar.hide() || this.pushEvent("close_panel", {})
     // Scroll layout: arrows, space and page keys scroll the column natively.
     else if (!scroll && ["ArrowDown", "PageDown", " "].includes(e.key)) this.step(e.shiftKey ? -1 : 1)
     else if (!scroll && ["ArrowUp", "PageUp"].includes(e.key)) this.step(-1)
@@ -416,9 +448,11 @@ const PdfReader = {
   // A plain tap (not a drag, not a text selection) toggles the bars; in the
   // paged layouts the sides turn the page.
   click(e) {
-    if (e.target.closest("button, a, input")) return
+    if (e.target.closest("button, a, input, .annot-bar")) return
     if (this.down && Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 8) return
     if (!window.getSelection()?.isCollapsed) return
+    if (this.bar.hide()) return
+    if (this.tappedAnnotation(e)) return
 
     if (this.layout !== "scroll") {
       const x = e.clientX / this.el.clientWidth
@@ -426,6 +460,104 @@ const PdfReader = {
       if (x > 1 - ZONE_SIDE) return this.step(1)
     }
     this.pushEvent("toggle_overlay", {})
+  },
+
+  // ── annotations ───────────────────────────────────────────────────────
+
+  drawAnnotations(slot) {
+    if (!slot?.annots) return
+    slot.annots.replaceChildren()
+    for (const a of this.annotations.values()) {
+      if (a.locator?.page !== slot.index || !a.locator.rects) continue
+      const color = a.kind === "highlight" ? HIGHLIGHT_COLORS[a.color] || HIGHLIGHT_COLORS.yellow : null
+      for (const [x, y, w, h] of a.locator.rects) {
+        const box = document.createElement("div")
+        box.className = color ? "pdf-annot" : "pdf-annot pdf-annot-note"
+        box.style.cssText = `left:${x * 100}%;top:${y * 100}%;width:${w * 100}%;height:${h * 100}%;${color ? `background:${color}` : ""}`
+        slot.annots.append(box)
+      }
+    }
+  },
+
+  redrawPage(page) {
+    if (Number.isInteger(page)) this.drawAnnotations(this.slots[page])
+  },
+
+  // The page a node is on, by its slot.
+  slotOf(node) {
+    const el = (node?.nodeType === 1 ? node : node?.parentElement)?.closest?.(".pdf-page")
+    return el ? this.slots[Number(el.dataset.page)] : null
+  },
+
+  // A selection in one page's text: the bar for a new highlight. Only the
+  // part on the page it starts on counts.
+  selected() {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return
+    const range = sel.getRangeAt(0)
+    const slot = this.slotOf(range.startContainer)
+    if (!slot || !this.el.contains(range.startContainer)) return
+    const page = slot.el.getBoundingClientRect()
+    const rects = [...range.getClientRects()]
+      .filter((r) => r.width > 1 && r.height > 1 && r.bottom > page.top && r.top < page.bottom && r.right > page.left && r.left < page.right)
+      .slice(0, 200)
+      .map((r) => [(r.left - page.left) / page.width, (r.top - page.top) / page.height, r.width / page.width, r.height / page.height])
+    const text = range.toString().trim()
+    if (!rects.length || !text) return
+    this.pending = {page: slot.index, rects, text}
+    this.bar.show(this.boxOf(range.getBoundingClientRect()), {mode: "new"})
+  },
+
+  // A tap on a highlight: the bar for it.
+  tappedAnnotation(e) {
+    const slot = this.slotOf(e.target)
+    if (!slot) return false
+    const page = slot.el.getBoundingClientRect()
+    const x = (e.clientX - page.left) / page.width
+    const y = (e.clientY - page.top) / page.height
+    const hit = [...this.annotations.values()].find(
+      (a) => a.locator?.page === slot.index && a.locator.rects?.some(([rx, ry, rw, rh]) => x >= rx && x <= rx + rw && y >= ry && y <= ry + rh),
+    )
+    if (!hit) return false
+    const [rx, ry, rw, rh] = hit.locator.rects[0]
+    this.pending = {text: null}
+    this.bar.show(this.boxOf({left: page.left + rx * page.width, top: page.top + ry * page.height, width: rw * page.width, height: rh * page.height}), {
+      mode: "existing",
+      annotation: hit.id,
+      color: hit.color,
+      copy: false,
+    })
+    return true
+  },
+
+  // A client rect relative to this element's box.
+  boxOf(r) {
+    const host = this.el.getBoundingClientRect()
+    return {left: r.left - host.left, top: r.top - host.top, width: r.width, height: r.height}
+  },
+
+  barAction(action, color) {
+    const p = this.pending
+    if (action === "copy") {
+      if (p?.text) navigator.clipboard?.writeText(p.text).catch(() => {})
+    } else if (this.bar.mode === "existing") {
+      const id = this.bar.annotation
+      if (action === "color") this.pushEvent("annotation_color", {id, color})
+      else if (action === "note") this.pushEvent("annotation_edit", {id})
+      else if (action === "delete") this.pushEvent("annotation_delete", {id})
+    } else if (p?.rects) {
+      this.pushEvent("annotate", {
+        kind: "highlight",
+        color: color || "yellow",
+        page: p.page,
+        rects: p.rects,
+        text: p.text.slice(0, 10000),
+        fraction: this.count > 1 ? p.page / (this.count - 1) : 0,
+        edit: action === "note",
+      })
+      window.getSelection()?.removeAllRanges()
+    }
+    this.bar.hide()
   },
 
   // ── contents ──────────────────────────────────────────────────────────

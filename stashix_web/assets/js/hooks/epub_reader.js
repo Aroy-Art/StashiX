@@ -4,6 +4,7 @@
  */
 
 import {exitReader} from "../reader_exit.js"
+import {AnnotationBar, HIGHLIGHT_COLORS} from "../annotation_bar.js"
 
 // EpubReader: the text reader's view for books foliate-js lays out: EPUB,
 // Kindle (MOBI, AZW3) and FictionBook.
@@ -23,7 +24,8 @@ import {exitReader} from "../reader_exit.js"
 // scripts. Nothing here relaxes that.
 //
 // Takes the same commands as the PDF hook ("text:goto", "text:step",
-// "text:view", "text:search") and reports with the same events. Progress is
+// "text:view", "text:search", "annotations:*") and reports with the same
+// events. Progress is
 // foliate-js locations (~1500 bytes each): "page_changed" carries the
 // location, the total, the contents entry it is under and the exact spot
 // (CFI, section href, share of the book), which the server saves.
@@ -35,8 +37,10 @@ let foliatePromise = null
 // is served as is from /vendor and only fetched when an EPUB is opened.
 // view.js registers <foliate-view>.
 const loadFoliate = () => {
-  const [view, notes] = ["view.js", "footnotes.js"].map((f) => FOLIATE + f)
-  foliatePromise ||= Promise.all([import(view), import(notes)]).then(([, {FootnoteHandler}]) => ({FootnoteHandler}))
+  const [view, notes, overlayer, cfi] = ["view.js", "footnotes.js", "overlayer.js", "epubcfi.js"].map((f) => FOLIATE + f)
+  foliatePromise ||= Promise.all([import(view), import(notes), import(overlayer), import(cfi)]).then(
+    ([, {FootnoteHandler}, {Overlayer}, CFI]) => ({FootnoteHandler, Overlayer, CFI}),
+  )
   return foliatePromise
 }
 const foliate = (file) => import(FOLIATE + file)
@@ -132,6 +136,13 @@ const EpubReader = {
     this.handleEvent("text:step", ({by}) => (by > 0 ? this.next() : this.view?.prev()))
     this.handleEvent("text:view", (settings) => this.apply({...this.settings, ...settings}))
     this.handleEvent("text:search", ({query}) => this.search(query))
+    this.handleEvent("annotations:all", ({items}) => this.setAnnotations(items))
+    this.handleEvent("annotations:put", ({item}) => this.putAnnotation(item))
+    this.handleEvent("annotations:remove", ({id}) => this.removeAnnotation(id))
+
+    // id → {id, kind, color, locator, note}; drawn by CFI.
+    this.annotations = new Map()
+    this.bar = new AnnotationBar(this.el, (action, color) => this.barAction(action, color))
 
     this.onKey = (e) => this.key(e)
     window.addEventListener("keydown", this.onKey)
@@ -143,6 +154,7 @@ const EpubReader = {
   },
 
   destroyed() {
+    this.bar.destroy()
     window.removeEventListener("keydown", this.onKey)
     clearTimeout(this.reportTimer)
     this.searchToken++
@@ -150,7 +162,8 @@ const EpubReader = {
   },
 
   async open() {
-    const {FootnoteHandler} = await loadFoliate()
+    const {FootnoteHandler, Overlayer, CFI} = await loadFoliate()
+    this.CFI = CFI
     this.book = await this.makeBook()
     this.view = document.createElement("foliate-view")
     this.view.className = "epub-view"
@@ -160,6 +173,18 @@ const EpubReader = {
     await this.view.open(this.book)
     this.view.addEventListener("relocate", (e) => this.relocated(e.detail))
     this.view.addEventListener("load", (e) => this.docLoaded(e.detail))
+
+    // Highlights: drawn in each section's overlay as it is laid out; tapping
+    // one brings up the bar for it.
+    this.view.addEventListener("draw-annotation", (e) => {
+      const {draw, annotation} = e.detail
+      const item = this.annotations.get(annotation.id)
+      if (!item) return
+      if (item.kind === "highlight") draw(Overlayer.highlight, {color: HIGHLIGHT_COLORS[item.color] || HIGHLIGHT_COLORS.yellow})
+      else draw(Overlayer.underline, {color: "#a1a1aa", width: 2})
+    })
+    this.view.addEventListener("create-overlay", () => this.drawAll())
+    this.view.addEventListener("show-annotation", (e) => this.tappedAnnotation(e.detail))
 
     // Footnote links open in a small view of their own instead of jumping.
     this.notes = new FootnoteHandler()
@@ -248,6 +273,10 @@ const EpubReader = {
     if (!location) return
     this.location = location
     this.section = section
+    this.visible = cfi
+    this.fraction = fraction
+    this.bar.hide()
+    this.checkBookmark()
     if (!this.loaded) {
       this.loaded = true
       this.pushEvent("loaded", {page_count: Math.max(location.total, 1)})
@@ -296,15 +325,30 @@ const EpubReader = {
 
   // Each chapter is its own document: keys and taps there never reach this
   // page, so they are wired up per document as it loads.
-  docLoaded({doc}) {
+  docLoaded({doc, index}) {
     doc.addEventListener("keydown", this.onKey)
+    // A finished selection (mouse, touch handles or shift+arrows) brings up
+    // the bar; clearing it takes the bar away.
+    const selected = () => setTimeout(() => this.selected(doc, index), 10)
+    doc.addEventListener("pointerup", selected)
+    doc.addEventListener("keyup", (e) => e.shiftKey && selected())
+    doc.addEventListener("selectionchange", () => {
+      if (doc.getSelection()?.isCollapsed && this.bar.mode === "new") this.bar.hide()
+    })
     let down = null
     doc.addEventListener("pointerdown", (e) => { down = {x: e.clientX, y: e.clientY} })
     doc.addEventListener("click", (e) => {
       if (e.defaultPrevented || e.target.closest?.("a[href]")) return
       if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) return
       if (!doc.defaultView.getSelection()?.isCollapsed) return
-      this.tap(e.clientX + (doc.defaultView.frameElement?.getBoundingClientRect().left ?? 0))
+      const x = e.clientX + (doc.defaultView.frameElement?.getBoundingClientRect().left ?? 0)
+      // A tap on a highlight shows its bar instead. foliate-js reports that
+      // from its own click listener, which may run after this one: wait.
+      setTimeout(() => {
+        if (Date.now() - (this.annotationTap || 0) < 300) return
+        if (this.bar.visible) return this.bar.hide()
+        this.tap(x)
+      })
     })
   },
 
@@ -324,7 +368,7 @@ const EpubReader = {
     if (e.ctrlKey || e.metaKey || e.altKey || !this.view) return
     const rtl = this.book?.dir === "rtl"
 
-    if (e.key === "Escape") return this.closeNote() || this.pushEvent("close_panel", {})
+    if (e.key === "Escape") return this.bar.hide() || this.closeNote() || this.pushEvent("close_panel", {})
     if (e.key === "+" || e.key === "=") this.pushEvent("zoom", {by: 1})
     else if (e.key === "-") this.pushEvent("zoom", {by: -1})
     else if (e.key === "0") this.pushEvent("zoom", {by: 0})
@@ -337,6 +381,127 @@ const EpubReader = {
     else if (["ArrowUp", "PageUp"].includes(e.key)) this.view.prev()
     else return
     e.preventDefault()
+  },
+
+  // ── annotations ───────────────────────────────────────────────────────
+
+  setAnnotations(items) {
+    for (const old of this.annotations.values()) this.undraw(old)
+    this.annotations = new Map(items.map((a) => [a.id, a]))
+    this.drawAll()
+    this.checkBookmark()
+  },
+
+  putAnnotation(item) {
+    const old = this.annotations.get(item.id)
+    if (old) this.undraw(old)
+    this.annotations.set(item.id, item)
+    this.draw(item)
+    this.checkBookmark()
+  },
+
+  removeAnnotation(id) {
+    const old = this.annotations.get(id)
+    if (!old) return
+    this.annotations.delete(id)
+    this.undraw(old)
+    if (this.bar.annotation === id) this.bar.hide()
+    this.checkBookmark()
+  },
+
+  // foliate-js keys drawings by CFI and hands back only that, so the CFI
+  // carries the id along (see "draw-annotation").
+  draw(item) {
+    if (item.kind === "bookmark" || !item.locator?.cfi || !this.view) return
+    this.view.addAnnotation({value: item.locator.cfi, id: item.id}).catch(() => {})
+  },
+
+  undraw(item) {
+    if (item.kind !== "bookmark" && item.locator?.cfi) this.view?.deleteAnnotation({value: item.locator.cfi}).catch(() => {})
+  },
+
+  drawAll() {
+    for (const item of this.annotations.values()) this.draw(item)
+  },
+
+  // Selected text in a section: the bar for a new highlight.
+  selected(doc, index) {
+    const sel = doc.getSelection()
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return
+    const range = sel.getRangeAt(0)
+    const text = range.toString().trim()
+    if (!text) return
+    this.pending = {doc, range, text, cfi: this.view.getCFI(index, range), index}
+    this.bar.show(this.rangeRect(doc, range), {mode: "new"})
+  },
+
+  tappedAnnotation({value, range}) {
+    const item = [...this.annotations.values()].find((a) => a.locator?.cfi === value)
+    if (!item) return
+    this.annotationTap = Date.now()
+    this.pending = {range, text: range.toString().trim()}
+    this.bar.show(this.rangeRect(range.startContainer.ownerDocument, range), {
+      mode: "existing",
+      annotation: item.id,
+      color: item.color,
+    })
+  },
+
+  // The range's box in this element's coordinates.
+  rangeRect(doc, range) {
+    const r = range.getBoundingClientRect()
+    const frame = doc.defaultView.frameElement?.getBoundingClientRect() ?? {left: 0, top: 0}
+    const host = this.el.getBoundingClientRect()
+    return {left: r.left + frame.left - host.left, top: r.top + frame.top - host.top, width: r.width, height: r.height}
+  },
+
+  barAction(action, color) {
+    const p = this.pending
+    if (action === "copy") {
+      if (p?.text) navigator.clipboard?.writeText(p.text).catch(() => {})
+    } else if (this.bar.mode === "existing") {
+      const id = this.bar.annotation
+      if (action === "color") this.pushEvent("annotation_color", {id, color})
+      else if (action === "note") this.pushEvent("annotation_edit", {id})
+      else if (action === "delete") this.pushEvent("annotation_delete", {id})
+    } else if (p?.cfi) {
+      this.pushEvent("annotate", {
+        kind: "highlight",
+        color: color || "yellow",
+        cfi: p.cfi,
+        href: this.view.book.sections?.[p.index]?.id ?? null,
+        text: p.text.slice(0, 10000),
+        fraction: this.fraction ?? 0,
+        edit: action === "note",
+      })
+      p.doc.getSelection()?.removeAllRanges()
+    }
+    this.bar.hide()
+  },
+
+  // Tells the server which bookmark (if any) is on the pages showing.
+  checkBookmark() {
+    if (!this.visible || !this.CFI) return
+    const {collapse, compare} = this.CFI
+    let here = null
+    try {
+      const start = collapse(this.visible)
+      const end = collapse(this.visible, true)
+      for (const a of this.annotations.values()) {
+        if (a.kind !== "bookmark" || !a.locator?.cfi) continue
+        // A bookmark is the range that showed when it was made: it is here
+        // when that range overlaps the one showing now (reopened, the same
+        // page can start a little further in).
+        if (compare(collapse(a.locator.cfi, true), start) > 0 && compare(collapse(a.locator.cfi), end) < 0) {
+          here = a.id
+          break
+        }
+      }
+    } catch (_) {}
+    if (here !== this.bookmarkHere) {
+      this.bookmarkHere = here
+      this.pushEvent("bookmark_here", {id: here})
+    }
   },
 
   // ── footnotes ─────────────────────────────────────────────────────────

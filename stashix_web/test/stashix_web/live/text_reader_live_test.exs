@@ -244,6 +244,92 @@ defmodule StashixWeb.TextReaderLiveTest do
     end
   end
 
+  describe "annotations" do
+    test "a highlight from the hook is saved, listed, noted and removed", %{conn: conn, user: user, epub: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 40})
+      assert_push_event(view, "annotations:all", %{items: []})
+
+      cfi = "epubcfi(/6/4!/4/2,/1:0,/1:15)"
+
+      reply =
+        render_hook(view, "annotate", %{
+          "kind" => "highlight",
+          "color" => "blue",
+          "cfi" => cfi,
+          "href" => "OEBPS/text/ch1.xhtml",
+          "text" => "Call me Ishmael",
+          "fraction" => 0.1,
+          "edit" => true
+        })
+
+      assert reply =~ "Call me Ishmael"
+
+      assert [%{id: id, kind: :highlight, color: "blue", locator: %{"type" => "epub", "cfi" => ^cfi}}] =
+               Stashix.Annotations.list(user.id, book.id)
+
+      assert_push_event(view, "annotations:put", %{item: %{id: ^id, color: "blue"}})
+
+      # "edit" opened the Notes panel on it.
+      assert has_element?(view, "#note-form-#{id} textarea")
+      view |> form("#note-form-#{id}", %{"note" => "First line"}) |> render_submit()
+      assert has_element?(view, "#note-#{id}", "First line")
+
+      view |> element("#note-#{id} button[phx-click=annotation_goto]") |> render_click()
+      assert_push_event(view, "text:goto", %{target: ^cfi})
+
+      view |> element("#note-#{id} button[phx-value-color=pink]") |> render_click()
+      assert_push_event(view, "annotations:put", %{item: %{id: ^id, color: "pink"}})
+
+      view |> element("#note-#{id} button[phx-click=annotation_delete]") |> render_click()
+      assert_push_event(view, "annotations:remove", %{id: ^id})
+      assert Stashix.Annotations.list(user.id, book.id) == []
+    end
+
+    test "PDF: highlights keep their page and rects; bookmarks follow the page", %{conn: conn, user: user, text: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 3})
+      render_hook(view, "page_changed", %{"page" => 1})
+
+      render_hook(view, "annotate", %{
+        "kind" => "highlight",
+        "page" => 1,
+        "rects" => [[0.1, 0.2, 0.5, 0.02]],
+        "text" => "x"
+      })
+
+      assert [%{locator: %{"type" => "pdf", "page" => 1, "rects" => [[0.1, 0.2, 0.5, 0.02]]}, color: "yellow"}] =
+               Stashix.Annotations.list(user.id, book.id)
+
+      view |> element("#bookmark-toggle") |> render_click()
+      assert has_element?(view, ~s|#bookmark-toggle[title="Remove bookmark"]|)
+
+      assert [%{kind: :bookmark, locator: %{"page" => 1}}] =
+               Stashix.Annotations.list(user.id, book.id) |> Enum.filter(&(&1.kind == :bookmark))
+
+      render_hook(view, "page_changed", %{"page" => 2})
+      assert has_element?(view, ~s|#bookmark-toggle[title="Bookmark this page"]|)
+      render_hook(view, "page_changed", %{"page" => 1})
+      view |> element("#bookmark-toggle") |> render_click()
+      assert Enum.filter(Stashix.Annotations.list(user.id, book.id), &(&1.kind == :bookmark)) == []
+    end
+
+    test "EPUB: the hook says which bookmark is showing", %{conn: conn, user: user, epub: book} do
+      {view, _html} = open(conn, book)
+      render_hook(view, "loaded", %{"page_count" => 40})
+      render_hook(view, "page_changed", %{"page" => 3, "cfi" => "epubcfi(/6/4!/4,/2/1:0,/8/1:20)", "fraction" => 0.1})
+      view |> element("#bookmark-toggle") |> render_click()
+
+      assert [%{id: id, kind: :bookmark, locator: %{"cfi" => "epubcfi(/6/4!/4,/2/1:0,/8/1:20)"}}] =
+               Stashix.Annotations.list(user.id, book.id)
+
+      render_hook(view, "bookmark_here", %{"id" => nil})
+      assert has_element?(view, ~s|#bookmark-toggle[title="Bookmark this page"]|)
+      render_hook(view, "bookmark_here", %{"id" => id})
+      assert has_element?(view, ~s|#bookmark-toggle[title="Remove bookmark"]|)
+    end
+  end
+
   describe "Kindle and FictionBook" do
     setup %{epub: epub, tmp_dir: tmp} do
       ebook = fn title, format, path ->

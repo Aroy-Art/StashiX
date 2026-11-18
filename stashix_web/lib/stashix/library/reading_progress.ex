@@ -8,18 +8,8 @@ defmodule Stashix.Library.ReadingProgress do
   `current_page` is the page index (EPUB: foliate-js location). `progression`
   is how far through the book that is, 0..1, with the last page at 1.0: it is
   what read status, progress bars and continue reading go by. `locator` says
-  exactly where, by reader:
-
-      %{"type" => "image", "page" => 12}
-      %{"type" => "pdf", "page" => 12}
-      %{"type" => "epub", "cfi" => "epubcfi(/6/8!/4/2/1:0)", "href" => "OEBPS/ch3.xhtml"}
-      %{"type" => "mobi" | "fb2", "cfi" => "epubcfi(/6/4!/4/10/1:0)", "href" => "3"}
-
-  (Kindle and FictionBook books are laid out by foliate-js like EPUB, so
-  their spot is a CFI over foliate-js's sections too.)
-
-  each with `"progression"` too (the Readium locator shape, for OPDS and
-  Kobo sync later).
+  exactly where (see `Stashix.Library.Locator`), with `"progression"` too
+  (the Readium locator shape, for OPDS and Kobo sync later).
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -45,29 +35,15 @@ defmodule Stashix.Library.ReadingProgress do
     |> unique_constraint([:user_id, :book_id])
   end
 
-  @locator_types ~w(image pdf epub mobi fb2)
-
   @doc """
   `Stashix.Library.update_progress/5` options from client params
-  (`"locator"`, `"progression"`), keeping only what fits the shape above.
+  (`"locator"`, `"progression"`), keeping only what fits
+  `Stashix.Library.Locator`.
   """
   @spec opts_from_params(map()) :: keyword()
   def opts_from_params(params) do
-    [locator: locator_from_params(params["locator"]), progression: params["progression"]]
+    [locator: Stashix.Library.Locator.from_params(params["locator"]), progression: params["progression"]]
     |> Enum.filter(fn {_, v} -> is_number(v) or is_map(v) end)
-  end
-
-  defp locator_from_params(%{"type" => type} = locator) when type in @locator_types do
-    %{"type" => type}
-    |> put_if(locator, "page", &(is_integer(&1) and &1 >= 0))
-    |> put_if(locator, "cfi", &(is_binary(&1) and String.starts_with?(&1, "epubcfi(") and byte_size(&1) <= 1024))
-    |> put_if(locator, "href", &(is_binary(&1) and byte_size(&1) <= 1024))
-  end
-
-  defp locator_from_params(_), do: nil
-
-  defp put_if(acc, locator, key, valid?) do
-    if valid?.(locator[key]), do: Map.put(acc, key, locator[key]), else: acc
   end
 
   @doc "How far through a book of `page_count` pages page index `page` is."

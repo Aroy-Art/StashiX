@@ -25,7 +25,7 @@ defmodule StashixWeb.TextReaderLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Accounts, Formatters, Library, Slug}
-  alias StashixWeb.Live.CanonicalUrl
+  alias StashixWeb.Live.{CanonicalUrl, ReaderAnnotations}
   alias StashixWeb.ReaderLive
 
   on_mount {StashixWeb.Live.Hooks, :require_auth}
@@ -39,6 +39,8 @@ defmodule StashixWeb.TextReaderLive do
   @spacings ~w(normal tight loose)
   @margins ~w(normal narrow wide)
   @text_sizes [80, 90, 100, 110, 120, 135, 150, 175, 200]
+  @panels ~w(contents search notes)
+  @annotation_events ~w(annotate annotation_color annotation_edit annotation_note annotation_cancel annotation_delete)
 
   @impl true
   def mount(%{"id" => param} = params, _session, socket) do
@@ -115,8 +117,11 @@ defmodule StashixWeb.TextReaderLive do
       search_results: [],
       search_scanned: 0,
       search_done: true,
-      save_timer: nil
+      save_timer: nil,
+      # The bookmark at the spot showing, if any (EPUB: the hook says).
+      bookmark_here: nil
     )
+    |> ReaderAnnotations.init()
   end
 
   defp setting(settings, key, [default | _] = allowed) do
@@ -128,7 +133,9 @@ defmodule StashixWeb.TextReaderLive do
   @impl true
   def handle_event("loaded", %{"page_count" => count}, socket) when is_integer(count) and count > 0 do
     book = sync_page_count(socket.assigns.book, count)
-    {:noreply, assign(socket, book: book, page_count: count, loaded: true)}
+
+    {:noreply,
+     socket |> assign(book: book, page_count: count, loaded: true) |> ReaderAnnotations.push_all() |> pdf_bookmark()}
   end
 
   def handle_event("failed", _params, socket), do: {:noreply, assign(socket, failed: true)}
@@ -171,9 +178,48 @@ defmodule StashixWeb.TextReaderLive do
     else
       # In the paged layouts a page turn back from the end card closes it.
       at_end = socket.assigns.at_end and socket.assigns.view_layout == "scroll"
-      {:noreply, socket |> assign(current_page: page, at_end: at_end) |> schedule_progress_save()}
+      {:noreply, socket |> assign(current_page: page, at_end: at_end) |> pdf_bookmark() |> schedule_progress_save()}
     end
   end
+
+  ## Annotations (see `StashixWeb.Live.ReaderAnnotations`)
+
+  def handle_event(event, params, socket) when event in @annotation_events do
+    case ReaderAnnotations.handle_event(event, params, socket, &annotation_locator(socket, &1), nil) do
+      :unhandled -> {:noreply, socket}
+      {:reply, reply, socket} -> {:reply, reply, pdf_bookmark(socket)}
+      {:noreply, socket} -> {:noreply, pdf_bookmark(socket)}
+    end
+  end
+
+  def handle_event("annotation_goto", %{"id" => id}, socket) do
+    case Enum.find(socket.assigns.annotations, &(&1.id == id)) do
+      %{locator: %{"cfi" => cfi}} -> handle_event("goto_target", %{"target" => cfi}, socket)
+      %{locator: %{"page" => page}} -> handle_event("goto_page", %{"page" => page}, socket)
+      _ -> {:noreply, socket}
+    end
+  end
+
+  # The bookmark button: drops the bookmark showing, or bookmarks the spot.
+  def handle_event("toggle_bookmark", _params, %{assigns: %{bookmark_here: id}} = socket) when is_binary(id) do
+    {:noreply, socket} = handle_event("annotation_delete", %{"id" => id}, socket)
+    {:noreply, assign(socket, :bookmark_here, nil)}
+  end
+
+  def handle_event("toggle_bookmark", _params, %{assigns: %{locator: locator}} = socket) when is_map(locator) do
+    params = Map.merge(locator, %{"kind" => "bookmark", "fraction" => socket.assigns.progression})
+
+    case handle_event("annotate", params, socket) do
+      {:reply, %{item: %{id: id}}, socket} -> {:noreply, assign(socket, :bookmark_here, id)}
+      {:reply, _, socket} -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("toggle_bookmark", _params, socket), do: {:noreply, socket}
+
+  # EPUB: the hook knows which bookmark falls on the pages showing.
+  def handle_event("bookmark_here", params, socket),
+    do: {:noreply, assign(socket, :bookmark_here, string_or_nil(params["id"]))}
 
   # Scroll layout: the space below the last page scrolled into or out of view.
   def handle_event("scroll_end", %{"visible" => true}, %{assigns: %{at_end: false, loaded: true}} = socket),
@@ -276,7 +322,7 @@ defmodule StashixWeb.TextReaderLive do
   def handle_event("set_page_theme", %{"theme" => theme}, socket) when theme in @themes,
     do: {:noreply, socket |> assign(:theme, theme) |> view_changed()}
 
-  def handle_event("open_panel", %{"panel" => panel}, socket) when panel in ["contents", "search"] do
+  def handle_event("open_panel", %{"panel" => panel}, socket) when panel in @panels do
     panel = if socket.assigns.panel == panel, do: nil, else: panel
     {:noreply, assign(socket, panel: panel, overlay_visible: true)}
   end
@@ -315,6 +361,23 @@ defmodule StashixWeb.TextReaderLive do
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
   ## Helpers
+
+  # Hook params to a locator: a CFI (range) in a foliate book, a page and
+  # its text rects in a PDF.
+  defp annotation_locator(%{assigns: %{engine: :pdf}}, params),
+    do: %{"type" => "pdf", "page" => params["page"], "rects" => params["rects"]}
+
+  defp annotation_locator(socket, params) do
+    %{"type" => locator_type(socket.assigns.format), "cfi" => params["cfi"], "href" => string_or_nil(params["href"])}
+  end
+
+  # PDF: a bookmark on the page showing.
+  defp pdf_bookmark(%{assigns: %{engine: :pdf, current_page: page, annotations: list}} = socket) do
+    here = Enum.find(list, &(&1.kind == :bookmark and &1.locator["page"] == page))
+    assign(socket, :bookmark_here, here && here.id)
+  end
+
+  defp pdf_bookmark(socket), do: socket
 
   defp view_changed(%{assigns: %{engine: :foliate}} = socket) do
     a = socket.assigns
@@ -549,6 +612,24 @@ defmodule StashixWeb.TextReaderLive do
               phx-click="open_panel"
               phx-value-panel="search"
             />
+            <.segment
+              icon="lucide-notebook-pen"
+              title={gettext("Notes")}
+              active={@panel == "notes"}
+              phx-click="open_panel"
+              phx-value-panel="notes"
+            />
+          </.segmented>
+
+          <.segmented>
+            <.segment
+              id="bookmark-toggle"
+              icon={if @bookmark_here, do: "lucide-bookmark-check", else: "lucide-bookmark"}
+              title={if @bookmark_here, do: gettext("Remove bookmark"), else: gettext("Bookmark this page")}
+              active={@bookmark_here != nil}
+              disabled={!@loaded}
+              phx-click="toggle_bookmark"
+            />
           </.segmented>
 
           <.ink_menu id="text-view-menu" modal panel_class="w-60" class="ink-segmented group">
@@ -734,6 +815,9 @@ defmodule StashixWeb.TextReaderLive do
         current_page={@current_page}
         current_target={@current_target}
         engine={@engine}
+        annotations={@annotations}
+        editing_note={@editing_note}
+        book={@book}
         query={@search_query}
         results={@search_results}
         scanned={@search_scanned}
@@ -781,6 +865,9 @@ defmodule StashixWeb.TextReaderLive do
   attr :current_page, :integer, required: true
   attr :current_target, :string, default: nil
   attr :engine, :atom, required: true
+  attr :annotations, :list, required: true
+  attr :editing_note, :string, default: nil
+  attr :book, :map, required: true
   attr :query, :string, required: true
   attr :results, :list, required: true
   attr :scanned, :integer, required: true
@@ -797,11 +884,13 @@ defmodule StashixWeb.TextReaderLive do
     <aside
       id="text-reader-panel"
       class="absolute z-40 inset-x-0 bottom-0 top-[45dvh] sm:top-12 sm:right-auto sm:w-80 flex flex-col bg-zinc-950/95 backdrop-blur-md ring-1 ring-fg/10"
-      aria-label={gettext("Contents and search")}
+      aria-label={gettext("Contents, search and notes")}
     >
       <div class="flex items-center gap-1 px-2 pt-2 border-b border-fg/10">
         <button
-          :for={{tab, label} <- [{"contents", gettext("Contents")}, {"search", gettext("Search")}]}
+          :for={
+            {tab, label} <- [{"contents", gettext("Contents")}, {"search", gettext("Search")}, {"notes", gettext("Notes")}]
+          }
           phx-click="open_panel"
           phx-value-panel={tab}
           disabled={@panel == tab}
@@ -855,6 +944,13 @@ defmodule StashixWeb.TextReaderLive do
             </ol>
         <% end %>
       </div>
+
+      <ReaderAnnotations.notes_list
+        :if={@panel == "notes"}
+        annotations={@annotations}
+        editing_note={@editing_note}
+        book={@book}
+      />
 
       <div :if={@panel == "search"} class="flex-1 min-h-0 flex flex-col">
         <form phx-change="search" phx-submit="search" class="p-3">

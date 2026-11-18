@@ -82,6 +82,8 @@ defmodule StashixWeb.Router do
     get "/books/:id/epub", EpubController, :index
     get "/books/:id/epub/*entry", EpubController, :entry
     get "/books/:id/download", DownloadController, :book
+    get "/books/:id/annotations/export", AnnotationController, :export
+    get "/annotations/:id/preview", AnnotationController, :preview
     get "/series/:id/cover", SeriesController, :cover
     get "/series/:id/download", DownloadController, :series
     get "/metadata/image", MetadataImageController, :show

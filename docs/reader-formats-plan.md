@@ -220,17 +220,38 @@ In scope (settled 2026-11-17). Order inside the phase is open.
 
 ### Highlights and notes — text and image readers
 
-- [ ] `annotations` table: `user_id`, `book_id`, `book_file_id`, `locator`
+UI settled 2026-11-18:
+- Text reader: selecting text shows a **floating bar** above it (four
+  colours, note, copy); tapping a highlight brings the same bar back with
+  delete.
+- Image reader: a highlighter button in the top bar enters **mark mode**;
+  drag a box on the page, then colour / note. Outside the mode taps turn
+  pages as before. Each region also keeps a **cropped preview** of the
+  area (saved server-side), shown in lists and exports.
+- Lists: a **Notes** tab next to Contents/Search in the reader panel, and a
+  Highlights section on the book page with Markdown / JSON export.
+
+- [x] `annotations` table: `user_id`, `book_id`, `book_file_id`, `locator`
   (D6), `kind` (`:highlight | :note | :bookmark`), `color`, `text` (quoted
-  selection), `note`, timestamps.
-- [ ] Text reader: highlight a selection (EPUB CFI range / PDF.js text-layer
-  quads), add a note, colours, list + jump in a side panel.
+  selection), `note`, timestamps. *Done:* plus `progression` (book order)
+  and `preview` (an image region's crop). `Stashix.Annotations`; locators
+  are shared with progress in `Stashix.Library.Locator`.
+- [x] Text reader: highlight a selection (EPUB CFI range / PDF.js text-layer
+  quads), add a note, colours, list + jump in a side panel. *Done:* the
+  floating bar (`assets/js/annotation_bar.js`) in both hooks; foliate-js
+  overlays for EPUB/MOBI/FB2, rects in page shares under the PDF text
+  layer; Notes tab with inline note editing
+  (`StashixWeb.Live.ReaderAnnotations`).
 - [ ] Image reader: highlight a **region** on a page — locator
   `%{"type" => "image", "page" => n, "rect" => [x, y, w, h]}` in 0..1 page
   coordinates so it survives fit modes and zoom; drawn as an overlay in
   single/double/webtoon; note attached to the region.
-- [ ] Bookmarks (page or CFI) in both readers.
+- [ ] Bookmarks (page or CFI) in both readers. *Text reader done:* top-bar
+  toggle; a bookmark is the range showing when made, and is "here" when it
+  overlaps the range showing now.
 - [ ] Export (Markdown / JSON); later mapped to Kobo/OPDS where possible.
+  *Done:* `/api/books/:id/annotations/export?format=md|json`, linked from
+  the Notes tab; the book page section is still to come.
 
 ### MOBI / AZW3 / FB2
 
