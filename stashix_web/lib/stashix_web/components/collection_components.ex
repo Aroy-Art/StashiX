@@ -208,9 +208,9 @@ defmodule StashixWeb.CollectionComponents do
     assigns = assign(assigns, stats: Enum.filter(assigns.stats, fn {_, n} -> is_integer(n) and n > 0 end))
 
     ~H"""
-    <div class="group relative overflow-hidden rounded-lg bg-surface ring-1 ring-edge hover:ring-ink/40 transition-all duration-200">
+    <div class="group relative flex overflow-hidden rounded-lg bg-surface ring-1 ring-edge hover:ring-ink/40 transition-all duration-200">
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-      <.link navigate={@navigate} class="relative flex min-h-36 focus-visible:outline-2 focus-visible:outline-ink">
+      <.link navigate={@navigate} class="relative flex flex-1 min-h-36 focus-visible:outline-2 focus-visible:outline-ink">
         <div class="relative w-24 flex-shrink-0 overflow-hidden bg-canvas">
           <div :if={@covers == []} class="flex h-full items-center justify-center">
             <.icon name="lucide-building" class="w-6 h-6 text-line" />
