@@ -150,10 +150,13 @@ Ends with: add the CalibreDB folder as a library, every book shows with
 Calibre's metadata and cover, edits in Calibre + rsync show up in Stashix
 without touching anything.
 
-- [ ] Add `exqlite`; fixture: a small `metadata.db` built from Calibre's
+- [x] Add `exqlite`; fixture: a small `metadata.db` built from Calibre's
   schema (triggers that call `title_sort()` / `uuid4()` stripped, since
   those are Python functions) in `test/support/fixtures/calibre/`, with a
-  couple of book folders.
+  couple of book folders. *Done:* `Stashix.CalibreFixtures` builds a
+  library per test from `schema.sql` (user_version 26, no views or FTS);
+  `add_book/2` writes the rows and the `<Author>/<Title> (<id>)/` folder,
+  `execute/3` changes it the way Calibre would.
 - [ ] Migration: `libraries.source`, `libraries.calibre_state` (jsonb:
   stamp, last sync, counts, errors); `books.calibre_id`, `calibre_uuid`,
   `calibre_fingerprint`, `calibre_modified_at`, `sort_title`, `added_at`,

@@ -119,6 +119,7 @@ defmodule Stashix.MixProject do
       {:unzip, "~> 0.12"},
       {:cors_plug, "~> 3.0"},
       {:file_system, "~> 1.0"},
+      {:exqlite, "~> 0.43"},
       {:image, "~> 0.73"},
       {:open_api_spex, "~> 3.21"},
       {:scalar_api_plug, "~> 0.3.0"},
