@@ -50,6 +50,17 @@ defmodule Stashix.Library.Book do
     field :metadata_source, :string
     # Reader override; nil follows the file's detected kind.
     field :content_kind, Ecto.Enum, values: [:images, :text]
+    # Calibre libraries: the Calibre book this mirrors, and the hash of its
+    # mapped record at the last sync.
+    field :calibre_id, :integer
+    field :calibre_uuid, :string
+    field :calibre_fingerprint, :string
+    field :calibre_modified_at, :naive_datetime
+    field :sort_title, :string
+    # When the book joined its library; Calibre's date for Calibre books.
+    field :added_at, :naive_datetime
+    # 0–5 stars, halves allowed.
+    field :rating, :float
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -114,7 +125,14 @@ defmodule Stashix.Library.Book do
       :black_and_white,
       :manga,
       :content_kind,
-      :locked_fields
+      :locked_fields,
+      :calibre_id,
+      :calibre_uuid,
+      :calibre_fingerprint,
+      :calibre_modified_at,
+      :sort_title,
+      :added_at,
+      :rating
     ])
     |> validate_required([:title, :library_id])
     |> validate_inclusion(:manga, ~w(Yes No YesAndRightToLeft))

@@ -10,6 +10,7 @@ defmodule Stashix.Library.Creator do
 
   schema "creators" do
     field :name, :string
+    field :sort_name, :string
 
     has_many :credits, Stashix.Library.BookCredit
 
@@ -18,7 +19,7 @@ defmodule Stashix.Library.Creator do
 
   def changeset(creator, attrs) do
     creator
-    |> cast(attrs, [:name])
+    |> cast(attrs, [:name, :sort_name])
     |> validate_required([:name])
     |> unique_constraint(:name)
   end

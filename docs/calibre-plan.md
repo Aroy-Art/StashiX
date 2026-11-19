@@ -157,11 +157,13 @@ without touching anything.
   library per test from `schema.sql` (user_version 26, no views or FTS);
   `add_book/2` writes the rows and the `<Author>/<Title> (<id>)/` folder,
   `execute/3` changes it the way Calibre would.
-- [ ] Migration: `libraries.source`, `libraries.calibre_state` (jsonb:
+- [x] Migration: `libraries.source`, `libraries.calibre_state` (jsonb:
   stamp, last sync, counts, errors); `books.calibre_id`, `calibre_uuid`,
   `calibre_fingerprint`, `calibre_modified_at`, `sort_title`, `added_at`,
   `rating`; `series.calibre_id`; `creators.sort_name`. Unique indexes
-  `(library_id, calibre_id)` on books and series.
+  `(library_id, calibre_id)` on books and series. *Done:* a Calibre file
+  that isn't on disk is a `book_files` row with `deleted_at`, the same
+  "missing" the Health page already lists; no new column.
 - [ ] `Stashix.Calibre.Snapshot`: stamp, copy, verify, open read-only
   (D3); refuses unknown schema (`user_version` outside the tested range →
   clear error instead of guessing).

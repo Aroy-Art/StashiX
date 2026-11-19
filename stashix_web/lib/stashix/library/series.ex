@@ -47,6 +47,7 @@ defmodule Stashix.Library.Series do
     field :locked_fields, {:array, :string}, default: []
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string
+    field :calibre_id, :integer
 
     belongs_to :library, Stashix.Library.Library
     has_many :books, Stashix.Library.Book
@@ -79,7 +80,8 @@ defmodule Stashix.Library.Series do
       :metadata_matched_at,
       :metadata_source,
       :status,
-      :locked_fields
+      :locked_fields,
+      :calibre_id
     ])
     |> validate_required([:name, :library_id])
     |> validate_inclusion(:status, ~w(Cancelled Completed Hiatus Ongoing))
