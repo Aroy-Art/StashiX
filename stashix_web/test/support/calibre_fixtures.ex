@@ -154,6 +154,8 @@ defmodule Stashix.CalibreFixtures do
 
   defp with_db(root, fun) do
     {:ok, conn} = Sqlite3.open(Path.join(root, "metadata.db"))
+    # Per connection only: the file keeps Calibre's rollback journal mode.
+    :ok = Sqlite3.execute(conn, "PRAGMA synchronous = OFF; PRAGMA journal_mode = MEMORY")
 
     try do
       fun.(conn)

@@ -164,9 +164,15 @@ without touching anything.
   `(library_id, calibre_id)` on books and series. *Done:* a Calibre file
   that isn't on disk is a `book_files` row with `deleted_at`, the same
   "missing" the Health page already lists; no new column.
-- [ ] `Stashix.Calibre.Snapshot`: stamp, copy, verify, open read-only
+- [x] `Stashix.Calibre.Snapshot`: stamp, copy, verify, open read-only
   (D3); refuses unknown schema (`user_version` outside the tested range →
-  clear error instead of guessing).
+  clear error instead of guessing). *Done:* the stamp adds the SQLite
+  header's file change counter (bumped on every commit), and a
+  `metadata.db-journal` means busy, so a copy taken mid-write is caught
+  even within one second. Schema check is by the tables and columns the
+  reader needs (`{:unsupported, ["books.uuid", …]}`), not `user_version`,
+  so newer Calibres that only add things keep working. Copies go to
+  `CALIBRE_CACHE_DIR` (`<data>/cache/calibre`).
 - [ ] `Stashix.Calibre.Reader`: books with authors, series, publisher,
   tags, languages, rating, comments, identifiers, formats — plain maps,
   one query per table.

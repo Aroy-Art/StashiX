@@ -58,13 +58,14 @@ Requires Elixir 1.18+, Erlang/OTP 27+, PostgreSQL, and system deps: `vips`, `p7z
 
 Defaults in development:
 
-| Env var           | Default (dev)                          |
-| ----------------- | -------------------------------------- |
-| `DATABASE_URL`    | _dev.exs default_                      |
-| `DATA_DIR`        | `/tmp/stashix`                         |
-| `THUMBNAIL_DIR`   | `<repo>/tmp/data/thumbnails`           |
-| `IMAGE_CACHE_DIR` | `<repo>/tmp/data/cache/images/resized` |
-| `PAGE_CACHE_DIR`  | `<repo>/tmp/data/cache/pages`          |
+| Env var             | Default (dev)                          |
+| ------------------- | -------------------------------------- |
+| `DATABASE_URL`      | _dev.exs default_                      |
+| `DATA_DIR`          | `/tmp/stashix`                         |
+| `THUMBNAIL_DIR`     | `<repo>/tmp/data/thumbnails`           |
+| `IMAGE_CACHE_DIR`   | `<repo>/tmp/data/cache/images/resized` |
+| `PAGE_CACHE_DIR`    | `<repo>/tmp/data/cache/pages`          |
+| `CALIBRE_CACHE_DIR` | `<repo>/tmp/data/cache/calibre`        |
 
 All production settings are in the
 [configuration reference](https://stashix.net/docs/reference/configuration/).
