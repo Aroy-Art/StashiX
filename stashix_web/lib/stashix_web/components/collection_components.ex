@@ -210,7 +210,7 @@ defmodule StashixWeb.CollectionComponents do
     ~H"""
     <div class="group relative overflow-hidden rounded-lg bg-surface ring-1 ring-edge hover:ring-ink/40 transition-all duration-200">
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
-      <.link navigate={@navigate} class="relative flex h-36 focus-visible:outline-2 focus-visible:outline-ink">
+      <.link navigate={@navigate} class="relative flex min-h-36 focus-visible:outline-2 focus-visible:outline-ink">
         <div class="relative w-24 flex-shrink-0 overflow-hidden bg-canvas">
           <div :if={@covers == []} class="flex h-full items-center justify-center">
             <.icon name="lucide-building" class="w-6 h-6 text-line" />
@@ -232,7 +232,7 @@ defmodule StashixWeb.CollectionComponents do
           </div>
         </div>
         <div class="flex-1 min-w-0 flex flex-col justify-center px-4 py-5 border-l border-fg/5">
-          <p class="font-display font-black uppercase leading-tight tracking-wide text-fg group-hover:text-ink transition-colors line-clamp-2 text-lg">
+          <p class="shrink-0 font-display font-black uppercase leading-tight tracking-wide text-fg group-hover:text-ink transition-colors line-clamp-2 text-lg">
             {@name}
           </p>
           <dl :if={@stats != []} class="flex flex-col gap-0.5 mt-2.5">
