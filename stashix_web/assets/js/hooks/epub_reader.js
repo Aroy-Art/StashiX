@@ -18,7 +18,13 @@ import {ReadAloud, ssmlSegments, supported as speechSupported} from "../read_alo
 //   progress without reading it.
 // - Kindle: foliate-js reads records out of a File; here a stand-in whose
 //   slices are byte ranges of /api/books/:id/file.
-// - FictionBook: one XML document, fetched whole (the server unzips .fbz).
+// - FictionBook: one XML document, fetched whole (the server unzips .fbz);
+//   its download is reported ("load_progress") for the server's loading card.
+//
+// The cover: Kindle and FictionBook books keep it out of the text, and some
+// EPUBs leave it out of the reading order. Then it is shown as a page of
+// its own in front of the book, outside foliate-js, so the book's sections,
+// CFIs and search hits keep their indexes.
 //
 // Book content is untrusted HTML shown in blob: iframes that run as this
 // page; the page's CSP (StashixWeb.Plugs.ReaderCSP) is what stops its
@@ -50,6 +56,87 @@ const fetchOK = async (url, init = {}) => {
   const r = await fetch(url, {credentials: "same-origin", ...init})
   if (!r.ok) throw new Error(`${url}: ${r.status}`)
   return r
+}
+
+// The whole response as a Blob, telling onProgress(loaded, total) as it
+// arrives; total is 0 when the server doesn't say.
+const fetchProgress = async (url, onProgress) => {
+  const r = await fetchOK(url)
+  const total = Number(r.headers.get("content-length")) || 0
+  if (!r.body) return r.blob()
+  const reader = r.body.getReader()
+  const chunks = []
+  let loaded = 0
+  for (;;) {
+    const {done, value} = await reader.read()
+    if (done) break
+    chunks.push(value)
+    loaded += value.length
+    onProgress(loaded, total)
+  }
+  return new Blob(chunks, {type: r.headers.get("content-type") || ""})
+}
+
+// A FictionBook's cover, out of the file itself: foliate-js's getCover
+// fetches a data: URL, which the reader's CSP (connect-src) refuses.
+const fb2Cover = async (blob) => {
+  const doc = new DOMParser().parseFromString(await blob.text(), "application/xml")
+  const ref = doc.querySelector("coverpage image")
+  const href = ref && [...ref.attributes].find((a) => a.localName === "href")?.value
+  if (!href?.startsWith("#")) return null
+  const bin = [...doc.getElementsByTagName("binary")].find((b) => b.getAttribute("id") === href.slice(1))
+  if (!bin) return null
+  const bytes = Uint8Array.from(atob(bin.textContent.replace(/\s/g, "")), (c) => c.charCodeAt(0))
+  return new Blob([bytes], {type: bin.getAttribute("content-type") || "image/jpeg"})
+}
+
+// A section that is only a picture (and a caption at most) is the cover.
+const COVER_TEXT = 80
+const isCoverPage = (doc) =>
+  !!doc?.querySelector("img, image") && (doc.body?.textContent.trim().length ?? 0) < COVER_TEXT
+
+// A page that is only a picture (a cover, a plate, a full-page drawing)
+// is laid out to fit the page and no more, whatever the book's own CSS
+// sizes it by: wrappers in vh (foliate-js turns those into the window's
+// height, not the page's), fixed heights or margins would push it past the
+// page, onto a blank one after.
+// - Paged (the html has .stashix-paged): the body is one page high and
+//   spans the spread; the picture and its wrappers share what a caption
+//   leaves, small pictures scaled up.
+// - Scrolled: there is no page height to share, so the picture is as wide
+//   as the text and foliate-js's cap at the view's height keeps it in view.
+const PICTURE_PAGE_CSS = `
+  body.stashix-picture-page { margin: 0 !important; padding: 0 !important; text-align: center !important; }
+  .stashix-picture-wrap {
+    width: 100% !important; height: auto !important; min-height: 0 !important;
+    margin: 0 !important; padding: 0 !important; text-indent: 0 !important;
+  }
+  .stashix-picture {
+    display: block !important; width: 100% !important; height: auto !important;
+    margin: 0 auto !important; padding: 0 !important; object-fit: contain !important;
+  }
+  .stashix-paged body.stashix-picture-page {
+    height: 100% !important; min-height: 0 !important; column-span: all !important;
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; justify-content: center !important;
+  }
+  .stashix-paged .stashix-picture-wrap {
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; justify-content: center !important;
+    flex: 1 1 0 !important; max-height: 100% !important;
+  }
+  .stashix-paged .stashix-picture { flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; }
+`
+
+const fitPicturePage = (doc) => {
+  const pics = [...doc.body.querySelectorAll("img, svg")].filter((el) => !el.parentElement.closest("svg"))
+  if (pics.length !== 1) return
+  const style = doc.createElement("style")
+  style.textContent = PICTURE_PAGE_CSS
+  doc.head.append(style)
+  doc.body.classList.add("stashix-picture-page")
+  pics[0].classList.add("stashix-picture")
+  for (let el = pics[0].parentElement; el && el !== doc.body; el = el.parentElement) el.classList.add("stashix-picture-wrap")
 }
 
 // What foliate-js's MOBI reader needs of a File: its size, and slices it
@@ -135,7 +222,7 @@ const EpubReader = {
 
     this.handleEvent("reader:exit", ({to}) => exitReader(this, to))
     this.handleEvent("text:goto", (cmd) => (cmd.section != null ? this.gotoHit(cmd) : this.goto(cmd)))
-    this.handleEvent("text:step", ({by}) => (by > 0 ? this.next() : this.view?.prev()))
+    this.handleEvent("text:step", ({by}) => (by > 0 ? this.next() : this.prev()))
     this.handleEvent("text:view", (settings) => this.apply({...this.settings, ...settings}))
     this.handleEvent("text:search", ({query, server}) => (server ? this.clearSearch() : this.search(query)))
     this.handleEvent("annotations:all", ({items}) => this.setAnnotations(items))
@@ -194,6 +281,7 @@ const EpubReader = {
     clearTimeout(this.reportTimer)
     this.searchToken++
     this.view?.close()
+    if (this.cover) URL.revokeObjectURL(this.cover.querySelector("img").src)
   },
 
   async open() {
@@ -242,10 +330,63 @@ const EpubReader = {
     this.outline()
 
     // Resume at the spot the server has; books saved before it kept one, at
-    // the same share of the book.
+    // the same share of the book. A book opened at its start opens on the
+    // cover; one resumed has it ready for paging back.
     if (this.startCfi) await this.view.init({lastLocation: this.startCfi})
     else if (this.start > 0 && this.total > 0) await this.view.goToFraction(this.start / this.total)
-    else await this.view.init({showTextStart: false})
+    else {
+      await this.makeCover()
+      this.showCover(true)
+      return this.view.init({showTextStart: false})
+    }
+    this.makeCover()
+  },
+
+  // ── cover ─────────────────────────────────────────────────────────────
+
+  // The cover page, when the book has a cover its first page doesn't show.
+  async makeCover() {
+    try {
+      const blob = await this.book.getCover?.()
+      if (!blob?.size) return
+      const first = this.book.sections.find((s) => s.linear !== "no")
+      if (isCoverPage(await first?.createDocument?.())) return
+      const el = document.createElement("div")
+      el.className = "epub-cover"
+      el.hidden = true
+      const img = document.createElement("img")
+      img.alt = ""
+      img.src = URL.createObjectURL(blob)
+      el.append(img)
+      // It covers the book's view, so its taps come here: turned like a page.
+      el.addEventListener("click", (e) => this.tap(e.clientX))
+      this.el.append(el)
+      this.cover = el
+      this.pushEvent("cover", {shown: false})
+    } catch (err) {
+      console.error("EpubReader cover", err)
+    }
+  },
+
+  showCover(show) {
+    if (!this.cover || this.cover.hidden === !show) return
+    this.cover.hidden = !show
+    // The server numbers the cover as page 1 and the book's pages after it.
+    this.pushEvent("cover", {shown: show})
+    if (show) this.pushEvent("scroll_end", {visible: false})
+  },
+
+  coverShown() {
+    return this.cover ? !this.cover.hidden : false
+  },
+
+  // At the very start of the book's first page, where paging back shows
+  // the cover.
+  atStart() {
+    const r = this.view.renderer
+    const before = this.view.book.sections.slice(0, this.section?.current ?? 0)
+    if (!before.every((s) => s.linear === "no")) return false
+    return r.scrolled ? r.start <= 1 : r.atStart
   },
 
   async makeBook() {
@@ -259,11 +400,22 @@ const EpubReader = {
       case "fb2":
       case "fbz": {
         const {makeFB2} = await foliate("fb2.js")
-        return makeFB2(await fetchOK(this.url).then((r) => r.blob()))
+        const blob = await fetchProgress(this.url, (loaded, total) => this.loadProgress(loaded, total))
+        const book = await makeFB2(blob)
+        book.getCover = () => fb2Cover(blob)
+        return book
       }
       default:
         return this.makeEPUB()
     }
+  },
+
+  // At most a few reports a second, and always the last.
+  loadProgress(loaded, total) {
+    const now = Date.now()
+    if (loaded < total && now - (this.progressAt || 0) < 200) return
+    this.progressAt = now
+    this.pushEvent("load_progress", {loaded, total})
   },
 
   async makeEPUB() {
@@ -291,6 +443,8 @@ const EpubReader = {
     if (!this.view?.renderer) return
     const r = this.view.renderer
     const paged = settings.layout !== "scroll"
+    // Before the layout changes, so the page is laid out with it.
+    for (const {doc} of r.getContents?.() ?? []) doc.documentElement.classList.toggle("stashix-paged", paged)
     // Each attribute change lays the book out again: only set what changed.
     const attrs = {
       flow: paged ? "paginated" : "scrolled",
@@ -323,6 +477,7 @@ const EpubReader = {
     this.fraction = fraction
     this.bar.hide()
     this.checkBookmark()
+    if (this.coverShown() && !this.atStart()) this.showCover(false)
     if (!this.loaded) {
       this.loaded = true
       this.pushEvent("loaded", {page_count: Math.max(location.total, 1)})
@@ -354,6 +509,7 @@ const EpubReader = {
   // Paged: past the last page the server shows the end card.
   next() {
     if (!this.view) return
+    if (this.coverShown()) return this.showCover(false)
     if (this.settings.layout !== "scroll" && this.lastSection() && this.view.renderer.atEnd) {
       this.pushEvent("paged_end", {})
       return
@@ -361,8 +517,16 @@ const EpubReader = {
     this.view.next()
   },
 
+  // Back from the book's first page: the cover.
+  prev() {
+    if (!this.view || this.coverShown()) return
+    if (this.cover && this.atStart()) return this.showCover(true)
+    this.view.prev()
+  },
+
   goto({page, target}) {
     if (!this.view) return
+    this.showCover(false)
     if (target) this.view.goTo(target)
     else if (page != null && this.location?.total) this.view.goToFraction(Math.min(page / this.location.total, 0.9999))
   },
@@ -372,6 +536,8 @@ const EpubReader = {
   // Each chapter is its own document: keys and taps there never reach this
   // page, so they are wired up per document as it loads.
   docLoaded({doc, index}) {
+    doc.documentElement.classList.toggle("stashix-paged", this.settings.layout !== "scroll")
+    if (isCoverPage(doc)) fitPicturePage(doc)
     doc.addEventListener("keydown", this.onKey)
     doc.addEventListener("wheel", this.onWheel, {passive: false})
     // foliate-js scrolls whatever gains focus into view, a frame later. A
@@ -408,8 +574,9 @@ const EpubReader = {
     const rect = this.el.getBoundingClientRect()
     const at = (x - rect.left) / rect.width
     if (this.settings.layout !== "scroll") {
-      if (at < ZONE_SIDE) return this.view.goLeft()
-      if (at > 1 - ZONE_SIDE) return this.book.dir === "rtl" ? this.view.goLeft() : this.next()
+      const rtl = this.book.dir === "rtl"
+      if (at < ZONE_SIDE) return rtl ? this.next() : this.prev()
+      if (at > 1 - ZONE_SIDE) return rtl ? this.prev() : this.next()
     }
     this.pushEvent("toggle_overlay", {})
   },
@@ -437,13 +604,13 @@ const EpubReader = {
     if (e.key === "+" || e.key === "=") this.pushEvent("zoom", {by: 1})
     else if (e.key === "-") this.pushEvent("zoom", {by: -1})
     else if (e.key === "0") this.pushEvent("zoom", {by: 0})
-    else if (e.key === "ArrowRight") rtl ? this.view.prev() : this.next()
-    else if (e.key === "ArrowLeft") rtl ? this.next() : this.view.prev()
-    else if (e.key === "Home") this.view.goToFraction(0)
-    else if (e.key === "End") this.view.goToFraction(0.9999)
-    else if (this.settings.layout === "scroll") return
-    else if (["ArrowDown", "PageDown", " "].includes(e.key)) e.shiftKey ? this.view.prev() : this.next()
-    else if (["ArrowUp", "PageUp"].includes(e.key)) this.view.prev()
+    else if (e.key === "ArrowRight") rtl ? this.prev() : this.next()
+    else if (e.key === "ArrowLeft") rtl ? this.next() : this.prev()
+    else if (e.key === "Home") this.view.goToFraction(0).then(() => this.showCover(true))
+    else if (e.key === "End") this.goto({page: this.location?.total ?? 0})
+    else if (this.settings.layout === "scroll" && !this.coverShown()) return
+    else if (["ArrowDown", "PageDown", " "].includes(e.key)) e.shiftKey ? this.prev() : this.next()
+    else if (["ArrowUp", "PageUp"].includes(e.key)) this.prev()
     else return
     e.preventDefault()
   },
@@ -693,6 +860,7 @@ const EpubReader = {
   async gotoHit({section, n, query}) {
     const token = ++this.searchToken
     if (!this.view || !query) return
+    this.showCover(false)
     let cfi = null
     let i = 0
     for await (const result of this.view.search({query, index: section})) {

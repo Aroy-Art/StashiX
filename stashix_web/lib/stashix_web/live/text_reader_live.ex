@@ -108,6 +108,14 @@ defmodule StashixWeb.TextReaderLive do
       locator: nil,
       progression: nil,
       loaded: false,
+      # FictionBook is downloaded whole before it opens: the loading card
+      # warns and shows the hook's {loaded, total} bytes as they come.
+      whole_file: Stashix.Media.Formats.fb2?(book_file.format),
+      load_progress: nil,
+      # The hook's cover page in front of the book (EPUB hook): numbered as
+      # page 1, the book's own pages after it.
+      cover_page: false,
+      on_cover: false,
       # :drm when the book is locked; true when the hook couldn't open it.
       failed: if(drm?, do: :drm, else: false),
       at_end: false,
@@ -165,6 +173,15 @@ defmodule StashixWeb.TextReaderLive do
   end
 
   def handle_event("failed", _params, socket), do: {:noreply, assign(socket, failed: true)}
+
+  def handle_event("cover", %{"shown" => shown}, socket) when is_boolean(shown) do
+    {:noreply, assign(socket, cover_page: true, on_cover: shown)}
+  end
+
+  def handle_event("load_progress", %{"loaded" => loaded, "total" => total}, socket)
+      when is_integer(loaded) and is_integer(total) do
+    {:noreply, assign(socket, load_progress: {loaded, total})}
+  end
 
   # Entries point at a PDF page, or (EPUB) at an href inside the book and
   # the section it is in.
@@ -980,6 +997,8 @@ defmodule StashixWeb.TextReaderLive do
             <p class="px-3 py-1.5 bg-ink text-zinc-950 text-sm font-semibold">
               {gettext("This book could not be opened.")}
             </p>
+          <% @whole_file -> %>
+            <.whole_file_loading progress={@load_progress} />
           <% true -> %>
             <.icon name="lucide-loader-circle" class="animate-spin h-8 w-8 text-ink/50" />
         <% end %>
@@ -1126,7 +1145,7 @@ defmodule StashixWeb.TextReaderLive do
       >
         <div class="flex items-center gap-4">
           <span class="w-10 text-right font-display font-black text-xl leading-none text-fg tabular-nums">
-            {@current_page + 1}
+            {shown_page(@current_page, @cover_page, @on_cover)}
           </span>
           <input
             id="page-slider"
@@ -1139,9 +1158,67 @@ defmodule StashixWeb.TextReaderLive do
             class="reader-slider flex-1"
             style={"--fill: #{slider_fill(@current_page, @page_count)}%"}
           />
-          <span class="w-10 font-display font-bold text-base leading-none text-muted tabular-nums">{@page_count}</span>
+          <span class="w-10 font-display font-bold text-base leading-none text-muted tabular-nums">
+            {@page_count + if(@cover_page, do: 1, else: 0)}
+          </span>
         </div>
       </div>
+    </div>
+    """
+  end
+
+  # The page number shown: with a cover page in front, it is page 1 and the
+  # book's own pages come after it.
+  defp shown_page(_page, true, true), do: 1
+  defp shown_page(page, true, false), do: page + 2
+  defp shown_page(page, _cover, _on_cover), do: page + 1
+
+  # The loading card for a book downloaded whole: why it takes a while, and
+  # how far along it is. Past the download, foliate-js still has to read it.
+  attr :progress, :any, required: true
+
+  defp whole_file_loading(assigns) do
+    {loaded, total} = assigns.progress || {0, 0}
+    share = if total > 0, do: min(loaded / total, 1), else: nil
+
+    assigns = assign(assigns, loaded: loaded, total: total, share: share, done: share == 1)
+
+    ~H"""
+    <div
+      class="w-[min(22rem,calc(100vw-2rem))] px-4 py-3.5 rounded-xl bg-zinc-950/95 ring-1 ring-fg/10 shadow-xl text-sm"
+      role="status"
+    >
+      <div class="flex items-center gap-2 font-semibold text-fg">
+        <.icon name="lucide-loader-circle" class="animate-spin h-4 w-4 text-ink shrink-0" />
+        {if @done, do: gettext("Opening the book…"), else: gettext("Downloading the book…")}
+      </div>
+      <p class="mt-1.5 text-muted">
+        {gettext(
+          "FictionBook files can't be read a part at a time, so the whole book is downloaded first. A large book can take a while."
+        )}
+      </p>
+      <div class="mt-3 h-1.5 rounded-full bg-fg/10 overflow-hidden">
+        <div
+          :if={@share}
+          class="h-full bg-ink transition-[width] duration-200"
+          style={"width: #{Float.round(@share * 100, 1)}%"}
+        >
+        </div>
+        <div :if={!@share} class="h-full w-1/3 bg-ink/60 animate-pulse"></div>
+      </div>
+      <p class="mt-1.5 text-xs text-muted tabular-nums">
+        <%= cond do %>
+          <% @total > 0 -> %>
+            {gettext("%{loaded} of %{total}",
+              loaded: StashixWeb.Format.bytes(@loaded),
+              total: StashixWeb.Format.bytes(@total)
+            )}
+          <% @loaded > 0 -> %>
+            {StashixWeb.Format.bytes(@loaded)}
+          <% true -> %>
+            {gettext("Starting…")}
+        <% end %>
+      </p>
     </div>
     """
   end

@@ -189,6 +189,30 @@
 .epub-reader[data-page-theme="sepia"] { background: #f1e7d0; }
 .epub-reader[data-page-theme="night"] { background: #141416; }
 
+/* The cover, as a page in front of the book (see hooks/epub_reader.js). */
+.epub-cover {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: inherit;
+  cursor: default;
+}
+
+.epub-cover[hidden] { display: none; }
+
+/* Fitted to the page clear of the bars, small pictures scaled up; the
+   shadow follows the picture, not its letterboxed box. */
+.epub-cover img {
+  position: absolute;
+  inset: 56px 16px;
+  width: calc(100% - 32px);
+  height: calc(100% - 112px);
+  object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgb(0 0 0 / 0.25));
+}
+
+[data-page-theme="night"] .epub-cover img { filter: brightness(0.85) drop-shadow(0 2px 8px rgb(0 0 0 / 0.5)); }
+
 .epub-view {
   display: block;
   width: 100%;
