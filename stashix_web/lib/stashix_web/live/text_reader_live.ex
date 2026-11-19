@@ -904,6 +904,7 @@ defmodule StashixWeb.TextReaderLive do
       <.side_panel
         :if={@panel}
         panel={@panel}
+        overlay_visible={@overlay_visible}
         outline={@outline}
         current_page={@current_page}
         current_target={@current_target}
@@ -984,10 +985,13 @@ defmodule StashixWeb.TextReaderLive do
       </div>
 
       <%!-- Bottom bar: scrubber --%>
-      <div class={[
-        "reader-bar reader-bar-bottom absolute bottom-0 left-0 right-0 z-30 px-4 py-2.5 transition-transform duration-200",
-        if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
-      ]}>
+      <div
+        class={[
+          "reader-bar reader-bar-bottom absolute bottom-0 left-0 right-0 z-30 flex flex-col justify-center px-4 transition-transform duration-200",
+          if(@overlay_visible, do: "translate-y-0", else: "translate-y-full")
+        ]}
+        style="height: 40px;"
+      >
         <div class="flex items-center gap-4">
           <span class="w-10 text-right font-display font-black text-xl leading-none text-fg tabular-nums">
             {@current_page + 1}
@@ -1011,6 +1015,7 @@ defmodule StashixWeb.TextReaderLive do
   end
 
   attr :panel, :string, required: true
+  attr :overlay_visible, :boolean, required: true
   attr :outline, :list, default: nil
   attr :current_page, :integer, required: true
   attr :current_target, :string, default: nil
@@ -1025,7 +1030,8 @@ defmodule StashixWeb.TextReaderLive do
   attr :page_count, :integer, required: true
 
   # Contents and search, one panel with two tabs: on the left from `sm` up, a
-  # bottom sheet on phones so the page an entry jumps to shows above it.
+  # bottom sheet on phones so the page an entry jumps to shows above it. It
+  # stays clear of the bars while they show and fills in when they hide.
   defp side_panel(assigns) do
     assigns =
       assign(assigns, :current_entry, current_entry(assigns.outline, assigns.current_page, assigns.current_target))
@@ -1033,7 +1039,10 @@ defmodule StashixWeb.TextReaderLive do
     ~H"""
     <aside
       id="text-reader-panel"
-      class="absolute z-40 inset-x-0 bottom-0 top-[45dvh] sm:top-12 sm:right-auto sm:w-80 flex flex-col bg-zinc-950/95 backdrop-blur-md ring-1 ring-fg/10"
+      class={[
+        "absolute z-40 inset-x-0 top-[45dvh] sm:right-auto sm:w-80 flex flex-col bg-zinc-950/95 backdrop-blur-md ring-1 ring-fg/10 transition-[top,bottom] duration-200",
+        if(@overlay_visible, do: "bottom-10 sm:top-12", else: "bottom-0 sm:top-0")
+      ]}
       aria-label={gettext("Contents, search and notes")}
     >
       <div class="flex items-center gap-1 px-2 pt-2 border-b border-fg/10">
