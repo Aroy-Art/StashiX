@@ -61,6 +61,9 @@ defmodule StashixWeb.TextReaderLive do
         {:ok, push_navigate(socket, to: ~p"/read/#{param}?#{Map.take(params, ["page", "at"])}", replace: true)}
 
       book_file ->
+        # Trapping exits is what makes terminate/2 run when the tab closes or
+        # navigates away, so the debounced progress is saved then too.
+        if connected?(socket), do: Process.flag(:trap_exit, true)
         {:ok, mount_text(socket, book, book_file, params), layout: false}
     end
   end
@@ -507,6 +510,16 @@ defmodule StashixWeb.TextReaderLive do
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
+  # Exits of linked processes, which arrive as messages while trapping exits.
+  def handle_info({:EXIT, _pid, _reason}, socket), do: {:noreply, socket}
+
+  # Closing the tab or going back skips the close button's save: a page
+  # turned within the debounce would otherwise be lost.
+  @impl true
+  def terminate(_reason, socket) do
+    if socket.assigns[:save_timer], do: flush_progress(socket)
+    :ok
+  end
 
   ## Helpers
 

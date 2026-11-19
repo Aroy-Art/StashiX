@@ -17,7 +17,8 @@ import {ReadAloud, ssmlSegments, supported as speechSupported} from "../read_alo
 //   list with sizes comes first, so foliate-js can size the book for
 //   progress without reading it.
 // - Kindle: foliate-js reads records out of a File; here a stand-in whose
-//   slices are byte ranges of /api/books/:id/file.
+//   slices are read from /api/books/:id/file in byte ranges of 256 KB,
+//   cached.
 // - FictionBook: one XML document, fetched whole (the server unzips .fbz);
 //   its download is reported ("load_progress") for the server's loading card.
 //
@@ -140,21 +141,61 @@ const fitPicturePage = (doc) => {
 }
 
 // What foliate-js's MOBI reader needs of a File: its size, and slices it
-// can read. Each slice is one Range request; the header and record table
-// come first, then a record at a time as pages are laid out.
+// can read; the header and record table come first, then a record at a
+// time as pages are laid out.
+//
+// Reads go by blocks of the file, each fetched once and kept (the latest
+// MAX_BLOCKS of them): foliate-js reads a Kindle book a small record at a
+// time, and a request per record made opening one a hundred round trips.
+const BLOCK = 256 * 1024
+const MAX_BLOCKS = 64
+
 const remoteFile = async (url) => {
-  const head = await fetchOK(url, {headers: {Range: "bytes=0-0"}})
-  const size = Number(head.headers.get("content-range")?.split("/")[1])
+  const blocks = new Map()
+  const fetchBlock = (i) => {
+    const range = `bytes=${i * BLOCK}-${(i + 1) * BLOCK - 1}`
+    const r = fetchOK(url, {headers: {Range: range}})
+    return {response: r, data: r.then((res) => res.arrayBuffer())}
+  }
+  const keep = (i, data) => {
+    blocks.set(i, data)
+    data.catch(() => blocks.delete(i))
+    if (blocks.size > MAX_BLOCKS) blocks.delete(blocks.keys().next().value)
+  }
+  // The first block also tells the file's size.
+  const first = fetchBlock(0)
+  const size = Number((await first.response).headers.get("content-range")?.split("/")[1])
   if (!size) throw new Error("no size")
+  keep(0, first.data)
+
+  const block = (i) => {
+    let data = blocks.get(i)
+    if (data) blocks.delete(i)
+    else data = fetchBlock(i).data
+    keep(i, data)
+    return data
+  }
+  const read = async (start, end) => {
+    const from = Math.floor(start / BLOCK)
+    const parts = await Promise.all(
+      Array.from({length: Math.floor((end - 1) / BLOCK) - from + 1}, (_, k) => block(from + k)),
+    )
+    const out = new Uint8Array(end - start)
+    parts.forEach((buf, k) => {
+      const at = (from + k) * BLOCK
+      const lo = Math.max(start, at)
+      const hi = Math.min(end, at + buf.byteLength)
+      if (hi > lo) out.set(new Uint8Array(buf, lo - at, hi - lo), lo - start)
+    })
+    return out.buffer
+  }
+
   const slice = (start = 0, end = size) => {
     start = Math.max(0, start)
     end = Math.min(size, end)
     return {
       size: Math.max(0, end - start),
-      arrayBuffer: () =>
-        end <= start
-          ? Promise.resolve(new ArrayBuffer(0))
-          : fetchOK(url, {headers: {Range: `bytes=${start}-${end - 1}`}}).then((r) => r.arrayBuffer()),
+      arrayBuffer: () => (end <= start ? Promise.resolve(new ArrayBuffer(0)) : read(start, end)),
     }
   }
   return {size, slice, name: url}
