@@ -38,6 +38,12 @@ defmodule StashixWeb.Router do
     plug StashixWeb.Plugs.AssignAccess
   end
 
+  # OPDS clients sign every request with HTTP Basic and an app password.
+  pipeline :opds do
+    plug StashixWeb.Plugs.OpdsAuth
+    plug StashixWeb.Plugs.AssignAccess
+  end
+
   pipeline :admin do
     plug StashixWeb.Plugs.RequireAdmin
   end
@@ -71,6 +77,25 @@ defmodule StashixWeb.Router do
     post "/auth/refresh", AuthController, :refresh
     get "/setup/status", SetupController, :status
     post "/setup", SetupController, :create
+  end
+
+  scope "/opds/v1.2", StashixWeb do
+    pipe_through :opds
+
+    get "/catalog", OpdsController, :root
+    get "/libraries", OpdsController, :libraries
+    get "/libraries/:id", OpdsController, :library
+    get "/series", OpdsController, :series_index
+    get "/series/:id", OpdsController, :series
+    get "/books", OpdsController, :books
+    get "/new", OpdsController, :new
+    get "/continue", OpdsController, :continue
+    get "/search", OpdsController, :search
+    get "/search.xml", OpdsController, :opensearch
+
+    get "/books/:id/cover", BookController, :cover
+    get "/books/:id/page/:n", BookController, :page
+    get "/books/:id/download", DownloadController, :book
   end
 
   scope "/api", StashixWeb do

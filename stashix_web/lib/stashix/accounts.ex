@@ -6,7 +6,7 @@ defmodule Stashix.Accounts do
   require Logger
 
   alias Stashix.Repo
-  alias Stashix.Accounts.{Session, User}
+  alias Stashix.Accounts.{AppPassword, Session, User}
   alias Stashix.Auth.LoginThrottle
 
   def get_user(id) do
@@ -187,6 +187,75 @@ defmodule Stashix.Accounts do
     else
       _ -> {:error, :not_found}
     end
+  end
+
+  ## App passwords
+
+  @app_password_touch_interval 300
+
+  @doc "The user's app passwords, newest first."
+  def list_app_passwords(%User{id: user_id}) do
+    Repo.all(from p in AppPassword, where: p.user_id == ^user_id, order_by: [desc: p.inserted_at])
+  end
+
+  @doc """
+  Makes an app password named `name`. Returns `{:ok, app_password, password}`;
+  `password` is shown to the user once and never stored.
+  """
+  def create_app_password(%User{id: user_id}, name) do
+    password = AppPassword.generate()
+
+    %AppPassword{user_id: user_id, token_hash: AppPassword.hash(password)}
+    |> AppPassword.changeset(%{name: name})
+    |> Repo.insert()
+    |> case do
+      {:ok, app_password} -> {:ok, app_password, password}
+      error -> error
+    end
+  end
+
+  def delete_app_password(%User{id: user_id}, id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         {1, _} <- Repo.delete_all(from p in AppPassword, where: p.id == ^id and p.user_id == ^user_id) do
+      :ok
+    else
+      _ -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  The user an app password belongs to, or nil. `login` must name that user
+  (username or email), as a client sends both. Marks the password as used,
+  at most once every few minutes.
+  """
+  def authenticate_app_password(login, password) when is_binary(login) and is_binary(password) do
+    with true <- AppPassword.app_password?(password),
+         %AppPassword{} = app_password <-
+           Repo.one(from p in AppPassword, where: p.token_hash == ^AppPassword.hash(password), preload: :user),
+         %User{} = user <- app_password.user,
+         true <- login_matches?(user, login) do
+      touch_app_password(app_password)
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  def authenticate_app_password(_login, _password), do: nil
+
+  defp login_matches?(user, login) do
+    login = String.trim(login)
+    login == user.username or String.downcase(login) == user.email
+  end
+
+  defp touch_app_password(%AppPassword{last_used_at: last} = app_password) do
+    now = DateTime.truncate(DateTime.utc_now(), :second)
+
+    if is_nil(last) or DateTime.diff(now, last) >= @app_password_touch_interval do
+      Repo.update_all(from(p in AppPassword, where: p.id == ^app_password.id), set: [last_used_at: now])
+    end
+
+    :ok
   end
 
   @doc "Whether tokens of this session still count. Tokens without one (nil) always do."

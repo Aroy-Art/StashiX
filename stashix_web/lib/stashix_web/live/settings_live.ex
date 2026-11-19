@@ -28,14 +28,24 @@ defmodule StashixWeb.SettingsLive do
        page_title: gettext("Settings"),
        preview_covers: preview_covers(socket),
        current_session_id: session["session_id"],
-       sessions: []
+       sessions: [],
+       app_passwords: [],
+       new_app_password: nil,
+       opds_url: nil
      )
      |> assign_profile_form(User.profile_changeset(socket.assigns.current_user, %{}))}
   end
 
   @impl true
-  def handle_params(_params, _uri, %{assigns: %{live_action: :security}} = socket) do
-    {:noreply, assign_sessions(socket)}
+  def handle_params(_params, uri, %{assigns: %{live_action: :security}} = socket) do
+    # The address the browser used, so it is right behind a reverse proxy.
+    opds_url = %{URI.parse(uri) | path: "/opds/v1.2/catalog", query: nil, fragment: nil} |> URI.to_string()
+
+    {:noreply,
+     socket
+     |> assign(opds_url: opds_url, new_app_password: nil)
+     |> assign_sessions()
+     |> assign_app_passwords()}
   end
 
   def handle_params(_params, _uri, socket), do: {:noreply, socket}
@@ -83,6 +93,25 @@ defmodule StashixWeb.SettingsLive do
     {:noreply, assign_sessions(socket)}
   end
 
+  # The new password is shown once, until the page is left.
+  def handle_event("create_app_password", %{"name" => name}, socket) do
+    case Accounts.create_app_password(socket.assigns.current_user, name) do
+      {:ok, app_password, password} ->
+        {:noreply,
+         socket
+         |> assign(new_app_password: %{name: app_password.name, password: password})
+         |> assign_app_passwords()}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, gettext("Give the app password a name (up to 80 characters)."))}
+    end
+  end
+
+  def handle_event("delete_app_password", %{"id" => id}, socket) do
+    Accounts.delete_app_password(socket.assigns.current_user, id)
+    {:noreply, assign_app_passwords(socket)}
+  end
+
   # Scan broadcasts reach every page through the sidebar subscriptions.
   @impl true
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -96,6 +125,9 @@ defmodule StashixWeb.SettingsLive do
 
     assign(socket, sessions: sessions)
   end
+
+  defp assign_app_passwords(socket),
+    do: assign(socket, app_passwords: Accounts.list_app_passwords(socket.assigns.current_user))
 
   defp assign_profile_form(socket, changeset), do: assign(socket, profile_form: to_form(changeset, as: :profile))
 
@@ -164,6 +196,9 @@ defmodule StashixWeb.SettingsLive do
         current_user={@current_user}
         sessions={@sessions}
         current_session_id={@current_session_id}
+        app_passwords={@app_passwords}
+        new_app_password={@new_app_password}
+        opds_url={@opds_url}
       />
       <.about_tab :if={@live_action == :about} />
     </.page>
@@ -429,6 +464,9 @@ defmodule StashixWeb.SettingsLive do
   attr :current_user, :map, required: true
   attr :sessions, :list, required: true
   attr :current_session_id, :string, default: nil
+  attr :app_passwords, :list, default: []
+  attr :new_app_password, :map, default: nil
+  attr :opds_url, :string, default: nil
 
   defp security_tab(assigns) do
     assigns = assign(assigns, csrf: Plug.CSRFProtection.get_csrf_token())
@@ -458,6 +496,13 @@ defmodule StashixWeb.SettingsLive do
           <.ink_button type="submit" size="md">{gettext("Change password")}</.ink_button>
         </form>
       </.panel>
+
+      <.app_passwords_panel
+        app_passwords={@app_passwords}
+        new_app_password={@new_app_password}
+        opds_url={@opds_url}
+        username={@current_user.username}
+      />
 
       <div class="space-y-6">
         <.panel class="p-5 sm:p-6">
@@ -548,6 +593,86 @@ defmodule StashixWeb.SettingsLive do
         </.panel>
       </div>
     </div>
+    """
+  end
+
+  attr :app_passwords, :list, required: true
+  attr :new_app_password, :map, default: nil
+  attr :opds_url, :string, default: nil
+  attr :username, :string, required: true
+
+  defp app_passwords_panel(assigns) do
+    ~H"""
+    <.panel id="app-passwords" class="p-5 sm:p-6 lg:col-start-1">
+      <.display_heading size="panel" class="mb-1">{gettext("App passwords")}</.display_heading>
+      <p class="mb-4 text-sm text-muted">
+        {gettext(
+          "Reading apps (KOReader, Panels, Chunky and other OPDS readers) sign in with your user name and one of these, never your account password. Make one per app, so you can shut one out alone."
+        )}
+      </p>
+      <.field :if={@opds_url} label={gettext("OPDS catalog address")}>
+        <.text_input id="opds-url" name="opds_url" value={@opds_url} readonly onfocus="this.select()" />
+      </.field>
+      <p class="mt-1 mb-5 text-xs text-muted">
+        <.rich_text text={gettext("User name: %{name}", name: rich_marker("name"))}>
+          <:part name="name"><span class="font-mono text-fg-soft">{@username}</span></:part>
+        </.rich_text>
+      </p>
+
+      <div :if={@new_app_password} id="new-app-password" class="mb-5 p-4 rounded-md ring-1 ring-ink/60 bg-ink/10">
+        <p class="mb-2 text-sm text-fg">
+          {gettext("Password for %{name}. Copy it now: it is not shown again.", name: @new_app_password.name)}
+        </p>
+        <.text_input
+          id="new-app-password-value"
+          name="new_app_password"
+          value={@new_app_password.password}
+          readonly
+          onfocus="this.select()"
+          class="font-mono"
+        />
+      </div>
+
+      <ul :if={@app_passwords != []} id="app-password-list" class="mb-5 border-y border-fg/10 divide-y divide-fg/10">
+        <li :for={p <- @app_passwords} id={"app-password-#{p.id}"} class="flex items-center justify-between gap-3 py-3">
+          <div class="min-w-0">
+            <p class="font-display font-bold uppercase text-lg leading-tight tracking-wide truncate text-fg">
+              {p.name}
+            </p>
+            <p class="text-xs text-muted">
+              <.rich_text text={gettext("made %{date}", date: rich_marker("date"))}>
+                <:part name="date"><.local_time id={"app-password-#{p.id}-made"} value={p.inserted_at} /></:part>
+              </.rich_text>
+              ·
+              <%= if p.last_used_at do %>
+                <.rich_text text={gettext("last used %{date}", date: rich_marker("date"))}>
+                  <:part name="date"><.local_time id={"app-password-#{p.id}-used"} value={p.last_used_at} /></:part>
+                </.rich_text>
+              <% else %>
+                {gettext("never used")}
+              <% end %>
+            </p>
+          </div>
+          <.ink_button
+            variant="ghost"
+            size="md"
+            class="shrink-0"
+            phx-click="delete_app_password"
+            phx-value-id={p.id}
+            data-confirm={gettext("Revoke %{name}? That app will be signed out.", name: p.name)}
+          >
+            {gettext("Revoke")}
+          </.ink_button>
+        </li>
+      </ul>
+
+      <form id="app-password-form" phx-submit="create_app_password" class="flex items-end gap-3">
+        <.field label={gettext("New app password for")} class="flex-1">
+          <.text_input name="name" required maxlength="80" placeholder={gettext("e.g. KOReader on Kobo")} />
+        </.field>
+        <.ink_button type="submit" size="md" class="shrink-0">{gettext("Create")}</.ink_button>
+      </form>
+    </.panel>
     """
   end
 

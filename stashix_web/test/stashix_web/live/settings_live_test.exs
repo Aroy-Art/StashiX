@@ -162,6 +162,34 @@ defmodule StashixWeb.SettingsLiveTest do
     assert {:ok, _} = TokenHelper.resource_from_token(get_session(conn, "guardian_default_token"))
   end
 
+  test "app passwords are made, shown once and revoked", %{conn: conn, user: user} do
+    {:ok, view, html} = live(conn, ~p"/settings/security")
+    assert html =~ "http://www.example.com/opds/v1.2/catalog"
+    refute has_element?(view, "#app-password-list")
+
+    view |> form("#app-password-form", %{"name" => "KOReader"}) |> render_submit()
+
+    [app] = Accounts.list_app_passwords(user)
+    assert has_element?(view, "#app-password-#{app.id}", "KOReader")
+
+    password =
+      view
+      |> element("#new-app-password-value")
+      |> render()
+      |> then(&Regex.run(~r/value="(stx_[^"]+)"/, &1))
+      |> List.last()
+
+    assert Accounts.authenticate_app_password("sam", password).id == user.id
+
+    # Shown once: a fresh visit lists it without the password.
+    {:ok, view, _html} = live(conn, ~p"/settings/security")
+    refute has_element?(view, "#new-app-password")
+
+    view |> element("#app-password-#{app.id} button", "Revoke") |> render_click()
+    refute has_element?(view, "#app-password-#{app.id}")
+    assert Accounts.authenticate_app_password("sam", password) == nil
+  end
+
   describe "the sessions list" do
     @firefox "Mozilla/5.0 (X11; Linux x86_64; rv:130.0) Gecko/20100101 Firefox/130.0"
     @chrome_android "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Mobile Safari/537.36"

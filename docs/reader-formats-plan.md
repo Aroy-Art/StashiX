@@ -328,12 +328,20 @@ OPDS's per-user tokens and feed queries).
 
 ### OPDS
 
-- [ ] OPDS 1.2 catalog (Atom): root, libraries, series, new, search
-  (OpenSearch), acquisition links to `/file`.
-- [ ] OPDS-PSE page streaming for comics, on top of `/page/:n` (`{pageNumber}`,
-  `{maxWidth}` templates) — Panels, Chunky, KOReader.
+- [x] OPDS 1.2 catalog (Atom): root, libraries, series, new, search
+  (OpenSearch), acquisition links to `/file`. *Done:* `/opds/v1.2/catalog`
+  (`OpdsController`, `Opds.Feed`): continue reading, recently added, series,
+  all books, libraries, search; 50 per page with next/previous. Acquisition
+  links go through the download endpoint, so only with `can_download`.
+- [x] OPDS-PSE page streaming for comics, on top of `/page/:n` (`{pageNumber}`,
+  `{maxWidth}` templates) — Panels, Chunky, KOReader. *Done:* books that read
+  as images get a stream link with `pse:count` and `pse:lastRead`, with or
+  without download permission.
 - [ ] OPDS 2.0 (JSON) feeds + Readium progression where clients support it.
-- [ ] Auth: HTTP Basic or per-user API tokens (not the session cookie).
+- [x] Auth: HTTP Basic or per-user API tokens (not the session cookie).
+  *Done:* HTTP Basic with the user name (or email) and an app password made
+  in Settings → Security (`AppPassword`, SHA-256 stored, revocable one by
+  one); the account password is refused. Kobo sync can reuse them.
 
 ### Kobo sync
 

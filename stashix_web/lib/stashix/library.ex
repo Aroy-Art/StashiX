@@ -391,6 +391,18 @@ defmodule Stashix.Library do
     |> Map.new()
   end
 
+  @doc "The page each started book in `book_ids` is open at, by id."
+  def current_pages(_user_id, []), do: %{}
+
+  def current_pages(user_id, book_ids) do
+    from(rp in ReadingProgress,
+      where: rp.user_id == ^user_id and rp.book_id in ^book_ids and rp.progression > 0.0,
+      select: {rp.book_id, rp.current_page}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
   def in_progress_books(access, user_id, limit \\ 20) do
     results =
       from(rp in ReadingProgress,
