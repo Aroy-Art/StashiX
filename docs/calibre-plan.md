@@ -278,8 +278,11 @@ without touching anything.
   `openlibrary:`, `issn:`, `doi:`, plus `metron:`, `comicvine:`, `gcd:` —
   matches that id exactly instead of the text search, on the search page
   and in the API / OPDS search (`Library.identifier_query/1`).
-- [ ] OPDS: one acquisition link per format, Calibre uuid as entry id
-  (`urn:uuid:…`) so KOReader keeps its records.
+- [x] OPDS: one acquisition link per format, Calibre uuid as entry id
+  (`urn:uuid:…`) so KOReader keeps its records. *Done:* per-format links
+  already existed; they now come best-first (reading order), Calibre
+  books' entries use `urn:uuid:<calibre uuid>` like Calibre's own feed,
+  and OPDS search finds ISBNs and other ids.
 
 ## 5. Phase 3 — OPF and Calibre layout in folder libraries
 

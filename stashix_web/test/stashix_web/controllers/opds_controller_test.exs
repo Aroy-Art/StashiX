@@ -110,6 +110,33 @@ defmodule StashixWeb.OpdsControllerTest do
     assert conn |> get(~p"/opds/v1.2/books/#{issue.id}/download?formats=cbz") |> response(200) == "cbz"
   end
 
+  test "a Calibre book keeps its uuid, offers its best format first and is found by ISBN",
+       %{conn: conn, user: user, lib: lib, tmp_dir: tmp} do
+    {:ok, _} =
+      Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_read: true, can_download: true})
+
+    {:ok, book} =
+      Library.create_book(%{
+        title: "Dune",
+        library_id: lib.id,
+        type: "standalone",
+        isbn: "9780441013593",
+        calibre_uuid: "11111111-2222-3333-4444-555555555555"
+      })
+
+    for format <- [:pdf, :epub, :mobi] do
+      path = Path.join(tmp, "Dune.#{format}")
+      File.write!(path, "x")
+      Repo.insert!(%BookFile{book_id: book.id, path: path, format: format, file_size: 1})
+    end
+
+    body = conn |> get(~p"/opds/v1.2/search?q=isbn:978-0-441-01359-3") |> response(200)
+    assert body =~ "<id>urn:uuid:11111111-2222-3333-4444-555555555555</id>"
+
+    links = Regex.scan(~r/download\?formats=(\w+)/, body) |> Enum.map(&List.last/1)
+    assert links == ["epub", "mobi", "pdf"]
+  end
+
   test "downloads stay forbidden without the permission", %{conn: conn, issue: issue} do
     assert conn |> get(~p"/opds/v1.2/books/#{issue.id}/download?formats=cbz") |> response(403)
   end

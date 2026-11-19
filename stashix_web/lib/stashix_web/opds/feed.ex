@@ -113,12 +113,17 @@ defmodule StashixWeb.Opds.Feed do
   The book needs `:series`, `:files` and `credits: :creator` loaded.
   """
   def book_entry(book, opts \\ []) do
-    files = Enum.filter(book.files, &is_nil(&1.deleted_at))
+    # Best format first: clients that offer one download take the first link.
+    files =
+      book.files
+      |> Enum.filter(&is_nil(&1.deleted_at))
+      |> Enum.sort_by(&Stashix.Media.Formats.reading_rank(&1.format))
+
     cover = "#{@base}/books/#{book.id}/cover"
 
     [
       "<entry>\n",
-      tag("id", "urn:stashix:book:#{book.id}"),
+      tag("id", entry_id(book)),
       tag("title", entry_title(book)),
       tag("updated", timestamp(book.updated_at)),
       Enum.map(authors(book), &["<author>", tag("name", &1), "</author>\n"]),
@@ -133,6 +138,11 @@ defmodule StashixWeb.Opds.Feed do
       "</entry>\n"
     ]
   end
+
+  # A Calibre book keeps the id Calibre's own OPDS feed gives it, so readers
+  # (KOReader) that knew it from Calibre see the same book.
+  defp entry_id(%{calibre_uuid: uuid}) when is_binary(uuid), do: "urn:uuid:" <> uuid
+  defp entry_id(book), do: "urn:stashix:book:#{book.id}"
 
   defp acquisition_link(book, file) do
     ~s(<link rel="http://opds-spec.org/acquisition" type="#{Map.get(@mime, file.format, "application/octet-stream")}" ) <>
