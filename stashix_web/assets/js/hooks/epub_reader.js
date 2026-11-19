@@ -225,7 +225,18 @@ const EpubReader = {
     this.notes = new FootnoteHandler()
     this.notes.addEventListener("before-render", (e) => this.styleNote(e.detail.view))
     this.notes.addEventListener("render", () => this.showNote())
-    this.view.addEventListener("link", (e) => this.notes.handle(this.book, e)?.catch((err) => console.error(err)))
+    // A link followed from the keyboard is blurred, for the same reason (see
+    // docLoaded): foliate-js refocuses the chapter's window after going.
+    this.view.addEventListener("link", (e) => {
+      e.detail.a?.blur()
+      this.notes.handle(this.book, e)?.catch((err) => console.error(err))
+    })
+    // Links out of the book are confirmed first (the server asks).
+    this.view.addEventListener("external-link", (e) => {
+      e.preventDefault()
+      e.detail.a?.blur()
+      this.pushEvent("external_link", {url: e.detail.href_})
+    })
 
     this.apply(this.settings)
     this.outline()
@@ -363,6 +374,10 @@ const EpubReader = {
   docLoaded({doc, index}) {
     doc.addEventListener("keydown", this.onKey)
     doc.addEventListener("wheel", this.onWheel, {passive: false})
+    // foliate-js scrolls whatever gains focus into view, a frame later. A
+    // link pressed with the mouse would take focus just before its click
+    // goes to the target, and be scrolled back to: pressing doesn't focus.
+    doc.addEventListener("mousedown", (e) => e.target.closest?.("a[href]") && e.preventDefault())
     // A finished selection (mouse, touch handles or shift+arrows) brings up
     // the bar; clearing it takes the bar away.
     const selected = () => setTimeout(() => this.selected(doc, index), 10)

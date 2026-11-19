@@ -381,10 +381,13 @@ const PdfReader = {
         viewport,
       })
 
+      const links = await this.linkLayer(page, viewport)
+      if (slot.run !== run) return
+
       slot.annots = document.createElement("div")
       slot.annots.className = "pdf-annots"
       const old = slot.el.querySelector("canvas")
-      slot.el.replaceChildren(canvas, slot.annots, text)
+      slot.el.replaceChildren(canvas, slot.annots, text, links)
       if (old) old.width = old.height = 0
       slot.state = "done"
       this.drawAnnotations(slot)
@@ -393,6 +396,54 @@ const PdfReader = {
     } catch (err) {
       if (err?.name !== "RenderingCancelledException") console.error("PdfReader page", slot.index + 1, err)
       if (slot.run === run && slot.state === "rendering") slot.state = "empty"
+    }
+  },
+
+  // The page's links, over its text. Positions are shares of the page, so
+  // they follow it through zooms like the highlights. Links out of the book
+  // are confirmed first (the server asks); links inside it go to their page.
+  async linkLayer(page, viewport) {
+    const layer = document.createElement("div")
+    layer.className = "pdf-links"
+    const annotations = await page.getAnnotations({intent: "display"}).catch(() => [])
+    // PDF space to the page's: viewport.transform, applied to both corners.
+    const [ta, tb, tc, td, te, tf] = viewport.transform
+    const point = (x, y) => [ta * x + tc * y + te, tb * x + td * y + tf]
+    for (const a of annotations) {
+      const url = a.url || a.unsafeUrl
+      if (a.subtype !== "Link" || (!url && a.dest == null) || a.rect?.length !== 4) continue
+      const [x1, y1] = point(a.rect[0], a.rect[1])
+      const [x2, y2] = point(a.rect[2], a.rect[3])
+      const share = (v, size) => `${(v / size) * 100}%`
+      const link = document.createElement("a")
+      link.className = "pdf-link"
+      link.tabIndex = 0
+      link.setAttribute("role", "link")
+      if (url) link.title = url
+      link.style.left = share(Math.min(x1, x2), viewport.width)
+      link.style.top = share(Math.min(y1, y2), viewport.height)
+      link.style.width = share(Math.abs(x2 - x1), viewport.width)
+      link.style.height = share(Math.abs(y2 - y1), viewport.height)
+      const follow = (e) => {
+        e.preventDefault()
+        this.followLink(url, a.dest)
+      }
+      link.addEventListener("click", follow)
+      link.addEventListener("keydown", (e) => e.key === "Enter" && follow(e))
+      layer.appendChild(link)
+    }
+    return layer
+  },
+
+  async followLink(url, dest) {
+    if (url) return this.pushEvent("external_link", {url})
+    try {
+      const explicit = typeof dest === "string" ? await this.doc.getDestination(dest) : dest
+      const ref = explicit?.[0]
+      if (ref == null) return
+      this.goto(typeof ref === "object" ? await this.doc.getPageIndex(ref) : ref)
+    } catch (err) {
+      console.error("PdfReader link", err)
     }
   },
 

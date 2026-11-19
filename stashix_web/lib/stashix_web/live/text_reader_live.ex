@@ -126,6 +126,8 @@ defmodule StashixWeb.TextReaderLive do
       search_results: [],
       search_scanned: 0,
       search_done: true,
+      # A link out of the book, waiting for the reader to confirm it.
+      external_link: nil,
       save_timer: nil,
       # The bookmark at the spot showing, if any (EPUB: the hook says).
       bookmark_here: nil,
@@ -329,6 +331,14 @@ defmodule StashixWeb.TextReaderLive do
     end
   end
 
+  # A link out of the book: confirmed in a dialog first. Only web and mail
+  # links open; anything else (javascript:, file:, data:) is ignored.
+  def handle_event("external_link", %{"url" => url}, socket) when is_binary(url) do
+    {:noreply, assign(socket, :external_link, external_url(url))}
+  end
+
+  def handle_event("close_external_link", _params, socket), do: {:noreply, assign(socket, :external_link, nil)}
+
   ## Events from the chrome
 
   # Slider, contents and search results: jump to a page.
@@ -474,6 +484,19 @@ defmodule StashixWeb.TextReaderLive do
   def handle_info({:cover_updated, _}, socket), do: {:noreply, socket}
 
   ## Helpers
+
+  defp external_url(url) do
+    case URI.new(String.trim(url)) do
+      {:ok, %URI{scheme: scheme, host: host} = uri} when scheme in ["http", "https"] and host not in [nil, ""] ->
+        URI.to_string(uri)
+
+      {:ok, %URI{scheme: "mailto", path: path} = uri} when path not in [nil, ""] ->
+        URI.to_string(uri)
+
+      _ ->
+        nil
+    end
+  end
 
   defp push_tts(socket, action) do
     %{tts_rate: rate, tts_voice: voice} = socket.assigns
@@ -980,6 +1003,33 @@ defmodule StashixWeb.TextReaderLive do
         done={@search_done}
         page_count={@page_count}
       />
+
+      <.dialog
+        :if={@external_link}
+        id="external-link"
+        size="sm"
+        title={gettext("Open external link?")}
+        on_close={JS.push("close_external_link")}
+      >
+        <p class="text-sm text-fg-soft">{gettext("This link leads out of the book to:")}</p>
+        <p class="mt-2 px-3 py-2 rounded-md bg-fg/5 font-mono text-sm text-fg break-all">{@external_link}</p>
+        <.dialog_footer>
+          <.ink_button type="button" variant="ghost" size="md" phx-click="close_external_link">
+            {gettext("Cancel")}
+          </.ink_button>
+          <%!-- noreferrer: the site isn't told this page (or book) sent the reader there. --%>
+          <.ink_button
+            id="external-link-open"
+            href={@external_link}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="md"
+            phx-click="close_external_link"
+          >
+            {gettext("Open link")}
+          </.ink_button>
+        </.dialog_footer>
+      </.dialog>
 
       <ReaderLive.end_card
         :if={@at_end}

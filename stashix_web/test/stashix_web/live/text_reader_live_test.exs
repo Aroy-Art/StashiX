@@ -159,6 +159,32 @@ defmodule StashixWeb.TextReaderLiveTest do
     end
   end
 
+  test "a link out of the book asks first, and opens without saying where it came from",
+       %{conn: conn, epub: book} do
+    {view, _html} = open(conn, book)
+    refute has_element?(view, "#external-link")
+
+    render_hook(view, "external_link", %{"url" => "https://example.com/page?q=1"})
+    assert has_element?(view, "#external-link", "https://example.com/page?q=1")
+
+    assert has_element?(
+             view,
+             ~s|#external-link-open[href="https://example.com/page?q=1"][target="_blank"][rel="noopener noreferrer"]|
+           )
+
+    render_click(view, "close_external_link")
+    refute has_element?(view, "#external-link")
+
+    # Only web and mail links open.
+    for url <- ["javascript:alert(1)", "file:///etc/passwd", "data:text/html,hi", "https://", "/api/books"] do
+      render_hook(view, "external_link", %{"url" => url})
+      refute has_element?(view, "#external-link"), url
+    end
+
+    render_hook(view, "external_link", %{"url" => "mailto:author@example.com"})
+    assert has_element?(view, ~s|#external-link-open[href="mailto:author@example.com"]|)
+  end
+
   test "the reader page runs under a CSP that only allows our own scripts", %{conn: conn, text: book} do
     # The id path redirects to the canonical slug one.
     conn = get(conn, ~p"/read/#{book.id}/text")

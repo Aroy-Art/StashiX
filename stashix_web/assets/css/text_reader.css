@@ -81,6 +81,10 @@
 
 /* Highlights: under the text layer, so text stays selectable over them. */
 .pdf-annots { position: absolute; inset: 0; pointer-events: none; }
+.pdf-links { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.pdf-link { position: absolute; pointer-events: auto; cursor: pointer; border-radius: 2px; }
+.pdf-link:hover { background: rgb(139 92 246 / 0.15); }
+.pdf-link:focus-visible { outline: 2px solid rgb(139 92 246); outline-offset: 1px; }
 .pdf-annot { position: absolute; opacity: 0.35; mix-blend-mode: multiply; border-radius: 2px; }
 .pdf-annot-note { background: none; border-bottom: 2px solid #a1a1aa; opacity: 1; mix-blend-mode: normal; border-radius: 0; }
 [data-page-theme="night"] .pdf-annot { mix-blend-mode: screen; opacity: 0.4; }
