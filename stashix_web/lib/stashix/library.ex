@@ -1493,10 +1493,14 @@ defmodule Stashix.Library do
 
   @doc """
   The file of `book` (of `format`, when given) to open in the text reader,
-  or nil when it opens as pages. Needs `files` preloaded.
+  or nil when it opens as pages. With several formats, the first in
+  `Stashix.Media.Formats.reading_order/0` (EPUB before Kindle before PDF).
+  Needs `files` preloaded.
   """
   def text_book_file(%Book{files: files} = book, format \\ nil) do
-    Enum.find(files, fn file ->
+    files
+    |> Enum.sort_by(&Stashix.Media.Formats.reading_rank(&1.format))
+    |> Enum.find(fn file ->
       file.deleted_at == nil and file.format in @text_formats and format in [nil, file.format] and
         reader_kind(book, file) == :text
     end)

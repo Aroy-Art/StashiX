@@ -20,4 +20,13 @@ defmodule Stashix.Library.ReaderKindTest do
     assert Library.reader_kind(%Book{}, %BookFile{}) == :images
     assert Library.reader_kind(%Book{}, nil) == :images
   end
+
+  test "a book with several text formats opens the best one" do
+    files = for f <- [:pdf, :azw3, :mobi, :epub], do: %BookFile{format: f, content_kind: :text}
+    book = %Book{files: files}
+
+    assert Library.text_book_file(book).format == :epub
+    assert Library.text_book_file(%{book | files: files -- [List.last(files)]}).format == :azw3
+    assert Library.text_book_file(book, :mobi).format == :mobi
+  end
 end

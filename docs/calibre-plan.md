@@ -234,16 +234,28 @@ without touching anything.
   locks). Book and series pages hide Fetch / Identify, Lock metadata, the
   publisher and language pushes and issue numbers from filenames; their
   rescan reads "Sync with Calibre" (a normal library sync).
-- [ ] Browser-check against a copy of the real library; tests for
+- [x] Browser-check against a copy of the real library; tests for
   snapshot (stamp moves mid-copy), mapper, sync (add / change / rename
   tag / delete / missing file / uuid kept across renumbered ids).
+  *Done (2026-11-19):* a copy of the reference library without its PDFs
+  (2 GB, 8 PDFs kept): setup wizard → first sync 678 books in ~9 s (a
+  full resync ~7 s), 568 files missing as expected; books, book page,
+  edit dialog, EPUB / MOBI / PDF / CBZ readers checked. An rsync-style
+  replace of `metadata.db` (tag renamed, title changed) synced 30 s later
+  in 2.6 s, rewriting the 52 books with that tag. Found and fixed: books
+  importing in parallel raced to create the same new author; the reader
+  opened a multi-format book's AZW3 instead of its EPUB. Seen, not
+  Calibre's: one EPUB whose XHTML uses `&nbsp;` without a DTD fails to
+  parse in the text reader.
 
 ## 4. Phase 2 — Calibre-native browsing
 
 - [ ] Book page: formats list (read in / download each), Calibre rating,
   identifiers as links, "Added" date.
-- [ ] Reader picks the preferred format (D9); format switch in the
-  reader menu when there are several.
+- [~] Reader picks the preferred format (D9); format switch in the
+  reader menu when there are several. *Started:* `Library.text_book_file/2`
+  picks by `Media.Formats.reading_order/0` (shared with Sync); the
+  switch is still to do.
 - [ ] Sort by title sort and author sort (`sort_title`,
   `creators.sort_name`) in books mode; author pages list by series then
   index.

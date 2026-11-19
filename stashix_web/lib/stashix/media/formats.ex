@@ -50,6 +50,16 @@ defmodule Stashix.Media.Formats do
     binary_part(name, 0, byte_size(name) - ext)
   end
 
+  # Which format a book with several opens in, best first: reflowable text
+  # with the best reader support, then Kindle, FictionBook, PDF, comics.
+  @reading_order [:epub, :azw3, :mobi, :azw, :fb2, :fbz, :pdf, :cbz, :cbr, :cb7]
+
+  @doc "Formats in the order a book with several opens them, best first."
+  def reading_order, do: @reading_order
+
+  @doc "A format's place in `reading_order/0` (lower opens first)."
+  def reading_rank(format), do: Enum.find_index(@reading_order, &(&1 == format)) || length(@reading_order)
+
   @doc "Formats in the Kindle (Mobipocket / KF8) family."
   def mobi?(format), do: format in [:mobi, :azw3, :azw]
 

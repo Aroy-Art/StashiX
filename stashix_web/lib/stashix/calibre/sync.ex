@@ -35,9 +35,6 @@ defmodule Stashix.Calibre.Sync do
 
   @concurrency 4
 
-  # The format a multi-format book opens in, best first (D9).
-  @preferred [:epub, :azw3, :mobi, :azw, :fb2, :fbz, :pdf, :cbz, :cbr, :cb7]
-
   @doc """
   Syncs `library` with its Calibre database. Returns `{:ok, summary}` or
   `{:error, reason}`; either way the outcome is stored in
@@ -394,7 +391,7 @@ defmodule Stashix.Calibre.Sync do
 
   @doc "The file a multi-format book opens in (D9)."
   def preferred_file([]), do: nil
-  def preferred_file(files), do: Enum.min_by(files, &(Enum.find_index(@preferred, fn f -> f == &1.format end) || 99))
+  def preferred_file(files), do: Enum.min_by(files, &Stashix.Media.Formats.reading_rank(&1.format))
 
   # ── Covers ─────────────────────────────────────────────────────────────────
 
