@@ -250,8 +250,12 @@ without touching anything.
 
 ## 4. Phase 2 — Calibre-native browsing
 
-- [ ] Book page: formats list (read in / download each), Calibre rating,
-  identifiers as links, "Added" date.
+- [x] Book page: formats list (read in / download each), Calibre rating,
+  identifiers as links, "Added" date. *Done:* format pills and the
+  per-format download menu were already there; the page now starts on
+  the reading order's pick in books libraries (EPUB first; comics keep
+  CBZ first). Rating shows as stars, "Added" from `added_at`, and Google
+  Books, Amazon, Goodreads, Open Library, ISSN and DOI ids link out.
 - [~] Reader picks the preferred format (D9); format switch in the
   reader menu when there are several. *Started:* `Library.text_book_file/2`
   picks by `Media.Formats.reading_order/0` (shared with Sync); the

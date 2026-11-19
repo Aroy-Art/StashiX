@@ -96,4 +96,38 @@ defmodule StashixWeb.CalibreLibraryLiveTest do
     {:ok, view, _html} = live(conn, ~p"/admin/libraries")
     assert view |> element("#calibre-status-#{lib.id}") |> render() =~ "Last sync failed: No metadata.db"
   end
+
+  test "a Calibre book's page", %{conn: conn, tmp_dir: tmp} do
+    thumbs = Path.join(System.tmp_dir!(), "stashix_test_thumbs_#{System.unique_integer([:positive])}")
+    Application.put_env(:stashix, :thumbnail_dir, thumbs)
+
+    on_exit(fn ->
+      Application.delete_env(:stashix, :thumbnail_dir)
+      File.rm_rf(thumbs)
+    end)
+
+    root =
+      CalibreFixtures.make_library(Path.join(tmp, "Shelf"), [
+        %{
+          title: "Good Omens",
+          authors: ["Terry Pratchett"],
+          rating: 9,
+          identifiers: %{"google" => "g1", "goodreads" => "12067"},
+          timestamp: "2021-06-01 10:00:00+00:00",
+          formats: ["PDF", "MOBI", "EPUB"]
+        }
+      ])
+
+    {:ok, lib} = Library.create_library(%{name: "Shelf", root_path: root, kind: :books, source: :calibre})
+    {:ok, _} = Stashix.Calibre.Sync.run(lib)
+    book = Stashix.Repo.get_by!(Stashix.Library.Book, title: "Good Omens")
+
+    {:ok, view, html} = live(conn, ~p"/book/#{book}")
+    assert html =~ "★★★★½ 4.5 / 5"
+    assert has_element?(view, "#book-added-at")
+    assert has_element?(view, "a[href='https://books.google.com/books?id=g1']")
+    assert has_element?(view, "a[href='https://www.goodreads.com/book/show/12067']")
+    # The format pills start on the EPUB.
+    assert view |> element("span.bg-fg", "EPUB") |> has_element?()
+  end
 end

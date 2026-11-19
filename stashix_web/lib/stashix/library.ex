@@ -1506,9 +1506,12 @@ defmodule Stashix.Library do
     end)
   end
 
+  @doc """
+  The file a book page starts on: of `format` when given, else the best by
+  the library's kind — comics first in a comics library, the reading order
+  (`Stashix.Media.Formats.reading_order/0`, EPUB first) in a books library.
+  """
   def get_preferred_book_file(book, format \\ nil) do
-    format_priority = [:cbz, :cbr, :cb7, :epub, :azw3, :mobi, :azw, :fb2, :fbz, :pdf]
-
     files =
       case book.files do
         %Ecto.Association.NotLoaded{} ->
@@ -1526,6 +1529,11 @@ defmodule Stashix.Library do
       fmt = if is_atom(format), do: format, else: String.to_existing_atom(to_string(format))
       Enum.find(files, &(&1.format == fmt)) || List.first(files)
     else
+      format_priority =
+        if book.library_id && library_kind(book.library_id) == :books,
+          do: Stashix.Media.Formats.reading_order(),
+          else: [:cbz, :cbr, :cb7, :epub, :azw3, :mobi, :azw, :fb2, :fbz, :pdf]
+
       Enum.min_by(
         files,
         &Enum.find_index(format_priority, fn f -> f == &1.format end),

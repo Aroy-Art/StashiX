@@ -4576,6 +4576,7 @@ msgstr ""
 msgid "Push to all issues…"
 msgstr ""
 
+#: lib/stashix_web/live/book_live.ex
 #: lib/stashix_web/live/identify_component.ex
 #, elixir-autogen, elixir-format
 msgid "Rating"
@@ -5423,4 +5424,9 @@ msgstr ""
 #: lib/stashix_web/live/series_edit_component.ex
 #, elixir-autogen, elixir-format
 msgid "This series comes from a Calibre library. Its name is edited in Calibre and comes back on every sync; the rest is kept in Stashix only."
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "Added"
 msgstr ""

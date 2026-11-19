@@ -228,10 +228,35 @@ defmodule StashixWeb.BookLive do
 
         {host, fallback} =
           case source do
-            "Comic Vine" -> {"comicvine.gamespot.com", "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"}
-            "Grand Comics Database" -> {"comics.org", "https://www.comics.org/issue/#{e.source_id}/"}
-            "Metron" -> {"metron.cloud", nil}
-            _ -> {nil, nil}
+            "Comic Vine" ->
+              {"comicvine.gamespot.com", "https://comicvine.gamespot.com/issue/4000-#{e.source_id}/"}
+
+            "Grand Comics Database" ->
+              {"comics.org", "https://www.comics.org/issue/#{e.source_id}/"}
+
+            "Metron" ->
+              {"metron.cloud", nil}
+
+            "Google Books" ->
+              {"books.google.com", "https://books.google.com/books?id=#{URI.encode_www_form(e.source_id)}"}
+
+            "Amazon" ->
+              {"amazon.com", "https://www.amazon.com/dp/#{URI.encode_www_form(e.source_id)}"}
+
+            "Goodreads" ->
+              {"goodreads.com", "https://www.goodreads.com/book/show/#{URI.encode_www_form(e.source_id)}"}
+
+            "Open Library" ->
+              {"openlibrary.org", "https://openlibrary.org/books/#{URI.encode_www_form(e.source_id)}"}
+
+            "ISSN" ->
+              {"portal.issn.org", "https://portal.issn.org/resource/ISSN/#{URI.encode_www_form(e.source_id)}"}
+
+            "DOI" ->
+              {"doi.org", "https://doi.org/#{URI.encode(e.source_id)}"}
+
+            _ ->
+              {nil, nil}
           end
 
         {source, (host && Enum.find_value(urls, &(url_host(&1.url) == host && &1.url))) || fallback}
@@ -264,9 +289,11 @@ defmodule StashixWeb.BookLive do
       {gettext("Cover date"), d.cover_date && fact_date("book-cover-date", d.cover_date, "month")},
       {gettext("In stores"), d.store_date && fact_date("book-store-date", d.store_date, "date")},
       {gettext("Price"), Enum.map_join(d.prices, " / ", fn p -> "#{Format.decimal(p.amount)} #{p.country}" end)},
+      {gettext("Rating"), rating(d.rating)},
       {gettext("Community rating"), community_rating(d)},
       {"ISBN", d.isbn},
-      {"UPC", d.upc}
+      {"UPC", d.upc},
+      {gettext("Added"), d.added_at && fact_date("book-added-at", d.added_at, "date")}
     ]
     |> Enum.map(fn {label, value} -> {label, value || nil} end)
   end
@@ -277,6 +304,15 @@ defmodule StashixWeb.BookLive do
     ~H"""
     <.local_time id={@id} value={@date} format={@format} />
     """
+  end
+
+  # The library's 0–5 rating (from Calibre), as stars.
+  defp rating(nil), do: nil
+
+  defp rating(stars) do
+    full = trunc(stars)
+    half = if stars - full >= 0.5, do: "½", else: ""
+    String.duplicate("★", full) <> half <> " " <> Format.decimal(stars * 1.0) <> " / 5"
   end
 
   defp community_rating(%{community_rating: nil}), do: nil
