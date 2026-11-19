@@ -180,11 +180,12 @@ defmodule StashixWeb.CreatorLive do
 
   defp sort_entries(books, _kind, _year_asc), do: Enum.sort_by(books, &{is_nil(&1.year), &1.year, book_name(&1)})
 
-  # Issues sort by series then number, books by title.
+  # Issues sort by series then number, books by title (its sort title when
+  # it has one, e.g. Calibre's "Hobbit, The").
   defp book_name(%{series_name: series, issue_number: n, title: title}) when is_binary(series),
     do: {String.downcase(series), issue_sort(n), String.downcase(title || "")}
 
-  defp book_name(%{title: title}), do: {String.downcase(title || ""), 0, ""}
+  defp book_name(%{title: title} = book), do: {String.downcase(book[:sort_title] || title || ""), 0, ""}
 
   defp issue_sort(nil), do: :infinity
   defp issue_sort(n), do: Decimal.to_float(n)

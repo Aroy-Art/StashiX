@@ -5431,3 +5431,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Added"
 msgstr ""
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "Author A → Z"
+msgstr ""

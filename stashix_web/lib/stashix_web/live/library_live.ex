@@ -114,7 +114,7 @@ defmodule StashixWeb.LibraryLive do
             total_pages: max(1, ceil(total / @page_size)),
             page: page,
             sort: sort,
-            sort_options: sort_options(:titles),
+            sort_options: sort_options(:books),
             progress_map: progress_map,
             loading: false
           )

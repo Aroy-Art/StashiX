@@ -105,19 +105,7 @@ defmodule Stashix.Library do
         query
       end
 
-    query =
-      case sort do
-        "title_desc" -> order_by(query, [b], desc: b.title)
-        "year_asc" -> order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
-        "year_desc" -> order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
-        "added_asc" -> order_by(query, [b], asc: b.inserted_at)
-        "added_desc" -> order_by(query, [b], desc: b.inserted_at)
-        "issue_asc" -> order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
-        "issue_desc" -> order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
-        _ -> order_by(query, [b], asc: b.title)
-      end
-
-    books = Repo.all(query)
+    books = query |> order_books(sort) |> Repo.all()
     books |> populate_source_formats() |> put_series_volume_counts(access!(opts))
   end
 
@@ -722,6 +710,7 @@ defmodule Stashix.Library do
           name: coalesce(s.name, b.title),
           series_name: s.name,
           title: b.title,
+          sort_title: b.sort_title,
           type: b.type,
           issue_number: b.issue_number,
           year: b.year
@@ -747,7 +736,7 @@ defmodule Stashix.Library do
     |> Enum.group_by(& &1.book_id)
     |> Enum.map(fn {id, [first | _] = rows} ->
       first
-      |> Map.take([:type, :title, :series_name, :issue_number, :year])
+      |> Map.take([:type, :title, :sort_title, :series_name, :issue_number, :year])
       |> Map.merge(%{id: id, roles: rows |> Enum.map(& &1.role) |> Enum.uniq()})
     end)
   end
@@ -2501,7 +2490,8 @@ defmodule Stashix.Library do
     query =
       from b in Access.books(access),
         where: is_nil(b.deleted_at),
-        order_by: [desc: b.inserted_at],
+        # A Calibre book was added when Calibre says, not when it was synced.
+        order_by: [desc: fragment("coalesce(?, ?)", b.added_at, b.inserted_at)],
         limit: ^limit,
         preload: [:cover, :series]
 
@@ -2805,19 +2795,50 @@ defmodule Stashix.Library do
     query = if type, do: where(query, [b], b.type == ^type), else: query
     query = if library_id, do: where(query, [b], b.library_id == ^library_id), else: query
 
-    query =
-      case sort do
-        "title_desc" -> order_by(query, [b], desc: b.title)
-        "year_asc" -> order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
-        "year_desc" -> order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
-        "added_asc" -> order_by(query, [b], asc: b.inserted_at)
-        "added_desc" -> order_by(query, [b], desc: b.inserted_at)
-        "issue_asc" -> order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
-        "issue_desc" -> order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
-        _ -> order_by(query, [b], asc: b.title)
-      end
+    query |> order_books(sort) |> Repo.all()
+  end
 
-    Repo.all(query)
+  # Book list orders. Titles sort by `sort_title` when a book has one
+  # (Calibre's "Hobbit, The"), dates added by `added_at` (Calibre's date)
+  # before the row's own, authors by the sort name of the book's first writer
+  # alphabetically ("Herbert, Frank").
+  defp order_books(query, sort) do
+    case sort do
+      "title_desc" ->
+        order_by(query, [b], desc: fragment("coalesce(?, ?)", b.sort_title, b.title))
+
+      "year_asc" ->
+        order_by(query, [b], asc_nulls_last: b.year, asc: b.title)
+
+      "year_desc" ->
+        order_by(query, [b], desc_nulls_last: b.year, asc: b.title)
+
+      "added_asc" ->
+        order_by(query, [b], asc: fragment("coalesce(?, ?)", b.added_at, b.inserted_at))
+
+      "added_desc" ->
+        order_by(query, [b], desc: fragment("coalesce(?, ?)", b.added_at, b.inserted_at))
+
+      "issue_asc" ->
+        order_by(query, [b], asc_nulls_last: b.issue_number, asc: b.title)
+
+      "issue_desc" ->
+        order_by(query, [b], desc_nulls_last: b.issue_number, asc: b.title)
+
+      "author_asc" ->
+        order_by(query, [b],
+          asc_nulls_last:
+            fragment(
+              "(SELECT min(coalesce(c.sort_name, c.name)) FROM book_credits bc JOIN creators c ON c.id = bc.creator_id WHERE bc.book_id = ? AND bc.role = 'Writer')",
+              b.id
+            ),
+          asc: fragment("coalesce(?, ?)", b.sort_title, b.title),
+          asc_nulls_last: b.issue_number
+        )
+
+      _ ->
+        order_by(query, [b], asc: fragment("coalesce(?, ?)", b.sort_title, b.title))
+    end
   end
 
   def count_all_books(opts \\ []) do

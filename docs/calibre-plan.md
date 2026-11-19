@@ -260,11 +260,17 @@ without touching anything.
   reader menu when there are several. *Done:* `Library.text_book_file/2`
   picks by `Media.Formats.reading_order/0` (shared with Sync); the text
   reader's View menu lists every format it can open the book in. Reading
-  progress is per book, so a switch keeps the page share but not an
-  exact CFI across formats.
-- [ ] Sort by title sort and author sort (`sort_title`,
+  progress is per book: after a switch the reader resumes by page number,
+  not at the exact spot (a CFI only applies to the format that saved it).
+- [x] Sort by title sort and author sort (`sort_title`,
   `creators.sort_name`) in books mode; author pages list by series then
-  index.
+  index. *Done:* A → Z / Z → A use `coalesce(sort_title, title)` (folder
+  books, without one, are unchanged); "Author A → Z" on the Books page
+  and a library's books tab sorts by the first writer's sort name
+  (alphabetically first; credits don't keep Calibre's order); date-added
+  sorts and the home page's recent books use `added_at` before
+  `inserted_at`. Author pages already listed series then number; their
+  standalone books now sort by sort title too.
 - [ ] Search: author, tag, publisher, identifier (`isbn:…`) filters.
 - [ ] OPDS: one acquisition link per format, Calibre uuid as entry id
   (`urn:uuid:…`) so KOReader keeps its records.

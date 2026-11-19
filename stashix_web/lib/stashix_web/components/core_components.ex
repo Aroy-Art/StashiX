@@ -716,6 +716,11 @@ defmodule StashixWeb.CoreComponents do
     ]
   end
 
+  def sort_options(:books) do
+    {by_title, rest} = Enum.split(sort_options(:titles), 2)
+    by_title ++ [{gettext("Author A → Z"), "author_asc"}] ++ rest
+  end
+
   def sort_options(:issues) do
     {by_title, rest} = Enum.split(sort_options(:titles), 2)
     by_title ++ [{gettext("Issue # ↑"), "issue_asc"}, {gettext("Issue # ↓"), "issue_desc"}] ++ rest

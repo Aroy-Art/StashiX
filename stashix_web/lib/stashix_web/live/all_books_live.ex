@@ -22,7 +22,7 @@ defmodule StashixWeb.AllBooksLive do
        total: 0,
        total_pages: 1,
        loading: true,
-       sort_options: sort_options(:titles)
+       sort_options: sort_options(:books)
      )}
   end
 
@@ -111,7 +111,7 @@ defmodule StashixWeb.AllBooksLive do
       <.browse_toolbar
         libraries={@sidebar_libraries}
         library_id={@library_id}
-        sort_options={sort_options(:titles)}
+        sort_options={sort_options(:books)}
         sort={@sort}
       />
 
