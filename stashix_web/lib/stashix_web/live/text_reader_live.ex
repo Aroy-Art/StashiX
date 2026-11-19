@@ -86,6 +86,14 @@ defmodule StashixWeb.TextReaderLive do
       page_title: gettext("Reading: %{title}", title: book.title),
       book: book,
       format: book_file.format,
+      # Every format this reader can open the book in, best first, for the
+      # View menu's switch.
+      formats:
+        book.files
+        |> Enum.map(& &1.format)
+        |> Enum.uniq()
+        |> Enum.filter(&Library.text_book_file(book, &1))
+        |> Enum.sort_by(&Stashix.Media.Formats.reading_rank/1),
       file_path: book_file.path,
       engine: engine,
       file_url:
@@ -823,7 +831,19 @@ defmodule StashixWeb.TextReaderLive do
               />
             </:trigger>
 
-            <.menu_label>{gettext("Layout")}</.menu_label>
+            <%= if length(@formats) > 1 do %>
+              <.menu_label>{gettext("Format")}</.menu_label>
+              <.menu_item
+                :for={format <- @formats}
+                id={"text-format-#{format}"}
+                active={@format == format}
+                navigate={~p"/read/#{@book}/text?#{[format: format]}"}
+              >
+                {String.upcase(to_string(format))}
+              </.menu_item>
+            <% end %>
+
+            <.menu_label class={length(@formats) > 1 && "mt-2"}>{gettext("Layout")}</.menu_label>
             <.menu_item
               :for={{layout, label} <- layouts(@engine)}
               icon={layout_icon(layout)}

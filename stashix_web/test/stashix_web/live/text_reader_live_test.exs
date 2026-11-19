@@ -432,6 +432,22 @@ defmodule StashixWeb.TextReaderLiveTest do
     end
   end
 
+  test "a book in several formats switches between them in the View menu", %{conn: conn, epub: book, tmp_dir: tmp} do
+    {view, _html} = open(conn, book)
+    refute has_element?(view, "#text-format-epub")
+
+    mobi = Stashix.EbookFixtures.make_mobi(Path.join(tmp, "moby.mobi"))
+    Repo.insert!(%BookFile{book_id: book.id, path: mobi, format: :mobi, file_size: 1, content_kind: :text})
+
+    {view, _html} = open(conn, book)
+    assert has_element?(view, "#text-format-epub[aria-checked=true]")
+    assert has_element?(view, "#text-format-mobi[aria-checked=false][href*='format=mobi']")
+
+    {:ok, view, _html} = live_canonical(conn, ~p"/read/#{book}/text?format=mobi")
+    assert has_element?(view, "#epub-reader[data-url$='file?format=mobi']")
+    assert has_element?(view, "#text-format-mobi[aria-checked=true]")
+  end
+
   describe "Kindle and FictionBook" do
     setup %{epub: epub, tmp_dir: tmp} do
       ebook = fn title, format, path ->

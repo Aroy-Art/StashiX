@@ -1343,6 +1343,7 @@ msgstr ""
 #: lib/stashix_web/live/series_edit_component.ex
 #: lib/stashix_web/live/series_live.ex
 #: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
 #, elixir-autogen, elixir-format
 msgid "Format"
 msgstr ""

@@ -256,10 +256,12 @@ without touching anything.
   the reading order's pick in books libraries (EPUB first; comics keep
   CBZ first). Rating shows as stars, "Added" from `added_at`, and Google
   Books, Amazon, Goodreads, Open Library, ISSN and DOI ids link out.
-- [~] Reader picks the preferred format (D9); format switch in the
-  reader menu when there are several. *Started:* `Library.text_book_file/2`
-  picks by `Media.Formats.reading_order/0` (shared with Sync); the
-  switch is still to do.
+- [x] Reader picks the preferred format (D9); format switch in the
+  reader menu when there are several. *Done:* `Library.text_book_file/2`
+  picks by `Media.Formats.reading_order/0` (shared with Sync); the text
+  reader's View menu lists every format it can open the book in. Reading
+  progress is per book, so a switch keeps the page share but not an
+  exact CFI across formats.
 - [ ] Sort by title sort and author sort (`sort_title`,
   `creators.sort_name`) in books mode; author pages list by series then
   index.
