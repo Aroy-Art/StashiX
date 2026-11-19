@@ -99,7 +99,6 @@ defmodule Stashix.Calibre.Sync do
     Agent.stop(counter)
 
     remove_books(removed, now)
-    make_covers(results, progress)
     Library.mark_empty_series_deleted(library.id)
     Library.update_series_counts(library.id)
 
@@ -256,11 +255,12 @@ defmodule Stashix.Calibre.Sync do
         )
       )
 
-    cover =
-      if preferred && (changed? or files_changed? or not MapSet.member?(covered, book.id)) do
-        image = m.cover && Path.join(root, m.cover)
-        {book, preferred.path, if(image && File.regular?(image), do: image)}
-      end
+    # Made here rather than after every book is in, so covers fill in as the
+    # sync goes instead of all at the end.
+    if preferred && (changed? or files_changed? or not MapSet.member?(covered, book.id)) do
+      image = m.cover && Path.join(root, m.cover)
+      make_cover(book, preferred.path, if(image && File.regular?(image), do: image))
+    end
 
     status =
       cond do
@@ -269,11 +269,11 @@ defmodule Stashix.Calibre.Sync do
         true -> :unchanged
       end
 
-    %{status: status, cover: cover, missing: missing, skipped: m.skipped_formats}
+    %{status: status, missing: missing, skipped: m.skipped_formats}
   rescue
     e ->
       Logger.error("[calibre] book #{m.calibre_id} (#{m.book.title}) failed: #{Exception.message(e)}")
-      %{status: :failed, error: "#{m.book.title}: #{Exception.message(e)}", cover: nil, missing: 0, skipped: []}
+      %{status: :failed, error: "#{m.book.title}: #{Exception.message(e)}", missing: 0, skipped: []}
   end
 
   defp upsert_book(_library, _m, existing, _series_ids, false, _deleted_at), do: Repo.get!(Book, existing.id)
@@ -301,23 +301,30 @@ defmodule Stashix.Calibre.Sync do
 
         {:ok, :ok} =
           Importer.replace_book_metadata(book, Map.take(m.record, [:tags, :credits, :external_ids, :urls]),
-            only_present: true
+            only_present: true,
+            new: is_nil(existing)
           )
 
-        set_publisher(book, m.record.publisher)
+        set_publisher(book, m.record.publisher, is_nil(existing))
         book
       end)
 
     book
   end
 
-  defp set_publisher(book, nil) do
+  # A new book has no publisher links to clear or compare with.
+  defp set_publisher(_book, nil, true = _new?), do: :ok
+
+  defp set_publisher(book, nil, false) do
     Repo.delete_all(from bp in "book_publishers", where: bp.book_id == ^Ecto.UUID.dump!(book.id))
   end
 
-  defp set_publisher(book, name) do
+  defp set_publisher(book, name, new?) do
     with {:ok, publisher} <- Library.get_or_create_publisher(name) do
-      Library.set_book_publisher(book.id, publisher.id)
+      if new?,
+        do: Library.link_publisher_to_book(book.id, publisher.id),
+        else: Library.set_book_publisher(book.id, publisher.id)
+
       if book.series_id, do: Library.link_publisher_to_series(book.series_id, publisher.id)
     end
   end
@@ -401,23 +408,8 @@ defmodule Stashix.Calibre.Sync do
     |> MapSet.new()
   end
 
-  defp make_covers(results, progress) do
-    jobs = for %{cover: {_, _, _} = job} <- results, do: job
-    total = length(jobs)
-    if total > 0, do: progress.(:thumbnails, 0, total)
-
-    jobs
-    |> Task.async_stream(&make_cover/1,
-      max_concurrency: @concurrency,
-      ordered: false,
-      timeout: 120_000
-    )
-    |> Stream.with_index(1)
-    |> Enum.each(fn {_, n} -> progress.(:thumbnails, n, total) end)
-  end
-
   # A cover that can't be made leaves the book without one; it doesn't stop the sync.
-  defp make_cover({book, path, image}) do
+  defp make_cover(book, path, image) do
     Scanner.generate_thumbnail(book, path, image)
   rescue
     e -> Logger.warning("[calibre] cover for #{book.title} failed: #{Exception.message(e)}")

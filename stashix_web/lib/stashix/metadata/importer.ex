@@ -33,6 +33,8 @@ defmodule Stashix.Metadata.Importer do
     * `:external_ids` - `:replace` (default) or `:merge`. Merge upserts the given
       ids per source and keeps ids from other sources, used when applying data
       fetched from a metadata source.
+    * `:new` - when true, the book was just created and has no child rows, so
+      nothing is cleared before inserting.
   """
   def replace_book_metadata(book, metadata, opts \\ []) when is_map(metadata) do
     Repo.transaction(fn ->
@@ -40,6 +42,7 @@ defmodule Stashix.Metadata.Importer do
       now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
       only_present = Keyword.get(opts, :only_present, false)
       skip = opts |> Keyword.get(:skip, []) |> Enum.map(&to_string/1)
+      clear? = not Keyword.get(opts, :new, false)
 
       touch? = fn key ->
         to_string(key) not in skip and (not only_present or Map.has_key?(metadata, key))
@@ -47,85 +50,85 @@ defmodule Stashix.Metadata.Importer do
 
       if touch?.(:genres),
         do:
-          replace_simple(BookGenre, book_id, metadata[:genres] || [], now, fn name ->
+          replace_simple(clear?, BookGenre, book_id, metadata[:genres] || [], now, fn name ->
             %{name: name}
           end)
 
       if touch?.(:tags),
         do:
-          replace_simple(BookTag, book_id, metadata[:tags] || [], now, fn name ->
+          replace_simple(clear?, BookTag, book_id, metadata[:tags] || [], now, fn name ->
             %{name: name}
           end)
 
       if touch?.(:arcs),
         do:
-          replace_simple(BookStoryArc, book_id, metadata[:arcs] || [], now, fn arc ->
+          replace_simple(clear?, BookStoryArc, book_id, metadata[:arcs] || [], now, fn arc ->
             %{name: arc.name, arc_number: arc[:arc_number], external_id: arc[:external_id]}
           end)
 
       if touch?.(:stories),
         do:
-          replace_simple(BookStory, book_id, metadata[:stories] || [], now, fn s ->
+          replace_simple(clear?, BookStory, book_id, metadata[:stories] || [], now, fn s ->
             %{name: s.name, external_id: s[:external_id]}
           end)
 
       if touch?.(:characters),
         do:
-          replace_simple(BookCharacter, book_id, metadata[:characters] || [], now, fn c ->
+          replace_simple(clear?, BookCharacter, book_id, metadata[:characters] || [], now, fn c ->
             %{name: c.name, external_id: c[:external_id]}
           end)
 
       if touch?.(:teams),
         do:
-          replace_simple(BookTeam, book_id, metadata[:teams] || [], now, fn t ->
+          replace_simple(clear?, BookTeam, book_id, metadata[:teams] || [], now, fn t ->
             %{name: t.name, external_id: t[:external_id]}
           end)
 
       if touch?.(:universes),
         do:
-          replace_simple(BookUniverse, book_id, metadata[:universes] || [], now, fn u ->
+          replace_simple(clear?, BookUniverse, book_id, metadata[:universes] || [], now, fn u ->
             %{name: u.name, designation: u[:designation], external_id: u[:external_id]}
           end)
 
       if touch?.(:locations),
         do:
-          replace_simple(BookLocation, book_id, metadata[:locations] || [], now, fn l ->
+          replace_simple(clear?, BookLocation, book_id, metadata[:locations] || [], now, fn l ->
             %{name: l.name, external_id: l[:external_id]}
           end)
 
       if touch?.(:reprints),
         do:
-          replace_simple(BookReprint, book_id, metadata[:reprints] || [], now, fn r ->
+          replace_simple(clear?, BookReprint, book_id, metadata[:reprints] || [], now, fn r ->
             %{name: r.name, external_id: r[:external_id]}
           end)
 
       if touch?.(:urls),
         do:
-          replace_simple(BookUrl, book_id, Enum.filter(metadata[:urls] || [], &web_url?(&1.url)), now, fn u ->
+          replace_simple(clear?, BookUrl, book_id, Enum.filter(metadata[:urls] || [], &web_url?(&1.url)), now, fn u ->
             %{url: u.url, is_primary: u[:is_primary] || false}
           end)
 
       if touch?.(:prices),
         do:
-          replace_simple(BookPrice, book_id, metadata[:prices] || [], now, fn p ->
+          replace_simple(clear?, BookPrice, book_id, metadata[:prices] || [], now, fn p ->
             %{amount: p.amount, country: p.country}
           end)
 
       if touch?.(:external_ids) do
         case Keyword.get(opts, :external_ids, :replace) do
           :merge -> upsert_external_ids(BookExternalId, :book_id, book_id, metadata[:external_ids] || [])
-          :replace -> replace_external_ids(book_id, metadata[:external_ids] || [], now)
+          :replace -> replace_external_ids(clear?, book_id, metadata[:external_ids] || [], now)
         end
       end
 
-      if touch?.(:credits), do: replace_credits(book_id, metadata[:credits] || [], now)
+      if touch?.(:credits), do: replace_credits(clear?, book_id, metadata[:credits] || [], now)
 
       :ok
     end)
   end
 
-  defp replace_simple(schema, book_id, items, now, row_fn) do
-    Repo.delete_all(from r in schema, where: r.book_id == ^book_id)
+  defp replace_simple(clear?, schema, book_id, items, now, row_fn) do
+    if clear?, do: Repo.delete_all(from r in schema, where: r.book_id == ^book_id)
 
     if items != [] do
       rows =
@@ -144,8 +147,8 @@ defmodule Stashix.Metadata.Importer do
     end
   end
 
-  defp replace_external_ids(book_id, ids, now) do
-    Repo.delete_all(from e in BookExternalId, where: e.book_id == ^book_id)
+  defp replace_external_ids(clear?, book_id, ids, now) do
+    if clear?, do: Repo.delete_all(from e in BookExternalId, where: e.book_id == ^book_id)
 
     if ids != [] do
       rows =
@@ -168,8 +171,8 @@ defmodule Stashix.Metadata.Importer do
     end
   end
 
-  defp replace_credits(book_id, credits, now) do
-    Repo.delete_all(from c in BookCredit, where: c.book_id == ^book_id)
+  defp replace_credits(clear?, book_id, credits, now) do
+    if clear?, do: Repo.delete_all(from c in BookCredit, where: c.book_id == ^book_id)
 
     for %{creator: name, roles: roles} <- credits do
       creator = find_or_create_creator(name)

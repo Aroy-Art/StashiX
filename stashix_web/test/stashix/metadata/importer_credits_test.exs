@@ -30,4 +30,17 @@ defmodule Stashix.Metadata.ImporterCreditsTest do
 
     assert roles(book) == [{"Tom King", :Writer}, {"Tony Takezaki", :Other}]
   end
+
+  test "a new book's rows are added without clearing first", %{book: book} do
+    {:ok, _} = Importer.replace_book_metadata(book, %{credits: [%{creator: "Tom King", roles: ["Writer"]}]})
+
+    # `new: true` promises there's nothing to clear, so the old row stays.
+    {:ok, _} =
+      Importer.replace_book_metadata(book, %{credits: [%{creator: "Mitch Gerads", roles: ["Artist"]}]}, new: true)
+
+    assert roles(book) == [{"Mitch Gerads", :Artist}, {"Tom King", :Writer}]
+
+    {:ok, _} = Importer.replace_book_metadata(book, %{credits: [%{creator: "Mitch Gerads", roles: ["Artist"]}]})
+    assert roles(book) == [{"Mitch Gerads", :Artist}]
+  end
 end
