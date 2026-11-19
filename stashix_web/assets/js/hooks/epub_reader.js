@@ -164,6 +164,8 @@ const EpubReader = {
     }
 
     this.onKey = (e) => this.key(e)
+    this.onWheel = (e) => this.wheel(e)
+    window.addEventListener("wheel", this.onWheel, {passive: false})
     window.addEventListener("keydown", this.onKey)
 
     // Taps on the page around the text (outside the chapter's frame) land
@@ -188,6 +190,7 @@ const EpubReader = {
     if (this.onVoices) speechSynthesis.removeEventListener?.("voiceschanged", this.onVoices)
     this.bar.destroy()
     window.removeEventListener("keydown", this.onKey)
+    window.removeEventListener("wheel", this.onWheel)
     clearTimeout(this.reportTimer)
     this.searchToken++
     this.view?.close()
@@ -359,6 +362,7 @@ const EpubReader = {
   // page, so they are wired up per document as it loads.
   docLoaded({doc, index}) {
     doc.addEventListener("keydown", this.onKey)
+    doc.addEventListener("wheel", this.onWheel, {passive: false})
     // A finished selection (mouse, touch handles or shift+arrows) brings up
     // the bar; clearing it takes the bar away.
     const selected = () => setTimeout(() => this.selected(doc, index), 10)
@@ -393,6 +397,20 @@ const EpubReader = {
       if (at > 1 - ZONE_SIDE) return this.book.dir === "rtl" ? this.view.goLeft() : this.next()
     }
     this.pushEvent("toggle_overlay", {})
+  },
+
+  // Ctrl (or ⌘) and the wheel step the text size, not the browser window's
+  // zoom. Scrolling adds up (a trackpad pinch sends many small steps), a
+  // size step for every 100 pixels or so.
+  wheel(e) {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    const delta = e.deltaY * (e.deltaMode === 1 ? 33 : 1)
+    if (Math.sign(delta) !== Math.sign(this.wheelDelta || 0)) this.wheelDelta = 0
+    this.wheelDelta += delta
+    if (Math.abs(this.wheelDelta) < 100) return
+    this.pushEvent("zoom", {by: this.wheelDelta < 0 ? 1 : -1})
+    this.wheelDelta = 0
   },
 
   key(e) {

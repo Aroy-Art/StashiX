@@ -50,6 +50,7 @@ const BAR_HIDE_PX = 48      // scrolled down this far in one go tucks the bars a
 const MIN_ZOOM = 0.5
 const MAX_ZOOM = 4
 const ZOOM_STEP = 1.2
+const RERENDER_MS = 150
 const ZONE_SIDE = 0.22      // paged layouts: side tap zones turn the page
 const MAX_RESULTS = 500
 const SNIPPET = 40          // characters of context each side of a search hit
@@ -125,6 +126,8 @@ const PdfReader = {
       if (this.frame == null) this.frame = requestAnimationFrame(() => this.scrolled())
     }
     this.onKey = (e) => this.key(e)
+    this.onWheel = (e) => this.wheel(e)
+    window.addEventListener("wheel", this.onWheel, {passive: false})
     this.onPointerDown = (e) => { this.down = {x: e.clientX, y: e.clientY} }
     this.onClick = (e) => this.click(e)
     this.el.addEventListener("scroll", this.onScroll, {passive: true})
@@ -153,11 +156,14 @@ const PdfReader = {
     this.el.removeEventListener("pointerdown", this.onPointerDown)
     this.el.removeEventListener("click", this.onClick)
     window.removeEventListener("keydown", this.onKey)
+    window.removeEventListener("wheel", this.onWheel)
+    cancelAnimationFrame(this.wheelFrame)
     this.resizeObserver.disconnect()
     this.pageObserver?.disconnect()
     this.endObserver?.disconnect()
     clearTimeout(this.reportTimer)
     clearTimeout(this.resizeTimer)
+    clearTimeout(this.rerenderTimer)
     if (this.frame != null) cancelAnimationFrame(this.frame)
     this.searchToken++
     this.slots.forEach((s) => this.release(s))
@@ -239,10 +245,44 @@ const PdfReader = {
     this.el.dataset.pageTheme = theme
   },
 
-  setZoom(zoom) {
-    this.zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+  // Zooms about a point on screen (the wheel's, else the middle of the
+  // view), keeping the spot of the page under it where it is.
+  setZoom(zoom, x, y) {
+    zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+    if (zoom === this.zoom) return
+    const view = this.el.getBoundingClientRect()
+    x ??= view.left + view.width / 2
+    y ??= view.top + view.height / 2
+    const under = document.elementFromPoint(x, y)?.closest(".pdf-page")
+    const slot = (under && this.slots[Number(under.dataset.page)]) || this.slots[this.page]
+    const before = slot?.el.getBoundingClientRect()
+
+    this.zoom = zoom
     this.relayout()
-    this.goto(this.page)
+    if (!before?.width) return this.goto(this.page)
+
+    const fx = (x - before.left) / before.width
+    const fy = (y - before.top) / before.height
+    const after = slot.el.getBoundingClientRect()
+    this.el.scrollLeft += after.left + fx * after.width - x
+    this.el.scrollTop += after.top + fy * after.height - y
+    this.lastTop = this.el.scrollTop
+  },
+
+  // Ctrl (or ⌘) and the wheel zoom the PDF, not the browser window. A
+  // trackpad pinch sends the same, in many small steps: they add up and
+  // the pages are laid out once a frame.
+  wheel(e) {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    const delta = e.deltaY * (e.deltaMode === 1 ? 33 : 1)
+    this.wheelFactor = (this.wheelFactor || 1) * Math.exp(-delta / 500)
+    this.wheelAt = [e.clientX, e.clientY]
+    this.wheelFrame ||= requestAnimationFrame(() => {
+      this.wheelFrame = null
+      this.setZoom(this.zoom * this.wheelFactor, ...this.wheelAt)
+      this.wheelFactor = 1
+    })
   },
 
   // Page scale from the fit mode and zoom; page 1 sets it for the whole book
@@ -268,7 +308,13 @@ const PdfReader = {
     this.column.style.setProperty("--total-scale-factor", scale)
     this.slots.forEach((s) => this.size(s))
     this.showPaged()
-    if (changed) this.slots.forEach((s) => { if (s.state !== "empty") this.rerender(s) })
+    // Rendered pages stretch to the new size meanwhile (canvas, text and
+    // highlights all follow the page's box); they are drawn sharp again
+    // once the zoom settles, not on every step of a pinch.
+    if (changed) {
+      clearTimeout(this.rerenderTimer)
+      this.rerenderTimer = setTimeout(() => this.slots.forEach((s) => s.state !== "empty" && this.rerender(s)), RERENDER_MS)
+    }
   },
 
   size(slot) {
@@ -299,6 +345,8 @@ const PdfReader = {
     if (slot.state !== "empty" || slot.el.hidden) return
     slot.state = "rendering"
     const scale = this.scale
+    // A rerender starts a new run while the old one may still be awaiting.
+    const run = (slot.run = (slot.run || 0) + 1)
 
     try {
       const page = slot.pdfPage || (slot.pdfPage = await this.doc.getPage(slot.index + 1))
@@ -308,7 +356,7 @@ const PdfReader = {
         slot.h = raw.height
         this.size(slot)
       }
-      if (slot.state !== "rendering" || scale !== this.scale) return
+      if (slot.run !== run || scale !== this.scale) return
 
       const viewport = page.getViewport({scale})
       const ratio = this.saver ? 1 : Math.min(window.devicePixelRatio || 1, 2)
@@ -323,7 +371,7 @@ const PdfReader = {
         transform: ratio !== 1 ? [ratio, 0, 0, ratio, 0, 0] : null,
       })
       await slot.task.promise
-      if (slot.state !== "rendering") return
+      if (slot.run !== run) return
 
       const text = document.createElement("div")
       text.className = "textLayer"
@@ -335,20 +383,29 @@ const PdfReader = {
 
       slot.annots = document.createElement("div")
       slot.annots.className = "pdf-annots"
+      const old = slot.el.querySelector("canvas")
       slot.el.replaceChildren(canvas, slot.annots, text)
+      if (old) old.width = old.height = 0
       slot.state = "done"
       this.drawAnnotations(slot)
       await slot.textLayer.render()
       this.markSlot(slot)
     } catch (err) {
       if (err?.name !== "RenderingCancelledException") console.error("PdfReader page", slot.index + 1, err)
-      if (slot.state === "rendering") slot.state = "empty"
+      if (slot.run === run && slot.state === "rendering") slot.state = "empty"
     }
   },
 
+  // Draws the page again at the current scale. What it shows now stays up,
+  // stretched, until the new drawing replaces it.
   rerender(slot) {
-    this.release(slot)
-    if (slot.near) this.render(slot)
+    if (!slot.near) return this.release(slot)
+    slot.task?.cancel()
+    slot.task = null
+    slot.textLayer?.cancel()
+    slot.textLayer = null
+    slot.state = "empty"
+    this.render(slot)
   },
 
   // Frees the canvas (its pixels are the memory that adds up) and the text.
@@ -362,6 +419,7 @@ const PdfReader = {
     slot.el.replaceChildren()
     slot.annots = null
     slot.pdfPage?.cleanup()
+    slot.run = (slot.run || 0) + 1
     slot.state = "empty"
   },
 
