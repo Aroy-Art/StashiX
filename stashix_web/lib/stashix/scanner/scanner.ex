@@ -120,7 +120,8 @@ defmodule Stashix.Scanner do
 
     case Library.get_series(series_id) do
       %{library_id: library_id} = series ->
-        job = if Stashix.Calibre.library?(series), do: {:library, force}, else: {:series, series_id, force}
+        # A forced series rescan isn't a full resync of the whole Calibre library.
+        job = if Stashix.Calibre.library?(series), do: {:library, false}, else: {:series, series_id, force}
         {:noreply, state |> dispatch(library_id, job) |> broadcast_queue(state, library_id)}
 
       nil ->

@@ -29,12 +29,15 @@ defmodule StashixWeb.BookEditComponent do
       {:ok, socket}
     else
       book = Repo.preload(book, Record.preloads(), force: true)
+      calibre_keys = if Stashix.Calibre.library?(book), do: Stashix.Calibre.book_keys(), else: []
 
       {:ok,
        assign(socket,
          book: book,
          draft: draft(book),
-         locks: book.locked_fields || [],
+         # Calibre's fields show as locked; `save/4` never writes them.
+         calibre_keys: calibre_keys,
+         locks: Enum.uniq((book.locked_fields || []) ++ calibre_keys),
          tab: "general",
          nonce: 0,
          error: nil
@@ -106,9 +109,7 @@ defmodule StashixWeb.BookEditComponent do
   def handle_event("tab", %{"tab" => tab}, socket), do: {:noreply, assign(socket, tab: tab)}
 
   def handle_event("toggle_lock", %{"field" => key}, socket) do
-    locks = socket.assigns.locks
-    locks = if key in locks, do: List.delete(locks, key), else: [key | locks]
-    {:noreply, assign(socket, locks: Locks.clean(locks, Locks.book_keys()))}
+    if key in socket.assigns.calibre_keys, do: {:noreply, socket}, else: toggle_lock(socket, key)
   end
 
   def handle_event("chip_add", %{"field" => key, "value" => value}, socket) when key in @chip_keys do
@@ -142,7 +143,7 @@ defmodule StashixWeb.BookEditComponent do
   def handle_event("save", %{"book" => params}, socket) do
     socket = update(socket, :draft, &from_params(&1, params))
 
-    case save(socket.assigns.book, socket.assigns.draft, socket.assigns.locks) do
+    case save(socket.assigns.book, socket.assigns.draft, socket.assigns.locks, socket.assigns.calibre_keys) do
       {:ok, book} ->
         Metadata.enqueue_write(book.id)
         send(self(), {:book_edit_saved, book.id})
@@ -151,6 +152,12 @@ defmodule StashixWeb.BookEditComponent do
       {:error, message} ->
         {:noreply, assign(socket, error: message)}
     end
+  end
+
+  defp toggle_lock(socket, key) do
+    locks = socket.assigns.locks
+    locks = if key in locks, do: List.delete(locks, key), else: [key | locks]
+    {:noreply, assign(socket, locks: Locks.clean(locks, Locks.book_keys()))}
   end
 
   # The form carries the whole draft; chips and rows come back indexed.
@@ -174,9 +181,11 @@ defmodule StashixWeb.BookEditComponent do
 
   ## Saving
 
-  defp save(book, draft, locks) do
-    # A field locked before the dialog opened and still locked stays as stored.
-    frozen? = fn key -> key in book.locked_fields and key in locks end
+  defp save(book, draft, locks, calibre_keys) do
+    # A field locked before the dialog opened and still locked stays as stored,
+    # as does every field Calibre owns; those aren't kept as locks.
+    frozen? = fn key -> key in calibre_keys or (key in book.locked_fields and key in locks) end
+    locks = locks -- calibre_keys
 
     attrs =
       for key <- Locks.book_scalars(), not frozen?.(key), into: %{} do
@@ -349,9 +358,15 @@ defmodule StashixWeb.BookEditComponent do
     <div>
       <.dialog id="edit-metadata-dialog" title={gettext("Edit metadata")} size="lg" on_close={JS.push("close_edit_dialog")}>
         <:description>
-          {gettext(
-            "Lock a field to keep rescans and metadata matching from changing it. Saving also writes the metadata to the book's files."
-          )}
+          <%= if @calibre_keys != [] do %>
+            {gettext(
+              "This book comes from a Calibre library. Fields marked Calibre are edited in Calibre and come back on every sync; the rest are kept in Stashix only."
+            )}
+          <% else %>
+            {gettext(
+              "Lock a field to keep rescans and metadata matching from changing it. Saving also writes the metadata to the book's files."
+            )}
+          <% end %>
           <p :if={@file_path} class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
             <.icon name="lucide-file" class="w-3 h-3 flex-shrink-0" />
             {@file_path}
@@ -363,26 +378,39 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- General --%>
           <.edit_panel tab="general" current={@tab}>
-            <.edit_field label={gettext("Title")} key="title" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Title")}
+              key="title"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_input name="book[title]" value={@draft["title"]} locked={"title" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Issue #")} key="issue_number" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Issue #")} key="issue_number" locks={@locks} target={@myself}>
               <.edit_input name="book[issue_number]" value={@draft["issue_number"]} locked={"issue_number" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Alternative #")} key="alternative_number" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Alternative #")}
+              key="alternative_number"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 name="book[alternative_number]"
                 value={@draft["alternative_number"]}
                 locked={"alternative_number" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
               <.edit_input type="number" name="book[volume]" value={@draft["volume"]} locked={"volume" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Year")} key="year" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Year")} key="year" locks={@locks} target={@myself}>
               <.edit_input type="number" name="book[year]" value={@draft["year"]} locked={"year" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Language")} key="language" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Language")} key="language" locks={@locks} target={@myself}>
               <.edit_language
                 id="edit-book-language"
                 name="book[language]"
@@ -390,7 +418,13 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"language" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Age rating")} key="age_rating" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Age rating")}
+              key="age_rating"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_select
                 name="book[age_rating]"
                 value={@draft["age_rating"]}
@@ -398,39 +432,83 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"age_rating" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Collection title")} key="collection_title" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Collection title")}
+              key="collection_title"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 name="book[collection_title]"
                 value={@draft["collection_title"]}
                 locked={"collection_title" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Manga volume")} key="manga_volume" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Manga volume")}
+              key="manga_volume"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input name="book[manga_volume]" value={@draft["manga_volume"]} locked={"manga_volume" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Summary")} key="summary" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Summary")}
+              key="summary"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_textarea name="book[summary]" rows="5" value={@draft["summary"]} locked={"summary" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Notes")} key="notes" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Notes")}
+              key="notes"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_textarea name="book[notes]" value={@draft["notes"]} locked={"notes" in @locks} />
             </.edit_field>
           </.edit_panel>
 
           <%!-- Dates & IDs --%>
           <.edit_panel tab="dates" current={@tab}>
-            <.edit_field label={gettext("Cover date")} key="cover_date" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Cover date")}
+              key="cover_date"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input type="date" name="book[cover_date]" value={@draft["cover_date"]} locked={"cover_date" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Store date")} key="store_date" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Store date")}
+              key="store_date"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input type="date" name="book[store_date]" value={@draft["store_date"]} locked={"store_date" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("ISBN")} key="isbn" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("ISBN")} key="isbn" locks={@locks} target={@myself}>
               <.edit_input name="book[isbn]" value={@draft["isbn"]} locked={"isbn" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("UPC")} key="upc" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("UPC")} key="upc" locks={@locks} target={@myself}>
               <.edit_input name="book[upc]" value={@draft["upc"]} locked={"upc" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Community rating (0–5)")} key="community_rating" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Community rating (0–5)")}
+              key="community_rating"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 type="number"
                 step="0.1"
@@ -441,7 +519,13 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"community_rating" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Rating count")} key="community_rating_count" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Rating count")}
+              key="community_rating_count"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 type="number"
                 min="0"
@@ -450,7 +534,14 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"community_rating_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Source IDs")} key="external_ids" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Source IDs")}
+              key="external_ids"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "external_ids" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -482,7 +573,14 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- People --%>
           <.edit_panel tab="people" current={@tab}>
-            <.edit_field label={gettext("Credits")} key="credits" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Credits")}
+              key="credits"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "credits" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -517,6 +615,7 @@ defmodule StashixWeb.BookEditComponent do
                   {"locations", gettext("Locations")}
                 ]
               }
+              owned={@calibre_keys}
               key={key}
               label={label}
               draft={@draft}
@@ -524,7 +623,14 @@ defmodule StashixWeb.BookEditComponent do
               nonce={@nonce}
               target={@myself}
             />
-            <.edit_field label={gettext("Universes")} key="universes" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Universes")}
+              key="universes"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "universes" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -561,6 +667,7 @@ defmodule StashixWeb.BookEditComponent do
           <%!-- Story --%>
           <.edit_panel tab="story" current={@tab}>
             <.chip_field
+              owned={@calibre_keys}
               key="stories"
               label={gettext("Stories (first is the title in MetronInfo)")}
               draft={@draft}
@@ -568,7 +675,14 @@ defmodule StashixWeb.BookEditComponent do
               nonce={@nonce}
               target={@myself}
             />
-            <.edit_field label={gettext("Story arcs")} key="arcs" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Story arcs")}
+              key="arcs"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "arcs" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -611,6 +725,7 @@ defmodule StashixWeb.BookEditComponent do
                   {"reprints", gettext("Reprints")}
                 ]
               }
+              owned={@calibre_keys}
               key={key}
               label={label}
               draft={@draft}
@@ -622,7 +737,14 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- Publishing & links --%>
           <.edit_panel tab="links" current={@tab}>
-            <.edit_field label={gettext("Publisher")} key="publisher" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Publisher")}
+              key="publisher"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <%= if "publisher" in @locks do %>
                 <input :for={id <- @draft["publisher_ids"]} type="hidden" name="book[publisher_ids][]" value={id} />
                 <p class="text-sm text-fg opacity-60">
@@ -655,6 +777,7 @@ defmodule StashixWeb.BookEditComponent do
               <% end %>
             </.edit_field>
             <.edit_field
+              owned={@calibre_keys}
               label={gettext("Imprint")}
               key="imprint"
               locks={@locks}
@@ -664,7 +787,14 @@ defmodule StashixWeb.BookEditComponent do
               <.edit_input name="book[imprint]" value={@draft["imprint"]} locked={"imprint" in @locks} />
             </.edit_field>
             <div></div>
-            <.edit_field label={gettext("Links")} key="urls" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Links")}
+              key="urls"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "urls" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -685,7 +815,14 @@ defmodule StashixWeb.BookEditComponent do
                 <.primary_flag name={"book[urls][#{i}][is_primary]"} value={row["is_primary"]} locked={locked} />
               </.edit_rows>
             </.edit_field>
-            <.edit_field label={gettext("Prices")} key="prices" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Prices")}
+              key="prices"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <% locked = "prices" in @locks %>
               <.edit_rows
                 :let={{row, i}}
@@ -719,14 +856,26 @@ defmodule StashixWeb.BookEditComponent do
 
           <%!-- ComicInfo extras --%>
           <.edit_panel tab="extras" current={@tab}>
-            <.edit_field label={gettext("Alternate series")} key="alternate_series" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Alternate series")}
+              key="alternate_series"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 name="book[alternate_series]"
                 value={@draft["alternate_series"]}
                 locked={"alternate_series" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Alternate count")} key="alternate_count" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Alternate count")}
+              key="alternate_count"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 type="number"
                 min="1"
@@ -735,10 +884,17 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"alternate_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Series group")} key="series_group" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Series group")}
+              key="series_group"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input name="book[series_group]" value={@draft["series_group"]} locked={"series_group" in @locks} />
             </.edit_field>
             <.edit_field
+              owned={@calibre_keys}
               label={gettext("Main character or team")}
               key="main_character_or_team"
               locks={@locks}
@@ -750,7 +906,7 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"main_character_or_team" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Manga")} key="manga" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Manga")} key="manga" locks={@locks} target={@myself}>
               <.edit_select
                 name="book[manga]"
                 value={@draft["manga"]}
@@ -763,7 +919,13 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"manga" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Black and white")} key="black_and_white" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Black and white")}
+              key="black_and_white"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_select
                 name="book[black_and_white]"
                 value={@draft["black_and_white"]}
@@ -773,6 +935,7 @@ defmodule StashixWeb.BookEditComponent do
               />
             </.edit_field>
             <.edit_field
+              owned={@calibre_keys}
               label={gettext("Scan information")}
               key="scan_information"
               locks={@locks}
@@ -786,7 +949,14 @@ defmodule StashixWeb.BookEditComponent do
                 locked={"scan_information" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Review")} key="review" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Review")}
+              key="review"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_textarea name="book[review]" value={@draft["review"]} locked={"review" in @locks} />
             </.edit_field>
             <%!-- Not file metadata (scans never set it), so no lock toggle --%>
@@ -820,12 +990,13 @@ defmodule StashixWeb.BookEditComponent do
   attr :label, :string, required: true
   attr :draft, :map, required: true
   attr :locks, :list, required: true
+  attr :owned, :list, default: []
   attr :nonce, :integer, required: true
   attr :target, :any, required: true
 
   defp chip_field(assigns) do
     ~H"""
-    <.edit_field label={@label} key={@key} locks={@locks} target={@target} class="col-span-2">
+    <.edit_field label={@label} key={@key} locks={@locks} owned={@owned} target={@target} class="col-span-2">
       <.edit_chips
         name={"book[#{@key}]"}
         key={@key}

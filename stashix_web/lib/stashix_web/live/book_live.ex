@@ -54,6 +54,8 @@ defmodule StashixWeb.BookLive do
        scanning: false,
        show_admin_menu: false,
        sources_ready: socket.assigns.current_user.role == :admin && Stashix.Metadata.Sources.any_ready?(),
+       # Calibre keeps this book's metadata: no matching, rescans sync the library.
+       calibre: Stashix.Calibre.library?(library),
        show_edit_dialog: false,
        show_identify_dialog: false,
        external_ids: load_external_ids(book),
@@ -420,7 +422,7 @@ defmodule StashixWeb.BookLive do
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
             <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">{gettext("Edit metadata")}</.menu_item>
-            <.needs_sources ready={@sources_ready} class="block">
+            <.needs_sources :if={!@calibre} ready={@sources_ready} class="block">
               <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
                 {gettext("Fetch metadata")}
               </.menu_item>
@@ -429,6 +431,7 @@ defmodule StashixWeb.BookLive do
               </.menu_item>
             </.needs_sources>
             <.menu_item
+              :if={!@calibre}
               icon={if @book.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"
             >
@@ -441,7 +444,11 @@ defmodule StashixWeb.BookLive do
               tone="warning"
               phx-click="rescan_book"
             >
-              {if @scanning, do: gettext("Scanning…"), else: gettext("Force rescan")}
+              {cond do
+                @scanning -> gettext("Scanning…")
+                @calibre -> gettext("Sync with Calibre")
+                true -> gettext("Force rescan")
+              end}
             </.menu_item>
           </.ink_menu>
         </:actions>

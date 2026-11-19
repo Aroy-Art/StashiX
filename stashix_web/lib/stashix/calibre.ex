@@ -17,6 +17,17 @@ defmodule Stashix.Calibre do
   alias Stashix.Repo
   alias Stashix.Library.{Book, Library, Series}
 
+  # `Stashix.Metadata.Locks` keys a sync writes (D7): read-only in the edit
+  # dialogs of a Calibre library's books and series.
+  @book_keys ~w(title issue_number year cover_date language summary isbn publisher tags credits external_ids urls)
+  @series_keys ~w(name sort_name)
+
+  @doc "Book fields Calibre owns."
+  def book_keys, do: @book_keys
+
+  @doc "Series fields Calibre owns."
+  def series_keys, do: @series_keys
+
   @doc "Whether a library (struct or id), or the library of a book or series, is a Calibre library."
   def library?(%Library{source: source}), do: source == :calibre
   def library?(%Book{library_id: id}), do: library?(id)

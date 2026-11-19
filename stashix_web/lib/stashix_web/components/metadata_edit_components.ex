@@ -65,16 +65,26 @@ defmodule StashixWeb.MetadataEditComponents do
   attr :target, :any, required: true
   attr :class, :any, default: nil
   attr :hint, :string, default: nil
+  attr :owned, :list, default: [], doc: "keys Calibre owns: read-only, no lock toggle"
   slot :inner_block, required: true
 
   def edit_field(assigns) do
-    assigns = assign(assigns, :locked, assigns.key in assigns.locks)
+    assigns = assign(assigns, locked: assigns.key in assigns.locks, calibre: assigns.key in assigns.owned)
 
     ~H"""
     <div class={@class}>
       <div class="flex items-center justify-between gap-2 mb-1.5">
         <.eyebrow tag="span" size="sm" tone="light">{@label}</.eyebrow>
+        <span
+          :if={@calibre}
+          data-calibre-owned={@key}
+          title={gettext("Edited in Calibre: every sync brings Calibre's value back.")}
+          class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted"
+        >
+          <.icon name="lucide-book-lock" class="w-3.5 h-3.5" /> Calibre
+        </span>
         <button
+          :if={!@calibre}
           type="button"
           phx-click="toggle_lock"
           phx-value-field={@key}

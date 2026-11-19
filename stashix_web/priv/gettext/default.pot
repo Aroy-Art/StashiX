@@ -1290,11 +1290,6 @@ msgstr ""
 msgid "Edited"
 msgstr ""
 
-#: lib/stashix_web/live/home_live.ex
-#, elixir-autogen, elixir-format
-msgid "Empty — scan it to fill it"
-msgstr ""
-
 #: lib/stashix_web/components/metadata_edit_components.ex
 #: lib/stashix_web/live/search_live.ex
 #: lib/stashix_web/live/series_live.ex
@@ -5407,4 +5402,25 @@ msgstr ""
 #: lib/stashix_web/live/settings_live.ex
 #, elixir-autogen, elixir-format
 msgid "never used"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format
+msgid "Edited in Calibre: every sync brings Calibre's value back."
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sync with Calibre"
+msgstr ""
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "This book comes from a Calibre library. Fields marked Calibre are edited in Calibre and come back on every sync; the rest are kept in Stashix only."
+msgstr ""
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "This series comes from a Calibre library. Its name is edited in Calibre and comes back on every sync; the rest is kept in Stashix only."
 msgstr ""

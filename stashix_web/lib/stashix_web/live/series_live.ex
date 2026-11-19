@@ -63,6 +63,9 @@ defmodule StashixWeb.SeriesLive do
        scanning: false,
        show_admin_menu: false,
        sources_ready: socket.assigns.current_user.role == :admin && Stashix.Metadata.Sources.any_ready?(),
+       # Calibre keeps this series' metadata: no matching, nothing written to
+       # files, and pushes of fields Calibre owns would be undone by the next sync.
+       calibre: Stashix.Calibre.library?(library),
        show_edit_dialog: false,
        show_identify_dialog: false,
        show_push_publishers_dialog: false,
@@ -648,7 +651,7 @@ defmodule StashixWeb.SeriesLive do
               <.icon name="lucide-chevron-down" class="w-3 h-3" />
             </:trigger>
             <.menu_item icon="lucide-pencil" phx-click="open_edit_dialog">{gettext("Edit metadata")}</.menu_item>
-            <.needs_sources ready={@sources_ready} class="block">
+            <.needs_sources :if={!@calibre} ready={@sources_ready} class="block">
               <.menu_item icon="lucide-cloud-download" phx-click="fetch_metadata" disabled={!@sources_ready}>
                 {gettext("Fetch metadata")}
               </.menu_item>
@@ -657,6 +660,7 @@ defmodule StashixWeb.SeriesLive do
               </.menu_item>
             </.needs_sources>
             <.menu_item
+              :if={!@calibre}
               icon={if @series.metadata_locked, do: "lucide-lock-open", else: "lucide-lock"}
               phx-click="toggle_metadata_lock"
             >
@@ -664,7 +668,7 @@ defmodule StashixWeb.SeriesLive do
             </.menu_item>
             <.menu_separator />
             <.menu_item
-              :if={@series.publishers != []}
+              :if={@series.publishers != [] and !@calibre}
               icon="lucide-arrow-down-to-line"
               phx-click="open_push_publishers_dialog"
             >
@@ -678,14 +682,14 @@ defmodule StashixWeb.SeriesLive do
               {gettext("Push age rating to issues…")}
             </.menu_item>
             <.menu_item
-              :if={@series.books != []}
+              :if={@series.books != [] and !@calibre}
               icon="lucide-languages"
               phx-click="open_push_language_dialog"
             >
               {gettext("Push language to issues…")}
             </.menu_item>
             <.menu_item
-              :if={@series.books != []}
+              :if={@series.books != [] and !@calibre}
               icon="lucide-hash"
               phx-click="open_issue_numbers_dialog"
             >
@@ -693,6 +697,7 @@ defmodule StashixWeb.SeriesLive do
             </.menu_item>
             <.menu_separator />
             <.menu_item
+              :if={!@calibre}
               icon={if @scanning, do: "lucide-loader-circle", else: "lucide-refresh-cw"}
               icon_class={if @scanning, do: "animate-spin"}
               phx-click="rescan_series"
@@ -705,7 +710,11 @@ defmodule StashixWeb.SeriesLive do
               tone="warning"
               phx-click="force_rescan_series"
             >
-              {if @scanning, do: gettext("Scanning…"), else: gettext("Force rescan")}
+              {cond do
+                @scanning -> gettext("Scanning…")
+                @calibre -> gettext("Sync with Calibre")
+                true -> gettext("Force rescan")
+              end}
             </.menu_item>
           </.ink_menu>
         </:actions>

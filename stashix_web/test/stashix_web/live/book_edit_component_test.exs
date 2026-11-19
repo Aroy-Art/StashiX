@@ -150,4 +150,46 @@ defmodule StashixWeb.BookEditComponentTest do
     html = form(view) |> render_submit(%{"book" => %{"title" => "Old Title", "imprint" => "Black Label"}})
     assert html =~ "An imprint needs a publisher"
   end
+
+  describe "a Calibre library's book" do
+    setup %{tmp_dir: tmp} do
+      thumbs = Path.join(System.tmp_dir!(), "stashix_test_thumbs_#{System.unique_integer([:positive])}")
+      Application.put_env(:stashix, :thumbnail_dir, thumbs)
+
+      on_exit(fn ->
+        Application.delete_env(:stashix, :thumbnail_dir)
+        File.rm_rf(thumbs)
+      end)
+
+      root =
+        Stashix.CalibreFixtures.make_library(Path.join(tmp, "Calibre"), [
+          %{title: "Dune", authors: ["Frank Herbert"], tags: ["SF"]}
+        ])
+
+      {:ok, lib} = Library.create_library(%{name: "Calibre", root_path: root, kind: :books, source: :calibre})
+      {:ok, _} = Stashix.Calibre.Sync.run(lib)
+      %{calibre_book: Repo.get_by!(Book, title: "Dune")}
+    end
+
+    @tag :tmp_dir
+    test "Calibre's fields are read-only and never saved; Stashix's own are", %{conn: conn, calibre_book: book} do
+      view = open(conn, book)
+      html = render(view)
+      assert html =~ "comes from a Calibre library"
+      assert has_element?(view, "[data-calibre-owned=title]")
+      assert has_element?(view, "input[name='book[title]'][readonly]")
+      refute has_element?(view, "[data-calibre-owned=age_rating]")
+
+      # No lock toggle to unlock it with; Stashix's own fields keep theirs.
+      refute has_element?(view, "button[phx-value-field=title]")
+      assert has_element?(view, "button[phx-value-field=age_rating]")
+
+      form(view) |> render_submit(%{"book" => %{"title" => "Hacked", "age_rating" => "mature"}})
+
+      book = reload(book)
+      assert book.title == "Dune"
+      assert book.age_rating == :mature
+      assert book.locked_fields == []
+    end
+  end
 end

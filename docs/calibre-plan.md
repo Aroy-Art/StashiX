@@ -227,8 +227,13 @@ without touching anything.
   unreadable formats and the last error; Scan / Force rescan read "Sync
   now" / "Full resync"; Settings and Match Metadata are hidden. The
   library API returns `source` and takes it on create.
-- [ ] Edit dialog: Calibre-owned fields read-only with "Edited in
-  Calibre" (D7).
+- [x] Edit dialog: Calibre-owned fields read-only with "Edited in
+  Calibre" (D7). *Done:* `Stashix.Calibre.book_keys/0` /
+  `series_keys/0`; those fields show a Calibre badge instead of the lock
+  toggle, read-only, and saving never writes them (nor keeps them as
+  locks). Book and series pages hide Fetch / Identify, Lock metadata, the
+  publisher and language pushes and issue numbers from filenames; their
+  rescan reads "Sync with Calibre" (a normal library sync).
 - [ ] Browser-check against a copy of the real library; tests for
   snapshot (stamp moves mid-copy), mapper, sync (add / change / rename
   tag / delete / missing file / uuid kept across renumbered ids).

@@ -27,12 +27,15 @@ defmodule StashixWeb.SeriesEditComponent do
       {:ok, assign(socket, series: series)}
     else
       series = Repo.preload(series, [:alternative_names, :publishers])
+      calibre_keys = if Stashix.Calibre.library?(series), do: Stashix.Calibre.series_keys(), else: []
 
       {:ok,
        assign(socket,
          series: series,
          draft: draft(series),
-         locks: series.locked_fields || [],
+         # Calibre's fields show as locked; `save/4` never writes them.
+         calibre_keys: calibre_keys,
+         locks: Enum.uniq((series.locked_fields || []) ++ calibre_keys),
          tab: "general",
          error: nil
        )}
@@ -64,9 +67,13 @@ defmodule StashixWeb.SeriesEditComponent do
   def handle_event("tab", %{"tab" => tab}, socket), do: {:noreply, assign(socket, tab: tab)}
 
   def handle_event("toggle_lock", %{"field" => key}, socket) do
-    locks = socket.assigns.locks
-    locks = if key in locks, do: List.delete(locks, key), else: [key | locks]
-    {:noreply, assign(socket, locks: Locks.clean(locks, Locks.series_keys()))}
+    if key in socket.assigns.calibre_keys do
+      {:noreply, socket}
+    else
+      locks = socket.assigns.locks
+      locks = if key in locks, do: List.delete(locks, key), else: [key | locks]
+      {:noreply, assign(socket, locks: Locks.clean(locks, Locks.series_keys()))}
+    end
   end
 
   def handle_event("item_remove", %{"field" => "alternative_names", "index" => index}, socket) do
@@ -97,7 +104,7 @@ defmodule StashixWeb.SeriesEditComponent do
     socket = update(socket, :draft, &from_params(&1, params))
     series = socket.assigns.series
 
-    case save(series, socket.assigns.draft, socket.assigns.locks) do
+    case save(series, socket.assigns.draft, socket.assigns.locks, socket.assigns.calibre_keys) do
       {:ok, updated} ->
         cascade_age_rating(series, all["age_rating"], all["age_rating_only_unknown"] == "true")
         send(self(), {:series_edit_saved, updated.id})
@@ -119,8 +126,9 @@ defmodule StashixWeb.SeriesEditComponent do
 
   ## Saving
 
-  defp save(series, draft, locks) do
-    frozen? = fn key -> key in series.locked_fields and key in locks end
+  defp save(series, draft, locks, calibre_keys) do
+    frozen? = fn key -> key in calibre_keys or (key in series.locked_fields and key in locks) end
+    locks = locks -- calibre_keys
 
     attrs =
       for key <- @scalars, not frozen?.(key), into: %{} do
@@ -205,9 +213,15 @@ defmodule StashixWeb.SeriesEditComponent do
         on_close={JS.push("close_edit_dialog")}
       >
         <:description>
-          {gettext(
-            "Lock a field to keep rescans and metadata matching from changing it. The name, years and ongoing flag otherwise follow the folder name on every scan."
-          )}
+          <%= if @calibre_keys != [] do %>
+            {gettext(
+              "This series comes from a Calibre library. Its name is edited in Calibre and comes back on every sync; the rest is kept in Stashix only."
+            )}
+          <% else %>
+            {gettext(
+              "Lock a field to keep rescans and metadata matching from changing it. The name, years and ongoing flag otherwise follow the folder name on every scan."
+            )}
+          <% end %>
           <p :if={@folder} class="flex items-center gap-1.5 text-xs font-mono text-muted mt-1 break-all">
             <.icon name="lucide-folder" class="w-3 h-3 flex-shrink-0" />
             {@folder}
@@ -218,19 +232,40 @@ defmodule StashixWeb.SeriesEditComponent do
           <.edit_tabs tabs={@tabs} current={@tab} target={@myself} />
 
           <.edit_panel tab="general" current={@tab}>
-            <.edit_field label={gettext("Name")} key="name" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Name")}
+              key="name"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_input name="series[name]" value={@draft["name"]} locked={"name" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Sort name")} key="sort_name" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Sort name")}
+              key="sort_name"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_input name="series[sort_name]" value={@draft["sort_name"]} locked={"sort_name" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Summary")} key="summary" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Summary")}
+              key="summary"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <.edit_textarea name="series[summary]" rows="4" value={@draft["summary"]} locked={"summary" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Volume")} key="volume" locks={@locks} target={@myself}>
               <.edit_input type="number" name="series[volume]" value={@draft["volume"]} locked={"volume" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Language")} key="language" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Language")} key="language" locks={@locks} target={@myself}>
               <.edit_language
                 id="edit-series-language"
                 name="series[language]"
@@ -249,7 +284,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 <.icon name="lucide-arrow-down-to-line" class="w-3.5 h-3.5" /> {gettext("Push to all issues…")}
               </.ink_button>
             </.edit_field>
-            <.edit_field label={gettext("Format")} key="format" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Format")} key="format" locks={@locks} target={@myself}>
               <.edit_select
                 name="series[format]"
                 value={@draft["format"]}
@@ -258,7 +293,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 locked={"format" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Status")} key="status" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Status")} key="status" locks={@locks} target={@myself}>
               <.edit_select
                 name="series[status]"
                 value={@draft["status"]}
@@ -268,6 +303,7 @@ defmodule StashixWeb.SeriesEditComponent do
               />
             </.edit_field>
             <.edit_field
+              owned={@calibre_keys}
               label={gettext("Ongoing (from the folder name)")}
               key="ongoing"
               locks={@locks}
@@ -295,7 +331,13 @@ defmodule StashixWeb.SeriesEditComponent do
           </.edit_panel>
 
           <.edit_panel tab="dates" current={@tab}>
-            <.edit_field label={gettext("Start year")} key="start_year" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Start year")}
+              key="start_year"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 type="number"
                 name="series[start_year]"
@@ -303,10 +345,16 @@ defmodule StashixWeb.SeriesEditComponent do
                 locked={"start_year" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("End year")} key="end_year" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("End year")} key="end_year" locks={@locks} target={@myself}>
               <.edit_input type="number" name="series[end_year]" value={@draft["end_year"]} locked={"end_year" in @locks} />
             </.edit_field>
-            <.edit_field label={gettext("Published issues")} key="issue_count" locks={@locks} target={@myself}>
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Published issues")}
+              key="issue_count"
+              locks={@locks}
+              target={@myself}
+            >
               <.edit_input
                 type="number"
                 min="0"
@@ -315,7 +363,7 @@ defmodule StashixWeb.SeriesEditComponent do
                 locked={"issue_count" in @locks}
               />
             </.edit_field>
-            <.edit_field label={gettext("Volumes")} key="volume_count" locks={@locks} target={@myself}>
+            <.edit_field owned={@calibre_keys} label={gettext("Volumes")} key="volume_count" locks={@locks} target={@myself}>
               <.edit_input
                 type="number"
                 min="0"
@@ -328,6 +376,7 @@ defmodule StashixWeb.SeriesEditComponent do
 
           <.edit_panel tab="names" current={@tab}>
             <.edit_field
+              owned={@calibre_keys}
               label={gettext("Also known as")}
               key="alternative_names"
               locks={@locks}
@@ -367,7 +416,14 @@ defmodule StashixWeb.SeriesEditComponent do
               </.edit_rows>
             </.edit_field>
 
-            <.edit_field label={gettext("Publisher")} key="publisher" locks={@locks} target={@myself} class="col-span-2">
+            <.edit_field
+              owned={@calibre_keys}
+              label={gettext("Publisher")}
+              key="publisher"
+              locks={@locks}
+              target={@myself}
+              class="col-span-2"
+            >
               <%= if "publisher" in @locks do %>
                 <input :for={id <- @draft["publisher_ids"]} type="hidden" name="series[publisher_ids][]" value={id} />
                 <p class="text-sm text-fg opacity-60">
