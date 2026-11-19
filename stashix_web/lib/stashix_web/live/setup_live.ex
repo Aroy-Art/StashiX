@@ -192,7 +192,7 @@ defmodule StashixWeb.SetupLive do
         <label
           :if={@library_calibre}
           id="setup-library-calibre"
-          class="flex gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
+          class="flex items-start gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
         >
           <input type="hidden" name="library_calibre" value="false" />
           <input type="checkbox" name="library_calibre" value="true" checked class="mt-1 accent-ink" />

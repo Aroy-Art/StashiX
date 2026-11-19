@@ -65,7 +65,7 @@ defmodule StashixWeb.AdminLive.Libraries do
             <label
               :if={@library_form_calibre}
               id="library-form-calibre"
-              class="flex gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
+              class="flex items-start gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
             >
               <input type="hidden" name="calibre" value="false" />
               <input type="checkbox" name="calibre" value="true" checked class="mt-1 accent-ink" />

@@ -200,6 +200,15 @@ defmodule Stashix.Calibre.SyncTest do
     assert book(a).series_id == series_id
   end
 
+  test "books sharing new authors and publishers all import", %{root: root, lib: lib} do
+    for n <- 1..12,
+        do:
+          CalibreFixtures.add_book(root, %{title: "Part #{n}", authors: ["Ann Author", "Bo Writer"], publisher: "Press"})
+
+    assert %{added: 12, failed: 0} = sync!(lib)
+    assert Repo.aggregate(from(c in Creator, where: c.name in ["Ann Author", "Bo Writer"]), :count) == 2
+  end
+
   test "a forced sync rewrites every book", %{root: root, lib: lib} do
     CalibreFixtures.add_book(root, omens())
     sync!(lib)

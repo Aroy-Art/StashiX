@@ -76,6 +76,7 @@ defmodule Stashix.Calibre.Sync do
     total = length(books)
     mapped = Enum.map(books, &Mapper.map_book/1)
     series_ids = upsert_series(library, mapped)
+    upsert_people(mapped)
     {matches, removed} = match_books(library, mapped)
     covered = covered_book_ids(library)
     now = NaiveDateTime.utc_now(:second)
@@ -167,6 +168,34 @@ defmodule Stashix.Calibre.Sync do
       end)
     end)
     |> then(fn {:ok, ids} -> ids end)
+  end
+
+  # ── Authors and publishers ─────────────────────────────────────────────────
+
+  # Created up front, one at a time: books import in parallel, and two books
+  # creating the same new author would race on the unique name (the loser's
+  # transaction aborts). Authors also take Calibre's sort name here.
+  defp upsert_people(mapped) do
+    now = NaiveDateTime.utc_now(:second)
+    creators = mapped |> Enum.flat_map(& &1.creators) |> Enum.uniq_by(& &1.name)
+
+    creators
+    |> Enum.map(&%{id: Ecto.UUID.generate(), name: &1.name, sort_name: &1.sort_name, inserted_at: now, updated_at: now})
+    |> Enum.chunk_every(1000)
+    |> Enum.each(&Repo.insert_all(Creator, &1, on_conflict: :nothing, conflict_target: :name))
+
+    for %{name: name, sort_name: sort} <- creators, sort do
+      Repo.update_all(
+        from(c in Creator, where: c.name == ^name and (is_nil(c.sort_name) or c.sort_name != ^sort)),
+        set: [sort_name: sort]
+      )
+    end
+
+    mapped
+    |> Enum.map(& &1.record.publisher)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.each(&Library.get_or_create_publisher/1)
   end
 
   # ── Books ──────────────────────────────────────────────────────────────────
@@ -279,7 +308,6 @@ defmodule Stashix.Calibre.Sync do
           )
 
         set_publisher(book, m.record.publisher)
-        set_creator_sort_names(m.creators)
         book
       end)
 
@@ -294,15 +322,6 @@ defmodule Stashix.Calibre.Sync do
     with {:ok, publisher} <- Library.get_or_create_publisher(name) do
       Library.set_book_publisher(book.id, publisher.id)
       if book.series_id, do: Library.link_publisher_to_series(book.series_id, publisher.id)
-    end
-  end
-
-  defp set_creator_sort_names(creators) do
-    for %{name: name, sort_name: sort} <- creators, sort do
-      Repo.update_all(
-        from(c in Creator, where: c.name == ^name and (is_nil(c.sort_name) or c.sort_name != ^sort)),
-        set: [sort_name: sort]
-      )
     end
   end
 
