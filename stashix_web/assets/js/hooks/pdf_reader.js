@@ -55,6 +55,17 @@ const ZONE_SIDE = 0.22      // paged layouts: side tap zones turn the page
 const MAX_RESULTS = 500
 const SNIPPET = 40          // characters of context each side of a search hit
 
+// What an empty page shows until its drawing replaces it. A rerender keeps
+// the old drawing up instead, so this only shows on pages not yet drawn.
+const loading = () => {
+  const el = document.createElement("div")
+  el.className = "pdf-loading"
+  el.setAttribute("role", "status")
+  el.setAttribute("aria-label", "Loading page")
+  el.innerHTML = `<span class="pdf-spinner animate-spin"></span>`
+  return el
+}
+
 const PdfReader = {
   mounted() {
     const d = this.el.dataset
@@ -203,6 +214,7 @@ const PdfReader = {
       const el = document.createElement("div")
       el.className = "pdf-page"
       el.dataset.page = i
+      el.appendChild(loading())
       this.column.appendChild(el)
       return {el, index: i, w: width, h: height, state: "empty"}
     })
@@ -467,7 +479,7 @@ const PdfReader = {
     slot.textLayer = null
     const canvas = slot.el.querySelector("canvas")
     if (canvas) canvas.width = canvas.height = 0
-    slot.el.replaceChildren()
+    slot.el.replaceChildren(loading())
     slot.annots = null
     slot.pdfPage?.cleanup()
     slot.run = (slot.run || 0) + 1
