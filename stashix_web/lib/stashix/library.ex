@@ -55,13 +55,26 @@ defmodule Stashix.Library do
   def create_library(attrs) do
     %Library{}
     |> Library.changeset(attrs)
+    |> validate_calibre_overlap()
     |> Repo.insert()
   end
 
   def update_library(library, attrs) do
     library
     |> Library.changeset(attrs)
+    |> validate_calibre_overlap()
     |> Repo.update()
+  end
+
+  defp validate_calibre_overlap(changeset) do
+    path = Ecto.Changeset.get_field(changeset, :root_path)
+    source = Ecto.Changeset.get_field(changeset, :source)
+
+    case path && Stashix.Calibre.overlapping(path, source, changeset.data.id) do
+      nil -> changeset
+      false -> changeset
+      other -> Ecto.Changeset.add_error(changeset, :root_path, "overlaps the library %{name}", name: other.name)
+    end
   end
 
   def list_books(library_id, opts \\ []) do

@@ -211,9 +211,14 @@ without touching anything.
   files are missing. Debounce and poll are app env
   (`calibre_debounce_ms`, `calibre_poll_ms`). Known gap, as for folders:
   the watcher only learns of new libraries on restart.
-- [ ] Guard rails (D8): folder scan, file write-back, sidecars and
+- [x] Guard rails (D8): folder scan, file write-back, sidecars and
   matching skip Calibre libraries; scanner refuses a folder library whose
-  root is inside a Calibre library (or the other way round).
+  root is inside a Calibre library (or the other way round). *Done:*
+  `Stashix.Calibre.library?/1`. File and series rescans there queue a
+  library sync; `FileWriter.write_book/2` (every write-back and sidecar
+  path) is a no-op; match jobs cancel with `:calibre_library`. Overlap is
+  refused when the library is saved (create and update), not at scan
+  time. A failed cover no longer stops a sync.
 - [ ] Setup wizard + Admin → Libraries: detect `metadata.db`, offer
   "Calibre library", show last sync, counts and errors.
 - [ ] Edit dialog: Calibre-owned fields read-only with "Edited in

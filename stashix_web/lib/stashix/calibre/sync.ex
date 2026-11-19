@@ -391,13 +391,20 @@ defmodule Stashix.Calibre.Sync do
     if total > 0, do: progress.(:thumbnails, 0, total)
 
     jobs
-    |> Task.async_stream(fn {book, path, image} -> Scanner.generate_thumbnail(book, path, image) end,
+    |> Task.async_stream(&make_cover/1,
       max_concurrency: @concurrency,
       ordered: false,
       timeout: 120_000
     )
     |> Stream.with_index(1)
     |> Enum.each(fn {_, n} -> progress.(:thumbnails, n, total) end)
+  end
+
+  # A cover that can't be made leaves the book without one; it doesn't stop the sync.
+  defp make_cover({book, path, image}) do
+    Scanner.generate_thumbnail(book, path, image)
+  rescue
+    e -> Logger.warning("[calibre] cover for #{book.title} failed: #{Exception.message(e)}")
   end
 
   # ── State ──────────────────────────────────────────────────────────────────

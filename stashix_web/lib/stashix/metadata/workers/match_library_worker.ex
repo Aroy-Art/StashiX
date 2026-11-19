@@ -17,6 +17,13 @@ defmodule Stashix.Metadata.Workers.MatchLibraryWorker do
 
   @impl true
   def perform(%Oban.Job{args: %{"library_id" => library_id} = args}) do
+    # Calibre keeps a Calibre library's metadata (D8 in docs/calibre-plan.md).
+    if Stashix.Calibre.library?(library_id),
+      do: {:cancel, :calibre_library},
+      else: match_library(library_id, args)
+  end
+
+  defp match_library(library_id, args) do
     skip_matched = args["skip_matched"] != false
 
     series_ids =

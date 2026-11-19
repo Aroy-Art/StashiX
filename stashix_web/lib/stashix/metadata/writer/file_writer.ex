@@ -31,8 +31,15 @@ defmodule Stashix.Metadata.Writer.FileWriter do
 
   @stored_exts Enum.map(~w(.jpg .jpeg .png .webp .gif .avif .jxl), &String.to_charlist/1)
 
-  @doc "Writes metadata for every live file of the book."
+  @doc """
+  Writes metadata for every live file of the book. Never into a Calibre
+  library: Calibre keeps the metadata there (D8 in docs/calibre-plan.md).
+  """
   def write_book(%Book{} = book, settings) do
+    if Stashix.Calibre.library?(book), do: :ok, else: write_files(book, settings)
+  end
+
+  defp write_files(book, settings) do
     book
     |> then(&Library.get_book_files(&1.id))
     |> Enum.map(&write_file(book, &1, settings))

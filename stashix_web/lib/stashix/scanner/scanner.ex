@@ -107,17 +107,21 @@ defmodule Stashix.Scanner do
     {:noreply, new_state}
   end
 
+  # Calibre libraries are only ever synced whole: a file or series rescan
+  # there is a sync of the library.
   def handle_cast({:scan_file, library_id, file_path}, state) do
     state = reap(state)
-    {:noreply, state |> dispatch(library_id, {:file, file_path}) |> broadcast_queue(state, library_id)}
+    job = if Stashix.Calibre.library?(library_id), do: {:library, false}, else: {:file, file_path}
+    {:noreply, state |> dispatch(library_id, job) |> broadcast_queue(state, library_id)}
   end
 
   def handle_cast({:scan_series, series_id, force}, state) do
     state = reap(state)
 
     case Library.get_series(series_id) do
-      %{library_id: library_id} ->
-        {:noreply, state |> dispatch(library_id, {:series, series_id, force}) |> broadcast_queue(state, library_id)}
+      %{library_id: library_id} = series ->
+        job = if Stashix.Calibre.library?(series), do: {:library, force}, else: {:series, series_id, force}
+        {:noreply, state |> dispatch(library_id, job) |> broadcast_queue(state, library_id)}
 
       nil ->
         {:noreply, state}

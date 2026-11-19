@@ -13,7 +13,10 @@ defmodule Stashix.Metadata.Workers.MatchBookWorker do
 
   @impl true
   def perform(%Oban.Job{args: %{"book_id" => id} = args}) do
-    case Repo.get(Book, id) do
+    case Repo.get(Book, id) |> unless_calibre() do
+      :calibre ->
+        {:cancel, :calibre_library}
+
       nil ->
         {:cancel, :not_found}
 
@@ -46,4 +49,7 @@ defmodule Stashix.Metadata.Workers.MatchBookWorker do
         end
     end
   end
+
+  # Calibre keeps a Calibre library's metadata (D8 in docs/calibre-plan.md).
+  defp unless_calibre(book), do: if(book && Stashix.Calibre.library?(book), do: :calibre, else: book)
 end

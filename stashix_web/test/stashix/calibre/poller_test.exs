@@ -12,8 +12,14 @@ defmodule Stashix.Calibre.PollerTest do
   @moduletag :tmp_dir
 
   setup %{tmp_dir: tmp} do
-    Application.put_env(:stashix, :thumbnail_dir, Path.join(tmp, "thumbnails"))
-    on_exit(fn -> Application.delete_env(:stashix, :thumbnail_dir) end)
+    # Short: book_covers.path is a varchar(255).
+    thumbs = Path.join(System.tmp_dir!(), "stashix_test_thumbs_#{System.unique_integer([:positive])}")
+    Application.put_env(:stashix, :thumbnail_dir, thumbs)
+
+    on_exit(fn ->
+      Application.delete_env(:stashix, :thumbnail_dir)
+      File.rm_rf(thumbs)
+    end)
 
     root = CalibreFixtures.make_library(Path.join(tmp, "Calibre"), [%{title: "Dune", authors: ["Frank Herbert"]}])
     {:ok, lib} = Library.create_library(%{name: "Calibre", root_path: root, kind: :books, source: :calibre})
