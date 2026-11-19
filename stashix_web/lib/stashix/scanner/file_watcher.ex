@@ -8,6 +8,9 @@ defmodule Stashix.Scanner.FileWatcher do
   alias Stashix.Library
 
   @debounce_ms 5_000
+  # Calibre libraries sync as a whole once changes stop for this long, so an
+  # rsync push (database and files, in any order) lands before the sync.
+  @calibre_debounce_ms 30_000
   @sidecar_exts ~w(.jpg .jpeg .png .webp .xml)
   # Events for paths Stashix itself just wrote (metadata write-back) are ignored
   # for this long, so our own writes don't trigger a re-import.
@@ -61,6 +64,45 @@ defmodule Stashix.Scanner.FileWatcher do
 
   @impl true
   def handle_info({:file_event, _pid, {path, events}}, state) do
+    case calibre_library(path, state.libraries) do
+      nil -> folder_event(path, events, state)
+      library_id -> calibre_event(library_id, path, events, state)
+    end
+  end
+
+  def handle_info({:file_event, _pid, :stop}, state) do
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:trigger_scan_file, path, library_id}, state) do
+    Logger.info("FileWatcher triggering scan for #{path}")
+    Stashix.Scanner.scan_file(library_id, path)
+    {:noreply, %{state | debounce: Map.delete(state.debounce, path)}}
+  end
+
+  def handle_info({:trigger_calibre_sync, library_id}, state) do
+    Logger.info("FileWatcher: Calibre library #{library_id} changed, syncing")
+    Stashix.Scanner.scan_library(library_id)
+    {:noreply, %{state | debounce: Map.delete(state.debounce, {:calibre, library_id})}}
+  end
+
+  # metadata.db replaced or written, or a book file arrived: (re)start the
+  # library's quiet-period timer. Journal and temp files are ignored.
+  defp calibre_event(library_id, path, events, state) do
+    if interesting_event?(events) and (Path.basename(path) == "metadata.db" or supported_file?(path)) do
+      key = {:calibre, library_id}
+      {existing_timer, _} = Map.get(state.debounce, key, {nil, nil})
+      cancel_timer(existing_timer)
+      delay = Application.get_env(:stashix, :calibre_debounce_ms, @calibre_debounce_ms)
+      timer = Process.send_after(self(), {:trigger_calibre_sync, library_id}, delay)
+      {:noreply, put_in(state, [:debounce, key], {timer, library_id})}
+    else
+      {:noreply, state}
+    end
+  end
+
+  defp folder_event(path, events, state) do
     scan_path =
       cond do
         supported_file?(path) -> path
@@ -82,17 +124,6 @@ defmodule Stashix.Scanner.FileWatcher do
     else
       {:noreply, state}
     end
-  end
-
-  def handle_info({:file_event, _pid, :stop}, state) do
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info({:trigger_scan_file, path, library_id}, state) do
-    Logger.info("FileWatcher triggering scan for #{path}")
-    Stashix.Scanner.scan_file(library_id, path)
-    {:noreply, %{state | debounce: Map.delete(state.debounce, path)}}
   end
 
   # FileSystem returns :ignore when its backend (inotify-tools on Linux) is
@@ -126,7 +157,7 @@ defmodule Stashix.Scanner.FileWatcher do
   end
 
   defp library_path_map(libraries) do
-    Map.new(libraries, fn lib -> {lib.root_path, lib.id} end)
+    Map.new(libraries, fn lib -> {lib.root_path, {lib.id, lib.source}} end)
   end
 
   defp suppressed?(state, path) do
@@ -156,10 +187,18 @@ defmodule Stashix.Scanner.FileWatcher do
   end
 
   defp find_library_id(path, libraries) do
-    Enum.find_value(libraries, fn {root, id} ->
-      if String.starts_with?(path, root), do: id
+    Enum.find_value(libraries, fn {root, {id, _source}} ->
+      if inside?(path, root), do: id
     end)
   end
+
+  defp calibre_library(path, libraries) do
+    Enum.find_value(libraries, fn {root, {id, source}} ->
+      if source == :calibre and inside?(path, root), do: id
+    end)
+  end
+
+  defp inside?(path, root), do: path == root or String.starts_with?(path, String.trim_trailing(root, "/") <> "/")
 
   defp cancel_timer(nil), do: :ok
   defp cancel_timer(ref), do: Process.cancel_timer(ref)

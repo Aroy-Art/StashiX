@@ -200,9 +200,17 @@ without touching anything.
   book's fingerprint or files change. Outcome and counts (added, updated,
   unchanged, removed, missing files, skipped formats, errors) go to
   `libraries.calibre_state`.
-- [ ] Triggers: watcher on `metadata.db`, debounce, stamp poll (D10);
+- [x] Triggers: watcher on `metadata.db`, debounce, stamp poll (D10);
   "Sync now" and "Full resync" (ignores fingerprints) in Admin →
   Libraries; sync runs where scans run so the queue UI shows it.
+  *Done:* a library scan of a Calibre library is a sync (`Scanner`), so
+  Scan / Force rescan already are "Sync now" / "Full resync" (relabelled
+  with the admin page, below). The watcher re-arms a 30 s timer per
+  library on `metadata.db` or any book file event; `Calibre.Poller` checks
+  stamps every 5 min (first a minute after boot) and also re-syncs while
+  files are missing. Debounce and poll are app env
+  (`calibre_debounce_ms`, `calibre_poll_ms`). Known gap, as for folders:
+  the watcher only learns of new libraries on restart.
 - [ ] Guard rails (D8): folder scan, file write-back, sidecars and
   matching skip Calibre libraries; scanner refuses a folder library whose
   root is inside a Calibre library (or the other way round).

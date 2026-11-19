@@ -323,7 +323,42 @@ defmodule Stashix.Scanner do
   end
 
   defp do_scan_safe(library_id, force) do
-    library = Library.get_library!(library_id)
+    case Library.get_library!(library_id) do
+      %{source: :calibre} = library -> do_calibre_sync(library, force)
+      library -> do_folder_scan(library, force)
+    end
+  end
+
+  # A Calibre library's "scan" is a sync with its metadata.db; it runs in the
+  # scan queue so the activity menu and progress work as for folders.
+  defp do_calibre_sync(library, force) do
+    Logger.info("Starting Calibre sync for library #{library.name} at #{library.root_path}")
+
+    progress = fn phase, done, total ->
+      update_task_status(library.id, %{scanned: done, total: total, done: false, phase: phase})
+      broadcast_progress(library.id, done, total, false, phase)
+    end
+
+    case Stashix.Calibre.Sync.run(library, force: force, progress: progress) do
+      {:ok, summary} ->
+        update_task_status(library.id, %{scanned: summary.books, total: summary.books, done: true})
+        broadcast_progress(library.id, summary.books, summary.books, true)
+
+        Logger.info(
+          "Calibre sync complete for #{library.name}: #{summary.added} added, #{summary.updated} updated, " <>
+            "#{summary.removed} removed, #{summary.missing_files} files missing"
+        )
+
+      {:error, reason} ->
+        msg = Stashix.Calibre.Sync.error_text(reason)
+        Logger.error("Calibre sync failed for library #{library.id}: #{msg}")
+        update_task_status(library.id, %{done: true, failed: true, error: msg})
+        broadcast_progress(library.id, 0, 0, true, :failed, msg)
+    end
+  end
+
+  defp do_folder_scan(library, force) do
+    library_id = library.id
     Logger.info("Starting scan for library #{library.name} at #{library.root_path}")
     Metadata.flush_pending_writes(library_id: library_id)
 

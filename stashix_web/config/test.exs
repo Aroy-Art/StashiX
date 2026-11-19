@@ -47,3 +47,4 @@ config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}
 # Rendered pages go to a throwaway dir, not the repo's tmp/data
 config :stashix, page_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_pages")
 config :stashix, calibre_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_calibre")
+config :stashix, calibre_poll_ms: nil

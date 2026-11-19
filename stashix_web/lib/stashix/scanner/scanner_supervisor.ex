@@ -13,7 +13,8 @@ defmodule Stashix.Scanner.Supervisor do
     children = [
       {Task.Supervisor, name: Stashix.Scanner.TaskSupervisor},
       Stashix.Scanner,
-      Stashix.Scanner.FileWatcher
+      Stashix.Scanner.FileWatcher,
+      Stashix.Calibre.Poller
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
