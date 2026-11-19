@@ -69,8 +69,8 @@ defmodule StashixWeb.SessionController do
 
   defp maybe_create_library(%{"skip_library" => "true"}), do: {:ok, nil}
 
-  defp maybe_create_library(%{"library_name" => name, "library_path" => path}),
-    do: Stashix.Library.create_library(%{name: name, root_path: path})
+  defp maybe_create_library(%{"library_name" => name, "library_path" => path} = params),
+    do: Stashix.Library.create_library(%{name: name, root_path: path, kind: params["library_kind"] || "comics"})
 
   def delete(conn, _params) do
     Accounts.delete_session(get_session(conn, "session_id"))

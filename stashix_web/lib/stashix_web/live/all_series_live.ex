@@ -62,7 +62,7 @@ defmodule StashixWeb.AllSeriesLive do
 
   defp load_series(socket, page) do
     opts = [
-      access: socket.assigns.access,
+      access: socket.assigns.browse_access,
       sort: socket.assigns.sort,
       library_id: socket.assigns.library_id,
       limit: @page_size,

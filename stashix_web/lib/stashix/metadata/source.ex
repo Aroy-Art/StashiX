@@ -96,5 +96,16 @@ defmodule Stashix.Metadata.Source do
   """
   @callback image_hosts() :: [String.t()]
 
-  @optional_callbacks cacheable?: 1, endpoint_scope: 1, default_endpoint_limit_per_hour: 0, image_hosts: 0
+  @doc """
+  Optional. Library kinds (`:comics`, `:books`) automatic matching asks this
+  source for; defaults to `[:comics]`. Identifying a book by hand can still
+  use any source.
+  """
+  @callback library_kinds() :: [:comics | :books]
+
+  @optional_callbacks cacheable?: 1,
+                      endpoint_scope: 1,
+                      default_endpoint_limit_per_hour: 0,
+                      image_hosts: 0,
+                      library_kinds: 0
 end

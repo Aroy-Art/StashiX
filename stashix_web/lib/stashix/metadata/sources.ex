@@ -49,6 +49,12 @@ defmodule Stashix.Metadata.Sources do
   @doc "Enabled sources ordered by priority."
   def enabled, do: Enum.filter(list(), & &1.config.enabled)
 
+  @doc "Whether automatic matching asks `mod` for books of a library of `kind`."
+  def for_kind?(mod, kind) do
+    kinds = if function_exported?(mod, :library_kinds, 0), do: mod.library_kinds(), else: [:comics]
+    kind in kinds
+  end
+
   @doc "True when at least one source is enabled and fully configured, so matching can run."
   def any_ready?, do: Enum.any?(enabled(), &configured?(&1.module, &1.config.config))
 

@@ -50,4 +50,10 @@ defmodule StashixWeb.SetupLiveTest do
     refute Accounts.setup_complete?()
     assert Repo.aggregate(Library, :count) == 0
   end
+
+  test "the library step asks what kind of library it is", %{conn: conn} do
+    view = to_library_step(conn)
+    assert has_element?(view, "#setup-library-kind")
+    assert has_element?(view, "#setup-form input[name=library_kind][value=comics]")
+  end
 end

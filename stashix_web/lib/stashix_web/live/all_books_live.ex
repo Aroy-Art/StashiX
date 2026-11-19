@@ -62,7 +62,7 @@ defmodule StashixWeb.AllBooksLive do
 
   defp load_books(socket, page) do
     opts = [
-      access: socket.assigns.access,
+      access: socket.assigns.browse_access,
       type: "standalone",
       sort: socket.assigns.sort,
       library_id: socket.assigns.library_id,

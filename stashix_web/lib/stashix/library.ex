@@ -1441,16 +1441,30 @@ defmodule Stashix.Library do
     |> Repo.one()
   end
 
+  # Formats the text reader can open.
+  @text_formats [:pdf, :epub, :mobi, :azw3, :azw, :fb2, :fbz]
+
   @doc """
   Which reader opens `book_file`: `:text` or `:images`. The book's override
-  wins, then the kind detected at scan; unknown reads as images.
+  wins, then the kind detected at scan. When that is unknown, the library's
+  kind breaks the tie: a file the text reader can open reads as text in a
+  books library, as images elsewhere.
   """
   def reader_kind(%Book{content_kind: kind}, _book_file) when kind != nil, do: kind
   def reader_kind(_book, %BookFile{content_kind: kind}) when kind != nil, do: kind
+
+  def reader_kind(%Book{library_id: library_id}, %BookFile{format: format})
+      when format in @text_formats and library_id != nil do
+    if library_kind(library_id) == :books, do: :text, else: :images
+  end
+
   def reader_kind(_book, _book_file), do: :images
 
-  # Formats the text reader can open.
-  @text_formats [:pdf, :epub, :mobi, :azw3, :azw, :fb2, :fbz]
+  @doc "A library's kind (`:comics` or `:books`)."
+  def library_kind(nil), do: :comics
+
+  def library_kind(library_id),
+    do: Repo.one(from(l in Library, where: l.id == ^library_id, select: l.kind)) || :comics
 
   @doc """
   The file of `book` (of `format`, when given) to open in the text reader,

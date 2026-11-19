@@ -53,6 +53,15 @@ defmodule Stashix.Metadata.MatcherTest do
       assert Metadata.identify_book(book) == {:error, :no_sources}
     end
 
+    test "comic sources are not asked about books libraries", %{lib: lib, book: book} do
+      enable_metron!()
+      {:ok, _} = Library.update_library(lib, %{kind: :books})
+
+      Req.Test.stub(Stashix.Metadata.HTTP, fn _conn -> flunk("a comic source was asked") end)
+
+      assert Metadata.identify_book(book) == {:error, :no_sources}
+    end
+
     test "confident match is applied", %{book: book, series: series} do
       enable_metron!()
 

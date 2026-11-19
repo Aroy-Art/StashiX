@@ -64,6 +64,75 @@ defmodule StashixWeb.Layouts do
     """
   end
 
+  @doc """
+  The Comics/Books switcher (`StashixWeb.Live.Hooks.assign_library_kind/1`):
+  a row of segments in the sidebar, or a menu in the top bar. Shows only
+  when the user's libraries are of more than one kind.
+  """
+  attr :kind, :string, required: true
+  attr :kinds, :list, required: true
+  attr :placement, :string, values: ~w(sidebar top), required: true
+
+  def kind_switcher(%{kinds: kinds} = assigns) when length(kinds) < 2, do: ~H""
+
+  def kind_switcher(%{placement: "sidebar"} = assigns) do
+    ~H"""
+    <div id="kind-switcher" class="px-2 pt-2">
+      <.segmented class="w-full" role="group" aria-label={gettext("Show libraries")}>
+        <.segment
+          :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
+          id={"kind-#{kind}"}
+          active={@kind == kind}
+          phx-click="set_library_kind"
+          phx-value-kind={kind}
+          title={kind_title(kind)}
+          class="flex-1 font-display font-bold uppercase tracking-[0.07em] text-xs"
+        >
+          {kind_label(kind)}
+        </.segment>
+      </.segmented>
+    </div>
+    """
+  end
+
+  def kind_switcher(assigns) do
+    ~H"""
+    <.ink_menu id="kind-switcher" align="start" panel_class="w-44" class="shrink-0">
+      <:trigger
+        label={gettext("Show libraries: %{kind}", kind: kind_label(@kind))}
+        class="flex items-center gap-1.5 h-9 px-2 sm:px-2.5 rounded-md text-sm text-fg-soft ring-1 ring-fg/15 hover:text-fg hover:bg-fg/10 transition-colors"
+      >
+        <.icon name={kind_icon(@kind)} class="w-4 h-4 text-ink" />
+        <span class="hidden sm:inline font-display font-bold uppercase tracking-[0.07em]">{kind_label(@kind)}</span>
+        <.icon name="lucide-chevron-down" class="hidden sm:block w-3.5 h-3.5 text-muted" />
+      </:trigger>
+      <.menu_label>{gettext("Show libraries")}</.menu_label>
+      <.menu_item
+        :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
+        id={"kind-#{kind}"}
+        icon={kind_icon(kind)}
+        active={@kind == kind}
+        phx-click="set_library_kind"
+        phx-value-kind={kind}
+      >
+        {kind_title(kind)}
+      </.menu_item>
+    </.ink_menu>
+    """
+  end
+
+  defp kind_label("comics"), do: gettext("Comics")
+  defp kind_label("books"), do: gettext("Books")
+  defp kind_label(_all), do: gettext("All")
+
+  defp kind_title("comics"), do: gettext("Comics & manga")
+  defp kind_title("books"), do: gettext("Books")
+  defp kind_title(_all), do: gettext("All libraries")
+
+  defp kind_icon("comics"), do: "lucide-book-image"
+  defp kind_icon("books"), do: "lucide-book-open-text"
+  defp kind_icon(_all), do: "lucide-library"
+
   @doc "Tag on a navbar quick result."
   def result_type_label(:series), do: gettext("Series")
   def result_type_label(:issue), do: gettext("Issue")

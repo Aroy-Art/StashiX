@@ -8,8 +8,13 @@ defmodule Stashix.Library.Library do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  @kinds [:comics, :books]
+
   schema "libraries" do
     field :name, :string
+    # Comics/manga or books: sets defaults (reader, metadata matching, labels)
+    # and which libraries the browse switcher shows.
+    field :kind, Ecto.Enum, values: @kinds, default: :comics
     field :root_path, :string
     field :standalone_folders, {:array, :string}, default: []
 
@@ -20,9 +25,12 @@ defmodule Stashix.Library.Library do
     timestamps()
   end
 
+  @doc "The library kinds, in switcher order."
+  def kinds, do: @kinds
+
   def changeset(library, attrs) do
     library
-    |> cast(attrs, [:name, :root_path, :standalone_folders])
+    |> cast(attrs, [:name, :root_path, :kind, :standalone_folders])
     |> validate_required([:name, :root_path])
     |> unique_constraint(:root_path)
   end

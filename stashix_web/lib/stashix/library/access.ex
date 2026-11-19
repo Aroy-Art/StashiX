@@ -55,6 +55,20 @@ defmodule Stashix.Library.Access do
     end
   end
 
+  @doc """
+  The same access limited to `library_ids` (the libraries of one kind, for
+  the browse switcher). Ratings limits stay as they were.
+  """
+  def narrow(%__MODULE__{all?: true}, library_ids),
+    do: %__MODULE__{rules: Enum.map(library_ids, &{&1, :all, true}), downloads: library_ids}
+
+  def narrow(%__MODULE__{rules: rules, downloads: downloads}, library_ids) do
+    %__MODULE__{
+      rules: Enum.filter(rules, &(elem(&1, 0) in library_ids)),
+      downloads: Enum.filter(downloads, &(&1 in library_ids))
+    }
+  end
+
   @doc "Library ids the user can read, or `:all`."
   def library_ids(%__MODULE__{all?: true}), do: :all
   def library_ids(%__MODULE__{rules: rules}), do: Enum.map(rules, &elem(&1, 0))

@@ -505,7 +505,7 @@ defmodule Stashix.Metadata do
   def describe({:sources_failed, errors}),
     do: Enum.map_join(errors, "; ", fn {k, r} -> "#{k}: #{HTTP.error_message(r)}" end)
 
-  def describe(:no_sources), do: "No metadata sources are enabled and configured"
+  def describe(:no_sources), do: "No metadata sources are enabled and configured for this kind of library"
   def describe(:unknown_source), do: "Unknown metadata source"
   def describe(reason), do: HTTP.error_message(reason)
 

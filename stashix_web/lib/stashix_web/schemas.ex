@@ -129,6 +129,7 @@ defmodule StashixWeb.Schemas do
       properties: %{
         id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
+        kind: %Schema{type: :string, enum: ["comics", "books"]},
         root_path: %Schema{type: :string, description: "Admins only"},
         book_count: %Schema{type: :integer},
         series_count: %Schema{type: :integer},
@@ -147,6 +148,7 @@ defmodule StashixWeb.Schemas do
       properties: %{
         id: %Schema{type: :string, format: :uuid},
         name: %Schema{type: :string},
+        kind: %Schema{type: :string, enum: ["comics", "books"]},
         root_path: %Schema{type: :string, description: "Admins only"},
         standalone_folders: %Schema{type: :boolean},
         book_count: %Schema{type: :integer},
@@ -166,6 +168,7 @@ defmodule StashixWeb.Schemas do
       properties: %{
         name: %Schema{type: :string},
         root_path: %Schema{type: :string},
+        kind: %Schema{type: :string, enum: ["comics", "books"], default: "comics"},
         standalone_folders: %Schema{type: :boolean}
       },
       required: [:name, :root_path]

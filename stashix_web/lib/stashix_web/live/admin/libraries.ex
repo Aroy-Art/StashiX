@@ -61,6 +61,16 @@ defmodule StashixWeb.AdminLive.Libraries do
             <.field label={gettext("Root Path")}>
               <.text_input name="root_path" required placeholder="/libraries/comics" />
             </.field>
+            <.field label={gettext("Kind")} hint={kind_hint()}>
+              <.ink_select
+                id="new-library-kind"
+                name="kind"
+                value="comics"
+                variant="field"
+                label={gettext("Kind")}
+                options={kind_options()}
+              />
+            </.field>
             <div class="flex gap-2 justify-end">
               <.ink_button variant="ghost" size="md" type="button" phx-click="toggle_library_form">{gettext("Cancel")}</.ink_button>
               <.ink_button
@@ -77,7 +87,10 @@ defmodule StashixWeb.AdminLive.Libraries do
           <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <div class="p-4 flex items-center justify-between">
               <div>
-                <p class="text-fg font-medium">{lib.name}</p>
+                <p class="flex items-center gap-2 text-fg font-medium">
+                  {lib.name}
+                  <.chip id={"library-kind-label-#{lib.id}"}>{kind_label(lib.kind)}</.chip>
+                </p>
                 <p class="text-muted text-sm">{lib.root_path}</p>
                 <%= if lib.standalone_folders != [] do %>
                   <p class="text-xs text-muted mt-1">
@@ -145,6 +158,16 @@ defmodule StashixWeb.AdminLive.Libraries do
               <div class="border-t border-fg/10 p-4 bg-canvas">
                 <form phx-submit="save_standalone_folders" class="space-y-3">
                   <input type="hidden" name="_id" value={lib.id} />
+                  <.field label={gettext("Kind")} hint={kind_hint()}>
+                    <.ink_select
+                      id={"library-kind-#{lib.id}"}
+                      name="kind"
+                      value={to_string(lib.kind)}
+                      variant="field"
+                      label={gettext("Kind")}
+                      options={kind_options()}
+                    />
+                  </.field>
                   <div>
                     <label class="block mb-1.5 text-[10px] font-bold tracking-[0.18em] uppercase text-fg-soft">
                       {gettext("Standalone folder names")}
@@ -179,4 +202,13 @@ defmodule StashixWeb.AdminLive.Libraries do
     </div>
     """
   end
+
+  defp kind_options, do: Enum.map(Stashix.Library.Library.kinds(), &{kind_label(&1), to_string(&1)})
+
+  @doc "A library kind's name."
+  def kind_label(:books), do: gettext("Books")
+  def kind_label(_comics), do: gettext("Comics & manga")
+
+  defp kind_hint,
+    do: gettext("Sets how books open when their kind isn't clear, and which libraries the Comics/Books switcher shows.")
 end

@@ -30,7 +30,7 @@ defmodule StashixWeb.SetupLive do
              "password" => "",
              "password_confirmation" => ""
            }),
-         library_form: to_form(%{"library_name" => "", "library_path" => ""})
+         library_form: to_form(%{"library_name" => "", "library_path" => "", "library_kind" => "comics"})
        ), layout: false}
     end
   end
@@ -173,6 +173,16 @@ defmodule StashixWeb.SetupLive do
             required
             mono
             placeholder="/mnt/comics"
+          />
+        </.field>
+        <.field label={gettext("Kind")}>
+          <.ink_select
+            id="setup-library-kind"
+            name="library_kind"
+            value={@library_form[:library_kind].value || "comics"}
+            variant="field"
+            label={gettext("Kind")}
+            options={[{gettext("Comics & manga"), "comics"}, {gettext("Books"), "books"}]}
           />
         </.field>
         <div class="flex gap-3 pt-2">

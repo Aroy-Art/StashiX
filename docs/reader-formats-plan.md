@@ -302,10 +302,24 @@ UI settled 2026-11-18:
 
 ### Library switcher (comics/manga vs books)
 
-- [ ] `libraries.kind` (`:comics | :books`), picked at creation.
-- [ ] Switcher in the nav; home, browse and search filter by kind.
+- [x] `libraries.kind` (`:comics | :books`), picked at creation. *Done:*
+  setup wizard and Admin → Libraries (create and Settings); in the API.
+- [x] Switcher in the nav; home, browse and search filter by kind. *Done:*
+  All / Comics / Books, saved to the account (`library_kind`); in the
+  sidebar under the logo or as a top-bar menu (`kind_switcher` UI
+  setting). Shows only when the user reads libraries of both kinds.
+  `Hooks.assign_library_kind/1` narrows `:access` to that kind's libraries
+  as `:browse_access` (`Access.narrow/2`), which home, the browse lists,
+  publishers, search and the navbar quick search read; book, series,
+  creator and library pages keep full access so links across kinds open.
 - [ ] Kind sets defaults: reader (image vs text), metadata sources, card
-  shape, labels ("issue" vs "book").
+  shape, labels ("issue" vs "book"). *Done so far:* reader — an unknown
+  content kind opens text formats in the text reader in a books library
+  (`Library.reader_kind/2`); metadata — automatic matching only asks
+  sources for the library's kind (`Source.library_kinds/0`, default
+  `[:comics]`; all three current sources are comic databases, so books
+  libraries match nothing until a book source exists). Card shape and
+  labels still to decide.
 
 Order: library switcher → OPDS → Kobo sync (settled 2026-11-17; Kobo reuses
 OPDS's per-user tokens and feed queries).

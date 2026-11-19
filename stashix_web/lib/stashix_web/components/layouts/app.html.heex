@@ -35,7 +35,9 @@
         </.link>
       </div>
 
-      <% path = Map.get(assigns, :current_path) %>
+      <% path = Map.get(assigns, :current_path)
+
+      switcher = Stashix.Accounts.User.ui_setting(@current_user, "kind_switcher") %>
       <%= if Map.get(assigns, :admin_sidebar) do %>
         <%!-- Admin Nav --%>
         <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Admin")}>
@@ -63,6 +65,12 @@
           </div>
         </nav>
       <% else %>
+        <.kind_switcher
+          :if={switcher == "sidebar"}
+          kind={assigns[:library_kind] || "all"}
+          kinds={assigns[:library_kinds] || []}
+          placement="sidebar"
+        />
         <%!-- Main Nav --%>
         <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Main")}>
           <.nav_item
@@ -189,7 +197,7 @@
       all_tasks = scan_tasks ++ health_tasks
 
       lib_names =
-        (Map.get(assigns, :sidebar_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end) %>
+        (Map.get(assigns, :all_libraries) || []) |> Enum.into(%{}, fn l -> {l.id, l.name} end) %>
       <header class="app-bar scheme-dark relative flex items-center h-16 gap-4 px-4 bg-band">
         <button
           onclick="toggleSidebar()"
@@ -198,6 +206,13 @@
         >
           <.icon name="lucide-menu" class="w-5 h-5" />
         </button>
+
+        <.kind_switcher
+          :if={Stashix.Accounts.User.ui_setting(@current_user, "kind_switcher") == "top"}
+          kind={assigns[:library_kind] || "all"}
+          kinds={assigns[:library_kinds] || []}
+          placement="top"
+        />
 
         <% navbar_query = Map.get(assigns, :navbar_search_query, "")
         navbar_results = Map.get(assigns, :navbar_search_results, [])

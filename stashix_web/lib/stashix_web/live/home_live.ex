@@ -15,8 +15,8 @@ defmodule StashixWeb.HomeLive do
   @impl true
   def mount(_params, _session, socket) do
     user = socket.assigns.current_user
-    access = socket.assigns.access
-    libraries = Library.list_libraries(user)
+    access = socket.assigns.browse_access
+    libraries = socket.assigns.sidebar_libraries
 
     libraries_data = Enum.map(libraries, &load_library_data(access, &1))
     continue_reading = Library.in_progress_books(access, user.id, 20)
@@ -48,7 +48,7 @@ defmodule StashixWeb.HomeLive do
   # The recent shelves draw from every library unless one is picked in the
   # dropdown above them. The pick is kept in the user's settings.
   defp assign_recent(socket) do
-    %{access: access, recent_library: library} = socket.assigns
+    %{browse_access: access, recent_library: library} = socket.assigns
 
     assign(socket,
       recent_series: Library.recent_series(access, library, @recent_limit),
@@ -221,8 +221,8 @@ defmodule StashixWeb.HomeLive do
 
   def handle_info(:refresh_after_scan, socket) do
     user = socket.assigns.current_user
-    access = socket.assigns.access
-    libraries = Library.list_libraries(user)
+    access = socket.assigns.browse_access
+    libraries = socket.assigns.sidebar_libraries
     libraries_data = Enum.map(libraries, &load_library_data(access, &1))
     continue_reading = Library.in_progress_books(access, user.id, 20)
 

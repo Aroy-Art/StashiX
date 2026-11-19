@@ -156,10 +156,10 @@ defmodule StashixWeb.AdminLive do
 
   def handle_event(
         "create_library",
-        %{"name" => name, "root_path" => root_path},
+        %{"name" => name, "root_path" => root_path} = params,
         socket
       ) do
-    case Library.create_library(%{name: name, root_path: root_path}) do
+    case Library.create_library(%{name: name, root_path: root_path, kind: params["kind"] || "comics"}) do
       {:ok, _lib} ->
         {:noreply,
          socket
@@ -218,11 +218,12 @@ defmodule StashixWeb.AdminLive do
     {:noreply, assign(socket, :editing_library_id, nil)}
   end
 
-  def handle_event("save_standalone_folders", %{"_id" => id, "standalone_folders" => raw}, socket) do
+  def handle_event("save_standalone_folders", %{"_id" => id, "standalone_folders" => raw} = params, socket) do
     library = Library.get_library!(id)
     folders = raw |> String.split("\n") |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
+    attrs = %{standalone_folders: folders, kind: params["kind"] || library.kind}
 
-    case Library.update_library(library, %{standalone_folders: folders}) do
+    case Library.update_library(library, attrs) do
       {:ok, _} ->
         {:noreply,
          socket

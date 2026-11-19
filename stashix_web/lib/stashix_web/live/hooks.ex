@@ -34,7 +34,7 @@ defmodule StashixWeb.Live.Hooks do
           |> assign(
             current_user: user,
             access: Access.for_user(user),
-            sidebar_libraries: libraries,
+            all_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             sidebar_health_progress: initial_health,
             sidebar_scan_queue: scan_queue,
@@ -43,7 +43,9 @@ defmodule StashixWeb.Live.Hooks do
           )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
+          |> assign_library_kind()
           |> attach_hook(:theme, :handle_event, &handle_theme/3)
+          |> attach_hook(:library_kind, :handle_event, &handle_library_kind/3)
           |> push_theme()
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
           |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
@@ -86,7 +88,7 @@ defmodule StashixWeb.Live.Hooks do
           |> assign(
             current_user: user,
             access: Access.for_user(user),
-            sidebar_libraries: libraries,
+            all_libraries: libraries,
             sidebar_scan_progress: initial_progress,
             sidebar_health_progress: initial_health,
             sidebar_scan_queue: scan_queue,
@@ -95,7 +97,9 @@ defmodule StashixWeb.Live.Hooks do
           )
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
+          |> assign_library_kind()
           |> attach_hook(:theme, :handle_event, &handle_theme/3)
+          |> attach_hook(:library_kind, :handle_event, &handle_library_kind/3)
           |> push_theme()
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
           |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
@@ -154,7 +158,7 @@ defmodule StashixWeb.Live.Hooks do
     results =
       if String.length(q) >= 2 do
         %{series: series, issues: issues, books: books} =
-          Library.search_all(q, limit: 12, access: socket.assigns.access)
+          Library.search_all(q, limit: 12, access: socket.assigns.browse_access)
 
         flat =
           Enum.map(series, fn s ->
@@ -210,6 +214,46 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_theme(_event, _params, socket), do: {:cont, socket}
+
+  @doc """
+  The Comics/Books switcher. Assigns:
+
+    * `:library_kind` — `"all"`, `"comics"` or `"books"`: the user's pick,
+      or `"all"` when they can read no library of that kind
+    * `:library_kinds` — the kinds among the user's libraries; the switcher
+      shows when there are two
+    * `:sidebar_libraries` — the libraries of that kind (`:all_libraries`
+      holds every one)
+    * `:browse_access` — `:access` narrowed to those libraries
+
+  Home, the browse lists and search read `:browse_access`. Pages of one
+  book, series, creator or library keep `:access`, so links that cross
+  kinds still open.
+  """
+  def assign_library_kind(socket) do
+    %{current_user: user, all_libraries: libraries, access: access} = socket.assigns
+    present = MapSet.new(libraries, & &1.kind)
+    kinds = Enum.filter(Stashix.Library.Library.kinds(), &MapSet.member?(present, &1))
+    picked = Accounts.User.ui_setting(user, "library_kind")
+    kind = if length(kinds) > 1 and picked in Enum.map(kinds, &to_string/1), do: picked, else: "all"
+    shown = if kind == "all", do: libraries, else: Enum.filter(libraries, &(to_string(&1.kind) == kind))
+    browse_access = if kind == "all", do: access, else: Access.narrow(access, Enum.map(shown, & &1.id))
+
+    assign(socket, library_kind: kind, library_kinds: kinds, sidebar_libraries: shown, browse_access: browse_access)
+  end
+
+  # Saved to the account, then the page loads again with the new kind.
+  defp handle_library_kind("set_library_kind", %{"kind" => kind}, %{assigns: %{current_user: user}} = socket) do
+    case Accounts.update_ui_settings(user, %{"library_kind" => kind}) do
+      {:ok, user} ->
+        {:halt, push_navigate(assign(socket, current_user: user), to: socket.assigns[:current_path] || "/")}
+
+      {:error, _} ->
+        {:halt, socket}
+    end
+  end
+
+  defp handle_library_kind(_event, _params, socket), do: {:cont, socket}
 
   @doc """
   Sends the account's theme to the browser (app.js `phx:set-theme`), which sets

@@ -69,7 +69,7 @@ defmodule Stashix.Metadata.Matcher do
     book = Repo.preload(book, [:external_ids, series: :external_ids])
     query = book_query(book)
 
-    run_sources(query, settings, fn source, ctx ->
+    run_sources(query, settings, book.library_id, fn source, ctx ->
       case known_id(book.external_ids, source.module) do
         nil ->
           series_id = book.series && known_id(book.series.external_ids, source.module)
@@ -87,7 +87,7 @@ defmodule Stashix.Metadata.Matcher do
     series = Repo.preload(series, :external_ids)
     query = series_query(series)
 
-    run_sources(query, settings, fn source, ctx ->
+    run_sources(query, settings, series.library_id, fn source, ctx ->
       case known_id(series.external_ids, source.module) do
         nil ->
           with {:ok, candidates} <- search_series(source, ctx, query) do
@@ -100,8 +100,15 @@ defmodule Stashix.Metadata.Matcher do
     end)
   end
 
-  defp run_sources(query, settings, fun) do
-    sources = Enum.filter(Sources.enabled(), &Sources.configured?(&1.module, &1.config.config))
+  # Only sources for the library's kind: comic databases have nothing on novels.
+  defp run_sources(query, settings, library_id, fun) do
+    kind = Stashix.Library.library_kind(library_id)
+
+    sources =
+      Enum.filter(
+        Sources.enabled(),
+        &(Sources.configured?(&1.module, &1.config.config) and Sources.for_kind?(&1.module, kind))
+      )
 
     if sources == [] do
       {:error, :no_sources}

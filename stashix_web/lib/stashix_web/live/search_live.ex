@@ -30,7 +30,7 @@ defmodule StashixWeb.SearchLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    year_counts = Library.book_year_counts(socket.assigns.access)
+    year_counts = Library.book_year_counts(socket.assigns.browse_access)
 
     {:ok,
      assign(socket,
@@ -46,7 +46,7 @@ defmodule StashixWeb.SearchLive do
        type_counts: %{},
        total_pages: 1,
        progress_map: %{},
-       publishers: Library.list_publishers_with_books(socket.assigns.access),
+       publishers: Library.list_publishers_with_books(socket.assigns.browse_access),
        facets: facets(),
        # Facets nothing in the library uses stay out of the sidebar.
        facets_present: Enum.filter(@facet_keys, &Library.facet_any?(String.to_existing_atom(&1))),
@@ -57,7 +57,7 @@ defmodule StashixWeb.SearchLive do
        # File formats are extended book info; without it there's no format filter.
        formats:
          if(User.ui_setting(socket.assigns.current_user, "extended_book_info") == "on",
-           do: Enum.map(Library.book_formats_present(socket.assigns.access), &to_string/1),
+           do: Enum.map(Library.book_formats_present(socket.assigns.browse_access), &to_string/1),
            else: []
          ),
        types: types(),
@@ -104,7 +104,7 @@ defmodule StashixWeb.SearchLive do
        creator_suggestions:
          Library.search_creators(query,
            exclude: socket.assigns.params["creator"],
-           access: socket.assigns.access
+           access: socket.assigns.browse_access
          )
      )}
   end
@@ -121,7 +121,7 @@ defmodule StashixWeb.SearchLive do
        facet_suggestions:
          Library.search_facet_names(String.to_existing_atom(key), query,
            exclude: socket.assigns.params[key],
-           access: socket.assigns.access
+           access: socket.assigns.browse_access
          )
      )}
   end
@@ -315,7 +315,7 @@ defmodule StashixWeb.SearchLive do
     user_id = socket.assigns.current_user.id
     filters = build_filters(params, user_id)
     offset = (page - 1) * @page_size
-    access = socket.assigns.access
+    access = socket.assigns.browse_access
 
     {books, books_total} =
       case params["type"] do

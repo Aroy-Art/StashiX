@@ -31,6 +31,7 @@ defmodule StashixWeb.LibraryController do
         with_root_path(user, lib, %{
           id: lib.id,
           name: lib.name,
+          kind: lib.kind,
           book_count: Library.count_books(conn.assigns.access, lib.id),
           series_count: Library.count_series(conn.assigns.access, lib.id),
           inserted_at: lib.inserted_at
@@ -58,6 +59,7 @@ defmodule StashixWeb.LibraryController do
       with_root_path(Guardian.Plug.current_resource(conn), library, %{
         id: library.id,
         name: library.name,
+        kind: library.kind,
         standalone_folders: library.standalone_folders,
         book_count: Library.count_books(conn.assigns.access, library.id),
         series_count: Library.count_series(conn.assigns.access, library.id),
@@ -91,7 +93,7 @@ defmodule StashixWeb.LibraryController do
       {:ok, library} ->
         conn
         |> put_status(:created)
-        |> json(%{library: %{id: library.id, name: library.name, root_path: library.root_path}})
+        |> json(%{library: %{id: library.id, name: library.name, kind: library.kind, root_path: library.root_path}})
 
       {:error, changeset} ->
         conn
@@ -122,7 +124,7 @@ defmodule StashixWeb.LibraryController do
 
     case Library.update_library(library, params) do
       {:ok, updated} ->
-        json(conn, %{library: %{id: updated.id, name: updated.name, root_path: updated.root_path}})
+        json(conn, %{library: %{id: updated.id, name: updated.name, kind: updated.kind, root_path: updated.root_path}})
 
       {:error, changeset} ->
         conn

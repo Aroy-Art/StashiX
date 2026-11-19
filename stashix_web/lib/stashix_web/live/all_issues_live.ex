@@ -62,7 +62,7 @@ defmodule StashixWeb.AllIssuesLive do
 
   defp load_issues(socket, page) do
     opts = [
-      access: socket.assigns.access,
+      access: socket.assigns.browse_access,
       type: "issue",
       sort: socket.assigns.sort,
       library_id: socket.assigns.library_id,

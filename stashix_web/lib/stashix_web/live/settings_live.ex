@@ -208,7 +208,8 @@ defmodule StashixWeb.SettingsLive do
         theme: User.ui_setting(assigns.current_user, "theme"),
         read_mark: User.ui_setting(assigns.current_user, "read_mark"),
         extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info"),
-        data_saver: User.ui_setting(assigns.current_user, "data_saver")
+        data_saver: User.ui_setting(assigns.current_user, "data_saver"),
+        kind_switcher: User.ui_setting(assigns.current_user, "kind_switcher")
       )
 
     ~H"""
@@ -243,6 +244,48 @@ defmodule StashixWeb.SettingsLive do
           <p class="mt-2 flex items-center gap-1.5 font-display font-black uppercase text-xl leading-none text-fg">
             <.icon name={icon} class="w-4 h-4 text-muted" />{name}
           </p>
+          <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">{gettext("On")}</.sticker>
+        </label>
+      </form>
+    </.section>
+
+    <.section title={gettext("Comics / Books switcher")}>
+      <p class="max-w-xl -mt-1 mb-5 text-sm text-muted">
+        {gettext(
+          "Where the switch between comics and books libraries sits. It only shows when you can read libraries of both kinds."
+        )}
+      </p>
+      <form id="ui-settings-kind-switcher" phx-change="set_ui" class="grid grid-cols-2 gap-4 max-w-md">
+        <label
+          :for={
+            {value, name, blurb} <- [
+              {"sidebar", gettext("Sidebar"), gettext("At the top of the sidebar, under the logo.")},
+              {"top", gettext("Top bar"), gettext("A menu next to the search box, always in reach.")}
+            ]
+          }
+          class="choice-card group relative block p-3 rounded-md bg-surface ring-1 ring-edge cursor-pointer transition-shadow"
+        >
+          <input type="radio" name="kind_switcher" value={value} checked={@kind_switcher == value} class="sr-only" />
+          <%!-- A tiny app frame with the switcher marked in ink. --%>
+          <div
+            class="pointer-events-none flex h-16 rounded-sm bg-canvas ring-1 ring-edge overflow-hidden"
+            aria-hidden="true"
+          >
+            <div class="w-1/3 p-1.5 space-y-1 border-r border-edge">
+              <div :if={value == "sidebar"} class="h-2 rounded-sm bg-ink"></div>
+              <div class="h-1 w-3/4 rounded-full bg-muted"></div>
+              <div class="h-1 w-2/3 rounded-full bg-muted"></div>
+              <div class="h-1 w-3/4 rounded-full bg-muted"></div>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center gap-1 h-4 px-1.5 bg-band">
+                <div :if={value == "top"} class="h-2 w-5 rounded-sm bg-ink"></div>
+                <div class="h-1.5 flex-1 rounded-full bg-fg/20"></div>
+              </div>
+            </div>
+          </div>
+          <p class="mt-2 font-display font-black uppercase text-xl leading-none text-fg">{name}</p>
+          <p class="mt-1 text-xs text-muted">{blurb}</p>
           <.sticker size="xs" tilt={false} class="choice-card-on absolute top-2 right-2">{gettext("On")}</.sticker>
         </label>
       </form>
