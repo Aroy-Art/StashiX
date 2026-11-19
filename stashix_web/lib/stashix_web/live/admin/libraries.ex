@@ -15,6 +15,7 @@ defmodule StashixWeb.AdminLive.Libraries do
   attr :libraries, :any, required: true
   attr :scanning_libraries, :any, required: true
   attr :show_library_form, :any, required: true
+  attr :library_form_calibre, :boolean, default: false
   attr :file_watcher_status, :any, required: true
   attr :sources_ready, :boolean, required: true
 
@@ -54,14 +55,30 @@ defmodule StashixWeb.AdminLive.Libraries do
       <%= if @show_library_form do %>
         <div class="bg-surface border border-edge rounded-lg p-6">
           <h3 class="font-display font-black uppercase text-2xl leading-none text-fg mb-4">{gettext("Create Library")}</h3>
-          <form phx-submit="create_library" class="space-y-4">
+          <form id="library-form" phx-submit="create_library" phx-change="library_form_change" class="space-y-4">
             <.field label={gettext("Name")}>
               <.text_input name="name" required placeholder={gettext("My Comics")} />
             </.field>
             <.field label={gettext("Root Path")}>
-              <.text_input name="root_path" required placeholder="/libraries/comics" />
+              <.text_input name="root_path" required placeholder="/libraries/comics" phx-debounce="300" />
             </.field>
-            <.field label={gettext("Kind")} hint={kind_hint()}>
+            <label
+              :if={@library_form_calibre}
+              id="library-form-calibre"
+              class="flex gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
+            >
+              <input type="hidden" name="calibre" value="false" />
+              <input type="checkbox" name="calibre" value="true" checked class="mt-1 accent-ink" />
+              <span class="space-y-1 text-sm">
+                <span class="block font-medium text-fg">{gettext("Calibre library")}</span>
+                <span class="block text-fg-soft">
+                  {gettext(
+                    "This folder has a Calibre metadata.db. Stashix will follow it: books, metadata and covers come from Calibre and update when it changes. Keep editing in Calibre."
+                  )}
+                </span>
+              </span>
+            </label>
+            <.field :if={!@library_form_calibre} label={gettext("Kind")} hint={kind_hint()}>
               <.ink_select
                 id="new-library-kind"
                 name="kind"
@@ -90,8 +107,10 @@ defmodule StashixWeb.AdminLive.Libraries do
                 <p class="flex items-center gap-2 text-fg font-medium">
                   {lib.name}
                   <.chip id={"library-kind-label-#{lib.id}"}>{kind_label(lib.kind)}</.chip>
+                  <.chip :if={lib.source == :calibre} id={"library-source-label-#{lib.id}"}>Calibre</.chip>
                 </p>
                 <p class="text-muted text-sm">{lib.root_path}</p>
+                <.calibre_status :if={lib.source == :calibre} library={lib} />
                 <%= if lib.standalone_folders != [] do %>
                   <p class="text-xs text-muted mt-1">
                     {gettext("Standalone folders: %{folders}", folders: Enum.join(lib.standalone_folders, ", "))}
@@ -99,8 +118,9 @@ defmodule StashixWeb.AdminLive.Libraries do
                 <% end %>
               </div>
               <% scanning = MapSet.member?(@scanning_libraries, lib.id) %>
+              <% calibre = lib.source == :calibre %>
               <div class="flex gap-2 items-center">
-                <.ink_button variant="ghost" size="md" phx-click="edit_library" phx-value-id={lib.id}>
+                <.ink_button :if={!calibre} variant="ghost" size="md" phx-click="edit_library" phx-value-id={lib.id}>
                   {gettext("Settings")}
                 </.ink_button>
                 <.ink_button
@@ -111,7 +131,12 @@ defmodule StashixWeb.AdminLive.Libraries do
                   disabled={scanning}
                 >
                   <.icon :if={scanning} name="lucide-loader-circle" class="w-3.5 h-3.5 animate-spin" />
-                  {if scanning, do: gettext("Scanning…"), else: gettext("Scan")}
+                  {cond do
+                    scanning and calibre -> gettext("Syncing…")
+                    scanning -> gettext("Scanning…")
+                    calibre -> gettext("Sync now")
+                    true -> gettext("Scan")
+                  end}
                 </.ink_button>
                 <.ink_button
                   variant="warning"
@@ -119,10 +144,11 @@ defmodule StashixWeb.AdminLive.Libraries do
                   phx-click="force_scan_library"
                   phx-value-id={lib.id}
                   disabled={scanning}
+                  title={calibre && gettext("Rewrite every book from Calibre, changed or not")}
                 >
-                  {gettext("Force rescan")}
+                  {if calibre, do: gettext("Full resync"), else: gettext("Force rescan")}
                 </.ink_button>
-                <.needs_sources ready={@sources_ready} class="inline-flex">
+                <.needs_sources :if={!calibre} ready={@sources_ready} class="inline-flex">
                   <.ink_button
                     variant="ghost"
                     size="md"
@@ -199,6 +225,53 @@ defmodule StashixWeb.AdminLive.Libraries do
           </div>
         <% end %>
       </div>
+    </div>
+    """
+  end
+
+  attr :library, :any, required: true
+
+  # Last sync, its counts and any error, from `calibre_state`.
+  defp calibre_status(assigns) do
+    state = assigns.library.calibre_state || %{}
+    summary = state["summary"] || %{}
+
+    synced_at =
+      with at when is_binary(at) <- state["synced_at"],
+           {:ok, at} <- NaiveDateTime.from_iso8601(at),
+           do: at,
+           else: (_ -> nil)
+
+    skipped = summary["skipped_formats"] || %{}
+
+    assigns =
+      assign(assigns,
+        error: state["error"],
+        synced_at: synced_at,
+        books: summary["books"],
+        missing: summary["missing_files"] || 0,
+        failed: summary["failed"] || 0,
+        skipped: skipped |> Enum.sort() |> Enum.map_join(", ", fn {format, n} -> "#{format} (#{n})" end)
+      )
+
+    ~H"""
+    <div id={"calibre-status-#{@library.id}"} class="mt-1 space-y-0.5 text-xs">
+      <p :if={@synced_at} class="text-fg-soft">
+        {gettext("Synced")}
+        <.local_time id={"calibre-synced-#{@library.id}"} value={@synced_at} format="datetime" />
+        · {ngettext("1 book", "%{count} books", @books || 0)}
+        <span :if={@missing > 0} class="text-warn">
+          · {ngettext("1 file missing", "%{count} files missing", @missing)}
+        </span>
+        <span :if={@failed > 0} class="text-danger">
+          · {ngettext("1 book failed", "%{count} books failed", @failed)}
+        </span>
+      </p>
+      <p :if={!@synced_at and !@error} class="text-muted">{gettext("Not synced yet")}</p>
+      <p :if={@skipped != ""} class="text-muted">
+        {gettext("Formats Stashix can't read: %{formats}", formats: @skipped)}
+      </p>
+      <p :if={@error} class="text-danger">{gettext("Last sync failed: %{error}", error: @error)}</p>
     </div>
     """
   end

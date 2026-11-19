@@ -19,6 +19,7 @@ defmodule StashixWeb.AdminLive do
        errors: %{},
        show_user_form: false,
        show_library_form: false,
+       library_form_calibre: false,
        editing_library_id: nil,
        deleted_books: [],
        deleted_series: [],
@@ -159,18 +160,38 @@ defmodule StashixWeb.AdminLive do
         %{"name" => name, "root_path" => root_path} = params,
         socket
       ) do
-    case Library.create_library(%{name: name, root_path: root_path, kind: params["kind"] || "comics"}) do
-      {:ok, _lib} ->
+    calibre? = params["calibre"] == "true" and Stashix.Calibre.Snapshot.calibre_library?(root_path)
+
+    attrs =
+      if calibre?,
+        do: %{name: name, root_path: root_path, kind: "books", source: "calibre"},
+        else: %{name: name, root_path: root_path, kind: params["kind"] || "comics"}
+
+    case Library.create_library(attrs) do
+      {:ok, lib} ->
+        # A Calibre library has nothing to show until its first sync.
+        if calibre?, do: Stashix.Scanner.scan_library(lib.id)
+
         {:noreply,
          socket
          |> assign(:libraries, Library.list_libraries(%{role: :admin}))
-         |> assign(:show_library_form, false)
+         |> assign(show_library_form: false, library_form_calibre: false)
          |> put_flash(:info, gettext("Library created"))}
 
       {:error, changeset} ->
         errors = Ecto.Changeset.traverse_errors(changeset, &translate_error/1)
-        {:noreply, assign(socket, :errors, errors)}
+        message = errors |> Enum.flat_map(fn {field, msgs} -> Enum.map(msgs, &"#{field}: #{&1}") end) |> Enum.join("; ")
+
+        {:noreply,
+         socket
+         |> assign(:errors, errors)
+         |> put_flash(:error, gettext("Could not create library: %{reason}", reason: message))}
     end
+  end
+
+  def handle_event("library_form_change", params, socket) do
+    path = String.trim(params["root_path"] || "")
+    {:noreply, assign(socket, :library_form_calibre, path != "" and Stashix.Calibre.Snapshot.calibre_library?(path))}
   end
 
   def handle_event("delete_library", %{"id" => id}, socket) do
@@ -573,7 +594,11 @@ defmodule StashixWeb.AdminLive do
 
   @impl true
   def handle_info({:scan_progress, %{library_id: id, done: true}}, socket) do
-    {:noreply, update(socket, :scanning_libraries, &MapSet.delete(&1, id))}
+    # A Calibre sync's outcome is on the library row.
+    {:noreply,
+     socket
+     |> update(:scanning_libraries, &MapSet.delete(&1, id))
+     |> assign(:libraries, Library.list_libraries(%{role: :admin}))}
   end
 
   def handle_info({:scan_progress, %{library_id: id, scanned: s, total: t}}, socket) do
@@ -611,6 +636,7 @@ defmodule StashixWeb.AdminLive do
         libraries={@libraries}
         scanning_libraries={@scanning_libraries}
         show_library_form={@show_library_form}
+        library_form_calibre={@library_form_calibre}
         file_watcher_status={@file_watcher_status}
         sources_ready={@sources_ready}
       />

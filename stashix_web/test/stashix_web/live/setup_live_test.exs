@@ -56,4 +56,27 @@ defmodule StashixWeb.SetupLiveTest do
     assert has_element?(view, "#setup-library-kind")
     assert has_element?(view, "#setup-form input[name=library_kind][value=comics]")
   end
+
+  @tag :tmp_dir
+  test "a Calibre folder becomes a Calibre library", %{conn: conn, tmp_dir: tmp} do
+    root = Stashix.CalibreFixtures.make_library(Path.join(tmp, "Calibre"))
+    view = to_library_step(conn)
+
+    view |> element("#setup-form") |> render_change(%{"library_name" => "Books", "library_path" => root})
+    assert has_element?(view, "#setup-library-calibre")
+    refute has_element?(view, "#setup-library-kind")
+
+    post(
+      conn,
+      ~p"/setup",
+      Map.merge(@account, %{"library_name" => "Books", "library_path" => root, "library_calibre" => "true"})
+    )
+
+    assert %{source: :calibre, kind: :books} = lib = Repo.get_by!(Library, name: "Books")
+
+    # Setup started the first sync; let it end inside the test.
+    Enum.find_value(1..100, fn _ ->
+      Stashix.Scanner.get_task_status(lib.id)[:done] || (Process.sleep(50) && nil)
+    end)
+  end
 end

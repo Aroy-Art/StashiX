@@ -23,6 +23,7 @@ defmodule StashixWeb.SetupLive do
          trigger_submit: false,
          confirm_skip: false,
          skip_library: false,
+         library_calibre: false,
          account_form:
            to_form(%{
              "email" => "",
@@ -78,6 +79,17 @@ defmodule StashixWeb.SetupLive do
 
   def handle_event("back", _params, socket) do
     {:noreply, assign(socket, step: :account, library_errors: %{})}
+  end
+
+  # A folder holding a Calibre metadata.db is offered as a Calibre library.
+  def handle_event("library_change", params, socket) do
+    path = String.trim(params["library_path"] || "")
+
+    {:noreply,
+     assign(socket,
+       library_form: to_form(params),
+       library_calibre: path != "" and Stashix.Calibre.Snapshot.calibre_library?(path)
+     )}
   end
 
   def handle_event("submit", params, socket) do
@@ -144,6 +156,7 @@ defmodule StashixWeb.SetupLive do
         method="post"
         action={~p"/setup"}
         phx-submit="submit"
+        phx-change="library_change"
         phx-trigger-action={@trigger_submit}
         class="space-y-4"
       >
@@ -173,9 +186,26 @@ defmodule StashixWeb.SetupLive do
             required
             mono
             placeholder="/mnt/comics"
+            phx-debounce="300"
           />
         </.field>
-        <.field label={gettext("Kind")}>
+        <label
+          :if={@library_calibre}
+          id="setup-library-calibre"
+          class="flex gap-3 rounded-lg ring-1 ring-ink/40 bg-ink/[0.06] p-4 cursor-pointer"
+        >
+          <input type="hidden" name="library_calibre" value="false" />
+          <input type="checkbox" name="library_calibre" value="true" checked class="mt-1 accent-ink" />
+          <span class="space-y-1 text-sm">
+            <span class="block font-medium text-fg">{gettext("Calibre library")}</span>
+            <span class="block text-fg-soft">
+              {gettext(
+                "This folder has a Calibre metadata.db. Stashix will follow it: books, metadata and covers come from Calibre and update when it changes. Keep editing in Calibre."
+              )}
+            </span>
+          </span>
+        </label>
+        <.field :if={!@library_calibre} label={gettext("Kind")}>
           <.ink_select
             id="setup-library-kind"
             name="library_kind"

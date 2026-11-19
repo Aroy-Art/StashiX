@@ -219,8 +219,14 @@ without touching anything.
   path) is a no-op; match jobs cancel with `:calibre_library`. Overlap is
   refused when the library is saved (create and update), not at scan
   time. A failed cover no longer stops a sync.
-- [ ] Setup wizard + Admin → Libraries: detect `metadata.db`, offer
-  "Calibre library", show last sync, counts and errors.
+- [x] Setup wizard + Admin → Libraries: detect `metadata.db`, offer
+  "Calibre library", show last sync, counts and errors. *Done:* typing a
+  path that holds a `metadata.db` shows a ticked "Calibre library" box
+  (and hides Kind: always books); creating one starts its first sync.
+  The row gets a Calibre chip, "Synced … · N books · N files missing",
+  unreadable formats and the last error; Scan / Force rescan read "Sync
+  now" / "Full resync"; Settings and Match Metadata are hidden. The
+  library API returns `source` and takes it on create.
 - [ ] Edit dialog: Calibre-owned fields read-only with "Edited in
   Calibre" (D7).
 - [ ] Browser-check against a copy of the real library; tests for
