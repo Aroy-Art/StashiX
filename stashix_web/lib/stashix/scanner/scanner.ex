@@ -1049,6 +1049,9 @@ defmodule Stashix.Scanner do
     collect_recursive(next_dirs, files ++ new_files)
   end
 
+  @doc "A book file's page count (text formats: reader locations), 0 when unknown."
+  def page_count(file_path), do: resolve_page_count(%{}, file_path, 0)
+
   # The reader pages through what the extractor lists (credit pages excluded), so that
   # count wins over ComicInfo's PageCount — otherwise the last page is never reached.
   # A text EPUB, Kindle or FictionBook book has no pages: its count is the
@@ -1103,13 +1106,17 @@ defmodule Stashix.Scanner do
     end
   end
 
-  defp generate_thumbnail(book, file_path) do
+  @doc """
+  Makes the book's cover from `image` (Calibre's `cover.jpg`), else the
+  file's sidecar image, else the file's first page.
+  """
+  def generate_thumbnail(book, file_path, image \\ nil) do
     thumb_dir = Application.get_env(:stashix, :thumbnail_dir, "/tmp/stashix/thumbnails")
     File.mkdir_p!(thumb_dir)
     dest = Path.join(thumb_dir, "#{book.id}.jpg")
 
     result =
-      case find_sidecar_image(file_path) do
+      case image || find_sidecar_image(file_path) do
         nil -> Thumbnail.generate(file_path, dest)
         sidecar -> File.cp(sidecar, dest)
       end

@@ -186,13 +186,20 @@ without touching anything.
   `urn`, …) aren't stored — one row per source leaves no room for an
   "Unknown" per type. Formats Stashix can't read (KEPUB, TXT, …) are
   listed in `skipped_formats`.
-- [ ] `Stashix.Calibre.Sync`: diff by fingerprint (D5), upsert series →
+- [x] `Stashix.Calibre.Sync`: diff by fingerprint (D5), upsert series →
   books → credits/tags/publishers/external ids → files, soft-delete books
   gone from Calibre, keep missing files as missing (D10). Batched
   transactions; one PubSub progress stream like scans.
-- [ ] Files: stat each `data` file; hash, page count / content kind and
+- [x] Files: stat each `data` file; hash, page count / content kind and
   cover only for new or changed files (size/mtime), reusing the scanner's
-  per-file steps.
+  per-file steps. *Done (with Sync, one commit):* a book is visible while
+  it's in Calibre and has a file on disk; a book back in Calibre under its
+  uuid is revived. Series match by Calibre id when the name still fits,
+  else by name (rebuilds renumber them), else by id (renamed). Covers from
+  `cover.jpg`, else the preferred file's first page; redone when the
+  book's fingerprint or files change. Outcome and counts (added, updated,
+  unchanged, removed, missing files, skipped formats, errors) go to
+  `libraries.calibre_state`.
 - [ ] Triggers: watcher on `metadata.db`, debounce, stamp poll (D10);
   "Sync now" and "Full resync" (ignores fingerprints) in Admin →
   Libraries; sync runs where scans run so the queue UI shows it.
