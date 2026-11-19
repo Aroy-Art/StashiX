@@ -555,8 +555,13 @@ defmodule StashixWeb.HomeLive do
                 else: "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4"
               )
             ]}>
+              <%!-- Two across in the side column: an odd last card takes the right-hand slot, against the page edge --%>
               <.collection_card
-                :for={data <- @shown_libraries}
+                :for={{data, i} <- Enum.with_index(@shown_libraries, 1)}
+                class={
+                  @queues? && @libraries_pair? && i == length(@shown_libraries) && rem(i, 2) == 1 &&
+                    "2xl:col-start-2"
+                }
                 navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
                 library_kind={data.library.kind}
