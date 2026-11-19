@@ -424,6 +424,7 @@ defmodule StashixWeb.CoreComponents do
   attr :scope, :string, default: nil
   attr :subtitle, :string, default: nil, doc: "replaces the years"
   attr :badge, :string, default: nil, doc: "replaces the issue count"
+  attr :novels, :boolean, default: false, doc: "count books rather than issues (prose libraries)"
   attr :class, :string, default: ""
 
   def series_card(assigns) do
@@ -436,7 +437,7 @@ defmodule StashixWeb.CoreComponents do
       subtitle={@subtitle || Stashix.Formatters.series_years(@series)}
       badge={
         @badge ||
-          (@series.issue_count && ngettext("1 issue", "%{count} issues", @series.issue_count))
+          (@series.issue_count && series_count_label(@series.issue_count, @novels))
       }
       type={:series}
       blurhash={@series.cover_blurhash}
@@ -447,13 +448,20 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  @doc "How many books a series holds: issues, or books in a prose library."
+  def series_count_label(count, novels? \\ false)
+  def series_count_label(count, true), do: ngettext("1 book", "%{count} books", count)
+  def series_count_label(count, _), do: ngettext("1 issue", "%{count} issues", count)
+
   @doc """
   `media_card/1` for a book. `as={:issue}` puts the issue number in the title
   and on a sticker and names the series underneath; the default shows the
-  year and the page count. `read` is the share of the book read so far, 0..1.
+  year and the page count. `as={:novel}` is for prose: a book in a series
+  gets "Book 3" on the sticker and the series underneath, a standalone one
+  the year. `read` is the share of the book read so far, 0..1.
   """
   attr :book, :map, required: true
-  attr :as, :atom, default: :book, values: [:book, :issue]
+  attr :as, :atom, default: :book, values: [:book, :issue, :novel]
   attr :read, :float, default: nil
   attr :size, :string, default: "m"
   attr :scope, :string, default: nil
@@ -463,13 +471,20 @@ defmodule StashixWeb.CoreComponents do
   def book_card(assigns) do
     book = assigns.book
     issue? = assigns.as == :issue
-    series = if issue? and Ecto.assoc_loaded?(book.series), do: book.series
+    novel? = assigns.as == :novel
+    series = if (issue? or novel?) and Ecto.assoc_loaded?(book.series), do: book.series
     year = book.year && to_string(book.year)
-    number = issue? && Stashix.Formatters.book_number_label(book, book.series_volume_counts || %{})
+
+    number =
+      cond do
+        issue? -> Stashix.Formatters.book_number_label(book, book.series_volume_counts || %{})
+        (novel? and series) && book.issue_number -> novel_number(book.issue_number)
+        true -> nil
+      end
 
     assigns =
       assign(assigns,
-        title: if(number, do: "#{number} – #{book.title}", else: book.title),
+        title: if(number && issue?, do: "#{number} – #{book.title}", else: book.title),
         subtitle: assigns.subtitle || (series && series.name) || year,
         badge: number,
         progress: assigns.read,
@@ -485,7 +500,7 @@ defmodule StashixWeb.CoreComponents do
       subtitle={@subtitle}
       badge={@badge}
       progress={@progress}
-      page_count={if @as == :book, do: @book.page_count}
+      page_count={if @as != :issue, do: @book.page_count}
       type={:book}
       blurhash={@blurhash || nil}
       scope={@scope}
@@ -493,6 +508,8 @@ defmodule StashixWeb.CoreComponents do
     />
     """
   end
+
+  defp novel_number(n), do: gettext("Book %{number}", number: Stashix.Formatters.format_issue_number(n))
 
   @doc """
   Compact row for a book or series in a list: small cover, a line naming what

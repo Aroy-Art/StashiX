@@ -63,7 +63,8 @@ defmodule StashixWeb.AllBooksLive do
   defp load_books(socket, page) do
     opts = [
       access: socket.assigns.browse_access,
-      type: "standalone",
+      # Prose libraries have no issues: everything is a book.
+      type: if(!socket.assigns.books_mode, do: "standalone"),
       sort: socket.assigns.sort,
       library_id: socket.assigns.library_id,
       limit: @page_size,
@@ -99,7 +100,9 @@ defmodule StashixWeb.AllBooksLive do
         <:meta>
           <span>
             <span class="text-fg font-semibold">{@total}</span>
-            {ngettext("standalone book", "standalone books", @total)}
+            {if @books_mode,
+              do: ngettext("book", "books", @total),
+              else: ngettext("standalone book", "standalone books", @total)}
           </span>
           <span :if={@total_pages > 1}>{gettext("page %{page} of %{count}", page: @page, count: @total_pages)}</span>
         </:meta>
@@ -115,7 +118,12 @@ defmodule StashixWeb.AllBooksLive do
       <%= if @books != [] do %>
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
         <.cover_grid>
-          <.book_card :for={book <- @books} book={book} read={@progress_map[book.id]} />
+          <.book_card
+            :for={book <- @books}
+            book={book}
+            read={@progress_map[book.id]}
+            as={if @books_mode, do: :novel, else: :book}
+          />
         </.cover_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />
       <% end %>

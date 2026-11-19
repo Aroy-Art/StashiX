@@ -75,15 +75,17 @@
         <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Main")}>
           <.nav_item
             :for={
-              {label, to, icon} <- [
-                {gettext("Home"), "/", "lucide-house"},
-                {gettext("Search"), "/search", "lucide-search"},
-                {gettext("Series"), "/series", "lucide-book-copy"},
-                {gettext("Books"), "/books", "lucide-library-big"},
-                {gettext("Issues"), "/issues", "lucide-layers"},
-                {gettext("Publishers"), "/publishers", "lucide-building"},
-                {gettext("Stats"), "/stats", "lucide-chart-bar"}
-              ]
+              {label, to, icon} <-
+                [
+                  {gettext("Home"), "/", "lucide-house"},
+                  {gettext("Search"), "/search", "lucide-search"},
+                  {gettext("Series"), "/series", "lucide-book-copy"},
+                  {gettext("Books"), "/books", "lucide-library-big"},
+                  !assigns[:books_mode] && {gettext("Issues"), "/issues", "lucide-layers"},
+                  {gettext("Publishers"), "/publishers", "lucide-building"},
+                  {gettext("Stats"), "/stats", "lucide-chart-bar"}
+                ]
+                |> Enum.filter(& &1)
             }
             navigate={to}
             icon={icon}

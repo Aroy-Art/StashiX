@@ -312,14 +312,16 @@ UI settled 2026-11-18:
   as `:browse_access` (`Access.narrow/2`), which home, the browse lists,
   publishers, search and the navbar quick search read; book, series,
   creator and library pages keep full access so links across kinds open.
-- [ ] Kind sets defaults: reader (image vs text), metadata sources, card
-  shape, labels ("issue" vs "book"). *Done so far:* reader — an unknown
-  content kind opens text formats in the text reader in a books library
+- [x] Kind sets defaults: reader (image vs text), metadata sources, card
+  shape, labels ("issue" vs "book"). *Done:* reader — an unknown content
+  kind opens text formats in the text reader in a books library
   (`Library.reader_kind/2`); metadata — automatic matching only asks
   sources for the library's kind (`Source.library_kinds/0`, default
   `[:comics]`; all three current sources are comic databases, so books
-  libraries match nothing until a book source exists). Card shape and
-  labels still to decide.
+  libraries match nothing until a book source exists); labels — when every
+  library shown holds books (`:books_mode`), the nav drops Issues, /books
+  and the home shelf list every book, cards read "Book 3" (`as={:novel}`)
+  and series count books. Card shape stays the same (2:3 covers suit both).
 
 Order: library switcher → OPDS → Kobo sync (settled 2026-11-17; Kobo reuses
 OPDS's per-user tokens and feed queries).

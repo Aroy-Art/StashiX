@@ -2466,7 +2466,7 @@ defmodule Stashix.Library do
         where: is_nil(b.deleted_at),
         order_by: [desc: b.inserted_at],
         limit: ^limit,
-        preload: [:cover]
+        preload: [:cover, :series]
 
     query = in_library(query, library_id)
 

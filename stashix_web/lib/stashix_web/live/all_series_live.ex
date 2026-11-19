@@ -107,7 +107,7 @@ defmodule StashixWeb.AllSeriesLive do
         <.pagination id="page-top" page={@page} total_pages={@total_pages} />
         <.cover_grid>
           <%= for s <- @series do %>
-            <.series_card series={s} />
+            <.series_card series={s} novels={@books_mode} />
           <% end %>
         </.cover_grid>
         <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />

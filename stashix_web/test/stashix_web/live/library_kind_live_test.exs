@@ -62,6 +62,38 @@ defmodule StashixWeb.LibraryKindLiveTest do
       refute html =~ "Ka-Pow Annual"
     end
 
+    test "books mode lists every book in one list, numbered as books", %{conn: conn, user: user, books: books} do
+      {:ok, series} =
+        Library.create_or_find_series(%{library_id: books.id, name: "Tide Cycle", path: "/tmp/kinds-books/Tide Cycle"})
+
+      {:ok, _} =
+        Library.create_book(%{
+          library_id: books.id,
+          series_id: series.id,
+          type: "issue",
+          title: "The Second Tide",
+          issue_number: 2
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/books")
+      assert has_element?(view, "#sidebar a[href='/issues']")
+      refute render(view) =~ "The Second Tide"
+
+      {:ok, _} = Accounts.update_ui_settings(user, %{"library_kind" => "books"})
+
+      {:ok, view, html} = live(conn, ~p"/books")
+      refute has_element?(view, "#sidebar a[href='/issues']")
+      assert html =~ "Quiet Lighthouse"
+      assert html =~ "The Second Tide"
+      assert html =~ "Book 2"
+      refute html =~ "#2"
+
+      {:ok, view, html} = live(conn, ~p"/")
+      refute has_element?(view, "#home-recent-issues")
+      assert has_element?(view, "#home-recent-books", "The Second Tide")
+      assert html =~ "1 book"
+    end
+
     test "a book of the other kind still opens from a link", %{conn: conn, user: user, comic: comic} do
       {:ok, _} = Accounts.update_ui_settings(user, %{"library_kind" => "books"})
 

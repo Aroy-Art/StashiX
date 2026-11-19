@@ -48,12 +48,13 @@ defmodule StashixWeb.HomeLive do
   # The recent shelves draw from every library unless one is picked in the
   # dropdown above them. The pick is kept in the user's settings.
   defp assign_recent(socket) do
-    %{browse_access: access, recent_library: library} = socket.assigns
+    %{browse_access: access, recent_library: library, books_mode: books_mode} = socket.assigns
 
+    # Prose libraries have no issues: one shelf holds every book.
     assign(socket,
       recent_series: Library.recent_series(access, library, @recent_limit),
-      recent_books: Library.recent_books(access, library, @recent_limit, "standalone"),
-      recent_issues: Library.recent_issues(access, library, @recent_limit)
+      recent_books: Library.recent_books(access, library, @recent_limit, if(!books_mode, do: "standalone")),
+      recent_issues: if(books_mode, do: [], else: Library.recent_issues(access, library, @recent_limit))
     )
   end
 
@@ -293,7 +294,7 @@ defmodule StashixWeb.HomeLive do
     }
   end
 
-  defp hero(%{spotlight: {:series, series}}) do
+  defp hero(%{spotlight: {:series, series}} = assigns) do
     %{
       id: "home-hero-#{series.id}",
       eyebrow: gettext("Discover a series"),
@@ -304,7 +305,7 @@ defmodule StashixWeb.HomeLive do
       meta:
         Enum.reject(
           [
-            series.issue_count && ngettext("1 issue", "%{count} issues", series.issue_count),
+            series.issue_count && series_count_label(series.issue_count, assigns[:books_mode]),
             Stashix.Formatters.series_years(series)
           ],
           &is_nil/1
@@ -517,7 +518,7 @@ defmodule StashixWeb.HomeLive do
                   eyebrow={gettext("Series")}
                   detail={
                     [
-                      s.issue_count && ngettext("1 issue", "%{count} issues", s.issue_count),
+                      s.issue_count && series_count_label(s.issue_count, @books_mode),
                       Stashix.Formatters.series_years(s)
                     ]
                     |> Enum.filter(& &1)
@@ -581,7 +582,13 @@ defmodule StashixWeb.HomeLive do
           <:actions>
             <.view_all to={~p"/series"} />
           </:actions>
-          <.series_card :for={s <- @recent_series} series={s} scope="recent-series" class="flex-shrink-0 w-36" />
+          <.series_card
+            :for={s <- @recent_series}
+            series={s}
+            novels={@books_mode}
+            scope="recent-series"
+            class="flex-shrink-0 w-36"
+          />
           <.recent_empty :if={@recent_series == []} kind="series" library={@recent_library_name} />
         </.shelf>
 
@@ -589,11 +596,21 @@ defmodule StashixWeb.HomeLive do
           <:actions>
             <.view_all to={~p"/books"} />
           </:actions>
-          <.book_card :for={book <- @recent_books} book={book} scope="recent-books" class="flex-shrink-0 w-36" />
+          <.book_card
+            :for={book <- @recent_books}
+            book={book}
+            as={if @books_mode, do: :novel, else: :book}
+            scope="recent-books"
+            class="flex-shrink-0 w-36"
+          />
           <.recent_empty :if={@recent_books == []} kind="books" library={@recent_library_name} />
         </.shelf>
 
-        <.shelf :if={@recent_issues != [] or @recent_library} id="home-recent-issues" title={gettext("Recent issues")}>
+        <.shelf
+          :if={!@books_mode and (@recent_issues != [] or @recent_library)}
+          id="home-recent-issues"
+          title={gettext("Recent issues")}
+        >
           <:actions>
             <.view_all to={~p"/issues"} />
           </:actions>

@@ -225,6 +225,8 @@ defmodule StashixWeb.Live.Hooks do
     * `:sidebar_libraries` — the libraries of that kind (`:all_libraries`
       holds every one)
     * `:browse_access` — `:access` narrowed to those libraries
+    * `:books_mode` — every library shown holds books (prose): one Books
+      list instead of Books + Issues, and "Book 3" rather than "#3"
 
   Home, the browse lists and search read `:browse_access`. Pages of one
   book, series, creator or library keep `:access`, so links that cross
@@ -239,7 +241,15 @@ defmodule StashixWeb.Live.Hooks do
     shown = if kind == "all", do: libraries, else: Enum.filter(libraries, &(to_string(&1.kind) == kind))
     browse_access = if kind == "all", do: access, else: Access.narrow(access, Enum.map(shown, & &1.id))
 
-    assign(socket, library_kind: kind, library_kinds: kinds, sidebar_libraries: shown, browse_access: browse_access)
+    books_mode = shown != [] and Enum.all?(shown, &(&1.kind == :books))
+
+    assign(socket,
+      library_kind: kind,
+      library_kinds: kinds,
+      sidebar_libraries: shown,
+      browse_access: browse_access,
+      books_mode: books_mode
+    )
   end
 
   # Saved to the account, then the page loads again with the new kind.
