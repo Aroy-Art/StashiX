@@ -71,6 +71,16 @@
           kind={assigns[:library_kind] || "all"}
           kinds={assigns[:library_kinds] || []}
           placement="sidebar"
+          class="max-lg:hidden"
+        />
+        <%!-- Small screens: a menu row in the drawer, whatever the setting. --%>
+        <.kind_switcher
+          id="kind-switcher-drawer"
+          item_prefix="kind-drawer"
+          class="lg:hidden"
+          kind={assigns[:library_kind] || "all"}
+          kinds={assigns[:library_kinds] || []}
+          placement="drawer"
         />
         <%!-- Main Nav --%>
         <nav class="flex-1 p-2 space-y-0.5 overflow-y-auto" aria-label={gettext("Main")}>
@@ -215,6 +225,7 @@
           kind={assigns[:library_kind] || "all"}
           kinds={assigns[:library_kinds] || []}
           placement="top"
+          class="max-lg:hidden"
         />
 
         <% navbar_query = Map.get(assigns, :navbar_search_query, "")

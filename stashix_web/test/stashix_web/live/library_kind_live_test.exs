@@ -109,6 +109,8 @@ defmodule StashixWeb.LibraryKindLiveTest do
 
       assert has_element?(view, "header #kind-switcher")
       refute has_element?(view, "#sidebar #kind-switcher")
+      # Small screens: the drawer keeps a menu copy, as the top bar is too narrow.
+      assert has_element?(view, "#sidebar .lg\\:hidden #kind-switcher-drawer #kind-drawer-all")
     end
   end
 

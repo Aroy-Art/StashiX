@@ -68,20 +68,27 @@ defmodule StashixWeb.Layouts do
   The Comics/Books switcher (`StashixWeb.Live.Hooks.assign_library_kind/1`):
   a row of segments in the sidebar, or a menu in the top bar. Shows only
   when the user's libraries are of more than one kind.
+
+  Below `lg` neither shows: the sidebar drawer carries a menu row styled
+  like the theme menu instead (`placement="drawer"`). `id` and
+  `item_prefix` keep that copy's ids apart from the others.
   """
   attr :kind, :string, required: true
   attr :kinds, :list, required: true
-  attr :placement, :string, values: ~w(sidebar top), required: true
+  attr :placement, :string, values: ~w(sidebar top drawer), required: true
+  attr :id, :string, default: "kind-switcher"
+  attr :item_prefix, :string, default: "kind"
+  attr :class, :string, default: nil
 
   def kind_switcher(%{kinds: kinds} = assigns) when length(kinds) < 2, do: ~H""
 
   def kind_switcher(%{placement: "sidebar"} = assigns) do
     ~H"""
-    <div id="kind-switcher" class="px-2 pt-2">
+    <div id={@id} class={["px-2 pt-2", @class]}>
       <.segmented class="w-full" role="group" aria-label={gettext("Show libraries")}>
         <.segment
           :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
-          id={"kind-#{kind}"}
+          id={"#{@item_prefix}-#{kind}"}
           active={@kind == kind}
           phx-click="set_library_kind"
           phx-value-kind={kind}
@@ -95,9 +102,27 @@ defmodule StashixWeb.Layouts do
     """
   end
 
+  def kind_switcher(%{placement: "drawer"} = assigns) do
+    ~H"""
+    <div class={["p-2 border-b border-fg/10", @class]}>
+      <.ink_menu id={@id} align="start" class="flex w-full" panel_class="w-44">
+        <:trigger
+          label={gettext("Show libraries: %{kind}", kind: kind_label(@kind))}
+          class="flex items-center gap-3 w-full px-3 py-2 rounded-sm font-display font-bold uppercase tracking-[0.07em] text-sm text-muted hover:text-fg hover:bg-fg/[0.06] transition-colors"
+        >
+          <.icon name={kind_icon(@kind)} class="w-4 h-4 text-ink" />
+          <span class="text-fg-soft">{kind_title(@kind)}</span>
+          <.icon name="lucide-chevron-down" class="ml-auto w-3.5 h-3.5 text-faint" />
+        </:trigger>
+        <.kind_menu_items kind={@kind} kinds={@kinds} item_prefix={@item_prefix} />
+      </.ink_menu>
+    </div>
+    """
+  end
+
   def kind_switcher(assigns) do
     ~H"""
-    <.ink_menu id="kind-switcher" align="start" panel_class="w-44" class="shrink-0">
+    <.ink_menu id={@id} align="start" panel_class="w-44" class={"shrink-0 #{@class}"}>
       <:trigger
         label={gettext("Show libraries: %{kind}", kind: kind_label(@kind))}
         class="flex items-center gap-1.5 h-9 px-2 sm:px-2.5 rounded-md text-sm text-fg-soft ring-1 ring-fg/15 hover:text-fg hover:bg-fg/10 transition-colors"
@@ -106,18 +131,28 @@ defmodule StashixWeb.Layouts do
         <span class="hidden sm:inline font-display font-bold uppercase tracking-[0.07em]">{kind_label(@kind)}</span>
         <.icon name="lucide-chevron-down" class="hidden sm:block w-3.5 h-3.5 text-muted" />
       </:trigger>
-      <.menu_label>{gettext("Show libraries")}</.menu_label>
-      <.menu_item
-        :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
-        id={"kind-#{kind}"}
-        icon={kind_icon(kind)}
-        active={@kind == kind}
-        phx-click="set_library_kind"
-        phx-value-kind={kind}
-      >
-        {kind_title(kind)}
-      </.menu_item>
+      <.kind_menu_items kind={@kind} kinds={@kinds} item_prefix={@item_prefix} />
     </.ink_menu>
+    """
+  end
+
+  attr :kind, :string, required: true
+  attr :kinds, :list, required: true
+  attr :item_prefix, :string, required: true
+
+  defp kind_menu_items(assigns) do
+    ~H"""
+    <.menu_label>{gettext("Show libraries")}</.menu_label>
+    <.menu_item
+      :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
+      id={"#{@item_prefix}-#{kind}"}
+      icon={kind_icon(kind)}
+      active={@kind == kind}
+      phx-click="set_library_kind"
+      phx-value-kind={kind}
+    >
+      {kind_title(kind)}
+    </.menu_item>
     """
   end
 
