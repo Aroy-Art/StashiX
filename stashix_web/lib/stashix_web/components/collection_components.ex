@@ -138,6 +138,7 @@ defmodule StashixWeb.CollectionComponents do
   attr :stats, :list, default: [], doc: "[{label, count}]; zero counts are skipped"
   attr :note, :string, default: nil, doc: "dim text shown when every count is zero"
   attr :icon, :string, default: "lucide-library"
+  attr :library_kind, :atom, default: nil, values: [nil, :comics, :books], doc: "see `kind_mark/1`"
   attr :class, :any, default: nil
   slot :menu
   slot :inner_block
@@ -171,6 +172,7 @@ defmodule StashixWeb.CollectionComponents do
           />
           <div :if={@covers != []} class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-gray-950/80 to-transparent">
           </div>
+          <.kind_mark :if={@library_kind} kind={@library_kind} class="absolute top-2 right-2" />
         </div>
         <div class="px-4 pt-3 pb-4">
           <div class="flex items-start justify-between gap-2">

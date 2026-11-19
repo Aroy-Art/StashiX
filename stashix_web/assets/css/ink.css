@@ -460,6 +460,19 @@
   display: flex;
 }
 
+/* A card's library kind shows only with comics and books side by side: the
+   layout sets data-mixed-kinds when the switcher is on All. */
+.kind-mark {
+  display: none;
+}
+[data-mixed-kinds] .kind-mark {
+  display: flex;
+}
+/* The READ stamp tilts up into the top-right corner; drop it below the mark. */
+[data-mixed-kinds] .read-stamp {
+  top: 24%;
+}
+
 /* Settings: a choice card lights up in ink when its radio is checked. */
 .choice-card:hover {
   box-shadow: 0 0 0 1px var(--color-edge-hover);

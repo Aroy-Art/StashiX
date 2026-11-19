@@ -966,6 +966,7 @@ defmodule StashixWeb.SearchLive do
                 page_count={b.page_count}
                 type={:book}
                 blurhash={b.cover && b.cover.blurhash}
+                library_kind={Stashix.Library.cached_library_kind(b.library_id)}
               />
             </.cover_grid>
             <.show_more total={@standalone_books_total} type="standalone" />
@@ -991,6 +992,7 @@ defmodule StashixWeb.SearchLive do
                 page_count={book.page_count}
                 type={:book}
                 blurhash={book.cover && book.cover.blurhash}
+                library_kind={Stashix.Library.cached_library_kind(book.library_id)}
               />
             </.cover_grid>
             <.show_more :if={@params["type"] == "all"} total={@books_total} type="issue" />

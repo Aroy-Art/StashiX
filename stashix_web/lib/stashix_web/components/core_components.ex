@@ -297,6 +297,9 @@ defmodule StashixWeb.CoreComponents do
     * `type` — `:book` or `:series`, picks the placeholder icon
     * `stack` — more covers of the same series; they slide out from behind on
       hover and are only fetched then
+    * `library_kind` — `:comics` or `:books`, marked in the top-right corner.
+      The mark shows only while the layout carries `data-mixed-kinds`: the
+      Comics/Books switcher is on All and both kinds are shown (see ink.css).
   """
   attr :navigate, :any, required: true
   attr :title, :string, required: true
@@ -310,6 +313,7 @@ defmodule StashixWeb.CoreComponents do
   attr :page_count, :integer, default: nil
   attr :blurhash, :string, default: nil
   attr :stack, :list, default: [], doc: "up to two more cover URLs, fanned out behind the cover on hover"
+  attr :library_kind, :atom, default: nil, values: [nil, :comics, :books]
 
   attr :scope, :string,
     default: nil,
@@ -330,6 +334,7 @@ defmodule StashixWeb.CoreComponents do
       |> assign(:cover_id, "cover-#{:erlang.phash2({assigns.scope, assigns.navigate})}")
       |> assign(:read, is_number(assigns.progress) and assigns.progress >= 1.0)
       |> assign(:fallback_icon, if(assigns.type == :series, do: "lucide-book-copy", else: "lucide-book-open"))
+      |> assign(:page_count_shown, assigns.type == :book and (assigns.page_count || 0) > 0)
 
     ~H"""
     <.link navigate={@navigate} data-read-mark={@read_mark} class={["media-card group relative block min-w-0", @class]}>
@@ -341,7 +346,7 @@ defmodule StashixWeb.CoreComponents do
           style={"--src: url('#{url}')"}
           aria-hidden="true"
         ></span>
-        <div class="media-card-cover relative aspect-[2/3] rounded-md overflow-hidden bg-raised ring-1 ring-edge">
+        <div class="media-card-cover @container relative aspect-[2/3] rounded-md overflow-hidden bg-raised ring-1 ring-edge">
           <%= if @img_src do %>
             <.blurhash_image
               id={@cover_id}
@@ -372,17 +377,11 @@ defmodule StashixWeb.CoreComponents do
           <.sticker :if={@badge} size="xs" tilt={false} class="absolute bottom-2 left-2 max-w-[calc(100%-1rem)] truncate">
             {@badge}
           </.sticker>
-          <span
-            :if={@type == :book && @page_count && @page_count > 0}
-            class={[
-              "absolute right-2 flex items-center gap-0.5 px-1 rounded-sm bg-canvas/70 text-[10px] font-semibold text-fg-soft tabular-nums",
-              if(@badge, do: "top-2", else: "bottom-2")
-            ]}
-            title={"#{@page_count} pages"}
-          >
-            <.icon name="lucide-sticky-note" class="w-2.5 h-2.5 shrink-0" />
-            {@page_count}
-          </span>
+          <div class="absolute top-2 right-2 flex items-center gap-1">
+            <.page_tally :if={@badge && @page_count_shown} count={@page_count} />
+            <.kind_mark :if={@library_kind} kind={@library_kind} fit />
+          </div>
+          <.page_tally :if={!@badge && @page_count_shown} count={@page_count} class="absolute bottom-2 right-2" />
 
           <span
             :if={@read}
@@ -418,6 +417,49 @@ defmodule StashixWeb.CoreComponents do
     """
   end
 
+  attr :count, :integer, required: true
+  attr :class, :string, default: nil
+
+  defp page_tally(assigns) do
+    ~H"""
+    <span
+      class={[
+        "flex items-center gap-0.5 px-1 rounded-sm bg-canvas/70 text-[10px] font-semibold text-fg-soft tabular-nums",
+        @class
+      ]}
+      title={"#{@count} pages"}
+    >
+      <.icon name="lucide-sticky-note" class="w-2.5 h-2.5 shrink-0" />
+      {@count}
+    </span>
+    """
+  end
+
+  @doc """
+  Sticker naming a library's kind: comics in ink, books in the button violet.
+  Hidden unless the layout carries `data-mixed-kinds` (see ink.css). `fit`
+  drops the label, leaving the icon, when the enclosing `@container` is
+  narrower than a card in a desktop grid.
+  """
+  attr :kind, :atom, required: true, values: [:comics, :books]
+  attr :fit, :boolean, default: false
+  attr :class, :any, default: nil
+
+  def kind_mark(assigns) do
+    ~H"""
+    <span class={[
+      "kind-mark items-center gap-1 h-5 px-1.5 rounded-sm font-display font-black uppercase text-[11px] tracking-wider leading-none shadow-[0_1px_4px_rgb(0_0_0/0.5)]",
+      if(@kind == :books, do: "bg-violet-600 text-white", else: "bg-ink text-zinc-950"),
+      @class
+    ]}>
+      <.icon name={if @kind == :books, do: "lucide-book-open-text", else: "lucide-book-image"} class="w-3 h-3 shrink-0" />
+      <span class={@fit && "sr-only @[8.5rem]:not-sr-only"}>
+        {if @kind == :books, do: gettext("Books"), else: gettext("Comics")}
+      </span>
+    </span>
+    """
+  end
+
   @doc "`media_card/1` for a series: years, issue count and the fanned stack of its next covers."
   attr :series, :map, required: true
   attr :size, :string, default: "m"
@@ -442,6 +484,7 @@ defmodule StashixWeb.CoreComponents do
       type={:series}
       blurhash={@series.cover_blurhash}
       stack={Enum.map(Map.get(@series, :stack_book_ids) || [], &"/api/books/#{&1}/cover?s=s")}
+      library_kind={Stashix.Library.cached_library_kind(Map.get(@series, :library_id))}
       scope={@scope}
       class={@class}
     />
@@ -503,6 +546,7 @@ defmodule StashixWeb.CoreComponents do
       page_count={if @as != :issue, do: @book.page_count}
       type={:book}
       blurhash={@blurhash || nil}
+      library_kind={Stashix.Library.cached_library_kind(Map.get(@book, :library_id))}
       scope={@scope}
       class={@class}
     />
@@ -523,6 +567,7 @@ defmodule StashixWeb.CoreComponents do
   attr :detail, :string, default: nil
   attr :progress, :float, default: nil
   attr :blurhash, :string, default: nil, doc: "the cover's blurhash, washed across the row behind it"
+  attr :library_kind, :atom, default: nil, values: [nil, :comics, :books], doc: "see `kind_mark/1`"
   attr :class, :any, default: nil
 
   def media_row(assigns) do
@@ -569,6 +614,7 @@ defmodule StashixWeb.CoreComponents do
         </div>
         <p :if={!@progress && @detail} class="mt-0.5 text-xs text-muted tabular-nums">{@detail}</p>
       </div>
+      <.kind_mark :if={@library_kind} kind={@library_kind} class="self-start flex-shrink-0" />
     </.link>
     """
   end
@@ -627,6 +673,7 @@ defmodule StashixWeb.CoreComponents do
       detail={@detail}
       progress={@progress}
       blurhash={@blurhash || nil}
+      library_kind={Stashix.Library.cached_library_kind(Map.get(@book, :library_id))}
       class={@class}
     />
     """

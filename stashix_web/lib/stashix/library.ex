@@ -57,6 +57,7 @@ defmodule Stashix.Library do
     |> Library.changeset(attrs)
     |> validate_calibre_overlap()
     |> Repo.insert()
+    |> tap(fn _ -> forget_library_kinds() end)
   end
 
   def update_library(library, attrs) do
@@ -64,6 +65,7 @@ defmodule Stashix.Library do
     |> Library.changeset(attrs)
     |> validate_calibre_overlap()
     |> Repo.update()
+    |> tap(fn _ -> forget_library_kinds() end)
   end
 
   defp validate_calibre_overlap(changeset) do
@@ -1561,6 +1563,26 @@ defmodule Stashix.Library do
 
   def library_kind(library_id),
     do: Repo.one(from(l in Library, where: l.id == ^library_id, select: l.kind)) || :comics
+
+  @doc """
+  A library's kind from a cache of every library's, for cards that each
+  name their library. Nil when there is no such library.
+  """
+  def cached_library_kind(nil), do: nil
+
+  def cached_library_kind(library_id) do
+    case :persistent_term.get(__MODULE__.LibraryKinds, nil) do
+      %{^library_id => kind} ->
+        kind
+
+      _missing ->
+        kinds = Map.new(Repo.all(from(l in Library, select: {l.id, l.kind})))
+        :persistent_term.put(__MODULE__.LibraryKinds, kinds)
+        kinds[library_id]
+    end
+  end
+
+  defp forget_library_kinds, do: :persistent_term.erase(__MODULE__.LibraryKinds)
 
   @doc """
   The file of `book` (of `format`, when given) to open in the text reader,

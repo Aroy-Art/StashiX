@@ -522,6 +522,7 @@ defmodule StashixWeb.HomeLive do
                   title={s.name}
                   cover_url={~p"/api/series/#{s.id}/cover"}
                   blurhash={s.cover_blurhash}
+                  library_kind={Stashix.Library.cached_library_kind(s.library_id)}
                   eyebrow={gettext("Series")}
                   detail={
                     [
@@ -558,6 +559,7 @@ defmodule StashixWeb.HomeLive do
                 :for={data <- @shown_libraries}
                 navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
+                library_kind={data.library.kind}
                 covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
                 stats={count_stats(data.series_count, data.book_count, data.issue_count)}
               >
