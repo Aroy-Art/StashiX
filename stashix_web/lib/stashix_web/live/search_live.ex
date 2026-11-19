@@ -745,9 +745,9 @@ defmodule StashixWeb.SearchLive do
               </.filter_section>
 
               <.filter_section :if={@params["type"] in ["all", "series"]} title={gettext("Series status")}>
-                <div class="grid grid-cols-3 gap-1.5">
+                <div class="flex flex-wrap gap-1.5">
                   <%= for {label, value} <- @series_statuses do %>
-                    <.pill active={(@params["series_status"] || "") == value} class="text-center">
+                    <.pill active={(@params["series_status"] || "") == value} class="flex-auto text-center">
                       <input
                         type="radio"
                         name="series_status"
