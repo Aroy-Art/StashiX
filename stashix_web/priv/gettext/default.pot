@@ -2823,11 +2823,6 @@ msgstr ""
 msgid "Tick"
 msgstr ""
 
-#: lib/stashix_web/live/search_live.ex
-#, elixir-autogen, elixir-format
-msgid "Title or creator"
-msgstr ""
-
 #: lib/stashix_web/live/reader_live.ex
 #, elixir-autogen, elixir-format
 msgid "To be continued"
@@ -5435,4 +5430,9 @@ msgstr ""
 #: lib/stashix_web/components/core_components.ex
 #, elixir-autogen, elixir-format
 msgid "Author A → Z"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Title, creator or ISBN"
 msgstr ""

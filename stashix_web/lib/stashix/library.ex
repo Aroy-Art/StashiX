@@ -472,19 +472,34 @@ defmodule Stashix.Library do
     end
   end
 
+  @doc """
+  Books matching a text search, best first; an identifier (`isbn:…`, a bare
+  ISBN, `goodreads:…`, see `identifier_query/1`) matches that id instead.
+  Backs the API and OPDS searches.
+  """
   def search_books(query_string, opts \\ []) do
     limit = Keyword.get(opts, :limit, 50)
     offset = Keyword.get(opts, :offset, 0)
 
-    from(b in Access.books(access!(opts)),
-      where:
-        fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-          is_nil(b.deleted_at),
-      order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
-      preload: [:cover, :series],
-      limit: ^limit,
-      offset: ^offset
-    )
+    base =
+      from(b in Access.books(access!(opts)),
+        as: :book,
+        where: is_nil(b.deleted_at),
+        preload: [:cover, :series],
+        limit: ^limit,
+        offset: ^offset
+      )
+
+    case identifier_query(query_string) do
+      {source, value} ->
+        base |> filter_book_identifier(source, value) |> order_by([b], asc: b.title)
+
+      nil ->
+        from(b in base,
+          where: fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string),
+          order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string)
+        )
+    end
     |> Repo.all()
   end
 
@@ -829,14 +844,20 @@ defmodule Stashix.Library do
     query =
       case filters[:q] do
         q when is_binary(q) and q != "" ->
-          pattern = like_pattern(q)
+          case identifier_query(q) do
+            {source, value} ->
+              filter_book_identifier(query, source, value)
 
-          where(
-            query,
-            [b],
-            fragment("search_vec @@ plainto_tsquery('english', ?)", ^q) or
-              exists(credit_match_query(name_pattern: pattern))
-          )
+            nil ->
+              pattern = like_pattern(q)
+
+              where(
+                query,
+                [b],
+                fragment("search_vec @@ plainto_tsquery('english', ?)", ^q) or
+                  exists(credit_match_query(name_pattern: pattern))
+              )
+          end
 
         _ ->
           query
@@ -852,6 +873,67 @@ defmodule Stashix.Library do
     |> filter_book_year(filters[:year_from], filters[:year_to])
     |> filter_book_attrs(filters)
     |> filter_read_status(filters[:read_status], filters[:user_id])
+  end
+
+  # Search prefixes for book identifiers, by external id source.
+  @identifier_prefixes %{
+    "google" => :"Google Books",
+    "amazon" => :Amazon,
+    "asin" => :Amazon,
+    "goodreads" => :Goodreads,
+    "openlibrary" => :"Open Library",
+    "issn" => :ISSN,
+    "doi" => :DOI,
+    "metron" => :Metron,
+    "comicvine" => :"Comic Vine",
+    "gcd" => :"Grand Comics Database"
+  }
+
+  @doc """
+  A search for one book identifier, as `{source, value}`: `isbn:…` or a bare
+  ISBN-10/13 (dashes and spaces allowed) gives `{:isbn, digits}`;
+  `goodreads:12067`, `google:…`, `amazon:…` and the other prefixes in
+  `@identifier_prefixes` give the external id source. Anything else is nil
+  (a text search).
+  """
+  def identifier_query(q) do
+    q = String.trim(q)
+
+    case Regex.run(~r/^([a-z]+):\s*(\S+)$/i, q) do
+      [_, prefix, value] ->
+        case String.downcase(prefix) do
+          "isbn" -> {:isbn, isbn_digits(value)}
+          prefix -> if source = @identifier_prefixes[prefix], do: {source, value}
+        end
+
+      nil ->
+        digits = isbn_digits(q)
+
+        if Regex.match?(~r/^[0-9][0-9\- ]+[0-9Xx]$/, q) and String.length(digits) in [10, 13],
+          do: {:isbn, digits}
+    end
+  end
+
+  defp isbn_digits(value), do: value |> String.upcase() |> String.replace(~r/[^0-9X]/, "")
+
+  defp filter_book_identifier(query, :isbn, digits) do
+    where(query, [book: b], fragment("regexp_replace(upper(coalesce(?, '')), '[^0-9X]', '', 'g') = ?", b.isbn, ^digits))
+  end
+
+  defp filter_book_identifier(query, source, value) do
+    value = String.downcase(value)
+
+    where(
+      query,
+      [book: b],
+      exists(
+        from(e in Stashix.Library.BookExternalId,
+          where:
+            e.book_id == parent_as(:book).id and e.source == ^source and fragment("lower(?)", e.source_id) == ^value,
+          select: 1
+        )
+      )
+    )
   end
 
   # Credits on the parent book (bound as :book), narrowed by any of

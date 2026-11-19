@@ -271,7 +271,13 @@ without touching anything.
   sorts and the home page's recent books use `added_at` before
   `inserted_at`. Author pages already listed series then number; their
   standalone books now sort by sort title too.
-- [ ] Search: author, tag, publisher, identifier (`isbn:…`) filters.
+- [x] Search: author, tag, publisher, identifier (`isbn:…`) filters.
+  *Done:* author, tag and publisher filters already existed. A query
+  that is an identifier — `isbn:…` or a bare ISBN-10/13 (dashes and
+  spaces allowed), `goodreads:`, `google:`, `amazon:`/`asin:`,
+  `openlibrary:`, `issn:`, `doi:`, plus `metron:`, `comicvine:`, `gcd:` —
+  matches that id exactly instead of the text search, on the search page
+  and in the API / OPDS search (`Library.identifier_query/1`).
 - [ ] OPDS: one acquisition link per format, Calibre uuid as entry id
   (`urn:uuid:…`) so KOReader keeps its records.
 

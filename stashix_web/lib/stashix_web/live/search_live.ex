@@ -646,7 +646,7 @@ defmodule StashixWeb.SearchLive do
                 value={@params["q"]}
                 data-ctrl-k-target
                 phx-debounce="300"
-                placeholder={gettext("Title or creator")}
+                placeholder={gettext("Title, creator or ISBN")}
                 aria-label={gettext("Search")}
                 autocomplete="off"
                 class="search-headline w-full pt-1 pb-2 pl-10 sm:pl-12 md:pl-14 pr-12 sm:pr-14 text-4xl sm:text-5xl md:text-6xl text-fg"
