@@ -134,10 +134,10 @@ const EpubReader = {
     this.loaded = false
 
     this.handleEvent("reader:exit", ({to}) => exitReader(this, to))
-    this.handleEvent("text:goto", ({page, target}) => this.goto({page, target}))
+    this.handleEvent("text:goto", (cmd) => (cmd.section != null ? this.gotoHit(cmd) : this.goto(cmd)))
     this.handleEvent("text:step", ({by}) => (by > 0 ? this.next() : this.view?.prev()))
     this.handleEvent("text:view", (settings) => this.apply({...this.settings, ...settings}))
-    this.handleEvent("text:search", ({query}) => this.search(query))
+    this.handleEvent("text:search", ({query, server}) => (server ? this.clearSearch() : this.search(query)))
     this.handleEvent("annotations:all", ({items}) => this.setAnnotations(items))
     this.handleEvent("annotations:put", ({item}) => this.putAnnotation(item))
     this.handleEvent("annotations:remove", ({id}) => this.removeAnnotation(id))
@@ -633,7 +633,13 @@ const EpubReader = {
     const walk = (nodes, depth) => {
       for (const node of nodes || []) {
         if (items.length >= 2000) return
-        items.push({title: (node.label || "").trim() || "—", target: node.href || null, depth})
+        const section = node.href ? this.view.resolveNavigation(node.href)?.index : null
+        items.push({
+          title: (node.label || "").trim() || "—",
+          target: node.href || null,
+          section: Number.isInteger(section) ? section : null,
+          depth,
+        })
         walk(node.subitems, depth + 1)
       }
     }
@@ -643,6 +649,29 @@ const EpubReader = {
 
   // ── search ────────────────────────────────────────────────────────────
 
+  // EPUB is searched on the server, which lists hits as the n-th match in a
+  // section; the matching follows foliate-js's, so searching just that
+  // section here finds it. The section's matches are all marked.
+  clearSearch() {
+    this.searchToken++
+    this.view?.clearSearch()
+  },
+
+  async gotoHit({section, n, query}) {
+    const token = ++this.searchToken
+    if (!this.view || !query) return
+    let cfi = null
+    let i = 0
+    for await (const result of this.view.search({query, index: section})) {
+      if (token !== this.searchToken) return
+      if (result === "done") break
+      if (result.cfi && i++ <= n) cfi = result.cfi
+    }
+    // No match there after all: the section's start.
+    this.view.goTo(cfi ?? section)
+  },
+
+  // Other formats: foliate-js searches the whole book, section by section.
   async search(query) {
     const token = ++this.searchToken
     this.view?.clearSearch()

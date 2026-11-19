@@ -82,7 +82,13 @@ const PdfReader = {
     this.handleEvent("text:step", ({by}) => this.step(by))
     this.handleEvent("text:view", (view) => this.setView(view))
     this.handleEvent("text:zoom", ({by}) => this.setZoom(by === 0 ? 1 : this.zoom * (by > 0 ? ZOOM_STEP : 1 / ZOOM_STEP)))
-    this.handleEvent("text:search", ({query}) => this.search(query))
+    // The server searches the PDF when poppler can read it; this only marks
+    // the hits then. Otherwise it reads each page's text here.
+    this.handleEvent("text:search", ({query, server}) => {
+      if (!server) return this.search(query)
+      this.searchToken++
+      this.mark(query)
+    })
     this.handleEvent("annotations:all", ({items}) => {
       this.annotations = new Map(items.map((a) => [a.id, a]))
       this.slots.forEach((s) => this.drawAnnotations(s))

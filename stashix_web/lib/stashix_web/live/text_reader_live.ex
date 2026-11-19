@@ -17,6 +17,11 @@ defmodule StashixWeb.TextReaderLive do
 
   `engine` is which of the two hooks reads the book: `:pdf` or `:foliate`.
 
+  Search runs here for EPUB and PDF (`Stashix.Media.TextSearch`), so the
+  book isn't downloaded to search it; an EPUB hit is a section and match
+  number that the hook finds in that one section. Kindle and FictionBook
+  books, and a PDF poppler can't read, are searched by the hook.
+
   The hook owns the content; this view owns the chrome (bars, View menu,
   contents and search panel, end card) and progress. Both hooks take the same
   `text:*` commands and report back with the same events. Book content is
@@ -25,6 +30,7 @@ defmodule StashixWeb.TextReaderLive do
   use StashixWeb, :live_view
 
   alias Stashix.{Accounts, Formatters, Library, Slug}
+  alias Stashix.Media.TextSearch
   alias StashixWeb.Live.{CanonicalUrl, ReaderAnnotations}
   alias StashixWeb.ReaderLive
 
@@ -80,6 +86,7 @@ defmodule StashixWeb.TextReaderLive do
       page_title: gettext("Reading: %{title}", title: book.title),
       book: book,
       format: book_file.format,
+      file_path: book_file.path,
       engine: engine,
       file_url:
         if(book_file.format == :epub,
@@ -149,7 +156,8 @@ defmodule StashixWeb.TextReaderLive do
 
   def handle_event("failed", _params, socket), do: {:noreply, assign(socket, failed: true)}
 
-  # Entries point at a PDF page, or (EPUB) at an href inside the book.
+  # Entries point at a PDF page, or (EPUB) at an href inside the book and
+  # the section it is in.
   def handle_event("outline", %{"items" => items}, socket) when is_list(items) do
     outline =
       for %{"title" => title, "depth" => depth} = item <- items,
@@ -158,7 +166,8 @@ defmodule StashixWeb.TextReaderLive do
             title: title,
             depth: min(depth, 6),
             page: int_or_nil(item["page"]),
-            target: string_or_nil(item["target"])
+            target: string_or_nil(item["target"]),
+            section: int_or_nil(item["section"])
           }
 
     {:noreply, assign(socket, :outline, outline)}
@@ -293,7 +302,8 @@ defmodule StashixWeb.TextReaderLive do
   def handle_event("set_overlay", %{"visible" => visible}, socket) when is_boolean(visible),
     do: {:noreply, assign(socket, :overlay_visible, visible)}
 
-  # Hits point at a PDF page, or (EPUB) at a CFI, labelled with the chapter.
+  # From a hook searching the book itself. Hits point at a PDF page, or at a
+  # CFI labelled with the chapter.
   def handle_event("search_results", %{"query" => query} = params, socket) do
     if query == socket.assigns.search_query do
       results =
@@ -329,9 +339,18 @@ defmodule StashixWeb.TextReaderLive do
     {:noreply, socket |> assign(:at_end, false) |> push_event("text:goto", event)}
   end
 
-  # Contents entries and search hits inside an EPUB.
+  # Contents entries and search hits inside an EPUB. A hit found here is
+  # "<section>:<n>", the n-th match in that section; the hook finds it.
   def handle_event("goto_target", %{"target" => target} = params, socket) when is_binary(target) do
-    event = if params["hit"], do: %{target: target, query: socket.assigns.search_query}, else: %{target: target}
+    query = socket.assigns.search_query
+
+    event =
+      case params["hit"] && Regex.run(~r/^(\d+):(\d+)$/, target, capture: :all_but_first) do
+        [section, n] -> %{section: String.to_integer(section), n: String.to_integer(n), query: query}
+        nil -> %{target: target, query: query}
+        _ -> %{target: target}
+      end
+
     {:noreply, socket |> assign(:at_end, false) |> push_event("text:goto", event)}
   end
 
@@ -386,10 +405,19 @@ defmodule StashixWeb.TextReaderLive do
     if query == socket.assigns.search_query do
       {:noreply, socket}
     else
-      {:noreply,
-       socket
-       |> assign(search_query: query, search_results: [], search_scanned: 0, search_done: query == "")
-       |> push_event("text:search", %{query: query})}
+      socket = assign(socket, search_query: query, search_results: [], search_scanned: 0, search_done: query == "")
+      %{format: format, file_path: path} = socket.assigns
+
+      if query != "" and TextSearch.supported?(format) do
+        # A newer search's result replaces this one's (see handle_async).
+        # Not cancelled: the first one may be extracting the book's text.
+        {:noreply,
+         socket
+         |> start_async(:search, fn -> {query, TextSearch.search(format, path, query)} end)
+         |> push_event("text:search", %{query: query, server: true})}
+      else
+        {:noreply, push_event(socket, "text:search", %{query: query})}
+      end
     end
   end
 
@@ -404,6 +432,40 @@ defmodule StashixWeb.TextReaderLive do
   # The end card's keyboard hints are the comic reader's; here the hook owns
   # the keys, so these come only from the card's own buttons.
   def handle_event(event, _params, socket) when event in ["prev_page", "next_page"], do: {:noreply, socket}
+
+  @impl true
+  def handle_async(:search, {:ok, {query, result}}, %{assigns: %{search_query: query}} = socket) do
+    case result do
+      {:ok, hits} ->
+        results =
+          for hit <- hits do
+            {page, target} =
+              if socket.assigns.engine == :pdf, do: {hit.section, nil}, else: {nil, "#{hit.section}:#{hit.n}"}
+
+            %{
+              page: page,
+              target: target,
+              section: hit.section,
+              label: nil,
+              before: hit.before,
+              match: hit.match,
+              after: hit.after
+            }
+          end
+
+        {:noreply, assign(socket, search_results: results, search_done: true)}
+
+      # Unreadable here (a PDF without poppler): the hook searches instead.
+      {:error, _} ->
+        {:noreply, push_event(socket, "text:search", %{query: query})}
+    end
+  end
+
+  def handle_async(:search, {:exit, _reason}, %{assigns: %{search_query: query}} = socket) when query != "",
+    do: {:noreply, push_event(socket, "text:search", %{query: query})}
+
+  # An older query's.
+  def handle_async(:search, _result, socket), do: {:noreply, socket}
 
   @impl true
   def handle_info(:save_progress, socket), do: {:noreply, save_progress(socket)}
@@ -1133,7 +1195,7 @@ defmodule StashixWeb.TextReaderLive do
               {ngettext("1 match", "%{count} matches", length(@results))}
             <% end %>
           <% else %>
-            <%= if @engine == :foliate do %>
+            <%= if @engine == :foliate or @scanned == 0 do %>
               {gettext("Searching…")}
             <% else %>
               {gettext("Searching… page %{page} of %{count}", page: @scanned, count: @page_count)}
@@ -1153,7 +1215,9 @@ defmodule StashixWeb.TextReaderLive do
                 {hit.before}<mark class="bg-ink/30 text-fg rounded-sm">{hit.match}</mark>{hit.after}
               </span>
               <span :if={hit.page} class="text-xs text-muted tabular-nums">{hit.page + 1}</span>
-              <span :if={!hit.page && hit.label} class="max-w-[6rem] truncate text-xs text-muted">{hit.label}</span>
+              <span :if={!hit.page && hit_label(hit, @outline)} class="max-w-[6rem] truncate text-xs text-muted">
+                {hit_label(hit, @outline)}
+              </span>
             </button>
           </li>
         </ol>
@@ -1161,6 +1225,19 @@ defmodule StashixWeb.TextReaderLive do
     </aside>
     """
   end
+
+  # A hit found here is labelled with the last contents entry at or before
+  # its section.
+  defp hit_label(%{label: label}, _outline) when is_binary(label), do: label
+
+  defp hit_label(%{section: section}, outline) when is_integer(section) and is_list(outline) do
+    outline
+    |> Enum.filter(&(is_integer(&1.section) and &1.section <= section))
+    |> Enum.max_by(& &1.section, fn -> nil end)
+    |> then(&(&1 && &1.title))
+  end
+
+  defp hit_label(_hit, _outline), do: nil
 
   # EPUB: the entry the hook says the reader is in. PDF: the last entry at or
   # before the current page.

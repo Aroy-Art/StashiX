@@ -108,13 +108,16 @@ defmodule StashixWeb.TextReaderLiveTest do
     assert_push_event(view, "text:goto", %{page: 2})
   end
 
-  test "search sends the query to the hook and lists its hits", %{conn: conn, text: book} do
+  test "a PDF poppler can't read is searched by the hook, which lists its hits", %{conn: conn, text: book} do
     {view, _html} = open(conn, book)
     render_hook(view, "loaded", %{"page_count" => 3})
     render_click(view, "open_panel", %{"panel" => "search"})
 
     view |> element("#text-reader-panel form") |> render_change(%{"q" => "whale"})
-    assert_push_event(view, "text:search", %{query: "whale"})
+    assert_push_event(view, "text:search", %{query: "whale", server: true})
+    render_async(view)
+    assert_push_event(view, "text:search", payload)
+    assert payload == %{query: "whale"}
 
     render_hook(view, "search_results", %{
       "query" => "whale",
@@ -134,6 +137,26 @@ defmodule StashixWeb.TextReaderLiveTest do
 
     view |> element("#text-reader-panel li button") |> render_click()
     assert_push_event(view, "text:goto", %{page: 1, query: "whale"})
+  end
+
+  if System.find_executable("pdftotext") do
+    test "a PDF is searched on the server", %{conn: conn, user: user, tmp_dir: tmp} do
+      {:ok, lib} = Library.create_library(%{name: "Papers", root_path: Path.join(tmp, "papers")})
+      {:ok, _} = Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_read: true})
+      {:ok, book} = Library.create_book(%{title: "Paper", library_id: lib.id, page_count: 2})
+      path = Stashix.PdfFixtures.make_pdf(Path.join(tmp, "paper.pdf"), [{612, 792}, {612, 792, "The white whale."}])
+      Repo.insert!(%BookFile{book_id: book.id, path: path, format: :pdf, file_size: 8, content_kind: :text})
+
+      {view, _html} = open(conn, book)
+      render_click(view, "open_panel", %{"panel" => "search"})
+      view |> element("#text-reader-panel form") |> render_change(%{"q" => "whale"})
+      assert_push_event(view, "text:search", %{query: "whale", server: true})
+      render_async(view)
+
+      assert has_element?(view, "#text-reader-panel mark", "whale")
+      view |> element("#text-reader-panel li button") |> render_click()
+      assert_push_event(view, "text:goto", %{page: 1, query: "whale"})
+    end
   end
 
   test "the reader page runs under a CSP that only allows our own scripts", %{conn: conn, text: book} do
@@ -219,28 +242,24 @@ defmodule StashixWeb.TextReaderLiveTest do
       refute Map.has_key?(settings, "text_layout")
     end
 
-    test "search hits point into the book and name the chapter", %{conn: conn, epub: book} do
+    test "search runs on the server; a hit is a match in a section, named by the contents",
+         %{conn: conn, epub: book} do
       {view, _html} = open(conn, book)
-      render_click(view, "open_panel", %{"panel" => "search"})
-      view |> element("#text-reader-panel form") |> render_change(%{"q" => "whale"})
 
-      render_hook(view, "search_results", %{
-        "query" => "whale",
-        "results" => [
-          %{
-            "target" => "epubcfi(/6/4!/4/2)",
-            "label" => "Loomings",
-            "before" => "a ",
-            "match" => "whale",
-            "after" => "!"
-          }
-        ],
-        "done" => true
+      render_hook(view, "outline", %{
+        "items" => [%{"title" => "Loomings", "depth" => 0, "target" => "OEBPS/text/ch1.xhtml", "section" => 0}]
       })
 
+      render_click(view, "open_panel", %{"panel" => "search"})
+      view |> element("#text-reader-panel form") |> render_change(%{"q" => "ishmael"})
+      assert_push_event(view, "text:search", %{query: "ishmael", server: true})
+      render_async(view)
+
+      assert has_element?(view, "#text-reader-panel mark", "Ishmael")
       assert has_element?(view, "#text-reader-panel li", "Loomings")
+      assert render(view) =~ "1 match"
       view |> element("#text-reader-panel li button") |> render_click()
-      assert_push_event(view, "text:goto", %{target: "epubcfi(/6/4!/4/2)", query: "whale"})
+      assert_push_event(view, "text:goto", %{section: 0, n: 0, query: "ishmael"})
     end
   end
 
@@ -417,6 +436,32 @@ defmodule StashixWeb.TextReaderLiveTest do
 
       {view, _html} = open(conn, book)
       assert has_element?(view, ~s|#epub-reader[data-cfi="#{cfi}"]|)
+    end
+
+    test "the hook searches them, with hits at a CFI", %{conn: conn, mobi: book} do
+      {view, _html} = open(conn, book)
+      render_click(view, "open_panel", %{"panel" => "search"})
+      view |> element("#text-reader-panel form") |> render_change(%{"q" => "whale"})
+      assert_push_event(view, "text:search", payload)
+      assert payload == %{query: "whale"}
+
+      render_hook(view, "search_results", %{
+        "query" => "whale",
+        "results" => [
+          %{
+            "target" => "epubcfi(/6/4!/4/2)",
+            "label" => "Loomings",
+            "before" => "a ",
+            "match" => "whale",
+            "after" => "!"
+          }
+        ],
+        "done" => true
+      })
+
+      assert has_element?(view, "#text-reader-panel li", "Loomings")
+      view |> element("#text-reader-panel li button") |> render_click()
+      assert_push_event(view, "text:goto", %{target: "epubcfi(/6/4!/4/2)", query: "whale"})
     end
 
     test "FictionBook opens there too", %{conn: conn, fb2: book} do
