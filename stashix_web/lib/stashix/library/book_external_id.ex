@@ -19,6 +19,12 @@ defmodule Stashix.Library.BookExternalId do
     :MangaDex,
     :Marvel,
     :MyAnimeList,
+    :"Google Books",
+    :Amazon,
+    :Goodreads,
+    :"Open Library",
+    :ISSN,
+    :DOI,
     :Unknown
   ]
 

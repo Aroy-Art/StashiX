@@ -135,7 +135,7 @@ Rsync facts that shape the design:
 | tags | tags |
 | rating (0–10, half stars) | `rating` (new, library-level, 0–5 stars); per-user ratings are separate work |
 | comments (HTML) | `summary`, sanitised to the tags the book page already renders |
-| identifiers | `isbn` + external ids (sources gain Google Books, Amazon, Goodreads, Open Library, ISBN, ISSN; others as `Unknown` with the type kept) |
+| identifiers | `isbn` + external ids (sources gain Google Books, Amazon, Goodreads, Open Library, ISSN, DOI); `uri` → links; other types not stored |
 | `uuid`, `id` | `calibre_uuid`, `calibre_id` |
 | `has_cover` + `cover.jpg` | cover / thumbnail, as the sidecar image today |
 | `data` rows | `book_files` at `<root>/<path>/<name>.<format lowercase>` |
@@ -177,9 +177,15 @@ without touching anything.
   tags, languages, rating, comments, identifiers, formats — plain maps,
   one query per table. *Done:* the reference library (678 books) copies
   in ~60 ms and reads in ~20 ms.
-- [ ] `Stashix.Calibre.Mapper`: Calibre map → book/series/creator attrs
+- [x] `Stashix.Calibre.Mapper`: Calibre map → book/series/creator attrs
   per the mapping table; HTML comment sanitising; language codes;
-  fingerprint.
+  fingerprint. *Done:* comments become plain text (the book page renders
+  summaries as text), so no HTML survives to sanitise. External id
+  sources gained Google Books, Amazon, Goodreads, Open Library, ISSN, DOI;
+  `uri:`/`url:` identifiers become links; other types (`barnesnoble`,
+  `urn`, …) aren't stored — one row per source leaves no room for an
+  "Unknown" per type. Formats Stashix can't read (KEPUB, TXT, …) are
+  listed in `skipped_formats`.
 - [ ] `Stashix.Calibre.Sync`: diff by fingerprint (D5), upsert series →
   books → credits/tags/publishers/external ids → files, soft-delete books
   gone from Calibre, keep missing files as missing (D10). Batched
