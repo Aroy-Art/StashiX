@@ -12,8 +12,10 @@ services:
     # Dev-only values, hardcoded so the prod-oriented .env can't override them.
     environment:
       DATABASE_URL: postgresql://stashix:stashix@db/stashix
-      SECRET_KEY_BASE: meSrQUhnKGOZ6RP9U/7scoNw6u0pL3/MDEkw6gDDNdCXtNkjkiFdUVTlWa8xOQ9q
-      JWT_SECRET: CNXGp1GrVP8ybgiJeMbypaSj64npgzMpsWAv+bVV3p0rfVpQAdPXitfVg2F/ca1l
+      SECRET_KEY_BASE: dev-only-insecure-secret-key-base-do-not-use-in-production-000000
+      JWT_SECRET: dev-only-insecure-jwt-secret-do-not-use-in-production
+      # base64 of "dev-only-insecure-vault-key-0000" (32 bytes).
+      STASHIX_ENCRYPTION_KEY: ZGV2LW9ubHktaW5zZWN1cmUtdmF1bHQta2V5LTAwMDA=
       PHX_HOST: localhost
       PORT: 4000
       DATA_DIR: /data

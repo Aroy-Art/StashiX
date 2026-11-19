@@ -20,3 +20,9 @@ npm-debug.log
 
 # Not needed in the image.
 /test/
+
+# Lokalize project files and its stray top-level .po copies.
+/priv/gettext/*.lokalize
+/priv/gettext/*.lqa
+/priv/gettext/*.tbx
+/priv/gettext/*.po
