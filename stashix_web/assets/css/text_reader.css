@@ -160,6 +160,11 @@
   background: #fbfaf6;
 }
 
+/* The page's colour from first paint, before the hook has the book open;
+   same values as THEMES in hooks/epub_reader.js. */
+.epub-reader[data-page-theme="sepia"] { background: #f1e7d0; }
+.epub-reader[data-page-theme="night"] { background: #141416; }
+
 .epub-view {
   display: block;
   width: 100%;
