@@ -95,6 +95,17 @@ defmodule StashixWeb.HomeLiveTest do
     assert has_element?(view, "#home-recent-books", "Manga Pick")
   end
 
+  test "an empty library's card stays off the home page until a scan starts on it", %{conn: conn, lib: lib} do
+    {:ok, empty} = Library.create_library(%{name: "Empty Shelf", root_path: "/tmp/empty-shelf"})
+
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert has_element?(view, "#home-lib-menu-#{lib.id}")
+    refute has_element?(view, "#home-lib-menu-#{empty.id}")
+
+    send(view.pid, {:scan_progress, %{library_id: empty.id, scanned: 0, total: 3}})
+    assert has_element?(view, "#home-lib-menu-#{empty.id}")
+  end
+
   test "an empty library shows the welcome state once connected", %{conn: conn} do
     for book <- Library.list_all_books(access: Stashix.Library.Access.all(), limit: 100),
         do: Stashix.Repo.delete!(book)

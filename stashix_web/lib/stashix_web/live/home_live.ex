@@ -424,9 +424,16 @@ defmodule StashixWeb.HomeLive do
       also_reading != [] and assigns.next_issue != [] and
         length(also_reading) <= 2 and length(assigns.next_issue) <= 2
 
+    # Empty libraries stay off the home page, unless a scan is filling one
+    shown_libraries =
+      Enum.filter(assigns.libraries_data, fn data ->
+        data.book_count + data.issue_count > 0 or Map.has_key?(assigns.scan_progress, data.library.id)
+      end)
+
     assigns =
       assign(assigns,
         hero: hero(assigns),
+        shown_libraries: shown_libraries,
         also_reading: also_reading,
         pair_queues?: pair_queues?,
         # Several libraries make a tall side column until it turns two-wide
@@ -435,7 +442,7 @@ defmodule StashixWeb.HomeLive do
         queue_cols:
           cond do
             not pair_queues? -> "grid-cols-1 sm:grid-cols-2"
-            length(assigns.libraries_data) > 1 -> "grid-cols-1 sm:grid-cols-2 2xl:grid-cols-1"
+            length(shown_libraries) > 1 -> "grid-cols-1 sm:grid-cols-2 2xl:grid-cols-1"
             true -> "grid-cols-1 sm:grid-cols-2 lg:grid-cols-1"
           end,
         library_options: for(%{library: lib} <- assigns.libraries_data, do: {lib.name, lib.id}),
@@ -444,7 +451,7 @@ defmodule StashixWeb.HomeLive do
             lib.id == assigns.recent_library && lib.name
           end),
         picks?: picks?,
-        libraries_pair?: length(assigns.libraries_data) > 1,
+        libraries_pair?: length(shown_libraries) > 1,
         queues?: picks? or length(assigns.continue_reading) > 1 or assigns.next_issue != []
       )
 
@@ -530,9 +537,9 @@ defmodule StashixWeb.HomeLive do
           </div>
 
           <.section
-            :if={@libraries_data != []}
+            :if={@shown_libraries != []}
             title={gettext("Libraries")}
-            count={length(@libraries_data)}
+            count={length(@shown_libraries)}
             class={[
               "w-full order-last lg:order-none",
               @queues? && "lg:w-64 lg:flex-shrink-0",
@@ -548,12 +555,11 @@ defmodule StashixWeb.HomeLive do
               )
             ]}>
               <.collection_card
-                :for={data <- @libraries_data}
+                :for={data <- @shown_libraries}
                 navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
                 covers={for book <- Enum.take(data.cover_books, 5), do: ~p"/api/books/#{book.id}/cover?s=sx"}
                 stats={count_stats(data.series_count, data.book_count, data.issue_count)}
-                note={gettext("Empty — scan it to fill it")}
               >
                 <:menu :if={@current_user.role == :admin}>
                   <.library_menu id={"home-lib-menu-#{data.library.id}"} library_id={data.library.id} />
