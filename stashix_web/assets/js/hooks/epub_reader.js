@@ -166,6 +166,17 @@ const EpubReader = {
     this.onKey = (e) => this.key(e)
     window.addEventListener("keydown", this.onKey)
 
+    // Taps on the page around the text (outside the chapter's frame) land
+    // here; the view's shadow DOM retargets them to the view itself.
+    let down = null
+    this.el.addEventListener("pointerdown", (e) => { down = {x: e.clientX, y: e.clientY} })
+    this.el.addEventListener("click", (e) => {
+      if (!this.view || e.target !== this.view) return
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) return
+      if (this.bar.visible) return this.bar.hide()
+      this.tap(e.clientX)
+    })
+
     this.open().catch((err) => {
       console.error("EpubReader:", err)
       this.pushEvent("failed", {})
