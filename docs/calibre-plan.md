@@ -173,9 +173,10 @@ without touching anything.
   reader needs (`{:unsupported, ["books.uuid", …]}`), not `user_version`,
   so newer Calibres that only add things keep working. Copies go to
   `CALIBRE_CACHE_DIR` (`<data>/cache/calibre`).
-- [ ] `Stashix.Calibre.Reader`: books with authors, series, publisher,
+- [x] `Stashix.Calibre.Reader`: books with authors, series, publisher,
   tags, languages, rating, comments, identifiers, formats — plain maps,
-  one query per table.
+  one query per table. *Done:* the reference library (678 books) copies
+  in ~60 ms and reads in ~20 ms.
 - [ ] `Stashix.Calibre.Mapper`: Calibre map → book/series/creator attrs
   per the mapping table; HTML comment sanitising; language codes;
   fingerprint.

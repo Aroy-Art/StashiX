@@ -1,0 +1,130 @@
+# SPDX-FileCopyrightText: 2026 Aroy <me@aroy-art.com> & Contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
+defmodule Stashix.Calibre.Reader do
+  @moduledoc """
+  Reads every book out of an open Calibre database (a
+  `Stashix.Calibre.Snapshot`) as plain maps: one query per table, joined
+  here. Values stay as Calibre stores them; `Stashix.Calibre.Mapper` turns
+  them into Stashix attributes.
+
+  Each book:
+
+      %{id: 12, uuid: "…", title: "Dune", sort: "Dune", path: "Frank Herbert/Dune (12)",
+        has_cover: true, timestamp: "2024-…+00:00", pubdate: "…", last_modified: "…",
+        series_index: 1.0, author_sort: "Herbert, Frank",
+        authors: [%{id: 3, name: "Frank Herbert", sort: "Herbert, Frank", link: ""}],
+        series: %{id: 5, name: "Dune", sort: "Dune"} | nil,
+        publisher: "Ace" | nil, tags: ["SF"], languages: ["eng"], rating: 8 | nil,
+        comments: "<p>…</p>" | nil, identifiers: %{"isbn" => "…"},
+        formats: [%{format: "EPUB", name: "Dune - Frank Herbert", size: 123}]}
+  """
+
+  import Stashix.Calibre.Snapshot, only: [rows: 2]
+
+  @doc "All books, by Calibre id."
+  @spec books(Exqlite.Sqlite3.db()) :: {:ok, [map]} | {:error, term}
+  def books(conn) do
+    with {:ok, books} <-
+           rows(conn, """
+           SELECT id, uuid, title, sort, path, has_cover, timestamp, pubdate, last_modified,
+                  series_index, author_sort
+           FROM books ORDER BY id
+           """),
+         {:ok, authors} <-
+           rows(conn, """
+           SELECT l.book, a.id, a.name, a.sort, a.link
+           FROM books_authors_link l JOIN authors a ON a.id = l.author
+           ORDER BY l.book, l.id
+           """),
+         {:ok, series} <-
+           rows(conn, """
+           SELECT l.book, s.id, s.name, s.sort
+           FROM books_series_link l JOIN series s ON s.id = l.series
+           """),
+         {:ok, publishers} <-
+           rows(conn, """
+           SELECT l.book, p.name
+           FROM books_publishers_link l JOIN publishers p ON p.id = l.publisher
+           ORDER BY l.book, l.id
+           """),
+         {:ok, tags} <-
+           rows(conn, """
+           SELECT l.book, t.name
+           FROM books_tags_link l JOIN tags t ON t.id = l.tag
+           ORDER BY l.book, t.name
+           """),
+         {:ok, languages} <-
+           rows(conn, """
+           SELECT l.book, g.lang_code
+           FROM books_languages_link l JOIN languages g ON g.id = l.lang_code
+           ORDER BY l.book, l.item_order
+           """),
+         {:ok, ratings} <-
+           rows(conn, """
+           SELECT l.book, r.rating
+           FROM books_ratings_link l JOIN ratings r ON r.id = l.rating
+           """),
+         {:ok, comments} <- rows(conn, "SELECT book, text FROM comments"),
+         {:ok, identifiers} <- rows(conn, "SELECT book, type, val FROM identifiers ORDER BY book, type"),
+         {:ok, formats} <-
+           rows(conn, "SELECT book, format, name, uncompressed_size FROM data ORDER BY book, format") do
+      authors = group(authors, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
+      series = first(series, fn [id, name, sort] -> %{id: id, name: name, sort: sort} end)
+      publishers = first(publishers, fn [name] -> name end)
+      tags = group(tags, fn [name] -> name end)
+      languages = group(languages, fn [code] -> code end)
+      ratings = first(ratings, fn [rating] -> rating end)
+      comments = first(comments, fn [text] -> text end)
+      identifiers = group(identifiers, fn [type, val] -> {type, val} end)
+
+      formats =
+        group(formats, fn [format, name, size] -> %{format: String.upcase(format), name: name, size: size} end)
+
+      {:ok,
+       Enum.map(books, fn [id, uuid, title, sort, path, has_cover, timestamp, pubdate, modified, index, author_sort] ->
+         %{
+           id: id,
+           uuid: uuid,
+           title: title,
+           sort: sort,
+           path: path,
+           has_cover: has_cover in [1, true],
+           timestamp: timestamp,
+           pubdate: pubdate,
+           last_modified: modified,
+           series_index: index,
+           author_sort: author_sort,
+           authors: Map.get(authors, id, []),
+           series: Map.get(series, id),
+           publisher: Map.get(publishers, id),
+           tags: Map.get(tags, id, []),
+           languages: Map.get(languages, id, []),
+           rating: Map.get(ratings, id),
+           comments: Map.get(comments, id),
+           identifiers: Map.new(Map.get(identifiers, id, [])),
+           formats: Map.get(formats, id, [])
+         }
+       end)}
+    end
+  end
+
+  @doc "The library's own uuid (`library_id` table), or nil."
+  def library_uuid(conn) do
+    case rows(conn, "SELECT uuid FROM library_id LIMIT 1") do
+      {:ok, [[uuid]]} -> uuid
+      _ -> nil
+    end
+  end
+
+  # `%{book_id => [value]}` in row order.
+  defp group(rows, fun) do
+    rows
+    |> Enum.group_by(&hd/1, &fun.(tl(&1)))
+  end
+
+  # `%{book_id => value}` for one-per-book links (the first row wins).
+  defp first(rows, fun) do
+    Enum.reduce(rows, %{}, fn [book | rest], acc -> Map.put_new(acc, book, fun.(rest)) end)
+  end
+end
