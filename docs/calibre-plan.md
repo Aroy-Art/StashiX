@@ -316,6 +316,9 @@ reference library if it's ever added as a plain folder.
   the same file name, and the scanner already joins same-name files.
   Authors come from the OPF, which Calibre always writes, so the parent
   folder isn't needed.
+  Checked on 9 real book folders scanned as a folder library: one book
+  each (formats joined), series and numbers from the OPFs, covers from
+  `cover.jpg`, no author or `Title (id)` folder made a series.
 
 ## 6. Phase 4 — Custom columns, read status, notes
 
