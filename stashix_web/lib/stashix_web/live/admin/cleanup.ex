@@ -26,12 +26,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
       <.display_heading level={1} class="text-4xl!">{gettext("Cleanup")}</.display_heading>
       <%!-- Series section --%>
       <div class="space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
             {gettext("Deleted Series")} <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_series)})</span>
           </h2>
           <%= if series_sel_count > 0 do %>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <span class="text-sm text-muted">{gettext("%{count} selected", count: series_sel_count)}</span>
               <.ink_button
                 size="md"
@@ -62,7 +62,45 @@ defmodule StashixWeb.AdminLive.Cleanup do
         <%= if @deleted_series == [] do %>
           <p class="text-muted text-sm">{gettext("No deleted series.")}</p>
         <% else %>
-          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
+          <%!-- Mobile card list — hidden on sm+ --%>
+          <div class="sm:hidden bg-surface rounded-lg ring-1 ring-edge divide-y divide-fg/10 overflow-hidden">
+            <label class="flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+              <input
+                type="checkbox"
+                phx-click="select_all_series"
+                checked={all_series_selected}
+                class="ink-check"
+              />
+              {gettext("Select all")}
+            </label>
+            <%= for s <- @deleted_series do %>
+              <div class={[
+                "flex items-start gap-3 px-4 py-3 transition-colors",
+                if(MapSet.member?(@selected_series, s.id), do: "bg-accent/10", else: "")
+              ]}>
+                <input
+                  type="checkbox"
+                  phx-click="toggle_series"
+                  phx-value-id={s.id}
+                  checked={MapSet.member?(@selected_series, s.id)}
+                  class="ink-check mt-0.5"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-fg font-medium break-words">{s.name}</p>
+                  <p class="text-xs text-muted mt-0.5">
+                    {s.library.name} ·
+                    <.local_time id={"deleted-series-m-#{s.id}"} value={s.deleted_at} format="datetime" />
+                  </p>
+                  <div class="flex gap-2 mt-2">
+                    <.series_actions series={s} />
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <%!-- Desktop table — hidden below sm --%>
+          <div class="hidden sm:block bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-fg/10">
@@ -80,7 +118,7 @@ defmodule StashixWeb.AdminLive.Cleanup do
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Library")}
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                  <th class="hidden md:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Deleted")}
                   </th>
                   <th class="px-4 py-3"></th>
@@ -103,30 +141,13 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     </td>
                     <td class="px-4 py-3 text-fg">{s.name}</td>
                     <td class="px-4 py-3 text-muted">{s.library.name}</td>
-                    <td class="px-4 py-3 text-muted text-xs">
+                    <td class="hidden md:table-cell px-4 py-3 text-muted text-xs whitespace-nowrap">
                       <.local_time id={"deleted-series-#{s.id}"} value={s.deleted_at} format="datetime" />
                     </td>
-                    <td class="px-4 py-3 text-right flex gap-3 justify-end">
-                      <.ink_button variant="ghost" size="md" phx-click="restore_series" phx-value-id={s.id}>
-                        {gettext("Restore")}
-                      </.ink_button>
-                      <.ink_button
-                        variant="danger"
-                        size="md"
-                        phx-click="show_confirm"
-                        phx-value-event="purge_series"
-                        phx-value-id={s.id}
-                        phx-value-title={gettext("Purge Series")}
-                        phx-value-message={
-                          gettext(
-                            "Permanently delete \"%{name}\" and all its books? Book files on disk are never deleted. This cannot be undone.",
-                            name: s.name
-                          )
-                        }
-                        phx-value-label={gettext("Purge")}
-                      >
-                        {gettext("Purge")}
-                      </.ink_button>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-3 justify-end">
+                        <.series_actions series={s} />
+                      </div>
                     </td>
                   </tr>
                 <% end %>
@@ -138,12 +159,12 @@ defmodule StashixWeb.AdminLive.Cleanup do
 
       <%!-- Books section --%>
       <div class="space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <h2 class="font-display font-black uppercase text-2xl leading-none text-fg">
             {gettext("Deleted Books")} <span class="ml-2 text-sm font-normal text-muted">({length(@deleted_books)})</span>
           </h2>
           <%= if books_sel_count > 0 do %>
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <span class="text-sm text-muted">{gettext("%{count} selected", count: books_sel_count)}</span>
               <.ink_button
                 size="md"
@@ -174,7 +195,48 @@ defmodule StashixWeb.AdminLive.Cleanup do
         <%= if @deleted_books == [] do %>
           <p class="text-muted text-sm">{gettext("No deleted books.")}</p>
         <% else %>
-          <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
+          <%!-- Mobile card list — hidden on sm+ --%>
+          <div class="sm:hidden bg-surface rounded-lg ring-1 ring-edge divide-y divide-fg/10 overflow-hidden">
+            <label class="flex items-center gap-3 px-4 py-2.5 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+              <input
+                type="checkbox"
+                phx-click="select_all_books"
+                checked={all_books_selected}
+                class="ink-check"
+              />
+              {gettext("Select all")}
+            </label>
+            <%= for b <- @deleted_books do %>
+              <div class={[
+                "flex items-start gap-3 px-4 py-3 transition-colors",
+                if(MapSet.member?(@selected_books, b.id), do: "bg-accent/10", else: "")
+              ]}>
+                <input
+                  type="checkbox"
+                  phx-click="toggle_book"
+                  phx-value-id={b.id}
+                  checked={MapSet.member?(@selected_books, b.id)}
+                  class="ink-check mt-0.5"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-fg font-medium break-words">{b.title}</p>
+                  <p :if={b.series} class="text-xs text-muted truncate">{b.series.name}</p>
+                  <p class="text-xs text-faint mt-0.5">
+                    {b.library.name} · <.local_time id={"deleted-book-m-#{b.id}"} value={b.deleted_at} format="datetime" />
+                  </p>
+                  <p :if={first_path(b)} class="text-xs text-faint font-mono truncate mt-0.5" title={first_path(b)}>
+                    {first_path(b)}
+                  </p>
+                  <div class="flex gap-2 mt-2">
+                    <.book_actions book={b} />
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+
+          <%!-- Desktop table — hidden below sm --%>
+          <div class="hidden sm:block bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-fg/10">
@@ -192,13 +254,13 @@ defmodule StashixWeb.AdminLive.Cleanup do
                   <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Series")}
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                  <th class="hidden md:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Library")}
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                  <th class="hidden xl:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Path")}
                   </th>
-                  <th class="px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+                  <th class="hidden lg:table-cell px-4 py-3 text-left text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
                     {gettext("Deleted")}
                   </th>
                   <th class="px-4 py-3"></th>
@@ -223,37 +285,20 @@ defmodule StashixWeb.AdminLive.Cleanup do
                     <td class="px-4 py-3 text-muted">
                       {if b.series, do: b.series.name, else: "—"}
                     </td>
-                    <td class="px-4 py-3 text-muted">{b.library.name}</td>
+                    <td class="hidden md:table-cell px-4 py-3 text-muted">{b.library.name}</td>
                     <td
-                      class="px-4 py-3 text-muted text-xs font-mono truncate max-w-xs"
-                      title={b.files |> List.first() |> then(&(&1 && &1.path))}
+                      class="hidden xl:table-cell px-4 py-3 text-muted text-xs font-mono truncate max-w-xs"
+                      title={first_path(b)}
                     >
-                      {b.files |> List.first() |> then(&(&1 && &1.path))}
+                      {first_path(b)}
                     </td>
-                    <td class="px-4 py-3 text-muted text-xs">
+                    <td class="hidden lg:table-cell px-4 py-3 text-muted text-xs whitespace-nowrap">
                       <.local_time id={"deleted-book-#{b.id}"} value={b.deleted_at} format="datetime" />
                     </td>
-                    <td class="px-4 py-3 text-right flex gap-3 justify-end">
-                      <.ink_button variant="ghost" size="md" phx-click="restore_book" phx-value-id={b.id}>
-                        {gettext("Restore")}
-                      </.ink_button>
-                      <.ink_button
-                        variant="danger"
-                        size="md"
-                        phx-click="show_confirm"
-                        phx-value-event="purge_book"
-                        phx-value-id={b.id}
-                        phx-value-title={gettext("Purge Book")}
-                        phx-value-message={
-                          gettext(
-                            "Permanently delete \"%{name}\"? Book files on disk are never deleted. This cannot be undone.",
-                            name: b.title
-                          )
-                        }
-                        phx-value-label={gettext("Purge")}
-                      >
-                        {gettext("Purge")}
-                      </.ink_button>
+                    <td class="px-4 py-3">
+                      <div class="flex gap-3 justify-end">
+                        <.book_actions book={b} />
+                      </div>
                     </td>
                   </tr>
                 <% end %>
@@ -265,4 +310,60 @@ defmodule StashixWeb.AdminLive.Cleanup do
     </div>
     """
   end
+
+  attr :series, :any, required: true
+
+  defp series_actions(assigns) do
+    ~H"""
+    <.ink_button variant="ghost" size="md" phx-click="restore_series" phx-value-id={@series.id}>
+      {gettext("Restore")}
+    </.ink_button>
+    <.ink_button
+      variant="danger"
+      size="md"
+      phx-click="show_confirm"
+      phx-value-event="purge_series"
+      phx-value-id={@series.id}
+      phx-value-title={gettext("Purge Series")}
+      phx-value-message={
+        gettext(
+          "Permanently delete \"%{name}\" and all its books? Book files on disk are never deleted. This cannot be undone.",
+          name: @series.name
+        )
+      }
+      phx-value-label={gettext("Purge")}
+    >
+      {gettext("Purge")}
+    </.ink_button>
+    """
+  end
+
+  attr :book, :any, required: true
+
+  defp book_actions(assigns) do
+    ~H"""
+    <.ink_button variant="ghost" size="md" phx-click="restore_book" phx-value-id={@book.id}>
+      {gettext("Restore")}
+    </.ink_button>
+    <.ink_button
+      variant="danger"
+      size="md"
+      phx-click="show_confirm"
+      phx-value-event="purge_book"
+      phx-value-id={@book.id}
+      phx-value-title={gettext("Purge Book")}
+      phx-value-message={
+        gettext(
+          "Permanently delete \"%{name}\"? Book files on disk are never deleted. This cannot be undone.",
+          name: @book.title
+        )
+      }
+      phx-value-label={gettext("Purge")}
+    >
+      {gettext("Purge")}
+    </.ink_button>
+    """
+  end
+
+  defp first_path(book), do: book.files |> List.first() |> then(&(&1 && &1.path))
 end

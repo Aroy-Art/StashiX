@@ -165,12 +165,12 @@ defmodule StashixWeb.AdminHealthLive do
 
           <div class="bg-surface rounded-lg ring-1 ring-edge overflow-hidden">
             <%!-- Library header --%>
-            <div class="p-4 border-b border-fg/10 flex items-center justify-between">
-              <div>
+            <div class="p-4 border-b border-fg/10 flex flex-wrap items-center justify-between gap-3">
+              <div class="min-w-0">
                 <p class="text-fg font-medium">{lib.name}</p>
-                <p class="text-muted text-sm">{lib.root_path}</p>
+                <p class="text-muted text-sm break-all">{lib.root_path}</p>
               </div>
-              <div class="flex gap-2">
+              <div class="flex flex-wrap gap-2">
                 <.ink_button
                   variant="ghost"
                   size="md"
@@ -258,7 +258,9 @@ defmodule StashixWeb.AdminHealthLive do
                 <%= if data == [] do %>
                   <p class="text-muted text-sm">{gettext("All clear.")}</p>
                 <% else %>
-                  <.section_table section={section} data={data} />
+                  <div class="overflow-x-auto">
+                    <.section_table section={section} data={data} />
+                  </div>
                 <% end %>
               </div>
             <% end %>
@@ -307,17 +309,25 @@ defmodule StashixWeb.AdminHealthLive do
       <thead>
         <tr class="border-b border-fg/10 text-left">
           <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Title")}</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Path")}</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Missing since")}</th>
+          <th class="hidden sm:table-cell pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+            {gettext("Path")}
+          </th>
+          <th class="hidden md:table-cell pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+            {gettext("Missing since")}
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 pr-4 text-fg">
             <.link navigate={~p"/book/#{Slug.to_param(row.title, row.book_id)}"} class="hover:underline">{row.title}</.link>
+            <p class="sm:hidden text-muted font-mono text-xs break-all mt-0.5">{row.path}</p>
+            <p class="md:hidden text-faint text-xs mt-0.5">
+              <.local_time id={"missing-m-#{row.book_file_id}"} value={row.deleted_at} format="datetime" />
+            </p>
           </td>
-          <td class="py-2 pr-4 text-muted font-mono text-xs truncate max-w-xs">{row.path}</td>
-          <td class="py-2 text-muted text-xs">
+          <td class="hidden sm:table-cell py-2 pr-4 text-muted font-mono text-xs truncate max-w-xs">{row.path}</td>
+          <td class="hidden md:table-cell py-2 text-muted text-xs whitespace-nowrap">
             <.local_time id={"missing-#{row.book_file_id}"} value={row.deleted_at} format="datetime" />
           </td>
         </tr>
@@ -370,15 +380,18 @@ defmodule StashixWeb.AdminHealthLive do
       <thead>
         <tr class="border-b border-fg/10 text-left">
           <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Series")}</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Expected path")}</th>
+          <th class="hidden sm:table-cell pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+            {gettext("Expected path")}
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
           <td class="py-2 pr-4 text-fg">
             <.link navigate={~p"/series/#{Slug.to_param(row.name, row.series_id)}"} class="hover:underline">{row.name}</.link>
+            <p class="sm:hidden text-muted font-mono text-xs break-all mt-0.5">{row.path}</p>
           </td>
-          <td class="py-2 text-muted font-mono text-xs truncate max-w-sm">{row.path}</td>
+          <td class="hidden sm:table-cell py-2 text-muted font-mono text-xs truncate max-w-sm">{row.path}</td>
         </tr>
       </tbody>
     </table>
@@ -434,15 +447,25 @@ defmodule StashixWeb.AdminHealthLive do
       <thead>
         <tr class="border-b border-fg/10 text-left">
           <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("File path")}</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Extension")}</th>
-          <th class="pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">{gettext("Scanned")}</th>
+          <th class="hidden sm:table-cell pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+            {gettext("Extension")}
+          </th>
+          <th class="hidden md:table-cell pb-2 text-[10px] font-bold tracking-[0.18em] uppercase text-muted">
+            {gettext("Scanned")}
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr :for={row <- @data} class="border-b border-fg/5 last:border-0">
-          <td class="py-2 pr-4 text-fg-soft font-mono text-xs truncate max-w-sm">{row.file_path}</td>
-          <td class="py-2 pr-4 text-warn text-xs font-mono">{Path.extname(row.file_path)}</td>
-          <td class="py-2 text-muted text-xs">
+          <td class="py-2 pr-4 text-fg-soft font-mono text-xs break-all sm:break-normal sm:truncate sm:max-w-sm">
+            {row.file_path}
+            <p class="md:hidden text-faint font-sans text-xs mt-0.5">
+              <span class="sm:hidden text-warn font-mono">{Path.extname(row.file_path)} ·</span>
+              <.local_time id={"unsupported-m-#{row.result_id}"} value={row.checked_at} format="datetime" />
+            </p>
+          </td>
+          <td class="hidden sm:table-cell py-2 pr-4 text-warn text-xs font-mono">{Path.extname(row.file_path)}</td>
+          <td class="hidden md:table-cell py-2 text-muted text-xs whitespace-nowrap">
             <.local_time id={"unsupported-#{row.result_id}"} value={row.checked_at} format="datetime" />
           </td>
         </tr>
