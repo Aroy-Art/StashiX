@@ -209,6 +209,69 @@ defmodule Stashix.Calibre.SyncTest do
     assert Repo.aggregate(from(c in Creator, where: c.name in ["Ann Author", "Bo Writer"]), :count) == 2
   end
 
+  test "custom columns of every kind", %{root: root, lib: lib} do
+    id = CalibreFixtures.add_book(root, omens())
+
+    cols =
+      for {label, name, type, opts} <- [
+            {"read", "Read", "bool", []},
+            {"progress", "Progress", "int", []},
+            {"score", "Score", "float", []},
+            {"finished", "Finished", "datetime", []},
+            {"review", "Review", "comments", []},
+            {"shelf", "Shelf", "enumeration", []},
+            {"moods", "Moods", "text", [multiple: true]},
+            {"location", "Location", "text", []},
+            {"universe", "Universe", "series", []},
+            {"stars", "My stars", "rating", []},
+            {"empty", "Never set", "text", []}
+          ],
+          into: %{},
+          do: {label, CalibreFixtures.add_custom_column(root, label, name, type, opts)}
+
+    for {label, value} <- [
+          {"read", 1},
+          {"progress", 42},
+          {"score", 7.5},
+          {"finished", "2024-03-05 10:00:00+00:00"},
+          {"review", "<p>Loved <b>it</b>.</p>"},
+          {"shelf", "Favourites"},
+          {"moods", ["funny", "dark"]},
+          {"location", "Box 3"},
+          {"universe", {"Discworld-ish", 2.5}},
+          {"stars", 8}
+        ],
+        do: CalibreFixtures.set_custom(root, cols[label], id, value)
+
+    sync!(lib)
+
+    assert book(id).calibre_fields == %{
+             "read" => %{"name" => "Read", "type" => "bool", "value" => true},
+             "progress" => %{"name" => "Progress", "type" => "int", "value" => 42},
+             "score" => %{"name" => "Score", "type" => "float", "value" => 7.5},
+             "finished" => %{"name" => "Finished", "type" => "datetime", "value" => "2024-03-05"},
+             "review" => %{"name" => "Review", "type" => "comments", "value" => "Loved it."},
+             "shelf" => %{"name" => "Shelf", "type" => "enumeration", "value" => "Favourites"},
+             "moods" => %{"name" => "Moods", "type" => "text", "value" => ["funny", "dark"]},
+             "location" => %{"name" => "Location", "type" => "text", "value" => "Box 3"},
+             "universe" => %{
+               "name" => "Universe",
+               "type" => "series",
+               "value" => %{"name" => "Discworld-ish", "index" => 2.5}
+             },
+             "stars" => %{"name" => "My stars", "type" => "rating", "value" => 4.0}
+           }
+
+    columns = Repo.get!(Library.Library, lib.id).calibre_state["columns"]
+    assert %{"label" => "moods", "name" => "Moods", "type" => "text", "multiple" => true} in columns
+    assert length(columns) == 11
+
+    # A changed value rewrites the book.
+    CalibreFixtures.set_custom(root, cols["read"], id, 0)
+    assert %{updated: 1} = sync!(lib)
+    assert book(id).calibre_fields["read"]["value"] == false
+  end
+
   test "a forced sync rewrites every book", %{root: root, lib: lib} do
     CalibreFixtures.add_book(root, omens())
     sync!(lib)

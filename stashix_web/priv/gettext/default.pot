@@ -203,6 +203,7 @@ msgid "Book"
 msgstr ""
 
 #: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/components/core_components.ex
 #: lib/stashix_web/components/layouts.ex
 #: lib/stashix_web/components/layouts/app.html.heex
 #: lib/stashix_web/live/admin/libraries.ex
@@ -3710,6 +3711,7 @@ msgstr ""
 
 #: lib/stashix_web/live/admin_metadata_live.ex
 #: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
 #: lib/stashix_web/live/identify_component.ex
 #: lib/stashix_web/live/series_edit_component.ex
 #, elixir-autogen, elixir-format
@@ -4154,6 +4156,7 @@ msgstr ""
 
 #: lib/stashix_web/live/admin_metadata_live.ex
 #: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
 #: lib/stashix_web/live/identify_component.ex
 #: lib/stashix_web/live/series_edit_component.ex
 #, elixir-autogen, elixir-format
@@ -4616,6 +4619,7 @@ msgstr ""
 msgid "Searching…"
 msgstr ""
 
+#: lib/stashix_web/live/admin/cleanup.ex
 #: lib/stashix_web/live/identify_component.ex
 #, elixir-autogen, elixir-format
 msgid "Select all"
@@ -5065,6 +5069,7 @@ msgstr ""
 msgid "Calibre library"
 msgstr ""
 
+#: lib/stashix_web/components/core_components.ex
 #: lib/stashix_web/components/layouts.ex
 #, elixir-autogen, elixir-format
 msgid "Comics"
@@ -5435,4 +5440,29 @@ msgstr ""
 #: lib/stashix_web/live/search_live.ex
 #, elixir-autogen, elixir-format
 msgid "Title, creator or ISBN"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{loaded} of %{total}"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Downloading the book…"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "FictionBook files can't be read a part at a time, so the whole book is downloaded first. A large book can take a while."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Opening the book…"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Starting…"
 msgstr ""

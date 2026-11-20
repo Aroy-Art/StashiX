@@ -59,4 +59,26 @@ defmodule Stashix.Library.IdentifierSearchTest do
     assert Library.search_books("goodreads:12067", access: Access.all()) |> Enum.map(& &1.title) == ["Good Omens"]
     assert Library.search_books("omens", access: Access.all()) |> Enum.map(& &1.title) == ["Good Omens"]
   end
+
+  test "#label:value searches Calibre custom columns" do
+    omens = Stashix.Repo.get_by!(Stashix.Library.Book, title: "Good Omens")
+
+    {:ok, _} =
+      Library.update_book(omens, %{
+        calibre_fields: %{
+          "read" => %{"name" => "Read", "type" => "bool", "value" => true},
+          "moods" => %{"name" => "Moods", "type" => "text", "value" => ["Funny", "dark"]}
+        }
+      })
+
+    assert Library.custom_query("#Read:yes") == {"read", "true"}
+    assert Library.custom_query("#moods: funny") == {"moods", "funny"}
+    assert Library.custom_query("read:yes") == nil
+
+    assert search("#read:yes") == ["Good Omens"]
+    assert search("#read:no") == []
+    assert search("#moods:funny") == ["Good Omens"]
+    assert search("#nope:x") == []
+    assert Library.search_books("#moods:dark", access: Access.all()) |> Enum.map(& &1.title) == ["Good Omens"]
+  end
 end

@@ -492,11 +492,14 @@ defmodule Stashix.Library do
         offset: ^offset
       )
 
-    case identifier_query(query_string) do
-      {source, value} ->
+    case {identifier_query(query_string), custom_query(query_string)} do
+      {{source, value}, _} ->
         base |> filter_book_identifier(source, value) |> order_by([b], asc: b.title)
 
-      nil ->
+      {nil, {label, value}} ->
+        base |> filter_book_custom(label, value) |> order_by([b], asc: b.title)
+
+      {nil, nil} ->
         from(b in base,
           where: fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string),
           order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string)
@@ -846,11 +849,14 @@ defmodule Stashix.Library do
     query =
       case filters[:q] do
         q when is_binary(q) and q != "" ->
-          case identifier_query(q) do
-            {source, value} ->
+          case {identifier_query(q), custom_query(q)} do
+            {{source, value}, _} ->
               filter_book_identifier(query, source, value)
 
-            nil ->
+            {nil, {label, value}} ->
+              filter_book_custom(query, label, value)
+
+            {nil, nil} ->
               pattern = like_pattern(q)
 
               where(
@@ -914,6 +920,37 @@ defmodule Stashix.Library do
         if Regex.match?(~r/^[0-9][0-9\- ]+[0-9Xx]$/, q) and String.length(digits) in [10, 13],
           do: {:isbn, digits}
     end
+  end
+
+  @doc """
+  A search in a Calibre custom column, `#label:value`, as `{label, value}`
+  (label lower-case), or nil. Yes/no search true/false columns.
+  """
+  def custom_query(q) do
+    case Regex.run(~r/^#([a-z0-9_]+):\s*(.+)$/i, String.trim(q)) do
+      [_, label, value] ->
+        value =
+          case String.downcase(String.trim(value)) do
+            yes when yes in ["yes", "true", "y"] -> "true"
+            no when no in ["no", "false", "n"] -> "false"
+            other -> other
+          end
+
+        {String.downcase(label), value}
+
+      nil ->
+        nil
+    end
+  end
+
+  # Matches anywhere in the value's text (a list's or series' JSON included),
+  # ignoring case.
+  defp filter_book_custom(query, label, value) do
+    where(
+      query,
+      [book: b],
+      ilike(fragment("(?->?->>'value')", b.calibre_fields, ^label), ^like_pattern(value))
+    )
   end
 
   defp isbn_digits(value), do: value |> String.upcase() |> String.replace(~r/[^0-9X]/, "")

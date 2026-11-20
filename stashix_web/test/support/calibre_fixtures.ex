@@ -138,6 +138,102 @@ defmodule Stashix.CalibreFixtures do
     end)
   end
 
+  @normalized ~w(text series enumeration rating)
+
+  @doc """
+  Adds a custom column the way Calibre does: a `custom_columns` row and its
+  tables. Text, series, enumeration and rating columns are normalized (a
+  value table and a `books_custom_column_N_link` table, with `extra` holding a
+  series index); the others keep one `(book, value)` row per book. Returns
+  the column id.
+  """
+  def add_custom_column(root, label, name, datatype, opts \\ []) do
+    multiple? = Keyword.get(opts, :multiple, false)
+    normalized? = datatype in @normalized
+
+    with_db(root, fn conn ->
+      exec(
+        conn,
+        "INSERT INTO custom_columns (label, name, datatype, is_multiple, normalized, display) VALUES (?, ?, ?, ?, ?, ?)",
+        [label, name, datatype, if(multiple?, do: 1, else: 0), if(normalized?, do: 1, else: 0), "{}"]
+      )
+
+      {:ok, id} = Sqlite3.last_insert_rowid(conn)
+
+      value_type =
+        case datatype do
+          "int" -> "INT"
+          "rating" -> "INT"
+          "float" -> "REAL"
+          "bool" -> "BOOL"
+          "datetime" -> "TIMESTAMP"
+          _ -> "TEXT"
+        end
+
+      if normalized? do
+        :ok =
+          Sqlite3.execute(conn, """
+          CREATE TABLE custom_column_#{id} (id INTEGER PRIMARY KEY AUTOINCREMENT, value #{value_type} NOT NULL,
+            link TEXT NOT NULL DEFAULT "", UNIQUE(value));
+          CREATE TABLE books_custom_column_#{id}_link (id INTEGER PRIMARY KEY AUTOINCREMENT, book INTEGER NOT NULL,
+            value INTEGER NOT NULL#{if datatype == "series", do: ", extra REAL", else: ""}, UNIQUE(book, value));
+          """)
+      else
+        :ok =
+          Sqlite3.execute(conn, """
+          CREATE TABLE custom_column_#{id} (id INTEGER PRIMARY KEY AUTOINCREMENT, book INTEGER,
+            value #{value_type} NOT NULL, UNIQUE(book));
+          """)
+      end
+
+      id
+    end)
+  end
+
+  @doc """
+  Sets a book's value in a custom column: a list for multiple text columns,
+  `{name, index}` for a series column, else the plain value.
+  """
+  def set_custom(root, column_id, book_id, value) do
+    with_db(root, fn conn ->
+      [[datatype, normalized]] = rows(conn, "SELECT datatype, normalized FROM custom_columns WHERE id = ?", [column_id])
+
+      if normalized == 1 do
+        exec(conn, "DELETE FROM books_custom_column_#{column_id}_link WHERE book = ?", [book_id])
+
+        for v <- List.wrap(if datatype == "series", do: [value], else: value) do
+          {name, extra} = if datatype == "series", do: v, else: {v, nil}
+          value_id = upsert(conn, "custom_column_#{column_id}", name, column: "value")
+
+          if datatype == "series",
+            do:
+              exec(conn, "INSERT INTO books_custom_column_#{column_id}_link (book, value, extra) VALUES (?, ?, ?)", [
+                book_id,
+                value_id,
+                extra / 1
+              ]),
+            else:
+              exec(conn, "INSERT INTO books_custom_column_#{column_id}_link (book, value) VALUES (?, ?)", [
+                book_id,
+                value_id
+              ])
+        end
+      else
+        exec(conn, "INSERT OR REPLACE INTO custom_column_#{column_id} (book, value) VALUES (?, ?)", [book_id, value])
+      end
+
+      :ok
+    end)
+  end
+
+  defp rows(conn, sql, params) do
+    {:ok, stmt} = Sqlite3.prepare(conn, sql)
+    :ok = Sqlite3.bind(stmt, params)
+    {:ok, rows} = Sqlite3.fetch_all(conn, stmt)
+    :ok = Sqlite3.release(conn, stmt)
+    rows
+  end
+
   @doc "Runs `sql` with `params` on the library's `metadata.db`."
   def execute(root, sql, params \\ []), do: with_db(root, &exec(&1, sql, params))
 

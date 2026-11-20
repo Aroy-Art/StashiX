@@ -329,12 +329,20 @@ reference library if it's ever added as a plain folder.
 
 ## 6. Phase 4 — Custom columns, read status, notes
 
-- [ ] Custom columns: read definitions (`custom_columns` + `display`)
+- [x] Custom columns: read definitions (`custom_columns` + `display`)
   and values (`custom_column_N`, `books_custom_column_N_link`) for every
   datatype (text, comments, series, enumeration, int, float, bool,
   datetime, rating); store in `books.calibre_fields`, definitions in
   `libraries.calibre_state`. Shown on the book page, searchable as
-  `#label:value`.
+  `#label:value`. *Done:* `books.calibre_fields` is
+  `%{label => %{"name", "type", "value"}}` (multi-text a list, series
+  `%{"name", "index"}`, rating stars, datetime an ISO date, comments plain
+  text); composite (computed) columns are skipped, and `display` isn't
+  read (number formats). Book page facts list them by name.
+  `#label:value` matches anywhere in the value, ignoring case
+  (yes/no for true/false), on the search page and API/OPDS search. The
+  reference library has none, so this is tested on fixture columns built
+  as Calibre builds them.
 - [ ] Read status mapping: per library, pick a user and a column (bool
   like `#read`, or int/float like `#progress`); a value changed in Calibre
   since the last sync sets that user's progress (read → 1.0, percent →

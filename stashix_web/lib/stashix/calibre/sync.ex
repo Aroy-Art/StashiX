@@ -49,9 +49,9 @@ defmodule Stashix.Calibre.Sync do
 
     result =
       with {:ok, snap} <- Snapshot.take(library.id, library.root_path),
-           {:ok, books, library_uuid} <- read(snap) do
+           {:ok, books, library_uuid, columns} <- read(snap) do
         summary = sync(library, books, Keyword.get(opts, :force, false), progress)
-        {:ok, Map.merge(summary, %{stamp: snap.stamp, library_uuid: library_uuid})}
+        {:ok, Map.merge(summary, %{stamp: snap.stamp, library_uuid: library_uuid, columns: columns})}
       end
 
     save_state(library, result)
@@ -62,7 +62,10 @@ defmodule Stashix.Calibre.Sync do
   defp read(snap) do
     with {:ok, conn} <- Snapshot.open(snap) do
       try do
-        with {:ok, books} <- Reader.books(conn), do: {:ok, books, Reader.library_uuid(conn)}
+        with {:ok, books} <- Reader.books(conn),
+             {:ok, columns} <- Reader.custom_columns(conn) do
+          {:ok, books, Reader.library_uuid(conn), columns}
+        end
       after
         Exqlite.Sqlite3.close(conn)
       end
@@ -427,7 +430,12 @@ defmodule Stashix.Calibre.Sync do
             "synced_at" => now,
             "stamp" => summary.stamp,
             "library_uuid" => summary.library_uuid,
-            "summary" => Map.drop(summary, [:stamp, :library_uuid]),
+            # Custom column definitions, for the library's settings.
+            "columns" =>
+              Enum.map(summary.columns, fn c ->
+                %{"label" => c.label, "name" => c.name, "type" => c.datatype, "multiple" => c.multiple}
+              end),
+            "summary" => Map.drop(summary, [:stamp, :library_uuid, :columns]),
             "error" => nil
           }
 

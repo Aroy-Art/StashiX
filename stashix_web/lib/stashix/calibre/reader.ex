@@ -17,7 +17,11 @@ defmodule Stashix.Calibre.Reader do
         series: %{id: 5, name: "Dune", sort: "Dune"} | nil,
         publisher: "Ace" | nil, tags: ["SF"], languages: ["eng"], rating: 8 | nil,
         comments: "<p>…</p>" | nil, identifiers: %{"isbn" => "…"},
-        formats: [%{format: "EPUB", name: "Dune - Frank Herbert", size: 123}]}
+        formats: [%{format: "EPUB", name: "Dune - Frank Herbert", size: 123}],
+        custom: %{"read" => %{name: "Read", datatype: "bool", multiple: false, values: [1]}}}
+
+  `custom` holds the book's custom column values as Calibre stores them, by
+  label: a list of values, `{name, index}` pairs for series columns.
   """
 
   import Stashix.Calibre.Snapshot, only: [rows: 2]
@@ -68,7 +72,9 @@ defmodule Stashix.Calibre.Reader do
          {:ok, comments} <- rows(conn, "SELECT book, text FROM comments"),
          {:ok, identifiers} <- rows(conn, "SELECT book, type, val FROM identifiers ORDER BY book, type"),
          {:ok, formats} <-
-           rows(conn, "SELECT book, format, name, uncompressed_size FROM data ORDER BY book, format") do
+           rows(conn, "SELECT book, format, name, uncompressed_size FROM data ORDER BY book, format"),
+         {:ok, columns} <- custom_columns(conn),
+         {:ok, custom} <- custom_values(conn, columns) do
       authors = group(authors, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
       series = first(series, fn [id, name, sort] -> %{id: id, name: name, sort: sort} end)
       publishers = first(publishers, fn [name] -> name end)
@@ -103,11 +109,76 @@ defmodule Stashix.Calibre.Reader do
            rating: Map.get(ratings, id),
            comments: Map.get(comments, id),
            identifiers: Map.new(Map.get(identifiers, id, [])),
-           formats: Map.get(formats, id, [])
+           formats: Map.get(formats, id, []),
+           custom: Map.get(custom, id, %{})
          }
        end)}
     end
   end
+
+  # Computed (composite) columns have no table, and columns deleted in Calibre
+  # wait for a restart with `mark_for_delete`.
+  @doc "The library's custom columns: `%{id, label, name, datatype, multiple, normalized}`."
+  def custom_columns(conn) do
+    with {:ok, rows} <-
+           rows(conn, """
+           SELECT id, label, name, datatype, is_multiple, normalized FROM custom_columns
+           WHERE mark_for_delete = 0 AND datatype != 'composite' ORDER BY id
+           """) do
+      {:ok,
+       Enum.map(rows, fn [id, label, name, datatype, multiple, normalized] ->
+         %{
+           id: id,
+           label: label,
+           name: name,
+           datatype: datatype,
+           multiple: multiple in [1, true],
+           normalized: normalized in [1, true]
+         }
+       end)}
+    end
+  end
+
+  # `%{book_id => %{label => %{name, datatype, multiple, values}}}`.
+  defp custom_values(conn, columns) do
+    Enum.reduce_while(columns, {:ok, %{}}, fn column, {:ok, acc} ->
+      case column_rows(conn, column) do
+        {:ok, rows} ->
+          acc =
+            rows
+            |> Enum.group_by(&hd/1, fn [_book | value] -> column_value(column, value) end)
+            |> Enum.reduce(acc, fn {book, values}, acc ->
+              entry = %{name: column.name, datatype: column.datatype, multiple: column.multiple, values: values}
+              Map.update(acc, book, %{column.label => entry}, &Map.put(&1, column.label, entry))
+            end)
+
+          {:cont, {:ok, acc}}
+
+        # A column whose tables are missing is skipped, not fatal.
+        {:error, _} ->
+          {:cont, {:ok, acc}}
+      end
+    end)
+  end
+
+  defp column_rows(conn, %{id: id, normalized: true, datatype: "series"}) do
+    rows(conn, """
+    SELECT l.book, v.value, l.extra FROM books_custom_column_#{id}_link l
+    JOIN custom_column_#{id} v ON v.id = l.value ORDER BY l.book, l.id
+    """)
+  end
+
+  defp column_rows(conn, %{id: id, normalized: true}) do
+    rows(conn, """
+    SELECT l.book, v.value FROM books_custom_column_#{id}_link l
+    JOIN custom_column_#{id} v ON v.id = l.value ORDER BY l.book, l.id
+    """)
+  end
+
+  defp column_rows(conn, %{id: id}), do: rows(conn, "SELECT book, value FROM custom_column_#{id} ORDER BY book")
+
+  defp column_value(%{datatype: "series"}, [name, index]), do: {name, index}
+  defp column_value(_column, [value]), do: value
 
   @doc "The library's own uuid (`library_id` table), or nil."
   def library_uuid(conn) do

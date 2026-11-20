@@ -118,6 +118,11 @@ defmodule StashixWeb.CalibreLibraryLiveTest do
         }
       ])
 
+    col = CalibreFixtures.add_custom_column(root, "read", "Read", "bool")
+    CalibreFixtures.set_custom(root, col, 1, 1)
+    shelf = CalibreFixtures.add_custom_column(root, "moods", "Moods", "text", multiple: true)
+    CalibreFixtures.set_custom(root, shelf, 1, ["funny", "dark"])
+
     {:ok, lib} = Library.create_library(%{name: "Shelf", root_path: root, kind: :books, source: :calibre})
     {:ok, _} = Stashix.Calibre.Sync.run(lib)
     book = Stashix.Repo.get_by!(Stashix.Library.Book, title: "Good Omens")
@@ -127,6 +132,11 @@ defmodule StashixWeb.CalibreLibraryLiveTest do
     assert has_element?(view, "#book-added-at")
     assert has_element?(view, "a[href='https://books.google.com/books?id=g1']")
     assert has_element?(view, "a[href='https://www.goodreads.com/book/show/12067']")
+    # Custom columns, by their Calibre names.
+    assert html =~ "Moods"
+    assert html =~ "funny, dark"
+    assert html =~ ~r/Read\s*<\/[^>]+>\s*<[^>]+>\s*Yes/
+
     # The format pills start on the EPUB.
     assert view |> element("span.bg-fg", "EPUB") |> has_element?()
   end

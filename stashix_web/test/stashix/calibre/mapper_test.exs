@@ -59,7 +59,8 @@ defmodule Stashix.Calibre.MapperTest do
              summary: nil,
              isbn: nil,
              rating: 4.5,
-             calibre_modified_at: ~N[2023-02-03 10:39:10]
+             calibre_modified_at: ~N[2023-02-03 10:39:10],
+             calibre_fields: %{}
            }
 
     assert m.series == nil

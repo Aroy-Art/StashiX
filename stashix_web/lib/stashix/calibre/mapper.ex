@@ -45,7 +45,8 @@ defmodule Stashix.Calibre.Mapper do
         summary: html_to_text(book.comments),
         isbn: blank(book.identifiers["isbn"]),
         rating: rating(book.rating),
-        calibre_modified_at: datetime(book.last_modified)
+        calibre_modified_at: datetime(book.last_modified),
+        calibre_fields: custom_fields(Map.get(book, :custom, %{}))
       },
       series: series,
       record: %{
@@ -119,6 +120,37 @@ defmodule Stashix.Calibre.Mapper do
         Stashix.Metadata.Importer.web_url?(value),
         do: %{url: value, is_primary: false}
   end
+
+  @doc """
+  Custom column values as stored on the book, by label:
+  `%{"read" => %{"name" => "Read", "type" => "bool", "value" => true}}`.
+  Values: text (a list when the column takes several), enumeration and
+  comments (plain text) are strings; series `%{"name", "index"}`; rating
+  0–5 stars; int, float and bool as such; datetime an ISO date.
+  """
+  def custom_fields(custom) do
+    custom
+    |> Enum.flat_map(fn {label, %{name: name, datatype: type} = column} ->
+      case custom_value(column) do
+        empty when empty in [nil, "", []] -> []
+        value -> [{label, %{"name" => name, "type" => type, "value" => value}}]
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp custom_value(%{datatype: "series", values: [{name, index} | _]}),
+    do: %{"name" => name, "index" => index}
+
+  defp custom_value(%{datatype: "text", multiple: true, values: values}), do: Enum.map(values, &to_string/1)
+  defp custom_value(%{datatype: "rating", values: [n | _]}), do: rating(n)
+  defp custom_value(%{datatype: "bool", values: [v | _]}), do: v in [1, true, "1", "true"]
+  defp custom_value(%{datatype: "int", values: [v | _]}) when is_number(v), do: trunc(v)
+  defp custom_value(%{datatype: "float", values: [v | _]}) when is_number(v), do: v / 1
+  defp custom_value(%{datatype: "datetime", values: [v | _]}), do: v |> date() |> then(&(&1 && Date.to_iso8601(&1)))
+  defp custom_value(%{datatype: "comments", values: [v | _]}), do: html_to_text(v)
+  defp custom_value(%{values: [v | _]}) when is_binary(v), do: blank(v)
+  defp custom_value(_column), do: nil
 
   # Calibre stores 0–10 (half stars); 0 means unrated.
   defp rating(n) when is_integer(n) and n > 0, do: min(n, 10) / 2

@@ -41,7 +41,8 @@ defmodule Stashix.Calibre.Snapshot do
     "ratings" => ~w(id rating),
     "books_ratings_link" => ~w(book rating),
     "comments" => ~w(book text),
-    "identifiers" => ~w(book type val)
+    "identifiers" => ~w(book type val),
+    "custom_columns" => ~w(id label name datatype is_multiple normalized mark_for_delete)
   }
 
   defstruct [:path, :stamp]

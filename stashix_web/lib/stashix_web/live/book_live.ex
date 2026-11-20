@@ -295,6 +295,7 @@ defmodule StashixWeb.BookLive do
       {"UPC", d.upc},
       {gettext("Added"), d.added_at && fact_date("book-added-at", d.added_at, "date")}
     ]
+    |> Enum.concat(custom_facts(d.calibre_fields))
     |> Enum.map(fn {label, value} -> {label, value || nil} end)
   end
 
@@ -305,6 +306,34 @@ defmodule StashixWeb.BookLive do
     <.local_time id={@id} value={@date} format={@format} />
     """
   end
+
+  # Calibre custom columns, by column name.
+  defp custom_facts(fields) when is_map(fields) do
+    fields
+    |> Enum.sort_by(fn {_label, %{"name" => name}} -> String.downcase(name) end)
+    |> Enum.map(fn {label, %{"name" => name, "type" => type, "value" => value}} ->
+      {name, custom_value(label, type, value)}
+    end)
+  end
+
+  defp custom_facts(_fields), do: []
+
+  defp custom_value(_label, "bool", value), do: if(value, do: gettext("Yes"), else: gettext("No"))
+  defp custom_value(_label, "rating", value), do: rating(value)
+  defp custom_value(_label, "float", value), do: Format.decimal(value * 1.0)
+
+  defp custom_value(_label, "series", %{"name" => name, "index" => index}),
+    do: "#{name} ##{Format.decimal(index * 1.0)}"
+
+  defp custom_value(label, "datetime", value) do
+    case Date.from_iso8601(value) do
+      {:ok, date} -> fact_date("book-custom-#{label}", date, "date")
+      _ -> value
+    end
+  end
+
+  defp custom_value(_label, _type, value) when is_list(value), do: Enum.join(value, ", ")
+  defp custom_value(_label, _type, value), do: to_string(value)
 
   # The library's 0–5 rating (from Calibre), as stars.
   defp rating(nil), do: nil

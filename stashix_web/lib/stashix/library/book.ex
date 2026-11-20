@@ -61,6 +61,8 @@ defmodule Stashix.Library.Book do
     field :added_at, :naive_datetime
     # 0–5 stars, halves allowed.
     field :rating, :float
+    # Calibre custom columns, by label: %{"name", "type", "value"}.
+    field :calibre_fields, :map, default: %{}
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -132,7 +134,8 @@ defmodule Stashix.Library.Book do
       :calibre_modified_at,
       :sort_title,
       :added_at,
-      :rating
+      :rating,
+      :calibre_fields
     ])
     |> validate_required([:title, :library_id])
     |> validate_inclusion(:manga, ~w(Yes No YesAndRightToLeft))
