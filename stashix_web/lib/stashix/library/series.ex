@@ -48,6 +48,8 @@ defmodule Stashix.Library.Series do
     field :metadata_matched_at, :naive_datetime
     field :metadata_source, :string
     field :calibre_id, :integer
+    # The series' web page (Calibre's series link).
+    field :url, :string
 
     belongs_to :library, Stashix.Library.Library
     has_many :books, Stashix.Library.Book
@@ -81,7 +83,8 @@ defmodule Stashix.Library.Series do
       :metadata_source,
       :status,
       :locked_fields,
-      :calibre_id
+      :calibre_id,
+      :url
     ])
     |> validate_required([:name, :library_id])
     |> validate_inclusion(:status, ~w(Cancelled Completed Hiatus Ongoing))

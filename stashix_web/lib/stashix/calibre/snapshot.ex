@@ -30,7 +30,7 @@ defmodule Stashix.Calibre.Snapshot do
     "data" => ~w(book format name uncompressed_size),
     "authors" => ~w(id name sort link),
     "books_authors_link" => ~w(id book author),
-    "series" => ~w(id name sort),
+    "series" => ~w(id name sort link),
     "books_series_link" => ~w(book series),
     "publishers" => ~w(id name),
     "books_publishers_link" => ~w(book publisher),
@@ -100,12 +100,33 @@ defmodule Stashix.Calibre.Snapshot do
     end
   end
 
+  @doc """
+  A copy of the library's `.calnotes/notes.db` (Calibre's notes, since
+  Calibre 7), opened read-only, or nil when there is none or it can't be
+  read. Notes are extras: a bad copy is skipped, not retried.
+  """
+  def open_notes(library_id, root) do
+    source = Path.join([root, ".calnotes", "notes.db"])
+    target = Path.join(dir(), "#{library_id}-notes.db")
+
+    with true <- File.regular?(source),
+         false <- File.exists?(source <> "-journal"),
+         :ok <- File.mkdir_p(dir()),
+         {:ok, _} <- File.copy(source, target),
+         {:ok, conn} <- Sqlite3.open(target, mode: :readonly) do
+      conn
+    else
+      _ -> nil
+    end
+  end
+
   @doc "Opens a snapshot read-only. The caller closes it with `Exqlite.Sqlite3.close/1`."
   def open(%__MODULE__{path: path}), do: Sqlite3.open(path, mode: :readonly)
 
   @doc "Removes a library's snapshot (library deleted, or switched to folders)."
   def delete(library_id) do
     File.rm(path(library_id))
+    File.rm(Path.join(dir(), "#{library_id}-notes.db"))
     :ok
   end
 

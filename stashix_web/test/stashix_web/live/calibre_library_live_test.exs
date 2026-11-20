@@ -176,4 +176,40 @@ defmodule StashixWeb.CalibreLibraryLiveTest do
     # The format pills start on the EPUB.
     assert view |> element("span.bg-fg", "EPUB") |> has_element?()
   end
+
+  test "author and series pages show Calibre's notes and links", %{conn: conn} do
+    {:ok, lib} = Library.create_library(%{name: "Shelf", root_path: "/tmp/notes-shelf", kind: :books})
+
+    {:ok, creator} =
+      %Stashix.Library.Creator{}
+      |> Stashix.Library.Creator.changeset(%{
+        name: "Terry Pratchett",
+        bio: "Wrote Discworld.",
+        url: "https://example.com/terry"
+      })
+      |> Stashix.Repo.insert()
+
+    {:ok, series} =
+      %Stashix.Library.Series{}
+      |> Stashix.Library.Series.changeset(%{
+        name: "Discworld",
+        library_id: lib.id,
+        url: "https://example.com/discworld"
+      })
+      |> Stashix.Repo.insert()
+
+    {:ok, book} = Library.create_book(%{title: "Mort", library_id: lib.id, series_id: series.id})
+
+    {:ok, _} =
+      Stashix.Metadata.Importer.replace_book_metadata(book, %{
+        credits: [%{creator: "Terry Pratchett", roles: ["Writer"]}]
+      })
+
+    {:ok, view, _html} = live(conn, ~p"/creator/#{creator}")
+    assert view |> element("#creator-bio") |> render() =~ "Wrote Discworld."
+    assert has_element?(view, "#creator-url[href='https://example.com/terry']", "example.com")
+
+    {:ok, view, _html} = live(conn, ~p"/series/#{series}")
+    assert has_element?(view, "#series-url[href='https://example.com/discworld']")
+  end
 end

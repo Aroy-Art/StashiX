@@ -50,7 +50,8 @@ defmodule Stashix.Calibre.Sync do
     result =
       with {:ok, snap} <- Snapshot.take(library.id, library.root_path),
            {:ok, books, library_uuid, columns} <- read(snap) do
-        summary = sync(library, books, Keyword.get(opts, :force, false), progress)
+        notes = read_notes(library)
+        summary = sync(library, books, notes, Keyword.get(opts, :force, false), progress)
         {:ok, Map.merge(summary, %{stamp: snap.stamp, library_uuid: library_uuid, columns: columns})}
       end
 
@@ -72,11 +73,29 @@ defmodule Stashix.Calibre.Sync do
     end
   end
 
-  defp sync(library, books, force, progress) do
+  # Author and series notes; none when the library has no notes database.
+  defp read_notes(library) do
+    case Snapshot.open_notes(library.id, library.root_path) do
+      nil ->
+        %{}
+
+      conn ->
+        try do
+          case Reader.notes(conn) do
+            {:ok, notes} -> Map.new(notes, fn {key, html} -> {key, Mapper.html_to_text(html)} end)
+            _ -> %{}
+          end
+        after
+          Exqlite.Sqlite3.close(conn)
+        end
+    end
+  end
+
+  defp sync(library, books, notes, force, progress) do
     total = length(books)
     mapped = Enum.map(books, &Mapper.map_book/1)
-    series_ids = upsert_series(library, mapped)
-    upsert_people(mapped)
+    series_ids = upsert_series(library, mapped, notes)
+    upsert_people(mapped, notes)
     {matches, removed} = match_books(library, mapped)
     covered = covered_book_ids(library)
     now = NaiveDateTime.utc_now(:second)
@@ -126,7 +145,7 @@ defmodule Stashix.Calibre.Sync do
   # `%{calibre series id => series id}`. A series is found by Calibre id when
   # the name still matches, else by name (Calibre renumbers series when it
   # rebuilds its database), else by id (renamed in Calibre).
-  defp upsert_series(library, mapped) do
+  defp upsert_series(library, mapped, notes) do
     wanted = mapped |> Enum.map(& &1.series) |> Enum.reject(&is_nil/1) |> Enum.uniq_by(& &1.calibre_id)
     rows = Repo.all(from s in Series, where: s.library_id == ^library.id and not is_nil(s.calibre_id))
     by_id = Map.new(rows, &{&1.calibre_id, &1})
@@ -152,13 +171,18 @@ defmodule Stashix.Calibre.Sync do
       Repo.update_all(from(s in Series, where: s.id in ^(moving ++ gone)), set: [calibre_id: nil])
 
       Map.new(pairs, fn {s, row} ->
-        attrs = %{
-          name: s.name,
-          sort_name: s.sort_name,
-          calibre_id: s.calibre_id,
-          library_id: library.id,
-          deleted_at: nil
-        }
+        # A note or link sets the summary / URL; without one, a summary
+        # written in Stashix stays.
+        attrs =
+          %{
+            name: s.name,
+            sort_name: s.sort_name,
+            calibre_id: s.calibre_id,
+            library_id: library.id,
+            deleted_at: nil
+          }
+          |> put_present(:url, s[:url])
+          |> put_present(:summary, notes[{"series", s.calibre_id}])
 
         series =
           case row do
@@ -177,7 +201,7 @@ defmodule Stashix.Calibre.Sync do
   # Created up front, one at a time: books import in parallel, and two books
   # creating the same new author would race on the unique name (the loser's
   # transaction aborts). Authors also take Calibre's sort name here.
-  defp upsert_people(mapped) do
+  defp upsert_people(mapped, notes) do
     now = NaiveDateTime.utc_now(:second)
     creators = mapped |> Enum.flat_map(& &1.creators) |> Enum.uniq_by(& &1.name)
 
@@ -186,11 +210,21 @@ defmodule Stashix.Calibre.Sync do
     |> Enum.chunk_every(1000)
     |> Enum.each(&Repo.insert_all(Creator, &1, on_conflict: :nothing, conflict_target: :name))
 
-    for %{name: name, sort_name: sort} <- creators, sort do
-      Repo.update_all(
-        from(c in Creator, where: c.name == ^name and (is_nil(c.sort_name) or c.sort_name != ^sort)),
-        set: [sort_name: sort]
-      )
+    # Sort name, and the note (as bio) and link Calibre has for the author;
+    # creators are shared across libraries, so nothing is cleared.
+    for creator <- creators,
+        set =
+          []
+          |> put_present(:sort_name, creator.sort_name)
+          |> put_present(:url, creator[:url])
+          |> put_present(:bio, notes[{"authors", creator[:calibre_id]}]),
+        set != [] do
+      name = creator.name
+
+      changed =
+        Enum.reduce(set, false, fn {k, v}, acc -> dynamic([c], ^acc or is_nil(field(c, ^k)) or field(c, ^k) != ^v) end)
+
+      Repo.update_all(from(c in Creator, where: c.name == ^name, where: ^changed), set: set)
     end
 
     mapped
@@ -199,6 +233,11 @@ defmodule Stashix.Calibre.Sync do
     |> Enum.uniq()
     |> Enum.each(&Library.get_or_create_publisher/1)
   end
+
+  defp put_present(acc, _key, nil), do: acc
+  defp put_present(acc, _key, ""), do: acc
+  defp put_present(acc, key, value) when is_list(acc), do: [{key, value} | acc]
+  defp put_present(acc, key, value), do: Map.put(acc, key, value)
 
   # ── Books ──────────────────────────────────────────────────────────────────
 

@@ -272,8 +272,15 @@ defmodule StashixWeb.CreatorLive do
           </span>
           <span :if={years(@works)}>{years(@works)}</span>
           <.text_link navigate={~p"/search?#{%{creator: [@creator.id]}}"}>{gettext("Filter in search")}</.text_link>
+          <.text_link :if={@creator.url} id="creator-url" href={@creator.url} target="_blank" rel="noopener noreferrer">
+            <.icon name="lucide-external-link" class="w-3.5 h-3.5" /> {URI.parse(@creator.url).host}
+          </.text_link>
         </:meta>
       </.page_hero>
+
+      <section :if={@creator.bio} id="creator-bio" class="max-w-3xl">
+        <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@creator.bio}</p>
+      </section>
 
       <%= if @tab do %>
         <.tabs label={gettext("Roles")}>

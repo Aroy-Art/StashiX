@@ -67,8 +67,8 @@ defmodule Stashix.Calibre.MapperTest do
     assert m.cover == "Terry Pratchett/Good Omens (12)/cover.jpg"
 
     assert m.creators == [
-             %{name: "Terry Pratchett", sort_name: "Pratchett, Terry"},
-             %{name: "Neil Gaiman", sort_name: "Gaiman, Neil"}
+             %{calibre_id: 1, name: "Terry Pratchett", sort_name: "Pratchett, Terry", url: nil},
+             %{calibre_id: 2, name: "Neil Gaiman", sort_name: "Gaiman, Neil", url: nil}
            ]
 
     assert m.record.credits == [
@@ -83,7 +83,7 @@ defmodule Stashix.Calibre.MapperTest do
   test "series and a fractional index" do
     m = Mapper.map_book(book(%{series: %{id: 5, name: "Omens", sort: "Omens"}, series_index: 2.5}))
 
-    assert m.series == %{calibre_id: 5, name: "Omens", sort_name: "Omens"}
+    assert m.series == %{calibre_id: 5, name: "Omens", sort_name: "Omens", url: nil}
     assert m.book.type == "issue"
     assert Decimal.equal?(m.book.issue_number, Decimal.new("2.5"))
 

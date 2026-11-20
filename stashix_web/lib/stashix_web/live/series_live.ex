@@ -854,6 +854,12 @@ defmodule StashixWeb.SeriesLive do
         </p>
       </section>
 
+      <p :if={@series.url} class="-mt-2">
+        <.text_link id="series-url" href={@series.url} target="_blank" rel="noopener noreferrer">
+          <.icon name="lucide-external-link" class="w-3.5 h-3.5" /> {URI.parse(@series.url).host}
+        </.text_link>
+      </p>
+
       <% series_age_rating = common_age_rating(@series.books) %>
       <.indicia>
         <:item label={gettext("Pages")} show={@total_pages > 0}>

@@ -234,6 +234,32 @@ defmodule Stashix.CalibreFixtures do
     rows
   end
 
+  @doc """
+  Writes Calibre's notes database (`.calnotes/notes.db`) with `notes`:
+  `{colname, item_id, html}` (colname `"authors"`, `"series"`, …).
+  """
+  def make_notes(root, notes) do
+    dir = Path.join(root, ".calnotes")
+    File.mkdir_p!(dir)
+    {:ok, conn} = Sqlite3.open(Path.join(dir, "notes.db"))
+
+    try do
+      :ok =
+        Sqlite3.execute(conn, """
+        CREATE TABLE IF NOT EXISTS notes (id INTEGER PRIMARY KEY AUTOINCREMENT, item INTEGER NOT NULL,
+          colname TEXT NOT NULL COLLATE NOCASE, doc TEXT NOT NULL DEFAULT '', searchable_text TEXT NOT NULL DEFAULT '',
+          ctime REAL, mtime REAL, UNIQUE(item, colname))
+        """)
+
+      for {col, item, html} <- notes,
+          do: exec(conn, "INSERT OR REPLACE INTO notes (colname, item, doc) VALUES (?, ?, ?)", [col, item, html])
+    after
+      Sqlite3.close(conn)
+    end
+
+    root
+  end
+
   @doc "Runs `sql` with `params` on the library's `metadata.db`."
   def execute(root, sql, params \\ []), do: with_db(root, &exec(&1, sql, params))
 

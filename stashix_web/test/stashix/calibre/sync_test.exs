@@ -346,6 +346,40 @@ defmodule Stashix.Calibre.SyncTest do
     end
   end
 
+  test "author and series notes and links", %{root: root, lib: lib} do
+    id = CalibreFixtures.add_book(root, omens())
+    [[author_id]] = CalibreFixtures.query(root, "SELECT id FROM authors WHERE name = 'Terry Pratchett'")
+    [[series_id]] = CalibreFixtures.query(root, "SELECT id FROM series")
+
+    CalibreFixtures.execute(root, "UPDATE authors SET link = 'https://www.terrypratchettbooks.com' WHERE id = ?", [
+      author_id
+    ])
+
+    CalibreFixtures.execute(root, "UPDATE series SET link = 'javascript:alert(1)'")
+
+    CalibreFixtures.make_notes(root, [
+      {"authors", author_id, "<p>Wrote <b>Discworld</b>.</p>"},
+      {"series", series_id, "<p>The end of the world.</p>"}
+    ])
+
+    sync!(lib)
+
+    terry = Repo.get_by!(Creator, name: "Terry Pratchett")
+    assert {terry.bio, terry.url} == {"Wrote Discworld.", "https://www.terrypratchettbooks.com"}
+    assert Repo.get_by!(Creator, name: "Neil Gaiman").bio == nil
+
+    series = book(id).series
+    assert series.summary == "The end of the world."
+    # Only web links are kept.
+    assert series.url == nil
+
+    # Without a note, a summary written in Stashix stays.
+    File.rm!(Path.join([root, ".calnotes", "notes.db"]))
+    {:ok, _} = Library.update_series(series, %{"summary" => "Mine"})
+    sync!(lib, force: true)
+    assert Repo.get!(Series, series.id).summary == "Mine"
+  end
+
   test "a forced sync rewrites every book", %{root: root, lib: lib} do
     CalibreFixtures.add_book(root, omens())
     sync!(lib)

@@ -26,7 +26,15 @@ defmodule Stashix.Calibre.Mapper do
 
   @doc "Maps one Calibre book."
   def map_book(book) do
-    series = book.series && %{calibre_id: book.series.id, name: book.series.name, sort_name: blank(book.series.sort)}
+    series =
+      book.series &&
+        %{
+          calibre_id: book.series.id,
+          name: book.series.name,
+          sort_name: blank(book.series.sort),
+          url: web_url(book.series[:link])
+        }
+
     {files, skipped} = files(book)
     cover_date = date(book.pubdate)
 
@@ -56,7 +64,8 @@ defmodule Stashix.Calibre.Mapper do
         external_ids: external_ids(book.identifiers),
         urls: urls(book.identifiers)
       },
-      creators: Enum.map(book.authors, &%{name: &1.name, sort_name: blank(&1.sort)}),
+      creators:
+        Enum.map(book.authors, &%{calibre_id: &1.id, name: &1.name, sort_name: blank(&1.sort), url: web_url(&1.link)}),
       files: files,
       skipped_formats: skipped,
       cover: if(book.has_cover, do: Path.join(book.path, "cover.jpg"))
@@ -151,6 +160,14 @@ defmodule Stashix.Calibre.Mapper do
   defp custom_value(%{datatype: "comments", values: [v | _]}), do: html_to_text(v)
   defp custom_value(%{values: [v | _]}) when is_binary(v), do: blank(v)
   defp custom_value(_column), do: nil
+
+  # Calibre's author / series links: kept when they're web links.
+  defp web_url(link) when is_binary(link) do
+    link = String.trim(link)
+    if Stashix.Metadata.Importer.web_url?(link), do: link
+  end
+
+  defp web_url(_link), do: nil
 
   # Calibre stores 0–10 (half stars); 0 means unrated.
   defp rating(n) when is_integer(n) and n > 0, do: min(n, 10) / 2

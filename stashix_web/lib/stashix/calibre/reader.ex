@@ -43,7 +43,7 @@ defmodule Stashix.Calibre.Reader do
            """),
          {:ok, series} <-
            rows(conn, """
-           SELECT l.book, s.id, s.name, s.sort
+           SELECT l.book, s.id, s.name, s.sort, s.link
            FROM books_series_link l JOIN series s ON s.id = l.series
            """),
          {:ok, publishers} <-
@@ -76,7 +76,7 @@ defmodule Stashix.Calibre.Reader do
          {:ok, columns} <- custom_columns(conn),
          {:ok, custom} <- custom_values(conn, columns) do
       authors = group(authors, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
-      series = first(series, fn [id, name, sort] -> %{id: id, name: name, sort: sort} end)
+      series = first(series, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
       publishers = first(publishers, fn [name] -> name end)
       tags = group(tags, fn [name] -> name end)
       languages = group(languages, fn [code] -> code end)
@@ -179,6 +179,17 @@ defmodule Stashix.Calibre.Reader do
 
   defp column_value(%{datatype: "series"}, [name, index]), do: {name, index}
   defp column_value(_column, [value]), do: value
+
+  @doc """
+  Calibre's notes (`.calnotes/notes.db`, opened like the library's
+  database) for authors and series, as `%{{"authors" | "series", id} => html}`.
+  """
+  def notes(conn) do
+    case rows(conn, "SELECT colname, item, doc FROM notes WHERE colname IN ('authors', 'series') AND doc != ''") do
+      {:ok, rows} -> {:ok, Map.new(rows, fn [col, item, doc] -> {{String.downcase(col), item}, doc} end)}
+      error -> error
+    end
+  end
 
   @doc "The library's own uuid (`library_id` table), or nil."
   def library_uuid(conn) do

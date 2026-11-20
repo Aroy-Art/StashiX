@@ -352,10 +352,18 @@ reference library if it's ever added as a plain folder.
   columns only), which syncs right away. Choosing or changing the column
   applies every book's value once (`calibre_state.read_applied`); after
   that only values that changed. Counted as `read_marked`.
-- [ ] Notes: `.calnotes/notes.db` → creator bio, series summary, tag and
+- [x] Notes: `.calnotes/notes.db` → creator bio, series summary, tag and
   publisher notes (HTML sanitised; images from `resources/` served like
   covers). `authors.link` / `series.link` → creator / series URL.
-  Migration: `creators.bio`, `creators.url`.
+  Migration: `creators.bio`, `creators.url`. *Done:* author notes → bio,
+  series notes → summary, as plain text; author / series links (web links
+  only) → `creators.url` / `series.url`, shown on the author and series
+  pages. A note or link only sets: creators are shared across libraries,
+  and a summary written in Stashix stays when Calibre has no note.
+  `notes.db` is copied like `metadata.db` but not retried when busy.
+  Dropped: tag and publisher notes (Stashix publishers are shared and
+  tags have no page) and note images. The reference library has no
+  notes or links; tested on fixtures.
 - [ ] Calibre viewer data (`annotations`, `last_read_positions`) → the
   mapped user's annotations / progress (EPUB CFI fits the D6 locator).
   Empty in the reference library; low priority.
