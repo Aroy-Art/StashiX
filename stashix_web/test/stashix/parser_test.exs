@@ -59,6 +59,40 @@ defmodule Stashix.Metadata.ParserTest do
     end
   end
 
+  describe "parse_filename/1 — square-bracket tags" do
+    test "imprint tag before the year is dropped" do
+      r = Parser.parse_filename("Stephen King's Creepshow [Signet] (1982)")
+      assert r.series == "Stephen King's Creepshow"
+      assert r.title == "Stephen King's Creepshow"
+      assert r.year == 1982
+    end
+
+    test "tag after the issue number is dropped" do
+      r = Parser.parse_filename("Dark Horse Comics 008 [Empire]")
+      assert r.series == "Dark Horse Comics"
+      assert Decimal.equal?(r.issue_number, Decimal.new("8"))
+    end
+
+    test "tag in a yearless title is dropped" do
+      assert Parser.parse_filename("Some Book [Scan]").title == "Some Book"
+    end
+
+    test "leading tag is dropped" do
+      assert Parser.parse_filename("[Group] Batman 001 (2016)").series == "Batman"
+    end
+
+    test "bracketed year is kept as the year" do
+      r = Parser.parse_filename("Batman 001 [2016]")
+      assert r.series == "Batman"
+      assert r.year == 2016
+      assert Decimal.equal?(r.issue_number, Decimal.new("1"))
+    end
+
+    test "brackets inside the title are kept" do
+      assert Parser.parse_filename("The [Redacted] Files 003 (2020)").series == "The [Redacted] Files"
+    end
+  end
+
   describe "parse_filename/1 — Issue/Volume prefix pattern" do
     test "Issue N - Title" do
       r = Parser.parse_filename("Issue 3 - Angel of Death")

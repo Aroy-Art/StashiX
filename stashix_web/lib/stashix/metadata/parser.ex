@@ -162,6 +162,11 @@ defmodule Stashix.Metadata.Parser do
 
     clean =
       Regex.replace(@noise_regex, filename, " ")
+      # A bracketed year is still the year — "Batman 001 [2016]", "Heavy Metal [1977-04]"
+      |> then(&Regex.replace(~r/\[(\d{4})(?:-\d{1,2})?\]/, &1, "(\\1)"))
+      # Other square-bracket groups are edition/imprint/scanner tags — "Creepshow [Signet] (1982)" —
+      # unless title words follow them, as in "The [Redacted] Files"
+      |> then(&Regex.replace(~r/\s*\[[^\]]*\]\s*(?=$|[(\[#\d])|^\s*\[[^\]]*\]\s*/, &1, " "))
       |> then(&Regex.replace(~r/\s*\(of\s+\d+\)\s*/i, &1, " "))
       |> then(&Regex.replace(~r/\((\d{1,2})-(\d{4})\)/, &1, "(\\2)"))
       # Whatever trails the year is scanner/release tagging — "(1994)(FB-DCP)(Group)"
