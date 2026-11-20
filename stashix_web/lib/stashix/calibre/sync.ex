@@ -80,6 +80,7 @@ defmodule Stashix.Calibre.Sync do
     {matches, removed} = match_books(library, mapped)
     covered = covered_book_ids(library)
     now = NaiveDateTime.utc_now(:second)
+    read = read_setting(library)
 
     progress.(:importing, 0, total)
     {:ok, counter} = Agent.start_link(fn -> 0 end)
@@ -88,7 +89,7 @@ defmodule Stashix.Calibre.Sync do
       mapped
       |> Task.async_stream(
         fn m ->
-          result = process_book(library, m, matches[m.calibre_id], series_ids, force, covered, now)
+          result = process_book(library, m, matches[m.calibre_id], series_ids, force, covered, now, read)
           done = Agent.get_and_update(counter, &{&1 + 1, &1 + 1})
           progress.(:importing, done, total)
           result
@@ -113,6 +114,8 @@ defmodule Stashix.Calibre.Sync do
       failed: Enum.count(results, &(&1.status == :failed)),
       removed: length(removed),
       missing_files: Enum.sum_by(results, & &1.missing),
+      read_marked: Enum.count(results, & &1[:read_marked]),
+      read_applied: read && read.key,
       skipped_formats: results |> Enum.flat_map(& &1.skipped) |> Enum.frequencies(),
       errors: for(%{status: :failed, error: error} <- results, do: error) |> Enum.take(20)
     }
@@ -207,7 +210,7 @@ defmodule Stashix.Calibre.Sync do
       Repo.all(
         from b in Book,
           where: b.library_id == ^library.id and (not is_nil(b.calibre_id) or not is_nil(b.calibre_uuid)),
-          select: map(b, [:id, :calibre_id, :calibre_uuid, :calibre_fingerprint, :deleted_at])
+          select: map(b, [:id, :calibre_id, :calibre_uuid, :calibre_fingerprint, :calibre_fields, :deleted_at])
       )
 
     by_uuid = Map.new(rows, &{&1.calibre_uuid, &1})
@@ -236,7 +239,7 @@ defmodule Stashix.Calibre.Sync do
     {matches, Enum.reject(removed, & &1.deleted_at)}
   end
 
-  defp process_book(library, m, existing, series_ids, force, covered, now) do
+  defp process_book(library, m, existing, series_ids, force, covered, now, read) do
     root = library.root_path
     # A book that gave up its Calibre id (`match_books/2`) is rewritten to take it back.
     changed? =
@@ -272,7 +275,7 @@ defmodule Stashix.Calibre.Sync do
         true -> :unchanged
       end
 
-    %{status: status, missing: missing, skipped: m.skipped_formats}
+    %{status: status, missing: missing, skipped: m.skipped_formats, read_marked: apply_read(read, m, existing, book)}
   rescue
     e ->
       Logger.error("[calibre] book #{m.calibre_id} (#{m.book.title}) failed: #{Exception.message(e)}")
@@ -403,6 +406,49 @@ defmodule Stashix.Calibre.Sync do
   def preferred_file([]), do: nil
   def preferred_file(files), do: Enum.min_by(files, &Stashix.Media.Formats.reading_rank(&1.format))
 
+  # ── Read status ────────────────────────────────────────────────────────────
+
+  # The library's read status column and user, when set and the user still
+  # exists. `all?` when the setting changed since the last sync: every book's
+  # value is applied, not just changed ones.
+  defp read_setting(%{calibre_settings: %{"read_user_id" => user_id, "read_column" => column}} = library)
+       when is_binary(user_id) and user_id != "" and is_binary(column) and column != "" do
+    if Repo.get(Stashix.Accounts.User, user_id) do
+      key = "#{user_id}:#{column}"
+      %{user_id: user_id, column: column, key: key, all?: (library.calibre_state || %{})["read_applied"] != key}
+    end
+  end
+
+  defp read_setting(_library), do: nil
+
+  # A value that changed in Calibre (or every value, see `read_setting/1`)
+  # moves the user's progress up: yes → read, a number → that percent. It
+  # never lowers it. True when the book was marked.
+  defp apply_read(nil, _m, _existing, _book), do: false
+
+  defp apply_read(read, m, existing, book) do
+    new = get_in(m.book.calibre_fields, [read.column, "value"])
+    old = existing && get_in(existing.calibre_fields || %{}, [read.column, "value"])
+
+    with true <- read.all? or is_nil(existing) or new != old,
+         p when p > 0 <- read_progression(new),
+         current = Library.get_progress(read.user_id, book.id),
+         true <- is_nil(current) or (current.progression || 0.0) < p do
+      page = round(p * max(book.page_count - 1, 0))
+
+      match?(
+        {:ok, _},
+        Library.update_progress(Stashix.Library.Access.all(), read.user_id, book.id, page, progression: p)
+      )
+    else
+      _ -> false
+    end
+  end
+
+  defp read_progression(true), do: 1.0
+  defp read_progression(n) when is_number(n), do: n |> Kernel./(100) |> max(0.0) |> min(1.0)
+  defp read_progression(_value), do: 0.0
+
   # ── Covers ─────────────────────────────────────────────────────────────────
 
   defp covered_book_ids(library) do
@@ -435,7 +481,8 @@ defmodule Stashix.Calibre.Sync do
               Enum.map(summary.columns, fn c ->
                 %{"label" => c.label, "name" => c.name, "type" => c.datatype, "multiple" => c.multiple}
               end),
-            "summary" => Map.drop(summary, [:stamp, :library_uuid, :columns]),
+            "read_applied" => summary.read_applied,
+            "summary" => Map.drop(summary, [:stamp, :library_uuid, :columns, :read_applied]),
             "error" => nil
           }
 

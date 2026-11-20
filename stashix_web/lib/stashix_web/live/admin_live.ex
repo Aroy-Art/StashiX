@@ -20,6 +20,7 @@ defmodule StashixWeb.AdminLive do
        show_user_form: false,
        show_library_form: false,
        library_form_calibre: false,
+       library_users: [],
        editing_library_id: nil,
        deleted_books: [],
        deleted_series: [],
@@ -71,6 +72,8 @@ defmodule StashixWeb.AdminLive do
     socket
     |> assign(:page_title, gettext("Admin · Libraries"))
     |> assign(:libraries, Library.list_libraries(%{role: :admin}))
+    # Who a Calibre library's read status column belongs to.
+    |> assign(:library_users, Accounts.list_users())
     |> assign(:file_watcher_status, Stashix.Scanner.FileWatcher.status())
     |> assign(:sources_ready, Stashix.Metadata.Sources.any_ready?())
   end
@@ -237,6 +240,31 @@ defmodule StashixWeb.AdminLive do
 
   def handle_event("cancel_edit_library", _params, socket) do
     {:noreply, assign(socket, :editing_library_id, nil)}
+  end
+
+  def handle_event("save_calibre_settings", %{"_id" => id} = params, socket) do
+    library = Library.get_library!(id)
+
+    settings =
+      Map.merge(library.calibre_settings || %{}, %{
+        "read_user_id" => params["read_user_id"] || "",
+        "read_column" => params["read_column"] || ""
+      })
+
+    case Library.update_library(library, %{calibre_settings: settings}) do
+      {:ok, _} ->
+        # The next sync applies the column; run it now.
+        Stashix.Scanner.scan_library(id)
+
+        {:noreply,
+         socket
+         |> assign(:libraries, Library.list_libraries(%{role: :admin}))
+         |> assign(:editing_library_id, nil)
+         |> put_flash(:info, gettext("Library settings saved"))}
+
+      {:error, _} ->
+        {:noreply, put_flash(socket, :error, gettext("Could not save the library settings"))}
+    end
   end
 
   def handle_event("save_standalone_folders", %{"_id" => id, "standalone_folders" => raw} = params, socket) do
@@ -637,6 +665,7 @@ defmodule StashixWeb.AdminLive do
         scanning_libraries={@scanning_libraries}
         show_library_form={@show_library_form}
         library_form_calibre={@library_form_calibre}
+        library_users={@library_users}
         file_watcher_status={@file_watcher_status}
         sources_ready={@sources_ready}
       />

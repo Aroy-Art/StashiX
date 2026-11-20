@@ -272,6 +272,80 @@ defmodule Stashix.Calibre.SyncTest do
     assert book(id).calibre_fields["read"]["value"] == false
   end
 
+  describe "read status from a custom column" do
+    setup %{root: root, lib: lib} do
+      {:ok, user} =
+        Stashix.Accounts.create_user(%{email: "r@example.com", username: "calreader", password: "password1234"})
+
+      id = CalibreFixtures.add_book(root, omens())
+      read = CalibreFixtures.add_custom_column(root, "read", "Read", "bool")
+      pct = CalibreFixtures.add_custom_column(root, "pct", "Percent", "int")
+      %{user: user, id: id, read: read, pct: pct, lib: lib}
+    end
+
+    defp progression(user, calibre_id) do
+      case Library.get_progress(user.id, book(calibre_id).id) do
+        nil -> nil
+        p -> p.progression
+      end
+    end
+
+    defp set_read(lib, user, column) do
+      {:ok, lib} =
+        Library.update_library(lib, %{calibre_settings: %{"read_user_id" => user.id, "read_column" => column}})
+
+      lib
+    end
+
+    test "a yes marks the book read, and a later no doesn't unread it", %{root: root, lib: lib, user: user} = c do
+      lib = set_read(lib, user, "read")
+      CalibreFixtures.set_custom(root, c.read, c.id, 1)
+
+      assert %{read_marked: 1} = sync!(lib)
+      assert progression(user, c.id) == 1.0
+
+      CalibreFixtures.set_custom(root, c.read, c.id, 0)
+      assert %{read_marked: 0} = sync!(lib)
+      assert progression(user, c.id) == 1.0
+    end
+
+    test "a percent column moves progress up only", %{root: root, lib: lib, user: user} = c do
+      lib = set_read(lib, user, "pct")
+      CalibreFixtures.set_custom(root, c.pct, c.id, 40)
+      sync!(lib)
+      assert progression(user, c.id) == 0.4
+
+      CalibreFixtures.set_custom(root, c.pct, c.id, 20)
+      sync!(lib)
+      assert progression(user, c.id) == 0.4
+
+      CalibreFixtures.set_custom(root, c.pct, c.id, 75)
+      sync!(lib)
+      assert progression(user, c.id) == 0.75
+    end
+
+    test "only values that changed in Calibre are applied", %{root: root, lib: lib, user: user} = c do
+      lib = set_read(lib, user, "pct")
+      CalibreFixtures.set_custom(root, c.pct, c.id, 40)
+      sync!(lib)
+
+      # Read further in Stashix, then sync again with Calibre unchanged.
+      Library.update_progress(Library.Access.all(), user.id, book(c.id).id, 0, progression: 0.9)
+      assert %{read_marked: 0} = sync!(lib)
+      assert progression(user, c.id) == 0.9
+    end
+
+    test "choosing the column later applies the values already there", %{root: root, lib: lib, user: user} = c do
+      CalibreFixtures.set_custom(root, c.read, c.id, 1)
+      sync!(lib)
+      assert progression(user, c.id) == nil
+
+      lib = set_read(lib, user, "read")
+      assert %{read_marked: 1} = sync!(lib)
+      assert progression(user, c.id) == 1.0
+    end
+  end
+
   test "a forced sync rewrites every book", %{root: root, lib: lib} do
     CalibreFixtures.add_book(root, omens())
     sync!(lib)

@@ -97,6 +97,42 @@ defmodule StashixWeb.CalibreLibraryLiveTest do
     assert view |> element("#calibre-status-#{lib.id}") |> render() =~ "Last sync failed: No metadata.db"
   end
 
+  test "settings pick whose read status a column holds", %{conn: conn, root: root} do
+    {:ok, lib} = Library.create_library(%{name: "Cal", root_path: root, kind: :books, source: :calibre})
+
+    lib
+    |> Ecto.Changeset.change(
+      calibre_state: %{
+        "columns" => [
+          %{"label" => "read", "name" => "Read", "type" => "bool", "multiple" => false},
+          %{"label" => "notes", "name" => "Notes", "type" => "comments", "multiple" => false}
+        ]
+      }
+    )
+    |> Stashix.Repo.update!()
+
+    user = Stashix.Repo.get_by!(Stashix.Accounts.User, username: "cal")
+    {:ok, view, _html} = live(conn, ~p"/admin/libraries")
+    view |> element("button[phx-click=edit_library][phx-value-id='#{lib.id}']") |> render_click()
+
+    html = view |> element("#calibre-settings-#{lib.id}") |> render()
+    assert html =~ "Read (#read)"
+    # Only yes/no and number columns can hold read status.
+    refute html =~ "#notes"
+
+    view
+    |> element("#calibre-settings-#{lib.id}")
+    |> render_submit(%{"_id" => lib.id, "read_column" => "read", "read_user_id" => user.id})
+
+    assert Stashix.Repo.get!(Library.Library, lib.id).calibre_settings == %{
+             "read_column" => "read",
+             "read_user_id" => user.id
+           }
+
+    # Saving started a sync; let it end inside the test.
+    Enum.find_value(1..100, fn _ -> Stashix.Scanner.get_task_status(lib.id)[:done] || (Process.sleep(50) && nil) end)
+  end
+
   test "a Calibre book's page", %{conn: conn, tmp_dir: tmp} do
     thumbs = Path.join(System.tmp_dir!(), "stashix_test_thumbs_#{System.unique_integer([:positive])}")
     Application.put_env(:stashix, :thumbnail_dir, thumbs)

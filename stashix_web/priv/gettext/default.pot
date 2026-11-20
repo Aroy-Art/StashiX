@@ -582,6 +582,7 @@ msgid "No signal — connection lost"
 msgstr ""
 
 #: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/admin/libraries.ex
 #: lib/stashix_web/live/book_edit_component.ex
 #: lib/stashix_web/live/series_edit_component.ex
 #: lib/stashix_web/live/series_live.ex
@@ -2860,6 +2861,7 @@ msgstr ""
 msgid "Unread"
 msgstr ""
 
+#: lib/stashix_web/live/admin/libraries.ex
 #: lib/stashix_web/live/admin/users.ex
 #: lib/stashix_web/live/settings_live.ex
 #, elixir-autogen, elixir-format
@@ -5465,4 +5467,29 @@ msgstr ""
 #: lib/stashix_web/live/text_reader_live.ex
 #, elixir-autogen, elixir-format
 msgid "Starting…"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Column"
+msgstr ""
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the library settings"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Read status from Calibre: a yes/no column marks books read, a number column sets how far (in percent). Calibre only ever moves the user's progress forward."
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "This Calibre library has no yes/no or number columns yet."
 msgstr ""

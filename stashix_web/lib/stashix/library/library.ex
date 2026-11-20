@@ -20,6 +20,8 @@ defmodule Stashix.Library.Library do
     # root (see `Stashix.Calibre`).
     field :source, Ecto.Enum, values: @sources, default: :folders
     field :calibre_state, :map, default: %{}
+    # "read_user_id" and "read_column": whose read status a custom column holds.
+    field :calibre_settings, :map, default: %{}
     field :root_path, :string
     field :standalone_folders, {:array, :string}, default: []
 
@@ -37,7 +39,7 @@ defmodule Stashix.Library.Library do
 
   def changeset(library, attrs) do
     library
-    |> cast(attrs, [:name, :root_path, :kind, :source, :standalone_folders])
+    |> cast(attrs, [:name, :root_path, :kind, :source, :standalone_folders, :calibre_settings])
     |> validate_required([:name, :root_path])
     |> unique_constraint(:root_path)
   end

@@ -343,10 +343,15 @@ reference library if it's ever added as a plain folder.
   (yes/no for true/false), on the search page and API/OPDS search. The
   reference library has none, so this is tested on fixture columns built
   as Calibre builds them.
-- [ ] Read status mapping: per library, pick a user and a column (bool
+- [x] Read status mapping: per library, pick a user and a column (bool
   like `#read`, or int/float like `#progress`); a value changed in Calibre
   since the last sync sets that user's progress (read → 1.0, percent →
   progression). Stashix progress never lowers on its own from Calibre.
+  *Done:* `libraries.calibre_settings` (`read_user_id`, `read_column`),
+  set from the Calibre library's Settings panel (yes/no and number
+  columns only), which syncs right away. Choosing or changing the column
+  applies every book's value once (`calibre_state.read_applied`); after
+  that only values that changed. Counted as `read_marked`.
 - [ ] Notes: `.calnotes/notes.db` → creator bio, series summary, tag and
   publisher notes (HTML sanitised; images from `resources/` served like
   covers). `authors.link` / `series.link` → creator / series URL.

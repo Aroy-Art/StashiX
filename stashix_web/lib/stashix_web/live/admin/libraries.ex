@@ -16,6 +16,7 @@ defmodule StashixWeb.AdminLive.Libraries do
   attr :scanning_libraries, :any, required: true
   attr :show_library_form, :any, required: true
   attr :library_form_calibre, :boolean, default: false
+  attr :library_users, :list, default: []
   attr :file_watcher_status, :any, required: true
   attr :sources_ready, :boolean, required: true
 
@@ -120,7 +121,7 @@ defmodule StashixWeb.AdminLive.Libraries do
               <% scanning = MapSet.member?(@scanning_libraries, lib.id) %>
               <% calibre = lib.source == :calibre %>
               <div class="flex gap-2 items-center">
-                <.ink_button :if={!calibre} variant="ghost" size="md" phx-click="edit_library" phx-value-id={lib.id}>
+                <.ink_button variant="ghost" size="md" phx-click="edit_library" phx-value-id={lib.id}>
                   {gettext("Settings")}
                 </.ink_button>
                 <.ink_button
@@ -180,7 +181,12 @@ defmodule StashixWeb.AdminLive.Libraries do
               </div>
             </div>
 
-            <%= if @editing_library_id == lib.id do %>
+            <.calibre_settings
+              :if={@editing_library_id == lib.id and lib.source == :calibre}
+              library={lib}
+              users={@library_users}
+            />
+            <%= if @editing_library_id == lib.id and lib.source != :calibre do %>
               <div class="border-t border-fg/10 p-4 bg-canvas">
                 <form phx-submit="save_standalone_folders" class="space-y-3">
                   <input type="hidden" name="_id" value={lib.id} />
@@ -230,6 +236,67 @@ defmodule StashixWeb.AdminLive.Libraries do
   end
 
   attr :library, :any, required: true
+  attr :users, :list, required: true
+
+  # A Calibre library's settings: whose read status a custom column holds.
+  defp calibre_settings(assigns) do
+    settings = assigns.library.calibre_settings || %{}
+
+    columns =
+      for %{"label" => label, "name" => name, "type" => type} <- (assigns.library.calibre_state || %{})["columns"] || [],
+          type in ~w(bool int float),
+          do: {"#{name} (##{label})", label}
+
+    assigns =
+      assign(assigns,
+        user_id: settings["read_user_id"] || "",
+        column: settings["read_column"] || "",
+        user_options: [{gettext("Nobody"), ""} | Enum.map(assigns.users, &{&1.username, &1.id})],
+        column_options: [{gettext("None"), ""} | columns]
+      )
+
+    ~H"""
+    <div class="border-t border-fg/10 p-4 bg-canvas">
+      <form id={"calibre-settings-#{@library.id}"} phx-submit="save_calibre_settings" class="space-y-3">
+        <input type="hidden" name="_id" value={@library.id} />
+        <p class="text-sm text-fg-soft">
+          {gettext(
+            "Read status from Calibre: a yes/no column marks books read, a number column sets how far (in percent). Calibre only ever moves the user's progress forward."
+          )}
+        </p>
+        <div class="grid sm:grid-cols-2 gap-3">
+          <.field label={gettext("Column")}>
+            <.ink_select
+              id={"calibre-read-column-#{@library.id}"}
+              name="read_column"
+              value={@column}
+              variant="field"
+              label={gettext("Column")}
+              options={@column_options}
+            />
+          </.field>
+          <.field label={gettext("User")}>
+            <.ink_select
+              id={"calibre-read-user-#{@library.id}"}
+              name="read_user_id"
+              value={@user_id}
+              variant="field"
+              label={gettext("User")}
+              options={@user_options}
+            />
+          </.field>
+        </div>
+        <p :if={@column_options == [{gettext("None"), ""}]} class="text-xs text-muted">
+          {gettext("This Calibre library has no yes/no or number columns yet.")}
+        </p>
+        <div class="flex gap-2 justify-end">
+          <.ink_button variant="ghost" size="md" type="button" phx-click="cancel_edit_library">{gettext("Cancel")}</.ink_button>
+          <.ink_button size="md" type="submit">{gettext("Save")}</.ink_button>
+        </div>
+      </form>
+    </div>
+    """
+  end
 
   # Last sync, its counts and any error, from `calibre_state`.
   defp calibre_status(assigns) do
