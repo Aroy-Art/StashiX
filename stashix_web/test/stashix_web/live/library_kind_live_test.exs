@@ -40,7 +40,7 @@ defmodule StashixWeb.LibraryKindLiveTest do
 
     test "the sidebar switcher narrows browse lists, search and the sidebar", %{conn: conn} do
       {:ok, view, html} = live(conn, ~p"/books")
-      assert has_element?(view, "#kind-switcher #kind-all[aria-pressed=true]")
+      assert has_element?(view, "#kind-switcher #kind-all[aria-checked=true]")
       assert html =~ "Ka-Pow Annual"
       assert html =~ "Quiet Lighthouse"
 
@@ -48,7 +48,7 @@ defmodule StashixWeb.LibraryKindLiveTest do
                view |> element("#kind-books") |> render_click()
 
       {:ok, view, html} = live(conn, ~p"/books")
-      assert has_element?(view, "#kind-books[aria-pressed=true]")
+      assert has_element?(view, "#kind-books[aria-checked=true]")
       assert html =~ "Quiet Lighthouse"
       refute html =~ "Ka-Pow Annual"
       refute has_element?(view, "#sidebar a", "Funnies")

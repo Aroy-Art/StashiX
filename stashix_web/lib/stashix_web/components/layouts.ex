@@ -66,16 +66,16 @@ defmodule StashixWeb.Layouts do
 
   @doc """
   The Comics/Books switcher (`StashixWeb.Live.Hooks.assign_library_kind/1`):
-  a row of segments in the sidebar, or a menu in the top bar. Shows only
-  when the user's libraries are of more than one kind.
+  a menu row styled like the theme menu in the sidebar, or a menu in the
+  top bar. Shows only when the user's libraries are of more than one kind.
 
-  Below `lg` neither shows: the sidebar drawer carries a menu row styled
-  like the theme menu instead (`placement="drawer"`). `id` and
-  `item_prefix` keep that copy's ids apart from the others.
+  The top bar has no room for it below `lg`, so the sidebar drawer then
+  carries a sidebar copy whatever the setting. `id` and `item_prefix` keep
+  that copy's ids apart from the top bar's.
   """
   attr :kind, :string, required: true
   attr :kinds, :list, required: true
-  attr :placement, :string, values: ~w(sidebar top drawer), required: true
+  attr :placement, :string, values: ~w(sidebar top), required: true
   attr :id, :string, default: "kind-switcher"
   attr :item_prefix, :string, default: "kind"
   attr :class, :string, default: nil
@@ -83,26 +83,6 @@ defmodule StashixWeb.Layouts do
   def kind_switcher(%{kinds: kinds} = assigns) when length(kinds) < 2, do: ~H""
 
   def kind_switcher(%{placement: "sidebar"} = assigns) do
-    ~H"""
-    <div id={@id} class={["px-2 pt-2", @class]}>
-      <.segmented class="w-full" role="group" aria-label={gettext("Show libraries")}>
-        <.segment
-          :for={kind <- ["all" | Enum.map(@kinds, &to_string/1)]}
-          id={"#{@item_prefix}-#{kind}"}
-          active={@kind == kind}
-          phx-click="set_library_kind"
-          phx-value-kind={kind}
-          title={kind_title(kind)}
-          class="flex-1 font-display font-bold uppercase tracking-[0.07em] text-xs"
-        >
-          {kind_label(kind)}
-        </.segment>
-      </.segmented>
-    </div>
-    """
-  end
-
-  def kind_switcher(%{placement: "drawer"} = assigns) do
     ~H"""
     <div class={["p-2 border-b border-fg/10", @class]}>
       <.ink_menu id={@id} align="start" class="flex w-full" panel_class="w-44">
