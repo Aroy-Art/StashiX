@@ -74,7 +74,10 @@ defmodule Stashix.Calibre.Reader do
          {:ok, formats} <-
            rows(conn, "SELECT book, format, name, uncompressed_size FROM data ORDER BY book, format"),
          {:ok, columns} <- custom_columns(conn),
-         {:ok, custom} <- custom_values(conn, columns) do
+         {:ok, custom} <- custom_values(conn, columns),
+         {:ok, positions} <- rows(conn, "SELECT book, max(pos_frac) FROM last_read_positions GROUP BY book") do
+      positions = Map.new(positions, fn [book, pos] -> {book, pos} end)
+
       authors = group(authors, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
       series = first(series, fn [id, name, sort, link] -> %{id: id, name: name, sort: sort, link: link} end)
       publishers = first(publishers, fn [name] -> name end)
@@ -110,7 +113,8 @@ defmodule Stashix.Calibre.Reader do
            comments: Map.get(comments, id),
            identifiers: Map.new(Map.get(identifiers, id, [])),
            formats: Map.get(formats, id, []),
-           custom: Map.get(custom, id, %{})
+           custom: Map.get(custom, id, %{}),
+           position: Map.get(positions, id)
          }
        end)}
     end

@@ -5486,10 +5486,10 @@ msgstr ""
 
 #: lib/stashix_web/live/admin/libraries.ex
 #, elixir-autogen, elixir-format
-msgid "Read status from Calibre: a yes/no column marks books read, a number column sets how far (in percent). Calibre only ever moves the user's progress forward."
+msgid "This Calibre library has no yes/no or number columns yet."
 msgstr ""
 
 #: lib/stashix_web/live/admin/libraries.ex
 #, elixir-autogen, elixir-format
-msgid "This Calibre library has no yes/no or number columns yet."
+msgid "Read status from Calibre for one user: how far Calibre's own viewer got, and optionally a column — yes/no marks books read, a number sets how far (in percent). Calibre only ever moves the user's progress forward."
 msgstr ""

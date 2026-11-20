@@ -249,7 +249,16 @@ defmodule Stashix.Calibre.Sync do
       Repo.all(
         from b in Book,
           where: b.library_id == ^library.id and (not is_nil(b.calibre_id) or not is_nil(b.calibre_uuid)),
-          select: map(b, [:id, :calibre_id, :calibre_uuid, :calibre_fingerprint, :calibre_fields, :deleted_at])
+          select:
+            map(b, [
+              :id,
+              :calibre_id,
+              :calibre_uuid,
+              :calibre_fingerprint,
+              :calibre_fields,
+              :calibre_position,
+              :deleted_at
+            ])
       )
 
     by_uuid = Map.new(rows, &{&1.calibre_uuid, &1})
@@ -447,11 +456,14 @@ defmodule Stashix.Calibre.Sync do
 
   # ── Read status ────────────────────────────────────────────────────────────
 
-  # The library's read status column and user, when set and the user still
-  # exists. `all?` when the setting changed since the last sync: every book's
-  # value is applied, not just changed ones.
-  defp read_setting(%{calibre_settings: %{"read_user_id" => user_id, "read_column" => column}} = library)
-       when is_binary(user_id) and user_id != "" and is_binary(column) and column != "" do
+  # The user Calibre's read status belongs to (a custom column's value and
+  # Calibre's viewer position), when set and the user still exists; the
+  # column is optional. `all?` when the setting changed since the last sync:
+  # every book's values are applied, not just changed ones.
+  defp read_setting(%{calibre_settings: %{"read_user_id" => user_id} = settings} = library)
+       when is_binary(user_id) and user_id != "" do
+    column = if settings["read_column"] in [nil, ""], do: nil, else: settings["read_column"]
+
     if Repo.get(Stashix.Accounts.User, user_id) do
       key = "#{user_id}:#{column}"
       %{user_id: user_id, column: column, key: key, all?: (library.calibre_state || %{})["read_applied"] != key}
@@ -461,16 +473,26 @@ defmodule Stashix.Calibre.Sync do
   defp read_setting(_library), do: nil
 
   # A value that changed in Calibre (or every value, see `read_setting/1`)
-  # moves the user's progress up: yes → read, a number → that percent. It
-  # never lowers it. True when the book was marked.
+  # moves the user's progress up: the column's yes → read, its number → that
+  # percent, the viewer's position → that share. It never lowers it. True
+  # when the book was moved.
   defp apply_read(nil, _m, _existing, _book), do: false
 
   defp apply_read(read, m, existing, book) do
-    new = get_in(m.book.calibre_fields, [read.column, "value"])
-    old = existing && get_in(existing.calibre_fields || %{}, [read.column, "value"])
+    changed? = fn new, old -> read.all? or is_nil(existing) or new != old end
 
-    with true <- read.all? or is_nil(existing) or new != old,
-         p when p > 0 <- read_progression(new),
+    column =
+      if read.column do
+        new = get_in(m.book.calibre_fields, [read.column, "value"])
+
+        if changed?.(new, existing && get_in(existing.calibre_fields || %{}, [read.column, "value"])),
+          do: read_progression(new)
+      end
+
+    position =
+      if (new = m.book.calibre_position) && changed?.(new, existing && existing.calibre_position), do: new
+
+    with p when p > 0 <- Enum.max([column || 0.0, position || 0.0]),
          current = Library.get_progress(read.user_id, book.id),
          true <- is_nil(current) or (current.progression || 0.0) < p do
       page = round(p * max(book.page_count - 1, 0))

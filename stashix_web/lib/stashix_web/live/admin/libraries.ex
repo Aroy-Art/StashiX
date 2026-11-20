@@ -261,7 +261,7 @@ defmodule StashixWeb.AdminLive.Libraries do
         <input type="hidden" name="_id" value={@library.id} />
         <p class="text-sm text-fg-soft">
           {gettext(
-            "Read status from Calibre: a yes/no column marks books read, a number column sets how far (in percent). Calibre only ever moves the user's progress forward."
+            "Read status from Calibre for one user: how far Calibre's own viewer got, and optionally a column — yes/no marks books read, a number sets how far (in percent). Calibre only ever moves the user's progress forward."
           )}
         </p>
         <div class="grid sm:grid-cols-2 gap-3">

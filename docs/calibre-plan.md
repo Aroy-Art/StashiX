@@ -364,9 +364,15 @@ reference library if it's ever added as a plain folder.
   Dropped: tag and publisher notes (Stashix publishers are shared and
   tags have no page) and note images. The reference library has no
   notes or links; tested on fixtures.
-- [ ] Calibre viewer data (`annotations`, `last_read_positions`) → the
+- [~] Calibre viewer data (`annotations`, `last_read_positions`) → the
   mapped user's annotations / progress (EPUB CFI fits the D6 locator).
-  Empty in the reference library; low priority.
+  Empty in the reference library; low priority. *Positions done:* the
+  furthest `pos_frac` per book (`books.calibre_position`) moves the read
+  status user's progress up when it changed, like the column (which is
+  now optional). *Annotations dropped for now:* Calibre's CFIs are its
+  own (spine index + in-document path) and need converting to the
+  reader's; without real highlights to check against, a guess would
+  place them wrong.
 
 ## 7. Phase 5 — Write-back (D11)
 

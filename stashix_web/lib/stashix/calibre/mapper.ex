@@ -54,7 +54,8 @@ defmodule Stashix.Calibre.Mapper do
         isbn: blank(book.identifiers["isbn"]),
         rating: rating(book.rating),
         calibre_modified_at: datetime(book.last_modified),
-        calibre_fields: custom_fields(Map.get(book, :custom, %{}))
+        calibre_fields: custom_fields(Map.get(book, :custom, %{})),
+        calibre_position: position(Map.get(book, :position))
       },
       series: series,
       record: %{
@@ -160,6 +161,10 @@ defmodule Stashix.Calibre.Mapper do
   defp custom_value(%{datatype: "comments", values: [v | _]}), do: html_to_text(v)
   defp custom_value(%{values: [v | _]}) when is_binary(v), do: blank(v)
   defp custom_value(_column), do: nil
+
+  # Calibre's viewer position, 0–1; nothing read is no position.
+  defp position(p) when is_number(p) and p > 0, do: min(p / 1, 1.0)
+  defp position(_p), do: nil
 
   # Calibre's author / series links: kept when they're web links.
   defp web_url(link) when is_binary(link) do

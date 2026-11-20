@@ -335,6 +335,25 @@ defmodule Stashix.Calibre.SyncTest do
       assert progression(user, c.id) == 0.9
     end
 
+    test "Calibre's viewer position counts, with no column needed", %{root: root, lib: lib, user: user} = c do
+      lib = set_read(lib, user, "")
+
+      CalibreFixtures.execute(
+        root,
+        "INSERT INTO last_read_positions (book, format, user, device, cfi, epoch, pos_frac) VALUES (?, 'EPUB', '*', 'pc', 'epubcfi(/6/2)', 0, 0.3)",
+        [c.id]
+      )
+
+      sync!(lib)
+      assert book(c.id).calibre_position == 0.3
+      assert progression(user, c.id) == 0.3
+
+      # Unread in Stashix; Calibre's unchanged position doesn't bring it back.
+      Library.update_progress(Library.Access.all(), user.id, book(c.id).id, 0, progression: 0.0)
+      sync!(lib)
+      assert progression(user, c.id) == 0.0
+    end
+
     test "choosing the column later applies the values already there", %{root: root, lib: lib, user: user} = c do
       CalibreFixtures.set_custom(root, c.read, c.id, 1)
       sync!(lib)

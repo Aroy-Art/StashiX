@@ -63,6 +63,8 @@ defmodule Stashix.Library.Book do
     field :rating, :float
     # Calibre custom columns, by label: %{"name", "type", "value"}.
     field :calibre_fields, :map, default: %{}
+    # How far Calibre's own viewer got (0–1), as of the last sync.
+    field :calibre_position, :float
 
     belongs_to :library, Stashix.Library.Library
     belongs_to :series, Stashix.Library.Series
@@ -135,7 +137,8 @@ defmodule Stashix.Library.Book do
       :sort_title,
       :added_at,
       :rating,
-      :calibre_fields
+      :calibre_fields,
+      :calibre_position
     ])
     |> validate_required([:title, :library_id])
     |> validate_inclusion(:manga, ~w(Yes No YesAndRightToLeft))
