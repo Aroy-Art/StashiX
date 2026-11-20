@@ -299,12 +299,23 @@ reference library if it's ever added as a plain folder.
   id sources) so OPF and `metadata.db` books read alike. All 661
   `metadata.opf` of the reference library parse. Author sort and user
   metadata (custom columns) are left for Phase 4.
-- [ ] Folder scanner reads `metadata.opf` in the book's folder (and
+- [x] Folder scanner reads `metadata.opf` in the book's folder (and
   `<stem>.opf`) as a sidecar, above embedded metadata; `cover.jpg` already
-  works.
-- [ ] Calibre layout detection: `<Author>/<Title> (<n>)/` → one book per
+  works. *Done:* precedence is Stashix's own sidecars > OPF > embedded
+  ComicInfo/MetronInfo. A file is re-imported when its OPF is newer than
+  its last import, and the watcher scans the folder's book when an `.opf`
+  changes. `cover.jpg` did not work (sidecar images are `<stem>.jpg`); a
+  folder with a `metadata.opf` now uses it.
+- [x] Calibre layout detection: `<Author>/<Title> (<n>)/` → one book per
   folder (all formats as its files), author from the parent folder, series
-  from the OPF — not the author folder as a series.
+  from the OPF — not the author folder as a series. *Done:* the marker is
+  the OPF, not the folder names (a Calibre id like "(1940)" can't be told
+  from a year): a book with an OPF is in the OPF's series (a series with
+  no folder, found by name) or standalone, and its folder is never a
+  series. One book per folder came for free: Calibre gives every format
+  the same file name, and the scanner already joins same-name files.
+  Authors come from the OPF, which Calibre always writes, so the parent
+  folder isn't needed.
 
 ## 6. Phase 4 — Custom columns, read status, notes
 

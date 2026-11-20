@@ -11,7 +11,7 @@ defmodule Stashix.Scanner.FileWatcher do
   # Calibre libraries sync as a whole once changes stop for this long, so an
   # rsync push (database and files, in any order) lands before the sync.
   @calibre_debounce_ms 30_000
-  @sidecar_exts ~w(.jpg .jpeg .png .webp .xml)
+  @sidecar_exts ~w(.jpg .jpeg .png .webp .xml .opf)
   # Events for paths Stashix itself just wrote (metadata write-back) are ignored
   # for this long, so our own writes don't trigger a re-import.
   @suppress_ms 30_000
@@ -173,7 +173,22 @@ defmodule Stashix.Scanner.FileWatcher do
     String.downcase(Path.extname(path)) in @sidecar_exts
   end
 
+  # Calibre's `metadata.opf` belongs to the book files of its folder (one
+  # book, maybe several formats); scanning one updates the book.
   defp find_comic_for_sidecar(sidecar_path) do
+    if Path.basename(sidecar_path) == "metadata.opf",
+      do: sidecar_path |> Path.dirname() |> first_book_file(),
+      else: find_comic_for_stem(sidecar_path)
+  end
+
+  defp first_book_file(dir) do
+    case File.ls(dir) do
+      {:ok, names} -> names |> Enum.sort() |> Enum.find(&supported_file?/1) |> then(&(&1 && Path.join(dir, &1)))
+      _ -> nil
+    end
+  end
+
+  defp find_comic_for_stem(sidecar_path) do
     base = Stashix.Metadata.Sidecar.stem(sidecar_path)
 
     Enum.find_value(Stashix.Media.Formats.extensions(), fn ext ->

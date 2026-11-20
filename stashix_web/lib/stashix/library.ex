@@ -1287,6 +1287,28 @@ defmodule Stashix.Library do
     end
   end
 
+  @doc """
+  The library's series named `name` (any case) that no folder or Calibre
+  library owns — one an OPF names — revived when it was deleted, or a new one.
+  """
+  def find_or_create_named_series(library_id, name) do
+    existing =
+      from(s in Series,
+        where:
+          s.library_id == ^library_id and is_nil(s.path) and is_nil(s.calibre_id) and
+            fragment("lower(?)", s.name) == ^String.downcase(name),
+        order_by: [asc_nulls_first: s.deleted_at],
+        limit: 1
+      )
+      |> Repo.one()
+
+    case existing do
+      nil -> %Series{} |> Series.changeset(%{name: name, library_id: library_id}) |> Repo.insert()
+      %{deleted_at: nil} = series -> {:ok, series}
+      series -> series |> Series.changeset(%{deleted_at: nil}) |> Repo.update()
+    end
+  end
+
   def create_or_find_series(attrs) do
     case Repo.get_by(Series, library_id: attrs.library_id, path: attrs.path) do
       nil ->
@@ -2338,7 +2360,14 @@ defmodule Stashix.Library do
       join: b in Book,
       on: b.id == bf.book_id,
       where: b.library_id == ^library_id,
-      select: {bf.path, %{last_modified: bf.last_modified, deleted_at: bf.deleted_at, file_hash: bf.file_hash}}
+      select:
+        {bf.path,
+         %{
+           last_modified: bf.last_modified,
+           deleted_at: bf.deleted_at,
+           file_hash: bf.file_hash,
+           updated_at: bf.updated_at
+         }}
     )
     |> Repo.all()
     |> Map.new()

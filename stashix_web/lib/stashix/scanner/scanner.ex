@@ -7,7 +7,8 @@ defmodule Stashix.Scanner do
 
   alias Stashix.{Library, Metadata}
   alias Stashix.Media.{ContentKind, Epub, Fb2, Formats, Mobi, Thumbnail, Extractor, ImageResizer}
-  alias Stashix.Metadata.{Parser, Importer, Locks}
+  alias Stashix.Metadata.{Parser, Importer, Locks, Sidecar}
+  alias Stashix.Metadata.Format.Opf
 
   @ets_table :scan_tasks
   @metadata_concurrency 16
@@ -385,8 +386,8 @@ defmodule Stashix.Scanner do
           %{deleted_at: da} when not is_nil(da) ->
             true
 
-          %{last_modified: lm} ->
-            file_changed?(path, lm)
+          %{last_modified: lm, updated_at: parsed_at} ->
+            file_changed?(path, lm) or opf_changed?(path, parsed_at)
         end
       end)
 
@@ -420,7 +421,9 @@ defmodule Stashix.Scanner do
           []
       end)
 
-    series_cache = detect_renamed_series(parsed_files, series_cache, library)
+    # Books with an OPF don't take their folder as a series, so their folders
+    # can't be renamed series folders either.
+    series_cache = parsed_files |> Enum.reject(& &1.opf) |> detect_renamed_series(series_cache, library)
 
     update_task_status(library_id, %{
       scanned: unchanged_count,
@@ -493,10 +496,13 @@ defmodule Stashix.Scanner do
     last_modified = NaiveDateTime.from_erl!(stat.mtime)
     filename = Formats.stem(file_path)
     parsed = Parser.parse_filename(filename)
-    comicinfo = Parser.parse_comicinfo(file_path)
+    opf_path = Opf.sidecar_path(file_path)
+    comicinfo = file_path |> Parser.parse_comicinfo() |> with_opf(file_path, opf_path)
 
     %{
       file_path: file_path,
+      # A Calibre-style book: its series comes from the OPF, not its folder.
+      opf: opf_path,
       file_hash: file_hash,
       last_modified: last_modified,
       file_size: stat.size,
@@ -527,7 +533,7 @@ defmodule Stashix.Scanner do
           NaiveDateTime.compare(
             last_modified,
             existing_file.last_modified || ~N[1970-01-01 00:00:00]
-          ) == :gt
+          ) == :gt or opf_changed?(file_path, existing_file.updated_at)
 
         if force || was_deleted || modified do
           update_book_file_from_meta(existing_file, file_meta, library, cache)
@@ -538,7 +544,7 @@ defmodule Stashix.Scanner do
   end
 
   defp create_book_from_meta(%{file_path: file_path, parsed: parsed} = file_meta, library, cache) do
-    {series, new_cache} = find_or_create_series_cached(file_path, library, cache)
+    {series, new_cache} = series_for(file_meta, library, cache)
 
     format = Formats.format(file_path)
     stem = Formats.stem(file_path)
@@ -631,7 +637,7 @@ defmodule Stashix.Scanner do
 
   # Rescan of an existing book: the file's metadata replaces the book's.
   defp refresh_book_from_meta(book, %{file_path: file_path, comicinfo: file} = file_meta, library, cache) do
-    {series, new_cache} = find_or_create_series_cached(file_path, library, cache, book.series_id)
+    {series, new_cache} = series_for(file_meta, library, cache, book.series_id)
 
     # The row's metadata stands when it came from an external source and the
     # file carries none (e.g. write-back disabled), or when it changed while
@@ -688,6 +694,8 @@ defmodule Stashix.Scanner do
       summary: Map.get(metadata, :summary, current.(:summary, nil)),
       age_rating: from_file.(:age_rating, :unknown),
       community_rating: from_file.(:community_rating, nil),
+      sort_title: from_file.(:sort_title, nil),
+      rating: from_file.(:rating, nil),
       community_rating_count: from_file.(:community_rating_count, nil),
       cover_date: from_file.(:cover_date, nil),
       store_date: from_file.(:store_date, nil),
@@ -748,11 +756,64 @@ defmodule Stashix.Scanner do
     Importer.replace_book_metadata(book, file, skip: book.locked_fields)
   end
 
+  # A book with an OPF (Calibre's `metadata.opf` or "Save to disk"
+  # `<book>.opf`) is in the OPF's series, or none; its folder is just the
+  # book's own (`<Author>/<Title> (<id>)/`).
+  defp series_for(file_meta, library, cache, prior_series_id \\ nil)
+
+  defp series_for(%{opf: opf, comicinfo: file}, library, cache, _prior) when is_binary(opf),
+    do: opf_series(file[:series], library, cache)
+
+  defp series_for(%{file_path: path}, library, cache, prior),
+    do: find_or_create_series_cached(path, library, cache, prior)
+
+  defp opf_series(name, library, cache) when is_binary(name) and name != "" do
+    key = {:opf, String.downcase(name)}
+
+    case Map.get(cache, key) || Library.find_or_create_named_series(library.id, name) do
+      {:ok, series} -> {series, Map.put(cache, key, series)}
+      %Stashix.Library.Series{} = series -> {series, cache}
+      _ -> {nil, cache}
+    end
+  end
+
+  defp opf_series(_name, _library, cache), do: {nil, cache}
+
+  # The OPF sidecar's metadata over what the file embeds; Stashix's own
+  # MetronInfo/ComicInfo sidecars (edits written back) still win over it.
+  defp with_opf(record, _path, nil), do: record
+
+  defp with_opf(record, path, opf_path) do
+    with {:ok, data} <- File.read(opf_path),
+         {:ok, opf} <- Opf.parse(data) do
+      if Sidecar.read(path) == %{}, do: merge_opf(record, opf), else: merge_opf(opf, record)
+    else
+      _ -> record
+    end
+  end
+
+  # Right side wins; external ids are kept from both, one per source.
+  defp merge_opf(base, override) do
+    ids = (List.wrap(override[:external_ids]) ++ List.wrap(base[:external_ids])) |> Enum.uniq_by(& &1.source)
+    merged = Map.merge(base, override)
+    if ids == [], do: merged, else: Map.put(merged, :external_ids, ids)
+  end
+
+  # The book's OPF was written after the file was last imported.
+  defp opf_changed?(path, parsed_at) do
+    with opf when is_binary(opf) <- Opf.sidecar_path(path),
+         {:ok, stat} <- File.stat(opf) do
+      NaiveDateTime.compare(NaiveDateTime.from_erl!(stat.mtime), NaiveDateTime.truncate(parsed_at, :second)) == :gt
+    else
+      _ -> false
+    end
+  end
+
   @default_standalone_patterns ["one-shot", "one shot", "oneshot"]
 
   # `prior_series_id` is the series the book belonged to before this scan; when
   # that series' folder is gone, the book's new folder is taken to be its rename.
-  defp find_or_create_series_cached(file_path, library, cache, prior_series_id \\ nil) do
+  defp find_or_create_series_cached(file_path, library, cache, prior_series_id) do
     parent_dir = Path.dirname(file_path)
     dir_name = Path.basename(parent_dir)
     dir_name_lower = String.downcase(dir_name)
@@ -1197,12 +1258,19 @@ defmodule Stashix.Scanner do
 
   @doc false
   def find_sidecar_image(file_path) do
-    base = Path.join(Path.dirname(file_path), Formats.stem(file_path))
+    dir = Path.dirname(file_path)
+    base = Path.join(dir, Formats.stem(file_path))
 
     Enum.find_value(~w(.jpg .jpeg .png .webp), fn ext ->
       path = base <> ext
       if File.exists?(path), do: path
-    end)
+    end) || calibre_folder_cover(dir)
+  end
+
+  # A Calibre book folder (it has a metadata.opf) keeps its cover as cover.jpg.
+  defp calibre_folder_cover(dir) do
+    cover = Path.join(dir, "cover.jpg")
+    if File.regular?(Path.join(dir, "metadata.opf")) and File.regular?(cover), do: cover
   end
 
   defp enrich_publisher(metadata, file_path, library) do
