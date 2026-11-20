@@ -8,7 +8,8 @@ defmodule Stashix.EpubFixtures do
   Writes an EPUB with its package at `OEBPS/content.opf`. `chapters` is a
   list of `{:text, body_text}` or `{:image, image_name}` spine documents, in
   reading order. Options: `layout:` (e.g. "pre-paginated"), `extra:` more
-  `{name, data}` entries.
+  `{name, data}` entries, `title:` (default "Test"), `metadata:` more XML
+  inside `<metadata>`.
   """
   def make_epub(path, chapters, opts \\ []) do
     docs =
@@ -36,7 +37,7 @@ defmodule Stashix.EpubFixtures do
     <?xml version="1.0" encoding="UTF-8"?>
     <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="id">
       <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-        <dc:identifier id="id">test</dc:identifier><dc:title>Test</dc:title>#{layout}
+        <dc:identifier id="id">test</dc:identifier><dc:title>#{opts[:title] || "Test"}</dc:title>#{layout}#{opts[:metadata]}
       </metadata>
       <manifest>#{manifest}</manifest>
       <spine>#{spine}</spine>

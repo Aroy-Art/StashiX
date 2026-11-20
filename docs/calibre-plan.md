@@ -320,6 +320,13 @@ reference library if it's ever added as a plain folder.
   each (formats joined), series and numbers from the OPFs, covers from
   `cover.jpg`, no author or `Title (id)` folder made a series.
 
+- [x] The OPF inside an EPUB (asked for 2026-11-20). *Done:* in books
+  libraries an EPUB's package metadata is the lowest source (under
+  embedded ComicInfo, an OPF sidecar and Stashix's sidecars); when it names
+  a series, that series wins over the folder, else the folder decides as
+  before. Comics libraries don't read it: their EPUBs' titles are often
+  worse than what the file name gives.
+
 ## 6. Phase 4 — Custom columns, read status, notes
 
 - [ ] Custom columns: read definitions (`custom_columns` + `display`)

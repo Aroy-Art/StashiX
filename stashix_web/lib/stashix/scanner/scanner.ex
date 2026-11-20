@@ -407,7 +407,7 @@ defmodule Stashix.Scanner do
 
     parsed_files =
       files_to_parse
-      |> Task.async_stream(&parse_file_metadata/1,
+      |> Task.async_stream(&parse_file_metadata(&1, library.kind),
         max_concurrency: @metadata_concurrency,
         ordered: true,
         timeout: 60_000
@@ -489,7 +489,7 @@ defmodule Stashix.Scanner do
     Logger.info("Scan complete for library #{library.name}: #{total} files processed")
   end
 
-  defp parse_file_metadata(file_path) do
+  defp parse_file_metadata(file_path, kind) do
     parsed_at = NaiveDateTime.utc_now(:second)
     stat = File.stat!(file_path)
     file_hash = compute_hash(file_path, stat.size)
@@ -497,12 +497,19 @@ defmodule Stashix.Scanner do
     filename = Formats.stem(file_path)
     parsed = Parser.parse_filename(filename)
     opf_path = Opf.sidecar_path(file_path)
-    comicinfo = file_path |> Parser.parse_comicinfo() |> with_opf(file_path, opf_path)
+    epub_opf = if kind == :books and Formats.format(file_path) == :epub, do: epub_opf(file_path), else: %{}
+
+    comicinfo =
+      file_path
+      |> Parser.parse_comicinfo()
+      |> then(&Map.merge(epub_opf, &1))
+      |> with_opf(file_path, opf_path)
 
     %{
       file_path: file_path,
       # A Calibre-style book: its series comes from the OPF, not its folder.
-      opf: opf_path,
+      # An EPUB's own OPF does the same when it names a series.
+      opf: opf_path || (epub_opf[:series] && :embedded),
       file_hash: file_hash,
       last_modified: last_modified,
       file_size: stat.size,
@@ -761,7 +768,7 @@ defmodule Stashix.Scanner do
   # book's own (`<Author>/<Title> (<id>)/`).
   defp series_for(file_meta, library, cache, prior_series_id \\ nil)
 
-  defp series_for(%{opf: opf, comicinfo: file}, library, cache, _prior) when is_binary(opf),
+  defp series_for(%{opf: opf, comicinfo: file}, library, cache, _prior) when not is_nil(opf),
     do: opf_series(file[:series], library, cache)
 
   defp series_for(%{file_path: path}, library, cache, prior),
@@ -778,6 +785,18 @@ defmodule Stashix.Scanner do
   end
 
   defp opf_series(_name, _library, cache), do: {nil, cache}
+
+  # The package metadata inside an EPUB (title, authors, series, …): the
+  # lowest source, under anything the file or its sidecars say.
+  defp epub_opf(path) do
+    with {:ok, %{opf: opf}} <- Epub.package(path),
+         {:ok, data} <- Epub.read(path, opf),
+         {:ok, record} <- Opf.parse(data) do
+      record
+    else
+      _ -> %{}
+    end
+  end
 
   # The OPF sidecar's metadata over what the file embeds; Stashix's own
   # MetronInfo/ComicInfo sidecars (edits written back) still win over it.
@@ -949,7 +968,7 @@ defmodule Stashix.Scanner do
 
     parsed_files =
       files
-      |> Task.async_stream(&parse_file_metadata/1,
+      |> Task.async_stream(&parse_file_metadata(&1, library.kind),
         max_concurrency: @metadata_concurrency,
         ordered: true,
         timeout: 60_000
@@ -1028,7 +1047,7 @@ defmodule Stashix.Scanner do
 
       broadcast_progress(library_id, 0, 1, false, :file)
 
-      file_meta = parse_file_metadata(file_path)
+      file_meta = parse_file_metadata(file_path, library.kind)
       series_cache = Library.load_series_cache(library_id)
       {job, _cache} = upsert_book(file_meta, library, true, series_cache)
 

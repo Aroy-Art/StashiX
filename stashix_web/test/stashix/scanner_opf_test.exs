@@ -135,4 +135,59 @@ defmodule Stashix.ScannerOpfTest do
     Scanner.scan_sync(lib.id)
     assert Repo.one!(from s in Series, select: s.name) == "Saga"
   end
+
+  describe "the OPF inside an EPUB" do
+    @embedded """
+    <dc:creator xmlns:opf="http://www.idpf.org/2007/opf" opf:role="aut" opf:file-as="Le Guin, Ursula K.">Ursula K. Le Guin</dc:creator>
+    <dc:language>eng</dc:language>
+    <meta name="calibre:series" content="Earthsea"/><meta name="calibre:series_index" content="1"/>
+    """
+
+    test "fills a books library's book, series included", %{lib: lib, tmp: tmp} do
+      dir = Path.join(tmp, "Ursula K. Le Guin")
+      File.mkdir_p!(dir)
+      make_epub(Path.join(dir, "wizard.epub"), [{:text, "Text."}], title: "A Wizard of Earthsea", metadata: @embedded)
+
+      plain = Path.join(tmp, "Loose")
+      File.mkdir_p!(plain)
+      make_epub(Path.join(plain, "lathe.epub"), [{:text, "Text."}], title: "The Lathe of Heaven")
+
+      Scanner.scan_sync(lib.id)
+
+      wizard = book!("A Wizard of Earthsea")
+      assert wizard.series.name == "Earthsea"
+      assert Decimal.to_integer(wizard.issue_number) == 1
+      assert Enum.map(wizard.credits, & &1.creator.name) == ["Ursula K. Le Guin"]
+
+      # No series in its OPF: the folder decides, as before.
+      assert book!("The Lathe of Heaven").series.name == "Loose"
+    end
+
+    test "a sidecar OPF wins over it", %{lib: lib, tmp: tmp} do
+      dir = Path.join([tmp, "Frank Herbert", "Dune (12)"])
+      File.mkdir_p!(dir)
+
+      make_epub(Path.join(dir, "Dune - Frank Herbert.epub"), [{:text, "Text."}],
+        title: "DUNE (retail)",
+        metadata: @embedded
+      )
+
+      File.write!(Path.join(dir, "metadata.opf"), opf(title: "Dune"))
+
+      Scanner.scan_sync(lib.id)
+      dune = book!("Dune")
+      # Fields the sidecar lacks still come from inside the EPUB.
+      assert dune.language == "en"
+    end
+
+    test "comics libraries keep reading titles from file names", %{tmp: tmp} do
+      root = Path.join(tmp, "comics")
+      File.mkdir_p!(Path.join(root, "Saga"))
+      {:ok, comics} = Library.create_library(%{name: "Comics", root_path: root})
+      make_epub(Path.join([root, "Saga", "Saga 001.epub"]), [{:text, "Text."}], title: "Generic", metadata: @embedded)
+
+      Scanner.scan_sync(comics.id)
+      assert Repo.get_by(Book, library_id: comics.id).title =~ "Saga"
+    end
+  end
 end
