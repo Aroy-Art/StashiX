@@ -290,9 +290,15 @@ For books libraries that aren't a Calibre library: Calibre "Save to disk"
 exports, calibre-web libraries copied without the database, and the
 reference library if it's ever added as a plain folder.
 
-- [ ] OPF reader: Dublin Core + `calibre:*` meta (series, series_index,
+- [x] OPF reader: Dublin Core + `calibre:*` meta (series, series_index,
   rating, title_sort, author sort, user metadata) — shares parsing with
-  `Media.Epub.package/1`.
+  `Media.Epub.package/1`. *Done:* `Metadata.Format.Opf` (OPF 2 and 3:
+  `opf:role`/`refines` roles, `calibre:series`/`belongs-to-collection`,
+  `opf:scheme`/`urn:` identifiers) into a Record plus `:sort_title` and
+  `:rating`; values map through `Calibre.Mapper` (HTML → text, language,
+  id sources) so OPF and `metadata.db` books read alike. All 661
+  `metadata.opf` of the reference library parse. Author sort and user
+  metadata (custom columns) are left for Phase 4.
 - [ ] Folder scanner reads `metadata.opf` in the book's folder (and
   `<stem>.opf`) as a sidecar, above embedded metadata; `cover.jpg` already
   works.

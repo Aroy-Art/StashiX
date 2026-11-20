@@ -98,6 +98,10 @@ defmodule Stashix.Calibre.Mapper do
   @doc "Stashix external id sources Calibre identifiers map to."
   def sources, do: @sources |> Map.values() |> Enum.uniq() |> Enum.sort()
 
+  @doc "The Stashix external id source for a Calibre identifier type (`\"google\"` → `\"Google Books\"`), or nil."
+  def source(type) when is_binary(type), do: @sources[String.downcase(type)]
+  def source(_type), do: nil
+
   # `amazon` wins over `mobi-asin` for Amazon: it's what Calibre's own Amazon
   # source writes; `mobi-asin` comes from the file.
   defp external_ids(identifiers) do

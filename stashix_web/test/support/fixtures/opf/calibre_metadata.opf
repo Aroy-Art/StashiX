@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="uuid_id" version="2.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+        <dc:identifier opf:scheme="calibre" id="calibre_id">77</dc:identifier>
+        <dc:identifier opf:scheme="uuid" id="uuid_id">80b64eca-a3c1-4d99-92f4-0aeaa453b954</dc:identifier>
+        <dc:title>Warcross</dc:title>
+        <dc:creator opf:file-as="Lu, Marie" opf:role="aut">Marie Lu</dc:creator>
+        <dc:contributor opf:file-as="calibre" opf:role="bkp">calibre (6.11.0) [https://calibre-ebook.com]</dc:contributor>
+        <dc:date>2017-09-12T04:00:00+00:00</dc:date>
+        <dc:description>&lt;div&gt;&lt;p&gt;&lt;strong&gt;From #1 &lt;em&gt;New York Times&lt;/em&gt; bestselling author Marie Lu—when a game called Warcross takes the world by storm, one girl hacks her way into its dangerous depths.&lt;br&gt;
+&lt;/strong&gt;&lt;br&gt;
+For the millions who log in every day, Warcross isn’t just a game—it’s a way of life. The obsession started ten years ago and its fan base now spans the globe, some eager to escape from reality and others hoping to make a profit. Struggling to make ends meet, teenage hacker Emika Chen works as a bounty hunter, tracking down Warcross players who bet on the game illegally. But the bounty-hunting world is a competitive one, and survival has not been easy. To make some quick cash, Emika takes a risk and hacks into the opening game of the international Warcross Championships—only to accidentally glitch herself into the action and become an overnight sensation.  &lt;/p&gt;
+&lt;p&gt;Convinced she’s going to be arrested, Emika is shocked when instead she gets a call from the game’s creator, the elusive young billionaire Hideo Tanaka, with an irresistible offer. He needs a spy on the inside of this year’s tournament in order to uncover a security problem . . . and he wants Emika for the job. With no time to lose, Emika’s whisked off to Tokyo and thrust into a world of fame and fortune that she’s only dreamed of. But soon her investigation uncovers a sinister plot, with major consequences for the entire Warcross empire.  &lt;/p&gt;
+&lt;p&gt;In this sci-fi thriller, #1 &lt;em&gt;New York Times&lt;/em&gt; bestselling author Marie Lu conjures an immersive, exhilarating world where choosing who to trust may be the biggest gamble of all.&lt;/p&gt;
+&lt;p&gt;**&lt;/p&gt;&lt;/div&gt;</dc:description>
+        <dc:publisher>Penguin</dc:publisher>
+        <dc:identifier opf:scheme="GOOGLE">II_fDQAAQBAJ</dc:identifier>
+        <dc:identifier opf:scheme="AMAZON">0399547967</dc:identifier>
+        <dc:identifier opf:scheme="ISBN">9780399547966</dc:identifier>
+        <dc:language>eng</dc:language>
+        <dc:subject>Cyberpunk</dc:subject>
+        <dc:subject>Girl</dc:subject>
+        <dc:subject>Science Fiction</dc:subject>
+        <dc:subject>Fiction</dc:subject>
+        <meta name="calibre:author_link_map" content="{&quot;Marie Lu&quot;: &quot;&quot;}"/>
+        <meta name="calibre:series" content="Warcross"/>
+        <meta name="calibre:series_index" content="1"/>
+        <meta name="calibre:rating" content="10"/>
+        <meta name="calibre:timestamp" content="2020-11-08T18:00:38+00:00"/>
+        <meta name="calibre:title_sort" content="Warcross"/>
+    </metadata>
+    <guide>
+        <reference type="cover" title="Cover" href="cover.jpg"/>
+    </guide>
+</package>
