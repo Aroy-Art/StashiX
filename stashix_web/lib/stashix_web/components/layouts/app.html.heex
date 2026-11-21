@@ -83,6 +83,7 @@
                 [
                   {gettext("Home"), "/", "lucide-house"},
                   {gettext("Search"), "/search", "lucide-search"},
+                  {gettext("Collections"), "/collections", "lucide-gallery-vertical-end"},
                   {gettext("Series"), "/series", "lucide-book-copy"},
                   {gettext("Books"), "/books", "lucide-library-big"},
                   !assigns[:books_mode] && {gettext("Issues"), "/issues", "lucide-layers"},
@@ -93,7 +94,10 @@
             }
             navigate={to}
             icon={icon}
-            active={under?(path, to) or (to == "/publishers" and under?(path, "/publisher"))}
+            active={
+              under?(path, to) or (to == "/publishers" and under?(path, "/publisher")) or
+                (to == "/collections" and under?(path, "/collection"))
+            }
           >
             {label}
           </.nav_item>

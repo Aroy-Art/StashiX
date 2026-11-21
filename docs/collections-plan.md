@@ -121,8 +121,11 @@ Deleting a book or series removes its entries (cascade); a soft-deleted book
 
 ## Phase 2 — Web UI
 
-Ask with ASCII mockups before building (the picker and the collection page);
-proposals:
+Settled with mockups (2026-11-21): the picker is a popover checklist (bottom
+sheet on phones) with a search box over the user's collections; the
+collection page is a cover grid; "Collections" sits in the nav right after
+Search, and a UI setting adds a sidebar section listing the user's
+collections. The mockups as shown:
 
 ```
 Book page  ⋯ menu  /  [+ Collection] button          Picker (popover / sheet on phones)
@@ -144,17 +147,20 @@ Collection page
 └───────────────────────────────────────────────────────────────────────┘
 ```
 
-- [ ] Nav item "Collections" (`/collections`): grid of collection cards
+- [x] Nav item "Collections" (`/collections`): grid of collection cards
       (stacked covers like series cards), sections "Yours" and "Shared with
       you", a "New collection" button, empty state that explains how to add.
-- [ ] Collection page (`/collection/:id`): hero (name, description, owner
+- [x] Collection page (`/collection/:id`): hero (name, description, owner
       when shared, counts, read share), entries as book and series cards in
       collection order, sort menu, "Read next" (first unfinished book in
       collection order), owner menu: rename / edit description / share toggle
-      / delete (confirm).
+      / delete (confirm). *Done:* also "Opens sorted by" (default sort) in the
+      edit dialog, and Move to top / bottom and Remove in each card's menu.
 - [ ] Add-to picker on book and series pages (and the cards' menus where they
       have one): ticks for collections that hold it, toggles in place,
       "New collection…" inline. Series page wording: "Add the whole series".
+- [ ] Sidebar section (UI setting, off by default): the user's collections
+      by name under Libraries.
 - [ ] Reordering (C8): `Sortable` hook on the owner's collection page in
       "Collection order" sort, `move_entry` on drop; Move to top / bottom in
       entry menus; remove from collection.

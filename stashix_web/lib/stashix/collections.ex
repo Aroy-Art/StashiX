@@ -210,6 +210,26 @@ defmodule Stashix.Collections do
       preload: [book: [:cover, :series], series: []]
     )
     |> Repo.all()
+    |> put_series_counts(access)
+  end
+
+  # A series card shows how many of its books the viewer may read.
+  defp put_series_counts(entries, access) do
+    series_ids = for %{series_id: id} <- entries, id, do: id
+
+    counts =
+      from(b in Access.books(access),
+        where: b.series_id in ^series_ids and is_nil(b.deleted_at),
+        group_by: b.series_id,
+        select: {b.series_id, count(b.id)}
+      )
+      |> Repo.all()
+      |> Map.new()
+
+    Enum.map(entries, fn
+      %{series: %Series{} = s} = e -> %{e | series: %{s | issue_count: Map.get(counts, s.id, 0)}}
+      e -> e
+    end)
   end
 
   @doc """
