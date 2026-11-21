@@ -562,6 +562,7 @@ defmodule StashixWeb.HomeLive do
                   @queues? && @libraries_pair? && i == length(@shown_libraries) && rem(i, 2) == 1 &&
                     "2xl:col-start-2"
                 }
+                spine={@queues?}
                 navigate={~p"/library/#{slug_param(data.library)}"}
                 name={data.library.name}
                 library_kind={data.library.kind}

@@ -447,6 +447,17 @@ defmodule StashixWeb.Dev.UiLive do
           class="w-72"
         />
         <.collection_card navigate="/dev/ui" name="Empty imprint" icon="lucide-building" note="No content" class="w-64" />
+        <.collection_card
+          spine
+          navigate="/dev/ui"
+          name="Comics"
+          library_kind={:comics}
+          covers={Enum.map(~w(rebeccapurple deepskyblue orange crimson seagreen), swatch)}
+          stats={[{"series", 341}, {"books", 391}, {"issues", 2302}]}
+          class="w-64"
+        >
+          <.pill tag="span" static>262 GiB</.pill>
+        </.collection_card>
       </.specimen>
 
       <.specimen title="Flash" note="flash — put_flash/3 shows these bottom right; info clears itself after 6s">

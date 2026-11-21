@@ -131,6 +131,10 @@ defmodule StashixWeb.CollectionComponents do
   labels. `:menu` sits in the
   top-right corner, outside the link; the default slot is a line below the
   counts.
+
+  `spine` lays it out like `publisher_card/1` from `lg` until `2xl`, where the
+  home page puts libraries in a narrow side column: the covers stacked down
+  the left and the counts listed beside them, for a much shorter card.
   """
   attr :navigate, :string, required: true
   attr :name, :string, required: true
@@ -139,6 +143,7 @@ defmodule StashixWeb.CollectionComponents do
   attr :note, :string, default: nil, doc: "dim text shown when every count is zero"
   attr :icon, :string, default: "lucide-library"
   attr :library_kind, :atom, default: nil, values: [nil, :comics, :books], doc: "see `kind_mark/1`"
+  attr :spine, :boolean, default: false
   attr :class, :any, default: nil
   slot :menu
   slot :inner_block
@@ -148,35 +153,67 @@ defmodule StashixWeb.CollectionComponents do
 
     ~H"""
     <%!-- A plain panel with the ink left edge and the halftone dots of an
-         indicia, without its colour wash, and a strip of covers across the top. --%>
+         indicia, without its colour wash, and a strip of covers across the top
+         (or down the side, for `spine`). --%>
     <div class={[
       "collection-card group relative overflow-hidden rounded-lg bg-surface border-l-4 border-ink ring-1 ring-edge hover:ring-ink/60 transition-shadow",
+      @spine && "lg:max-2xl:flex",
       @class
     ]}>
       <div class="halftone absolute inset-0 pointer-events-none" aria-hidden="true"></div>
       <.link navigate={@navigate} class="absolute inset-0 focus-visible:outline-2 focus-visible:outline-ink z-0">
         <span class="sr-only">{@name}</span>
       </.link>
-      <div class="relative pointer-events-none">
-        <div class="relative flex h-24 bg-canvas overflow-hidden border-b border-fg/10">
+      <div class={["relative pointer-events-none", @spine && "lg:max-2xl:flex lg:max-2xl:flex-1 lg:max-2xl:min-w-0"]}>
+        <div class={[
+          "relative flex h-24 bg-canvas overflow-hidden border-b border-fg/10",
+          @spine &&
+            "lg:max-2xl:w-24 lg:max-2xl:h-auto lg:max-2xl:flex-shrink-0 lg:max-2xl:flex-col lg:max-2xl:border-b-0 lg:max-2xl:border-r"
+        ]}>
           <div :if={@covers == []} class="flex-1 flex items-center justify-center">
             <.icon name={@icon} class="w-8 h-8 text-faint" />
           </div>
-          <img
-            :for={url <- @covers}
-            src={url}
-            alt=""
-            loading="lazy"
-            class="flex-1 min-w-0 h-full object-cover object-top"
-            onerror="this.style.display='none'"
-          />
-          <div :if={@covers != []} class="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-gray-950/80 to-transparent">
+          <%!-- Positioned so a cover's own size never stretches the strip --%>
+          <div :for={url <- @covers} class="relative flex-1 min-w-0 min-h-0 overflow-hidden">
+            <img
+              src={url}
+              alt=""
+              loading="lazy"
+              class="absolute inset-0 w-full h-full object-cover object-top"
+              onerror="this.style.display='none'"
+            />
           </div>
-          <.kind_mark :if={@library_kind} kind={@library_kind} class="absolute top-2 right-2" />
+          <div
+            :if={@covers != []}
+            class={[
+              "absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-gray-950/80 to-transparent",
+              @spine && "lg:max-2xl:hidden"
+            ]}
+          >
+          </div>
+          <div
+            :if={@spine}
+            class="hidden lg:max-2xl:block absolute inset-y-0 right-0 w-10 bg-gradient-to-r from-transparent to-gray-950/80"
+          >
+          </div>
+          <.kind_mark
+            :if={@library_kind}
+            kind={@library_kind}
+            class={[
+              "absolute top-2 right-2",
+              @spine && "lg:max-2xl:top-auto lg:max-2xl:right-auto lg:max-2xl:bottom-2 lg:max-2xl:left-2"
+            ]}
+          />
         </div>
-        <div class="px-4 pt-3 pb-4">
+        <div class={[
+          "px-4 pt-3 pb-4",
+          @spine && "lg:max-2xl:flex-1 lg:max-2xl:min-w-0 lg:max-2xl:py-3.5"
+        ]}>
           <div class="flex items-start justify-between gap-2">
-            <p class="font-display font-black uppercase text-2xl leading-none tracking-wide text-fg truncate group-hover:text-ink transition-colors">
+            <p class={[
+              "font-display font-black uppercase text-2xl leading-none tracking-wide text-fg truncate group-hover:text-ink transition-colors",
+              @spine && "lg:max-2xl:text-xl lg:max-2xl:leading-tight"
+            ]}>
               {@name}
             </p>
             <div
@@ -186,8 +223,15 @@ defmodule StashixWeb.CollectionComponents do
               {render_slot(@menu)}
             </div>
           </div>
-          <dl :if={@stats != []} class="flex flex-wrap gap-x-6 gap-y-2 mt-3">
+          <dl :if={@stats != []} class={["flex flex-wrap gap-x-6 gap-y-2 mt-3", @spine && "lg:max-2xl:hidden"]}>
             <.stat :for={{label, count} <- @stats} label={label}>{count}</.stat>
+          </dl>
+          <%!-- The side column is too narrow for the counts in a row --%>
+          <dl :if={@spine and @stats != []} class="hidden lg:max-2xl:flex flex-col gap-0.5 mt-1.5">
+            <div :for={{label, count} <- @stats} class="flex items-baseline gap-2">
+              <dt class="order-last text-[10px] uppercase tracking-widest text-ink/80 font-semibold">{label}</dt>
+              <dd class="text-sm font-bold text-fg tabular-nums">{count}</dd>
+            </div>
           </dl>
           <p :if={@stats == [] and @note} class="mt-2 text-xs text-muted">{@note}</p>
           <div :if={@inner_block != []} class="pointer-events-auto mt-2.5">{render_slot(@inner_block)}</div>
