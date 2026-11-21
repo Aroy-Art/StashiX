@@ -486,6 +486,7 @@ defmodule StashixWeb.SeriesLive do
   end
 
   def handle_info({:scan_progress, _}, socket), do: {:noreply, socket}
+  def handle_info({:collections_changed, _item}, socket), do: {:noreply, socket}
   def handle_info({:book_added, _}, socket), do: {:noreply, socket}
 
   def handle_info({:metadata_updated, :series, id}, %{assigns: %{series: %{id: id}}} = socket),
@@ -777,9 +778,8 @@ defmodule StashixWeb.SeriesLive do
             </span>
           </div>
 
-          <%!-- Read + download buttons --%>
+          <%!-- Read, download and collection buttons --%>
           <div
-            :if={@continue_book || (@can_download && @file_formats != [])}
             class="rise flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7"
             style="--i:4"
           >
@@ -821,6 +821,14 @@ defmodule StashixWeb.SeriesLive do
               <.icon name="lucide-download" class="w-4 h-4" />
               <span class="hidden sm:inline">{gettext("Download…")}</span>
             </.text_link>
+            <.live_component
+              module={StashixWeb.CollectionPicker}
+              id="collection-picker"
+              item={{:series, @series.id}}
+              title={@series.name}
+              current_user={@current_user}
+              access={@access}
+            />
           </div>
         </div>
       </header>

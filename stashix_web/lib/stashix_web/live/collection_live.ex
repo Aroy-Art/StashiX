@@ -297,24 +297,26 @@ defmodule StashixWeb.CollectionLive do
   # The owner's menu on a card: sits over the card's corner, outside its link.
   defp entry_menu(assigns) do
     ~H"""
-    <.ink_menu id={"entry-menu-#{@entry.id}"} class="absolute top-1.5 right-1.5 z-10">
-      <:trigger
-        class="p-1.5 rounded-md bg-canvas/80 text-fg-soft hover:text-fg ring-1 ring-edge opacity-100 sm:opacity-0 sm:group-hover/entry:opacity-100 focus:opacity-100 transition-opacity"
-        label={gettext("Entry actions")}
-      >
-        <.icon name="lucide-ellipsis-vertical" class="w-4 h-4" />
-      </:trigger>
-      <.menu_item icon="lucide-arrow-up-to-line" phx-click="move_entry" phx-value-id={@entry.id} phx-value-to="top">
-        {gettext("Move to top")}
-      </.menu_item>
-      <.menu_item icon="lucide-arrow-down-to-line" phx-click="move_entry" phx-value-id={@entry.id} phx-value-to="bottom">
-        {gettext("Move to bottom")}
-      </.menu_item>
-      <.menu_separator />
-      <.menu_item icon="lucide-x" tone="danger" phx-click="remove_entry" phx-value-id={@entry.id}>
-        {gettext("Remove from collection")}
-      </.menu_item>
-    </.ink_menu>
+    <div class="absolute top-1.5 right-1.5 z-10">
+      <.ink_menu id={"entry-menu-#{@entry.id}"}>
+        <:trigger
+          class="p-1.5 rounded-md bg-canvas/80 text-fg-soft hover:text-fg ring-1 ring-edge opacity-100 sm:opacity-0 sm:group-hover/entry:opacity-100 focus:opacity-100 transition-opacity"
+          label={gettext("Entry actions")}
+        >
+          <.icon name="lucide-ellipsis-vertical" class="w-4 h-4" />
+        </:trigger>
+        <.menu_item icon="lucide-arrow-up-to-line" phx-click="move_entry" phx-value-id={@entry.id} phx-value-to="top">
+          {gettext("Move to top")}
+        </.menu_item>
+        <.menu_item icon="lucide-arrow-down-to-line" phx-click="move_entry" phx-value-id={@entry.id} phx-value-to="bottom">
+          {gettext("Move to bottom")}
+        </.menu_item>
+        <.menu_separator />
+        <.menu_item icon="lucide-x" tone="danger" phx-click="remove_entry" phx-value-id={@entry.id}>
+          {gettext("Remove from collection")}
+        </.menu_item>
+      </.ink_menu>
+    </div>
     """
   end
 

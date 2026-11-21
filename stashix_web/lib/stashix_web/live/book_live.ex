@@ -61,7 +61,8 @@ defmodule StashixWeb.BookLive do
        external_ids: load_external_ids(book),
        annotations: Stashix.Annotations.list(socket.assigns.current_user.id, book.id),
        book_details: Library.get_book_details(socket.assigns.access, book.id),
-       all_publishers: Library.list_all_publishers()
+       all_publishers: Library.list_all_publishers(),
+       in_collections: Stashix.Collections.holding_book(socket.assigns.current_user, socket.assigns.access, book.id)
      )}
   end
 
@@ -144,6 +145,11 @@ defmodule StashixWeb.BookLive do
   end
 
   @impl true
+  def handle_info({:collections_changed, _item}, socket) do
+    %{current_user: user, access: access, book: book} = socket.assigns
+    {:noreply, assign(socket, in_collections: Stashix.Collections.holding_book(user, access, book.id))}
+  end
+
   def handle_info({:scan_progress, %{done: true}}, socket) do
     book = Library.get_book_with_series(socket.assigns.access, socket.assigns.book.id)
     progress = Library.get_progress(socket.assigns.current_user.id, book.id)
@@ -609,9 +615,8 @@ defmodule StashixWeb.BookLive do
             <% end %>
           </div>
 
-          <%!-- Read + download buttons --%>
+          <%!-- Read, download and collection buttons --%>
           <div
-            :if={(@book.page_count > 0 && @selected_file) || (@can_download && @book.files != [])}
             class="rise relative z-10 flex items-center justify-center sm:justify-start gap-5 flex-wrap mt-7"
             style="--i:5"
           >
@@ -651,6 +656,14 @@ defmodule StashixWeb.BookLive do
               </:aside>
             </.split_button>
             <.download_button :if={@can_download} book={@book} />
+            <.live_component
+              module={StashixWeb.CollectionPicker}
+              id="collection-picker"
+              item={{:book, @book.id}}
+              title={@book.title}
+              current_user={@current_user}
+              access={@access}
+            />
           </div>
         </div>
       </header>
@@ -683,6 +696,14 @@ defmodule StashixWeb.BookLive do
           {Formatters.language_name(@book.language)}
         </:item>
         <:item label={gettext("Age Rating")}>{Formatters.format_age_rating(@book.age_rating)}</:item>
+        <:item label={gettext("Collections")} show={@in_collections != []}>
+          <span id="book-collections">
+            <%= for {c, idx} <- Enum.with_index(@in_collections) do %>
+              <span :if={idx > 0} class="text-muted"> / </span>
+              <.link navigate={~p"/collection/#{c.id}"} class="hover:text-accent transition-colors">{c.name}</.link>
+            <% end %>
+          </span>
+        </:item>
       </.indicia>
 
       <.details_panel

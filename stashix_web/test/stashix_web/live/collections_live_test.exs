@@ -123,4 +123,44 @@ defmodule StashixWeb.CollectionsLiveTest do
     {:ok, view, _html} = live(conn, ~p"/collections")
     assert has_element?(view, "#shared-collections #collection-#{c.id}", "by owner")
   end
+
+  describe "the Collection button" do
+    test "ticks add and remove a book, and the book page lists its collections", ctx do
+      %{conn: conn, owner: owner, c: c, s1: s1} = ctx
+      {:ok, other} = Collections.create(owner, %{name: "Book club"})
+      {:ok, view, _html} = live_canonical(conn, ~p"/book/#{s1.id}")
+
+      # In "Space operas" through Saga; not in "Book club".
+      assert has_element?(view, ~s|#collection-picker-#{c.id}[aria-checked="false"]|, "via series")
+      assert has_element?(view, "#book-collections", "Space operas")
+
+      view |> element("#collection-picker-#{other.id}") |> render_click()
+      assert has_element?(view, ~s|#collection-picker-#{other.id}[aria-checked="true"]|)
+      assert has_element?(view, "#book-collections", "Book club")
+      assert Collections.containing(owner, {:book, s1.id})[other.id] == :direct
+
+      view |> element("#collection-picker-#{other.id}") |> render_click()
+      refute has_element?(view, "#book-collections", "Book club")
+    end
+
+    test "a new collection is made with the item in it", %{conn: conn, owner: owner, dune: dune} do
+      {:ok, view, _html} = live_canonical(conn, ~p"/book/#{dune.id}")
+      view |> element("#collection-picker-menu button", "New collection…") |> render_click()
+      view |> form("#collection-picker-new-form", %{collection: %{name: "Classics"}}) |> render_submit()
+
+      [classics] = owner |> Collections.own() |> Enum.filter(&(&1.name == "Classics"))
+      assert Collections.containing(owner, {:book, dune.id})[classics.id] == :direct
+      assert has_element?(view, "#book-collections", "Classics")
+      refute has_element?(view, "#collection-picker-new")
+    end
+
+    test "a whole series goes in from its page", %{conn: conn, owner: owner} do
+      {:ok, fresh} = Collections.create(owner, %{name: "Ongoing"})
+      saga = Repo.get_by!(Series, name: "Saga")
+      {:ok, view, _html} = live_canonical(conn, ~p"/series/#{saga.id}")
+
+      view |> element("#collection-picker-#{fresh.id}") |> render_click()
+      assert Collections.containing(owner, {:series, saga.id})[fresh.id] == :direct
+    end
+  end
 end

@@ -156,15 +156,19 @@ Collection page
       collection order), owner menu: rename / edit description / share toggle
       / delete (confirm). *Done:* also "Opens sorted by" (default sort) in the
       edit dialog, and Move to top / bottom and Remove in each card's menu.
-- [ ] Add-to picker on book and series pages (and the cards' menus where they
+- [x] Add-to picker on book and series pages (and the cards' menus where they
       have one): ticks for collections that hold it, toggles in place,
       "New collection…" inline. Series page wording: "Add the whole series".
+      *Done as:* `CollectionPicker` (LiveComponent) on the book and series
+      action rows, filter box over the user's collections, "via series" half
+      ticks; "New collection…" opens a small dialog that makes it and adds the
+      item. Cards have no menu yet (bulk add in phase 6 covers grids).
 - [ ] Sidebar section (UI setting, off by default): the user's collections
       by name under Libraries.
 - [ ] Reordering (C8): `Sortable` hook on the owner's collection page in
       "Collection order" sort, `move_entry` on drop; Move to top / bottom in
       entry menus; remove from collection.
-- [ ] Book page: "In collections: To read, Book club" line (own + visible
+- [x] Book page: "In collections: To read, Book club" line (own + visible
       shared), linking each.
 - [ ] Search finds collections by name (own + visible shared) as a section.
 - [ ] Tests (LiveView): create, add/remove from picker, reorder events, share
