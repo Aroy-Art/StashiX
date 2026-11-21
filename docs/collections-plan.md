@@ -202,12 +202,12 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
 "Created", "LastModified", "Items" => [%{"RevisionId" => book_id, "Type" =>
 "ProductRevisionTagItem"}]}}`; the device edits through `/v1/library/tags`.
 
-- [ ] Server → device: `kobo_synced_collections (app_password_id,
+- [x] Server → device: `kobo_synced_collections (app_password_id,
       collection_id, synced_at, items_hash)`; each sync, after books, sends new /
       changed (name, or the hash of its expanded, device-held book ids) /
       deleted collections (C9: own only). Items are only books the device has
       (EPUB, downloadable), so a comics collection may be an empty shelf.
-- [ ] Device → server: `POST /v1/library/tags` (create, C10), `PUT
+- [x] Device → server: `POST /v1/library/tags` (create, C10), `PUT
       /v1/library/tags/:id` (rename), `DELETE /v1/library/tags/:id`, `POST
       /v1/library/tags/:id/items` and `…/items/delete` (add / remove books);
       ids that aren't Stashix collections go on to Kobo through the proxy.
@@ -215,7 +215,7 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
       Removing a book that comes from a series entry: proposal — turn that
       series entry into its remaining books (the device can't remove "part of a
       series"), with a note in the UI history.
-- [ ] Tests with the stubbed store: shelf round trips, store-book shelves
+- [x] Tests with the stubbed store: shelf round trips, store-book shelves
       proxied, rename/delete both ways, series expansion on the device.
 
 ## Phase 6 — Polish

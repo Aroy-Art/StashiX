@@ -126,6 +126,58 @@ defmodule Stashix.Collections do
     end
   end
 
+  @doc """
+  Takes a book out of a collection however it is in it: its own entry goes,
+  and if it is there through a series entry, that series entry becomes the
+  series' other books (those the owner may read), in its place. For clients
+  that only know books, such as a Kobo shelf.
+  """
+  def remove_book(%User{} = user, %Access{} = access, %Collection{} = c, book_id) do
+    with :ok <- check_owner(c, user) do
+      series_id = Repo.one(from b in Book, where: b.id == ^book_id, select: b.series_id)
+
+      Repo.transaction(fn ->
+        from(e in CollectionEntry, where: e.collection_id == ^c.id and e.book_id == ^book_id) |> Repo.delete_all()
+
+        series_entry =
+          series_id &&
+            Repo.one(from e in CollectionEntry, where: e.collection_id == ^c.id and e.series_id == ^series_id)
+
+        if series_entry, do: spread_series(access, c, series_entry, book_id)
+        touch(c)
+      end)
+
+      :ok
+    end
+  end
+
+  # The series entry becomes one entry per remaining book, where it was.
+  defp spread_series(access, c, series_entry, without_book_id) do
+    held = from(e in CollectionEntry, where: e.collection_id == ^c.id and not is_nil(e.book_id), select: e.book_id)
+
+    book_ids =
+      from(b in Access.books(access),
+        where:
+          b.series_id == ^series_entry.series_id and is_nil(b.deleted_at) and b.id != ^without_book_id and
+            b.id not in subquery(held),
+        order_by: [asc_nulls_last: b.issue_number, asc: b.title],
+        select: b.id
+      )
+      |> Repo.all()
+
+    entries =
+      from(e in CollectionEntry, where: e.collection_id == ^c.id, order_by: [e.position, e.inserted_at]) |> Repo.all()
+
+    Repo.delete!(series_entry)
+
+    new =
+      for id <- book_ids, do: Repo.insert!(%CollectionEntry{collection_id: c.id, book_id: id, position: 0})
+
+    entries
+    |> Enum.flat_map(fn e -> if e.id == series_entry.id, do: new, else: [e] end)
+    |> renumber()
+  end
+
   @doc "Removes an entry by its id."
   def remove_entry(%User{} = user, %Collection{} = c, entry_id) do
     with :ok <- check_owner(c, user),

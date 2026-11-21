@@ -161,6 +161,11 @@ defmodule StashixWeb.Router do
     get "/v1/library/:id/metadata", KoboController, :metadata
     get "/v1/library/:id/state", KoboController, :state
     put "/v1/library/:id/state", KoboController, :update_state
+    post "/v1/library/tags", KoboController, :create_tag
+    put "/v1/library/tags/:tag_id", KoboController, :update_tag
+    delete "/v1/library/tags/:tag_id", KoboController, :update_tag
+    post "/v1/library/tags/:tag_id/items", KoboController, :add_tag_items
+    post "/v1/library/tags/:tag_id/items/delete", KoboController, :remove_tag_items
     get "/v1/books/:id/file/epub", KoboController, :download
     get "/v1/books/:id/thumbnail/:width/:height/:grey/image.jpg", KoboController, :cover
     get "/v1/books/:id/thumbnail/:width/:height/:quality/:grey/image.jpg", KoboController, :cover

@@ -89,6 +89,68 @@ defmodule Stashix.Kobo do
     :ok
   end
 
+  ## Shelves (collections)
+
+  @doc """
+  The collections an app password's Kobo has as shelves: `%{collection_id
+  => items_hash}`. No foreign key on the collection: a deleted collection
+  stays listed until the device is told it is gone.
+  """
+  def synced_shelves(app_password_id) do
+    from(s in "kobo_synced_collections",
+      where: s.app_password_id == type(^app_password_id, :binary_id),
+      select: {type(s.collection_id, :binary_id), s.items_hash}
+    )
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  @doc "Records shelves as sent with these hashes: `[{collection_id, items_hash}]`."
+  def mark_shelves(_app_password_id, []), do: :ok
+
+  def mark_shelves(app_password_id, shelves) do
+    now = DateTime.utc_now() |> DateTime.truncate(:second)
+    {:ok, ap} = Ecto.UUID.dump(app_password_id)
+
+    rows =
+      for {id, hash} <- shelves do
+        {:ok, id} = Ecto.UUID.dump(id)
+        %{app_password_id: ap, collection_id: id, items_hash: hash, synced_at: now}
+      end
+
+    Repo.insert_all("kobo_synced_collections", rows,
+      on_conflict: {:replace, [:items_hash, :synced_at]},
+      conflict_target: [:app_password_id, :collection_id]
+    )
+
+    :ok
+  end
+
+  @doc "Forgets shelves the device was told are gone (all of them with `:all`)."
+  def forget_shelves(app_password_id, :all) do
+    from(s in "kobo_synced_collections", where: s.app_password_id == type(^app_password_id, :binary_id))
+    |> Repo.delete_all()
+
+    :ok
+  end
+
+  def forget_shelves(_app_password_id, []), do: :ok
+
+  def forget_shelves(app_password_id, ids) do
+    from(s in "kobo_synced_collections",
+      where:
+        s.app_password_id == type(^app_password_id, :binary_id) and
+          s.collection_id in type(^ids, {:array, :binary_id})
+    )
+    |> Repo.delete_all()
+
+    :ok
+  end
+
+  @doc "What a shelf's hash covers: its name and its books, in order."
+  def shelf_hash(name, book_ids),
+    do: :crypto.hash(:sha256, Enum.join([name | book_ids], "\n")) |> Base.url_encode64(padding: false)
+
   @doc "Books with everything a Kobo's metadata needs."
   def load_books(ids) do
     from(b in Book, where: b.id in ^ids, preload: [:series, :publishers, :files, credits: :creator])

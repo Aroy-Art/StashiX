@@ -175,6 +175,31 @@ defmodule Stashix.CollectionsTest do
     assert Collections.containing(owner, {:book, ctx.s1.id}) == %{by_series.id => :series}
   end
 
+  test "removing a book that is there through its series takes the series apart", ctx do
+    %{owner: owner, owner_access: access} = ctx
+    {:ok, c} = Collections.create(owner, %{name: "Spread"})
+    {:ok, _} = Collections.add(owner, access, c, {:book, ctx.dune.id})
+    {:ok, _} = Collections.add(owner, access, c, {:series, ctx.saga.id})
+    {:ok, _} = Collections.add(owner, access, c, {:book, ctx.secret.id})
+
+    :ok = Collections.remove_book(owner, access, c, ctx.s2.id)
+
+    entries = Collections.entries(access, c)
+
+    assert Enum.map(entries, &(&1.book_id || {:series, &1.series_id})) == [
+             ctx.dune.id,
+             ctx.s1.id,
+             ctx.s3.id,
+             ctx.secret.id
+           ]
+
+    assert ids(Collections.books(access, c)) == [ctx.dune.id, ctx.s1.id, ctx.s3.id, ctx.secret.id]
+
+    # A book with its own entry just loses it.
+    :ok = Collections.remove_book(owner, access, c, ctx.dune.id)
+    assert ids(Collections.books(access, c)) == [ctx.s1.id, ctx.s3.id, ctx.secret.id]
+  end
+
   test "deleting a book or series removes its entries", ctx do
     %{owner: owner, owner_access: access} = ctx
     {:ok, c} = Collections.create(owner, %{name: "Gone"})

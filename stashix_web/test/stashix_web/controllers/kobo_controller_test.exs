@@ -209,6 +209,91 @@ defmodule StashixWeb.KoboControllerTest do
              "k"
   end
 
+  describe "shelves" do
+    alias Stashix.Collections
+
+    setup %{user: user, novel: novel} do
+      {:ok, c} = Collections.create(user, %{name: "Night reading"})
+      {:ok, _} = Collections.add(user, Library.Access.for_user(user), c, {:book, novel.id})
+      %{collection: c}
+    end
+
+    defp tags(items), do: Enum.filter(items, &(Map.keys(&1) |> hd() |> String.ends_with?("Tag")))
+
+    test "the user's collections go to the device as shelves, and follow changes", ctx do
+      %{conn: conn, base: base, user: user, collection: c, novel: novel} = ctx
+      {items, token, false} = sync(conn, base)
+
+      assert [%{"NewTag" => %{"Tag" => tag}}] = tags(items)
+      assert %{"Id" => id, "Name" => "Night reading", "Type" => "UserTag", "Items" => [item]} = tag
+      assert id == c.id
+      assert item == %{"RevisionId" => novel.id, "Type" => "ProductRevisionTagItem"}
+
+      assert {[], token, false} = sync(conn, base, token)
+
+      {:ok, c} = Collections.update(user, c, %{name: "Late reading"})
+      {items, token, false} = sync(conn, base, token)
+      assert [%{"ChangedTag" => %{"Tag" => %{"Name" => "Late reading"}}}] = tags(items)
+
+      {:ok, _} = Collections.delete(user, c)
+      {items, _token, false} = sync(conn, base, token)
+      assert [%{"DeletedTag" => %{"Tag" => %{"Id" => ^id}}}] = tags(items)
+    end
+
+    test "others' shared collections are not shelves", %{conn: conn, base: base, lib: lib, novel: novel} do
+      {:ok, other} = Accounts.create_user(%{email: "sh@example.com", username: "sharer", password: "password1234"})
+      {:ok, _} = Library.set_library_permission(%{user_id: other.id, library_id: lib.id, can_read: true})
+      {:ok, c} = Collections.create(other, %{name: "Theirs", shared: true})
+      {:ok, _} = Collections.add(other, Library.Access.for_user(other), c, {:book, novel.id})
+
+      {items, _, false} = sync(conn, base)
+      assert [%{"NewTag" => %{"Tag" => %{"Name" => "Night reading"}}}] = tags(items)
+    end
+
+    test "shelves made and changed on the device become collections", ctx do
+      %{conn: conn, base: base, user: user, novel: novel} = ctx
+      {_, token, false} = sync(conn, base)
+      item = %{"RevisionId" => novel.id, "Type" => "ProductRevisionTagItem"}
+
+      id =
+        conn |> post(base <> "/v1/library/tags", %{"Name" => "On the train", "Items" => [item]}) |> json_response(201)
+
+      {:ok, c} = Collections.get(user, Library.Access.for_user(user), id)
+      assert c.name == "On the train"
+      assert Collections.containing(user, {:book, novel.id})[c.id] == :direct
+
+      # The device has it as it is: the next sync doesn't send it back.
+      assert {[], token, false} = sync(conn, base, token)
+
+      assert conn |> put(base <> "/v1/library/tags/#{id}", %{"Name" => "Commute"}) |> response(200)
+      assert {:ok, %{name: "Commute"}} = Collections.get(user, Library.Access.for_user(user), id)
+
+      assert conn |> post(base <> "/v1/library/tags/#{id}/items/delete", %{"Items" => [item]}) |> response(200)
+      assert Collections.containing(user, {:book, novel.id})[c.id] == nil
+      assert conn |> post(base <> "/v1/library/tags/#{id}/items", %{"Items" => [item]}) |> response(201)
+      assert Collections.containing(user, {:book, novel.id})[c.id] == :direct
+
+      assert conn |> delete(base <> "/v1/library/tags/#{id}") |> response(200)
+      assert {:error, :not_found} = Collections.get(user, Library.Access.for_user(user), id)
+      assert {[], _token, false} = sync(conn, base, token)
+    end
+
+    test "a shelf of only Kobo books stays with Kobo", %{conn: conn, base: base, user: user} do
+      Application.put_env(:stashix, :kobo_proxy, true)
+      on_exit(fn -> Application.put_env(:stashix, :kobo_proxy, false) end)
+      store_book = Ecto.UUID.generate()
+
+      Req.Test.stub(Stashix.Kobo.Store, fn store ->
+        assert store.request_path == "/v1/library/tags"
+        store |> Plug.Conn.put_resp_content_type("application/json") |> Plug.Conn.send_resp(201, ~s("kobo-tag"))
+      end)
+
+      body = %{"Name" => "Bought", "Items" => [%{"RevisionId" => store_book, "Type" => "ProductRevisionTagItem"}]}
+      assert conn |> post(base <> "/v1/library/tags", body) |> json_response(201) == "kobo-tag"
+      refute Enum.any?(Collections.own(user), &(&1.name == "Bought"))
+    end
+  end
+
   describe "with the Kobo store proxy" do
     setup do
       Application.put_env(:stashix, :kobo_proxy, true)

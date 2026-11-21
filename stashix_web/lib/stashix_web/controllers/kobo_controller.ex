@@ -18,6 +18,10 @@ defmodule StashixWeb.KoboController do
   and covers come from Kobo. With the proxy off those calls get an empty
   answer and Kobo purchases don't sync.
 
+  Shelves are the user's own collections (`Stashix.Collections`), with the
+  books of each the device has; shelves made or changed on the device
+  change the collections back (`create_tag/2` and friends).
+
   Reading state goes both ways: the device's spot (chapter, Kobo span and
   how far through) is saved as Stashix progress, and progress from the web
   readers and other apps goes back to the device on the next sync.
@@ -193,8 +197,10 @@ defmodule StashixWeb.KoboController do
     since = parse_time(token["since"])
 
     # A device without a token (new, or reset) starts over.
-    if is_nil(since) and is_nil(token["round"]),
-      do: Kobo.mark_removed(app_password.id, Map.keys(Kobo.synced(app_password.id)))
+    if is_nil(since) and is_nil(token["round"]) do
+      Kobo.mark_removed(app_password.id, Map.keys(Kobo.synced(app_password.id)))
+      Kobo.forget_shelves(app_password.id, :all)
+    end
 
     current = Map.new(Kobo.books(access), &{&1.id, &1.modified})
     synced = Kobo.synced(app_password.id)
@@ -234,7 +240,168 @@ defmodule StashixWeb.KoboController do
     Kobo.mark_synced(app_password.id, new_now ++ changed_now)
     Kobo.mark_removed(app_password.id, removed_now)
 
-    {results, more?}
+    # Shelves once the books are all there, so their items are on the device.
+    shelves = if more?, do: [], else: shelf_changes(conn, Map.keys(current))
+
+    {results ++ shelves, more?}
+  end
+
+  # The user's own collections as shelves (not others' shared ones: edits on
+  # the device couldn't be kept). A shelf holds the collection's books that
+  # the device has; it is sent when new, when its name or books change, and
+  # deleted when the collection is gone.
+  defp shelf_changes(conn, device_book_ids) do
+    %{access: access, app_password: app_password, current_user: user} = conn.assigns
+    held = MapSet.new(device_book_ids)
+    own = Stashix.Collections.own(user)
+    expanded = own |> Enum.map(& &1.id) |> Stashix.Collections.expanded_ids(access)
+    synced = Kobo.synced_shelves(app_password.id)
+
+    shelves =
+      for c <- own do
+        items = expanded |> Map.get(c.id, []) |> Enum.filter(&MapSet.member?(held, &1))
+        {c, items, Kobo.shelf_hash(c.name, items)}
+      end
+
+    sent =
+      for {c, items, hash} <- shelves, synced[c.id] != hash do
+        kind = if Map.has_key?(synced, c.id), do: "ChangedTag", else: "NewTag"
+        {%{kind => %{"Tag" => tag(c, items)}}, {c.id, hash}}
+      end
+
+    gone = Map.keys(synced) -- Enum.map(own, & &1.id)
+    Kobo.mark_shelves(app_password.id, Enum.map(sent, &elem(&1, 1)))
+    Kobo.forget_shelves(app_password.id, gone)
+
+    Enum.map(sent, &elem(&1, 0)) ++
+      Enum.map(gone, &%{"DeletedTag" => %{"Tag" => %{"Id" => &1, "LastModified" => iso(DateTime.utc_now())}}})
+  end
+
+  defp tag(c, items) do
+    %{
+      "Created" => iso(c.inserted_at),
+      "Id" => c.id,
+      "Items" => Enum.map(items, &%{"RevisionId" => &1, "Type" => "ProductRevisionTagItem"}),
+      "LastModified" => iso(c.updated_at),
+      "Name" => c.name,
+      "Type" => "UserTag"
+    }
+  end
+
+  ## Shelves edited on the device
+
+  @doc """
+  A shelf made on the device. It becomes a collection (or joins the one of
+  that name) unless it holds only books bought from Kobo: those shelves stay
+  with Kobo. Answers with the collection's id, which the device uses from
+  then on.
+  """
+  def create_tag(conn, %{"Name" => name} = params) when is_binary(name) and name != "" do
+    %{current_user: user, access: access} = conn.assigns
+    {ours, theirs} = params |> tag_items() |> Enum.split_with(&ours?/1)
+
+    if ours == [] and theirs != [] and Store.enabled?() do
+      proxy(conn)
+    else
+      collection =
+        Enum.find(Stashix.Collections.own(user), &(String.downcase(&1.name) == String.downcase(String.trim(name)))) ||
+          case Stashix.Collections.create(user, %{name: name}) do
+            {:ok, c} -> c
+            {:error, _} -> nil
+          end
+
+      if collection do
+        Enum.each(ours, &Stashix.Collections.add(user, access, collection, {:book, &1}))
+        device_saw(conn, collection)
+        conn |> put_status(:created) |> json(collection.id)
+      else
+        conn |> put_status(:bad_request) |> json(%{error: "invalid shelf name"})
+      end
+    end
+  end
+
+  def create_tag(conn, _params), do: conn |> put_status(:bad_request) |> json(%{error: "Name is required"})
+
+  @doc "Renames (PUT) or deletes (DELETE) a shelf that is a collection of the user's."
+  def update_tag(conn, %{"tag_id" => tag_id} = params) do
+    with_own_collection(conn, tag_id, fn c ->
+      user = conn.assigns.current_user
+
+      case conn.method do
+        "DELETE" ->
+          Stashix.Collections.delete(user, c)
+          Kobo.forget_shelves(conn.assigns.app_password.id, [c.id])
+          send_resp(conn, 200, " ")
+
+        _ ->
+          case Stashix.Collections.update(user, c, %{name: params["Name"]}) do
+            {:ok, c} ->
+              device_saw(conn, c)
+              send_resp(conn, 200, " ")
+
+            {:error, _} ->
+              conn |> put_status(:bad_request) |> json(%{error: "invalid shelf name"})
+          end
+      end
+    end)
+  end
+
+  @doc "Books added to a shelf on the device. Books bought from Kobo can't join a Stashix collection."
+  def add_tag_items(conn, %{"tag_id" => tag_id} = params) do
+    with_own_collection(conn, tag_id, fn c ->
+      %{current_user: user, access: access} = conn.assigns
+
+      params
+      |> tag_items()
+      |> Enum.filter(&ours?/1)
+      |> Enum.each(&Stashix.Collections.add(user, access, c, {:book, &1}))
+
+      device_saw(conn, c)
+      send_resp(conn, 201, "")
+    end)
+  end
+
+  @doc "Books taken off a shelf on the device; a book there through its series takes the series apart."
+  def remove_tag_items(conn, %{"tag_id" => tag_id} = params) do
+    with_own_collection(conn, tag_id, fn c ->
+      %{current_user: user, access: access} = conn.assigns
+      params |> tag_items() |> Enum.filter(&ours?/1) |> Enum.each(&Stashix.Collections.remove_book(user, access, c, &1))
+      device_saw(conn, c)
+      send_resp(conn, 200, "")
+    end)
+  end
+
+  # A shelf the user owns as a collection; others go on to Kobo.
+  defp with_own_collection(conn, tag_id, fun) do
+    %{current_user: user, access: access} = conn.assigns
+
+    case Stashix.Collections.get(user, access, tag_id) do
+      {:ok, c} ->
+        if Stashix.Collections.owner?(c, user),
+          do: fun.(c),
+          else: conn |> put_status(:forbidden) |> json(%{error: "not yours"})
+
+      {:error, :not_found} ->
+        if Store.enabled?(), do: proxy(conn), else: conn |> put_status(:not_found) |> json(%{error: "no such shelf"})
+    end
+  end
+
+  defp tag_items(%{"Items" => items}) when is_list(items) do
+    for %{"Type" => "ProductRevisionTagItem", "RevisionId" => id} <- items, is_binary(id), do: id
+  end
+
+  defp tag_items(_params), do: []
+
+  # The device already has the shelf as it now is: no need to send it back.
+  defp device_saw(conn, c) do
+    %{access: access, app_password: app_password} = conn.assigns
+    held = MapSet.new(Map.keys(Kobo.synced(app_password.id)))
+    c = Repo.reload!(c)
+
+    items =
+      [c.id] |> Stashix.Collections.expanded_ids(access) |> Map.get(c.id, []) |> Enum.filter(&MapSet.member?(held, &1))
+
+    Kobo.mark_shelves(app_password.id, [{c.id, Kobo.shelf_hash(c.name, items)}])
   end
 
   # Books the device has whose progress changed since its last sync.

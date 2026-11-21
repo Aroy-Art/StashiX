@@ -385,7 +385,7 @@ OPDS's per-user tokens and feed queries).
 - [x] Reading state both ways, mapped to the D6 locator. *Done:* chapter
   href, Kobo span and chapter share kept in the locator; older device
   states lose to newer Stashix progress.
-- [ ] Shelves ↔ collections / reading lists: planned in `docs/collections-plan.md` (phase 5).
+- [x] Shelves ↔ collections / reading lists: done as `docs/collections-plan.md` phase 5 (own collections as shelves, both ways).
 ---
 
 ## 9. Open questions
