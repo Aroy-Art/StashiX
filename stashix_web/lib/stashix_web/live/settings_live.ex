@@ -610,9 +610,34 @@ defmodule StashixWeb.SettingsLive do
           "Reading apps (KOReader, Panels, Chunky and other OPDS readers) sign in with your user name and one of these, never your account password. Make one per app, so you can shut one out alone."
         )}
       </p>
-      <.field :if={@opds_url} label={gettext("OPDS catalog address")}>
-        <.text_input id="opds-url" name="opds_url" value={@opds_url} readonly onfocus="this.select()" />
-      </.field>
+      <div :if={@opds_url} class="space-y-3">
+        <.field label={gettext("OPDS catalog address")}>
+          <.text_input id="opds-url" name="opds_url" value={@opds_url} readonly onfocus="this.select()" />
+        </.field>
+        <.field label={gettext("OPDS 2.0 catalog address")} hint={gettext("For apps built on Readium, such as Thorium.")}>
+          <.text_input
+            id="opds2-url"
+            name="opds2_url"
+            value={String.replace_suffix(@opds_url, "/v1.2/catalog", "/v2/catalog")}
+            readonly
+            onfocus="this.select()"
+          />
+        </.field>
+        <.field
+          label={gettext("KOReader sync server")}
+          hint={
+            gettext("In KOReader: Progress sync, Custom sync server. Log in with the same user name and an app password.")
+          }
+        >
+          <.text_input
+            id="koreader-url"
+            name="koreader_url"
+            value={String.replace_suffix(@opds_url, "/opds/v1.2/catalog", "/koreader")}
+            readonly
+            onfocus="this.select()"
+          />
+        </.field>
+      </div>
       <p class="mt-1 mb-5 text-xs text-muted">
         <.rich_text text={gettext("User name: %{name}", name: rich_marker("name"))}>
           <:part name="name"><span class="font-mono text-fg-soft">{@username}</span></:part>
@@ -651,6 +676,9 @@ defmodule StashixWeb.SettingsLive do
               <% else %>
                 {gettext("never used")}
               <% end %>
+            </p>
+            <p :if={is_nil(p.koreader_key)} class="text-xs text-muted">
+              {gettext("Made before KOReader sync: make a new one for KOReader.")}
             </p>
           </div>
           <.ink_button

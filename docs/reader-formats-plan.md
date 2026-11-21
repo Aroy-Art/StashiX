@@ -354,6 +354,15 @@ OPDS's per-user tokens and feed queries).
   in Settings → Security (`AppPassword`, SHA-256 stored, revocable one by
   one); the account password is refused. Kobo sync can reuse them.
 
+### KOReader sync
+
+- [x] kosync server under `/koreader` (`KoreaderController`): sign-in with
+  the user name and an app password (KOReader sends its MD5, kept as
+  `AppPassword.koreader_key`); books found by KOReader's partial MD5
+  (`Stashix.Koreader`, hashed lazily per file). Page books sync by page,
+  EPUBs keep KOReader's XPointer and get the chapter start back when read
+  on in Stashix; the web reader opens at the share of the book.
+
 ### Kobo sync
 
 - [ ] Per-user sync token, device URL `/kobo/:token/` (Kobo store API

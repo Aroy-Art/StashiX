@@ -22,6 +22,7 @@ defmodule Stashix.Accounts.AppPassword do
   schema "app_passwords" do
     field :name, :string
     field :token_hash, :binary, redact: true
+    field :koreader_key, :binary, redact: true
     field :last_used_at, :utc_datetime
 
     belongs_to :user, Stashix.Accounts.User
@@ -41,6 +42,12 @@ defmodule Stashix.Accounts.AppPassword do
   def generate, do: @prefix <> Base.url_encode64(:crypto.strong_rand_bytes(24), padding: false)
 
   def hash(password), do: :crypto.hash(:sha256, password)
+
+  @doc """
+  What KOReader's sync plugin sends for a password (the MD5 of it, in hex),
+  hashed for storage like the password itself.
+  """
+  def koreader_key(password), do: hash(Base.encode16(:crypto.hash(:md5, password), case: :lower))
 
   @doc "Whether a string looks like one of ours (so it isn't an account password)."
   def app_password?(password), do: is_binary(password) and String.starts_with?(password, @prefix)

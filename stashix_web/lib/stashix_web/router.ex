@@ -123,6 +123,25 @@ defmodule StashixWeb.Router do
     get "/books/:id/download", DownloadController, :book
   end
 
+  # No :accepts: KOReader asks for application/vnd.koreader.v1+json.
+  pipeline :koreader do
+    plug StashixWeb.Plugs.KoreaderAuth
+    plug StashixWeb.Plugs.AssignAccess
+  end
+
+  # KOReader's progress sync (kosync); users are made in Stashix.
+  scope "/koreader", StashixWeb do
+    post "/users/create", KoreaderController, :create_user
+  end
+
+  scope "/koreader", StashixWeb do
+    pipe_through :koreader
+
+    get "/users/auth", KoreaderController, :auth
+    get "/syncs/progress/:document", KoreaderController, :show
+    put "/syncs/progress", KoreaderController, :update
+  end
+
   # Komga's read-progress call, for reading apps that send it as you read.
   scope "/api/v1", StashixWeb do
     pipe_through :opds

@@ -19,6 +19,9 @@ defmodule Stashix.Library.BookFile do
     # Detected at scan; see `Stashix.Media.ContentKind`.
     field :content_kind, Ecto.Enum, values: [:images, :text]
     field :deleted_at, :naive_datetime
+    # See Stashix.Koreader.
+    field :koreader_hash, :string
+    field :koreader_hash_of, :string
 
     belongs_to :book, Stashix.Library.Book
     timestamps()

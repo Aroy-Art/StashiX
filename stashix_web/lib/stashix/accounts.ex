@@ -205,7 +205,11 @@ defmodule Stashix.Accounts do
   def create_app_password(%User{id: user_id}, name) do
     password = AppPassword.generate()
 
-    %AppPassword{user_id: user_id, token_hash: AppPassword.hash(password)}
+    %AppPassword{
+      user_id: user_id,
+      token_hash: AppPassword.hash(password),
+      koreader_key: AppPassword.koreader_key(password)
+    }
     |> AppPassword.changeset(%{name: name})
     |> Repo.insert()
     |> case do
@@ -242,6 +246,27 @@ defmodule Stashix.Accounts do
   end
 
   def authenticate_app_password(_login, _password), do: nil
+
+  @doc """
+  The user for KOReader's sync headers: `login` (user name or email) and
+  `key`, the MD5 (hex) of one of their app passwords. Passwords made before
+  KOReader sync existed have no key and don't work here.
+  """
+  def authenticate_koreader(login, key) when is_binary(login) and is_binary(key) do
+    hash = AppPassword.hash(String.downcase(key))
+
+    with %AppPassword{} = app_password <-
+           Repo.one(from p in AppPassword, where: p.koreader_key == ^hash, preload: :user),
+         %User{} = user <- app_password.user,
+         true <- login_matches?(user, login) do
+      touch_app_password(app_password)
+      user
+    else
+      _ -> nil
+    end
+  end
+
+  def authenticate_koreader(_login, _key), do: nil
 
   defp login_matches?(user, login) do
     login = String.trim(login)
