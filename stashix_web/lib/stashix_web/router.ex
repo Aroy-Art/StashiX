@@ -96,6 +96,38 @@ defmodule StashixWeb.Router do
     get "/books/:id/cover", BookController, :cover
     get "/books/:id/page/:n", BookController, :page
     get "/books/:id/download", DownloadController, :book
+    get "/books/:id/progression", OpdsController, :progression
+    put "/books/:id/progression", OpdsController, :update_progression
+  end
+
+  scope "/opds/v2", StashixWeb do
+    pipe_through :opds
+
+    get "/catalog", OpdsController, :root
+    get "/auth", OpdsController, :authentication
+    get "/libraries", OpdsController, :libraries
+    get "/libraries/:id", OpdsController, :library
+    get "/series", OpdsController, :series_index
+    get "/series/:id", OpdsController, :series
+    get "/books", OpdsController, :books
+    get "/new", OpdsController, :new
+    get "/continue", OpdsController, :continue
+    get "/search", OpdsController, :search
+
+    get "/books/:id", OpdsController, :publication
+    get "/books/:id/manifest", OpdsController, :manifest
+    get "/books/:id/progression", OpdsController, :progression
+    put "/books/:id/progression", OpdsController, :update_progression
+    get "/books/:id/cover", BookController, :cover
+    get "/books/:id/page/:n", BookController, :page
+    get "/books/:id/download", DownloadController, :book
+  end
+
+  # Komga's read-progress call, for reading apps that send it as you read.
+  scope "/api/v1", StashixWeb do
+    pipe_through :opds
+
+    patch "/books/:id/read-progress", OpdsController, :read_progress
   end
 
   scope "/api", StashixWeb do

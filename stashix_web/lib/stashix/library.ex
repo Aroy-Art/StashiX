@@ -348,6 +348,8 @@ defmodule Stashix.Library do
     * `:progression` - how far through the book, 0..1; worked out from `page`
       and the book's page count when not given
     * `:locator` - where exactly, see `Stashix.Library.ReadingProgress`
+    * `:at` - when the reader got there (`NaiveDateTime`, UTC); now when
+      not given, and never later than now
   """
   def update_progress(access, user_id, book_id, page, opts \\ []) do
     case Repo.one(from(b in Access.books(access), where: b.id == ^book_id, select: b.page_count)) do
@@ -358,6 +360,7 @@ defmodule Stashix.Library do
 
   defp put_progress(user_id, book_id, page, count, opts) do
     now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+    now = if opts[:at], do: Enum.min([opts[:at] |> NaiveDateTime.truncate(:second), now], NaiveDateTime), else: now
     progression = clamp_progression(opts[:progression]) || ReadingProgress.progression(page, count)
     locator = opts[:locator] && Map.put(opts[:locator], "progression", progression)
 

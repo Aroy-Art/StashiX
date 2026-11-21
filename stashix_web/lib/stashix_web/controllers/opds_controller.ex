@@ -3,24 +3,30 @@
 
 defmodule StashixWeb.OpdsController do
   @moduledoc """
-  The OPDS 1.2 catalog, for reading apps (KOReader, Panels, Chunky, Moon+
-  and the like), under `/opds/v1.2`. Clients sign in with an app password
+  The OPDS catalogs, for reading apps (KOReader, Panels, Chunky, Thorium,
+  Moon+ and the like): OPDS 1.2 (Atom) under `/opds/v1.2`, OPDS 2.0 (JSON)
+  under `/opds/v2`. Both serve the same feeds (see `StashixWeb.Opds`); the
+  path picks the renderer. Clients sign in with an app password
   (`StashixWeb.Plugs.OpdsAuth`) and see what the user may read.
 
   Navigation feeds: the root, the libraries, one library, a list of series.
   Acquisition feeds (books): continue reading, recently added, a library's
   books, a series, search. Books link their files for download when the
-  user may download them, and comics and scanned PDFs also stream page by
-  page (OPDS-PSE) whether or not they may.
+  user may download them; comics and scanned PDFs also stream page by page
+  (OPDS-PSE in 1.2, a Divina manifest in 2.0) whether or not they may.
+
+  Reading progress goes both ways through the Readium Progression API
+  (`progression/2`, `update_progression/2`), and through Komga's
+  `PATCH /api/v1/books/:id/read-progress` (`read_progress/2`) for apps that
+  speak that.
   """
   use StashixWeb, :controller
 
   alias Stashix.{Library, Repo}
   alias Stashix.Library.Access
-  alias StashixWeb.Opds.Feed
+  alias StashixWeb.Opds.{Feed, Feed2, Progression}
 
   @per_page 50
-  @base Feed.base()
 
   def root(conn, _params) do
     entries = [
@@ -31,13 +37,7 @@ defmodule StashixWeb.OpdsController do
       nav("libraries", gettext("Libraries"), "/libraries", :navigation, gettext("Browse one library"))
     ]
 
-    send_feed(conn, %{
-      id: "urn:stashix:root",
-      title: "Stashix",
-      self: @base <> "/catalog",
-      kind: :navigation,
-      entries: entries
-    })
+    send_feed(conn, %{id: "urn:stashix:root", title: "Stashix", self: "/catalog", kind: :navigation, entries: entries})
   end
 
   def libraries(conn, _params) do
@@ -49,8 +49,8 @@ defmodule StashixWeb.OpdsController do
     send_feed(conn, %{
       id: "urn:stashix:libraries",
       title: gettext("Libraries"),
-      self: @base <> "/libraries",
-      up: @base <> "/catalog",
+      self: "/libraries",
+      up: "/catalog",
       kind: :navigation,
       entries: entries
     })
@@ -69,8 +69,8 @@ defmodule StashixWeb.OpdsController do
     send_feed(conn, %{
       id: "urn:stashix:library:#{lib.id}",
       title: lib.name,
-      self: "#{@base}/libraries/#{lib.id}",
-      up: @base <> "/libraries",
+      self: "/libraries/#{lib.id}",
+      up: "/libraries",
       kind: :navigation,
       entries: entries
     })
@@ -82,7 +82,6 @@ defmodule StashixWeb.OpdsController do
     page = page_param(params)
     opts = [access: access, library_id: library_id, sort: "title_asc"]
     series = Library.list_all_series(opts ++ [limit: @per_page, offset: (page - 1) * @per_page])
-    path = "/series" <> library_query(library_id)
 
     entries =
       for s <- series do
@@ -98,10 +97,10 @@ defmodule StashixWeb.OpdsController do
     send_feed(conn, %{
       id: "urn:stashix:series" <> library_query(library_id),
       title: gettext("Series"),
-      self: @base <> path,
+      self: "/series" <> library_query(library_id),
       up: up(library_id),
       kind: :navigation,
-      page: %{page: page, per_page: @per_page, total: Library.count_all_series(opts), path: @base <> path},
+      page: %{page: page, per_page: @per_page, total: Library.count_all_series(opts)},
       entries: entries
     })
   end
@@ -114,8 +113,8 @@ defmodule StashixWeb.OpdsController do
     send_books(conn, books, %{
       id: "urn:stashix:series:#{series.id}",
       title: series.name,
-      self: "#{@base}/series/#{series.id}",
-      up: @base <> "/series"
+      self: "/series/#{series.id}",
+      up: "/series"
     })
   end
 
@@ -129,20 +128,21 @@ defmodule StashixWeb.OpdsController do
     send_books(conn, books, %{
       id: "urn:stashix:continue",
       title: gettext("Continue reading"),
-      self: @base <> "/continue",
-      up: @base <> "/catalog"
+      self: "/continue",
+      up: "/catalog"
     })
   end
 
+  # OPDS 1.2 clients fill in `q` (OpenSearch), OPDS 2.0 ones `query`.
   def search(conn, params) do
-    q = String.trim(params["q"] || "")
+    q = String.trim(params["q"] || params["query"] || "")
     books = if q == "", do: [], else: Library.search_books(q, access: conn.assigns.access, limit: 100)
 
     send_books(conn, books, %{
       id: "urn:stashix:search",
       title: gettext("Search: %{query}", query: q),
-      self: "#{@base}/search?" <> URI.encode_query(q: q),
-      up: @base <> "/catalog"
+      self: "/search?" <> URI.encode_query(q: q),
+      up: "/catalog"
     })
   end
 
@@ -151,6 +151,96 @@ defmodule StashixWeb.OpdsController do
     |> put_resp_content_type("application/opensearchdescription+xml")
     |> send_resp(200, Feed.opensearch())
   end
+
+  ## OPDS 2.0 only
+
+  def authentication(conn, _params) do
+    conn
+    |> put_resp_content_type("application/opds-authentication+json")
+    |> send_resp(200, Jason.encode_to_iodata!(Feed2.authentication_document()))
+  end
+
+  def publication(conn, %{"id" => id}) do
+    [entry] = conn |> book_entries([Library.get_book!(conn.assigns.access, id)])
+
+    conn
+    |> put_resp_content_type(Feed2.publication_type())
+    |> send_resp(200, Jason.encode_to_iodata!(Feed2.publication(entry)))
+  end
+
+  def manifest(conn, %{"id" => id}) do
+    book = conn.assigns.access |> Library.get_book!(id) |> Repo.preload([:series, :files, credits: :creator])
+
+    if Progression.mode(book) == :images and book.page_count > 0 do
+      conn
+      |> put_resp_content_type(Feed2.divina_type())
+      |> send_resp(200, Jason.encode_to_iodata!(Feed2.manifest(book)))
+    else
+      conn |> put_status(:not_found) |> json(%{error: "not a comic"})
+    end
+  end
+
+  ## Progress
+
+  @doc "Readium Progression API: where the user is in the book (204 if never opened)."
+  def progression(conn, %{"id" => id}) do
+    book = progress_book(conn, id)
+
+    case Library.get_progress(conn.assigns.current_user.id, book.id) do
+      nil ->
+        send_resp(conn, 204, "")
+
+      progress ->
+        conn
+        |> put_resp_content_type(StashixWeb.Opds.progression_type())
+        |> send_resp(200, Jason.encode_to_iodata!(Progression.to_json(progress, book)))
+    end
+  end
+
+  @doc "Readium Progression API: saves where the user is; 409 if the server knows a newer spot."
+  def update_progression(conn, %{"id" => id} = params) do
+    %{access: access, current_user: user} = conn.assigns
+    book = progress_book(conn, id)
+    saved = Library.get_progress(user.id, book.id)
+
+    with false <- Progression.stale?(params, saved),
+         {:ok, page, opts} <- Progression.from_json(params, book, saved),
+         {:ok, _} <- Library.update_progress(access, user.id, book.id, page, opts) do
+      send_resp(conn, 204, "")
+    else
+      true -> conn |> put_status(:conflict) |> json(%{error: "a newer progression is saved"})
+      {:error, reason} when is_binary(reason) -> conn |> put_status(:bad_request) |> json(%{error: reason})
+      _ -> conn |> put_status(:bad_request) |> json(%{error: "invalid progression"})
+    end
+  end
+
+  @doc """
+  Komga's read-progress call (`{"page": n, "completed": bool}`, pages from
+  1), which some reading apps send as you read.
+  """
+  def read_progress(conn, %{"id" => id} = params) do
+    %{access: access, current_user: user} = conn.assigns
+    book = progress_book(conn, id)
+    last = max(book.page_count - 1, 0)
+
+    result =
+      cond do
+        params["completed"] == true -> {:ok, last, [progression: 1.0]}
+        is_integer(params["page"]) and params["page"] in 1..(last + 1) -> {:ok, params["page"] - 1, []}
+        true -> :error
+      end
+
+    with {:ok, page, opts} <- result,
+         {:ok, _} <- Library.update_progress(access, user.id, book.id, page, opts) do
+      send_resp(conn, 204, "")
+    else
+      _ -> conn |> put_status(:bad_request) |> json(%{error: "page must be within 1 and the page count"})
+    end
+  end
+
+  defp progress_book(conn, id), do: conn.assigns.access |> Library.get_book!(id) |> Repo.preload(:files)
+
+  ## Feeds
 
   # A paged list of books, of one library or all.
   defp book_list(conn, params, path, title, sort) do
@@ -164,52 +254,43 @@ defmodule StashixWeb.OpdsController do
     send_books(conn, books, %{
       id: "urn:stashix:" <> String.trim_leading(path, "/"),
       title: title,
-      self: @base <> path,
+      self: path,
       up: up(library_id),
-      page: %{page: page, per_page: @per_page, total: Library.count_all_books(opts), path: @base <> path}
+      page: %{page: page, per_page: @per_page, total: Library.count_all_books(opts)}
     })
   end
 
-  defp send_books(conn, books, feed) do
+  defp send_books(conn, books, feed),
+    do: send_feed(conn, Map.merge(feed, %{kind: :acquisition, entries: book_entries(conn, books)}))
+
+  defp book_entries(conn, books) do
     %{access: access, current_user: user} = conn.assigns
     books = Repo.preload(books, [:series, :files, credits: :creator])
     pages = Library.current_pages(user.id, Enum.map(books, & &1.id))
 
-    entries =
-      for book <- books do
-        Feed.book_entry(book,
-          download?: Access.can_download?(access, book.library_id),
-          stream?: streams?(book),
-          last_read: pages[book.id]
-        )
-      end
-
-    send_feed(conn, Map.merge(feed, %{kind: :acquisition, entries: entries}))
-  end
-
-  # Books read as page images stream through the page endpoint.
-  defp streams?(book) do
-    case Library.get_preferred_book_file(book) do
-      nil -> false
-      file -> Library.reader_kind(book, file) == :images
+    for book <- books do
+      {:book, book,
+       [
+         download?: Access.can_download?(access, book.library_id),
+         stream?: Progression.mode(book) == :images,
+         last_read: pages[book.id]
+       ]}
     end
   end
 
   defp send_feed(conn, feed) do
+    renderer = renderer(conn)
+
     conn
-    |> put_resp_content_type(Feed.content_type(feed.kind))
-    |> send_resp(200, Feed.render(feed))
+    |> put_resp_content_type(renderer.content_type(feed.kind))
+    |> send_resp(200, renderer.render(feed))
   end
 
+  defp renderer(%{path_info: ["opds", "v2" | _]}), do: Feed2
+  defp renderer(_conn), do: Feed
+
   defp nav(id, title, path, kind, content),
-    do:
-      Feed.navigation_entry(%{
-        id: "urn:stashix:" <> id,
-        title: title,
-        href: @base <> path,
-        kind: kind,
-        content: content
-      })
+    do: {:nav, %{id: "urn:stashix:" <> id, title: title, href: path, kind: kind, content: content}}
 
   # A `library` param the user can read, else nil (every library).
   defp library_param(access, %{"library" => id}) when is_binary(id) do
@@ -221,8 +302,8 @@ defmodule StashixWeb.OpdsController do
   defp library_query(nil), do: ""
   defp library_query(id), do: "?library=#{id}"
 
-  defp up(nil), do: @base <> "/catalog"
-  defp up(library_id), do: "#{@base}/libraries/#{library_id}"
+  defp up(nil), do: "/catalog"
+  defp up(library_id), do: "/libraries/#{library_id}"
 
   defp page_param(%{"page" => p}) do
     case Integer.parse(p) do

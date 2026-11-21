@@ -337,7 +337,18 @@ OPDS's per-user tokens and feed queries).
   `{maxWidth}` templates) — Panels, Chunky, KOReader. *Done:* books that read
   as images get a stream link with `pse:count` and `pse:lastRead`, with or
   without download permission.
-- [ ] OPDS 2.0 (JSON) feeds + Readium progression where clients support it.
+- [x] OPDS 2.0 (JSON) feeds + Readium progression where clients support it.
+  *Done:* `/opds/v2` serves the same feeds as 1.2 (one controller, two
+  renderers: `Opds.Feed`, `Opds.Feed2`), comics stream through a Divina
+  manifest, 401s carry an authentication document. Progress goes both ways
+  through the Readium Progression API (`/books/:id/progression`, GET/PUT,
+  409 for an older spot), linked from 1.2 entries too; and through Komga's
+  `PATCH /api/v1/books/:id/read-progress` for apps (Panels) that send it.
+  Panels only sends that to servers it takes for Komga, by rules it does
+  not publish; not checked with Panels yet. EPUB spots from apps are a
+  progression + chapter href, so the web reader still reopens at its own
+  last CFI (going to the app's spot needs `epub_reader.js` to start from a
+  fraction).
 - [x] Auth: HTTP Basic or per-user API tokens (not the session cookie).
   *Done:* HTTP Basic with the user name (or email) and an app password made
   in Settings → Security (`AppPassword`, SHA-256 stored, revocable one by
