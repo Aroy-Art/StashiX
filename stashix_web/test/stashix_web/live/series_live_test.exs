@@ -47,6 +47,14 @@ defmodule StashixWeb.SeriesLiveTest do
     refute has_element?(view, ".cover-stack-card")
   end
 
+  test "the summary renders clamped with a toggle", %{conn: conn, series_id: series_id} do
+    {:ok, _} = Library.update_series(Library.get_series!(series_id), %{summary: "A long run of road racing."})
+
+    {:ok, view, _html} = live_canonical(conn, ~p"/series/#{series_id}")
+    assert has_element?(view, "#series-summary[phx-hook=ClampText] p.line-clamp-6", "A long run of road racing.")
+    assert has_element?(view, "#series-summary button[aria-controls=series-summary-text]", "Show more")
+  end
+
   defp write_cbz(dir, filename) do
     {:ok, {_, data}} = :zip.create(String.to_charlist(filename), [{~c"page1.jpg", "fake jpeg #{filename}"}], [:memory])
     File.write!(Path.join(dir, filename), data)

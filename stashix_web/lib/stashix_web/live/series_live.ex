@@ -856,7 +856,7 @@ defmodule StashixWeb.SeriesLive do
 
       <%!-- Summary --%>
       <section :if={@summary_info} class="max-w-3xl">
-        <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@summary_info.text}</p>
+        <.clamp_text id="series-summary" text={@summary_info.text} class="text-[15px] text-fg-soft leading-7" />
         <p :if={@summary_info.source} class="mt-2 text-xs text-muted italic">
           {gettext("From issue %{issue}", issue: @summary_info.source)}
         </p>

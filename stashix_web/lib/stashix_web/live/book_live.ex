@@ -670,7 +670,7 @@ defmodule StashixWeb.BookLive do
 
       <%!-- Summary --%>
       <section :if={@book.summary && @book.summary != ""} class="max-w-3xl">
-        <p class="text-[15px] text-fg-soft leading-7 whitespace-pre-line">{@book.summary}</p>
+        <.clamp_text id="book-summary" text={@book.summary} class="text-[15px] text-fg-soft leading-7" />
       </section>
 
       <.indicia>

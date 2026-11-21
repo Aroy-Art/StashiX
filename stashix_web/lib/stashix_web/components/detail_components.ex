@@ -76,6 +76,44 @@ defmodule StashixWeb.DetailComponents do
     """
   end
 
+  @doc """
+  Long text clamped to a few lines, with a toggle to read the rest. The
+  `ClampText` hook shows the toggle only when the text overflows the clamp.
+  """
+  attr :id, :string, required: true
+  attr :text, :string, required: true
+  attr :class, :any, default: nil
+
+  def clamp_text(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-hook="ClampText"
+      phx-mounted={JS.ignore_attributes(["data-expanded", "data-overflow"])}
+      class="group/clamp"
+    >
+      <p
+        id={"#{@id}-text"}
+        class={[
+          "whitespace-pre-line line-clamp-6 group-data-expanded/clamp:line-clamp-none",
+          @class
+        ]}
+      >
+        {@text}
+      </p>
+      <button
+        type="button"
+        phx-click={JS.toggle_attribute({"data-expanded", ""}, to: "##{@id}")}
+        aria-controls={"#{@id}-text"}
+        class="mt-2 hidden group-data-overflow/clamp:inline-flex items-center text-sm font-medium text-ink hover:text-fg underline decoration-2 decoration-violet-600 hover:decoration-violet-500 underline-offset-4 transition-colors"
+      >
+        <span class="group-data-expanded/clamp:hidden">{gettext("Show more")}</span>
+        <span class="hidden group-data-expanded/clamp:inline">{gettext("Show less")}</span>
+      </button>
+    </div>
+    """
+  end
+
   @doc "Fine-print row of facts, like the indicia at the foot of a comic's first page."
   slot :item do
     attr :label, :string, required: true
