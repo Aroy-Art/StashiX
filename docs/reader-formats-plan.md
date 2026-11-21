@@ -373,9 +373,11 @@ OPDS's per-user tokens and feed queries).
   unknown store calls upstream. *Done:* `KoboController.sync/2` sends new,
   changed and removed books and reading states, 100 at a time
   (`kobo_synced_books` per app password; the token keeps when the last sync
-  started). Every book with an EPUB the user may download goes out. *Not
-  done:* the proxy: other store calls get `{}`, so Kobo purchases don't sync
-  while the device points at Stashix.
+  started). Every book with an EPUB the user may download goes out. Other
+  store calls go on to `storeapi.kobo.com` with the device's own Kobo
+  credentials (`Stashix.Kobo.Store`): Kobo's sync is appended after
+  Stashix's (its token kept inside ours), store books' metadata, state and
+  covers come from Kobo. `KOBO_PROXY=false` turns it off (`{}` answers).
 - [x] KEPUB delivery: convert EPUB with `kepubify` on demand, cached.
   *Done:* `Stashix.Kobo.kepub/1`, cached by file hash under the cache dir
   (never pruned yet); plain EPUB when kepubify is missing; fixed-layout as

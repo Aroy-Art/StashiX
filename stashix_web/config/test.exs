@@ -44,6 +44,9 @@ config :stashix, :rekey_vault_on_start, false
 # Metadata source HTTP calls are stubbed with Req.Test in tests
 config :stashix, :metadata_req_options, plug: {Req.Test, Stashix.Metadata.HTTP}
 
+# The Kobo store proxy is off unless a test turns it on (stubbed with Req.Test)
+config :stashix, kobo_proxy: false, kobo_req_options: [plug: {Req.Test, Stashix.Kobo.Store}]
+
 # Rendered pages go to a throwaway dir, not the repo's tmp/data
 config :stashix, page_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_pages")
 config :stashix, calibre_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_calibre")

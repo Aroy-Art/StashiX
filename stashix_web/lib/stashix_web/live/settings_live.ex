@@ -661,7 +661,7 @@ defmodule StashixWeb.SettingsLive do
           label={gettext("For a Kobo")}
           hint={
             gettext(
-              "On the Kobo, set api_endpoint in .kobo/Kobo/Kobo eReader.conf to this, then sync. Books bought from Kobo stop syncing while it points here."
+              "On the Kobo, set api_endpoint in .kobo/Kobo/Kobo eReader.conf to this, then sync. Your Kobo account keeps working: store calls are passed on to Kobo."
             )
           }
           class="mt-3"

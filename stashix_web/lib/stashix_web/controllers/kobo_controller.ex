@@ -12,9 +12,11 @@ defmodule StashixWeb.KoboController do
   a sync token), each book's metadata and reading state, the books
   themselves (`download/2`, KEPUB when `kepubify` is installed) and covers.
 
-  Store calls Stashix has no part in (the shop, wishlists, analytics) get an
-  empty answer: books bought from Kobo don't sync while the device points
-  here.
+  Everything else goes on to Kobo's own store (`Stashix.Kobo.Store`), with
+  the device's Kobo credentials: the shop, wishlists, and the books bought
+  from Kobo, whose sync is added after Stashix's and whose metadata, state
+  and covers come from Kobo. With the proxy off those calls get an empty
+  answer and Kobo purchases don't sync.
 
   Reading state goes both ways: the device's spot (chapter, Kobo span and
   how far through) is saved as Stashix progress, and progress from the web
@@ -25,7 +27,8 @@ defmodule StashixWeb.KoboController do
   import Ecto.Query
 
   alias Stashix.{Kobo, Library, Repo}
-  alias Stashix.Library.{Access, ReadingProgress}
+  alias Stashix.Kobo.Store
+  alias Stashix.Library.{Access, Book, ReadingProgress}
 
   @sync_limit 100
   @dummy_id "00000000-0000-0000-0000-000000000001"
@@ -37,11 +40,31 @@ defmodule StashixWeb.KoboController do
 
   ## Device setup
 
+  # Kobo's resources when the store answers (it may sign the device out with
+  # a 401), the copy kept here otherwise; the image ones point here.
   def initialization(conn, %{"token" => token}) do
     images = "#{base_url(conn)}/kobo/#{token}/v1/books/{ImageId}/thumbnail"
 
+    case store_resources(conn) do
+      {:unauthorized, response} -> send_store_response(conn, response)
+      resources -> send_resources(conn, resources, images)
+    end
+  end
+
+  defp store_resources(conn) do
+    with true <- Store.enabled?(),
+         {:ok, %{status: 200, body: body}} <- forward(conn),
+         {:ok, %{"Resources" => %{} = resources}} <- Jason.decode(body) do
+      resources
+    else
+      {:ok, %{status: 401} = response} -> {:unauthorized, response}
+      _ -> @resources
+    end
+  end
+
+  defp send_resources(conn, resources, images) do
     resources =
-      Map.merge(@resources, %{
+      Map.merge(resources, %{
         "image_host" => base_url(conn),
         "image_url_template" => images <> "/{Width}/{Height}/false/image.jpg",
         "image_url_quality_template" => images <> "/{Width}/{Height}/{Quality}/{IsGreyscale}/image.jpg"
@@ -52,8 +75,16 @@ defmodule StashixWeb.KoboController do
     |> json(%{"Resources" => resources})
   end
 
-  # The device asks for store tokens; Stashix signs it in by the URL instead.
+  # The device asks for store tokens: Kobo's when the store answers. Stashix
+  # signs it in by the URL, so made-up ones do otherwise.
   def auth_device(conn, params) do
+    case Store.enabled?() && forward(conn) do
+      {:ok, %{status: 200} = response} -> send_store_response(conn, response)
+      _ -> fake_auth(conn, params)
+    end
+  end
+
+  defp fake_auth(conn, params) do
     json(conn, %{
       "AccessToken" => random_token(),
       "RefreshToken" => random_token(),
@@ -63,22 +94,102 @@ defmodule StashixWeb.KoboController do
     })
   end
 
-  @doc "Store calls Stashix does not answer for."
-  def other(conn, _params), do: json(conn, %{})
+  @doc "Store calls Stashix does not answer for: on to Kobo, or an empty answer."
+  def other(conn, _params), do: proxy(conn)
+
+  # Kobo's answer to this request as it is, or `{}` when the proxy is off
+  # or the store can't be reached.
+  defp proxy(conn) do
+    case Store.enabled?() && forward(conn) do
+      {:ok, response} -> send_store_response(conn, response)
+      _ -> json(conn, %{})
+    end
+  end
+
+  defp forward(conn, extra_headers \\ []) do
+    ["kobo", _token | rest] = conn.path_info
+
+    Store.request(
+      method(conn),
+      "/" <> Enum.join(rest, "/"),
+      conn.query_string,
+      conn.req_headers,
+      request_body(conn),
+      extra_headers
+    )
+  end
+
+  defp method(conn), do: conn.method |> String.downcase() |> String.to_existing_atom()
+
+  # JSON bodies were parsed on the way in: sent on as JSON again. Others
+  # are still unread.
+  defp request_body(%{method: method}) when method in ["GET", "HEAD", "DELETE"], do: nil
+
+  defp request_body(conn) do
+    if conn.body_params == %{} or match?(%Plug.Conn.Unfetched{}, conn.body_params) do
+      case Plug.Conn.read_body(conn) do
+        {:ok, body, _conn} -> body
+        _ -> ""
+      end
+    else
+      Jason.encode!(conn.body_params)
+    end
+  end
+
+  defp send_store_response(conn, %{status: status, headers: headers, body: body, content_type: type}) do
+    headers
+    |> Enum.reduce(conn, fn {name, value}, conn -> put_resp_header(conn, name, value) end)
+    |> put_resp_content_type(type, nil)
+    |> send_resp(status, body)
+  end
 
   ## Library sync
 
   @doc """
   The device's library, as changes since its last sync: new books, changed
   ones, removed ones and reading states, at most #{@sync_limit} at a time
-  (`x-kobo-sync: continue` asks for the rest). The sync token holds when
-  the last complete sync started (`since`) and, mid-way, when this one did.
+  (`x-kobo-sync: continue` asks for the rest), then Kobo's own sync of the
+  books bought there. The sync token holds when the last complete sync
+  started (`since`), mid-way when this one did (`round`), Kobo's own token
+  (`kobo`), and whether only Kobo's part is left (`phase`).
   """
   def sync(conn, _params) do
-    %{access: access, app_password: app_password, current_user: user} = conn.assigns
     token = read_sync_token(conn)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
     round = parse_time(token["round"]) || now
+
+    {results, more?} = if token["phase"] == "kobo", do: {[], false}, else: library_sync(conn, token)
+    {kobo_results, kobo_token, kobo_more?} = if more?, do: {[], token["kobo"], false}, else: store_sync(conn, token)
+
+    next_token =
+      cond do
+        more? -> %{"since" => token["since"], "round" => iso(round), "kobo" => token["kobo"]}
+        kobo_more? -> %{"since" => token["since"], "round" => iso(round), "kobo" => kobo_token, "phase" => "kobo"}
+        true -> %{"since" => iso(round), "kobo" => kobo_token}
+      end
+
+    conn
+    |> put_resp_header("x-kobo-synctoken", next_token |> Jason.encode!() |> Base.encode64())
+    |> then(&if(more? or kobo_more?, do: put_resp_header(&1, "x-kobo-sync", "continue"), else: &1))
+    |> json(results ++ kobo_results)
+  end
+
+  # Kobo's sync of the store's books, with Kobo's own token.
+  defp store_sync(conn, token) do
+    extra = if is_binary(token["kobo"]), do: [{"x-kobo-synctoken", token["kobo"]}], else: []
+
+    with true <- Store.enabled?(),
+         {:ok, %{status: 200, body: body, headers: headers}} <- forward(conn, extra),
+         {:ok, results} when is_list(results) <- Jason.decode(body) do
+      header = &Enum.find_value(headers, fn {name, value} -> name == &1 && value end)
+      {results, header.("x-kobo-synctoken") || token["kobo"], header.("x-kobo-sync") == "continue"}
+    else
+      _ -> {[], token["kobo"], false}
+    end
+  end
+
+  defp library_sync(conn, token) do
+    %{access: access, app_password: app_password, current_user: user} = conn.assigns
     since = parse_time(token["since"])
 
     # A device without a token (new, or reset) starts over.
@@ -123,13 +234,7 @@ defmodule StashixWeb.KoboController do
     Kobo.mark_synced(app_password.id, new_now ++ changed_now)
     Kobo.mark_removed(app_password.id, removed_now)
 
-    next_token =
-      if more?, do: %{"since" => token["since"], "round" => iso(round)}, else: %{"since" => iso(round)}
-
-    conn
-    |> put_resp_header("x-kobo-synctoken", next_token |> Jason.encode!() |> Base.encode64())
-    |> then(&if(more?, do: put_resp_header(&1, "x-kobo-sync", "continue"), else: &1))
-    |> json(results)
+    {results, more?}
   end
 
   # Books the device has whose progress changed since its last sync.
@@ -167,19 +272,20 @@ defmodule StashixWeb.KoboController do
   ## One book
 
   def metadata(conn, %{"id" => id}) do
-    book = kobo_book!(conn, id)
-    json(conn, [book_metadata(book, urls(conn))])
+    with_book(conn, id, fn book -> json(conn, [book_metadata(book, urls(conn))]) end)
   end
 
   def state(conn, %{"id" => id}) do
-    book = kobo_book!(conn, id)
-    json(conn, [reading_state(book, Library.get_progress(conn.assigns.current_user.id, book.id))])
+    with_book(conn, id, fn book ->
+      json(conn, [reading_state(book, Library.get_progress(conn.assigns.current_user.id, book.id))])
+    end)
   end
 
   @doc "The device's reading state for a book, saved as progress unless Stashix has a newer one."
-  def update_state(conn, %{"id" => id} = params) do
+  def update_state(conn, %{"id" => id} = params), do: with_book(conn, id, &save_state(conn, &1, params))
+
+  defp save_state(conn, book, params) do
     %{access: access, current_user: user} = conn.assigns
-    book = kobo_book!(conn, id)
 
     result =
       with [%{} = state | _] <- params["ReadingStates"],
@@ -275,17 +381,33 @@ defmodule StashixWeb.KoboController do
     end
   end
 
-  def cover(conn, %{"id" => id, "width" => width}),
-    do: StashixWeb.BookController.cover(conn, %{"id" => id, "w" => width})
+  # A store book's cover comes from Kobo's image server.
+  def cover(conn, %{"id" => id, "width" => width} = params) do
+    if ours?(id) or not Store.enabled?(),
+      do: StashixWeb.BookController.cover(conn, %{"id" => id, "w" => width}),
+      else: redirect(conn, external: Store.cover_url(id, width, params["height"]))
+  end
+
+  # A book of Stashix's, else one bought from Kobo (on to the store).
+  defp with_book(conn, id, fun) do
+    if ours?(id) or not Store.enabled?(), do: fun.(kobo_book!(conn, id)), else: proxy(conn)
+  end
+
+  # Kobo's store ids are UUIDs too: a book is ours when the library has it.
+  defp ours?(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.exists?(from b in Book, where: b.id == ^id)
+      :error -> false
+    end
+  end
 
   defp kobo_book!(conn, id) do
-    # Books bought from Kobo have ids of their own: not ours.
-    if Ecto.UUID.cast(id) == :error, do: raise(Ecto.NoResultsError, queryable: Stashix.Library.Book)
+    if Ecto.UUID.cast(id) == :error, do: raise(Ecto.NoResultsError, queryable: Book)
     book = conn.assigns.access |> Library.get_book!(id)
 
     if Access.can_download?(conn.assigns.access, book.library_id),
       do: book |> Repo.preload([:series, :publishers, :files, credits: :creator]),
-      else: raise(Ecto.NoResultsError, queryable: Stashix.Library.Book)
+      else: raise(Ecto.NoResultsError, queryable: Book)
   end
 
   ## Shapes

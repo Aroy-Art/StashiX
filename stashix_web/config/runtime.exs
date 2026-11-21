@@ -111,6 +111,11 @@ if path_overrides != [] do
   config :stashix, path_overrides
 end
 
+# Kobo sync passes the device's other store calls on to Kobo (Stashix.Kobo.Store).
+if System.get_env("KOBO_PROXY") in ~w(false 0 no off) do
+  config :stashix, kobo_proxy: false
+end
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

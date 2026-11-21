@@ -208,4 +208,117 @@ defmodule StashixWeb.KoboControllerTest do
     assert conn |> post(base <> "/v1/auth/device", %{"UserKey" => "k"}) |> json_response(200) |> Map.get("UserKey") ==
              "k"
   end
+
+  describe "with the Kobo store proxy" do
+    setup do
+      Application.put_env(:stashix, :kobo_proxy, true)
+      on_exit(fn -> Application.put_env(:stashix, :kobo_proxy, false) end)
+    end
+
+    defp stub_store(fun), do: Req.Test.stub(Stashix.Kobo.Store, fun)
+
+    defp kobo(conn, status, body, headers \\ []) do
+      headers
+      |> Enum.reduce(conn, fn {k, v}, conn -> Plug.Conn.put_resp_header(conn, k, v) end)
+      |> Plug.Conn.put_resp_content_type("application/json")
+      |> Plug.Conn.send_resp(status, Jason.encode!(body))
+    end
+
+    test "start-up resources come from Kobo, with images pointed here", %{conn: conn, base: base, token: token} do
+      stub_store(fn store ->
+        assert store.request_path == "/v1/initialization"
+        assert Plug.Conn.get_req_header(store, "authorization") == ["Bearer device"]
+
+        kobo(store, 200, %{
+          "Resources" => %{"library_sync" => "https://storeapi.kobo.com/v1/library/sync", "new_thing" => "x"}
+        })
+      end)
+
+      resources =
+        conn
+        |> put_req_header("authorization", "Bearer device")
+        |> get(base <> "/v1/initialization")
+        |> json_response(200)
+        |> Map.fetch!("Resources")
+
+      assert resources["new_thing"] == "x"
+      assert resources["image_url_template"] =~ "/kobo/#{token}/v1/books/{ImageId}/thumbnail"
+
+      # Kobo signing the device out is passed on.
+      stub_store(&kobo(&1, 401, %{"error" => "expired"}))
+      assert conn |> get(base <> "/v1/initialization") |> response(401)
+
+      # Kobo out of reach: the kept copy.
+      stub_store(&Req.Test.transport_error(&1, :econnrefused))
+      assert conn |> get(base <> "/v1/initialization") |> json_response(200) |> get_in(["Resources", "library_sync"])
+    end
+
+    test "other calls go to Kobo with their path, query and body", %{conn: conn, base: base} do
+      stub_store(fn store ->
+        {:ok, body, store} = Plug.Conn.read_body(store)
+        assert store.method == "PUT"
+        assert store.request_path == "/v1/user/wishlist"
+        assert store.query_string == "page=2"
+        assert Jason.decode!(body) == %{"Items" => [1]}
+        assert Plug.Conn.get_req_header(store, "x-kobo-deviceid") == ["dev"]
+        kobo(store, 201, %{"ok" => true}, [{"x-kobo-recent-reads", "1"}])
+      end)
+
+      conn =
+        conn
+        |> put_req_header("x-kobo-deviceid", "dev")
+        |> put_req_header("content-type", "application/json")
+        |> put(base <> "/v1/user/wishlist?page=2", Jason.encode!(%{"Items" => [1]}))
+
+      assert json_response(conn, 201) == %{"ok" => true}
+      assert get_resp_header(conn, "x-kobo-recent-reads") == ["1"]
+    end
+
+    test "the library sync adds Kobo's books after Stashix's", %{conn: conn, base: base, novel: novel} do
+      stub_store(fn store ->
+        assert Plug.Conn.get_req_header(store, "x-kobo-synctoken") == []
+        kobo(store, 200, [%{"NewEntitlement" => %{"From" => "kobo"}}], [{"x-kobo-synctoken", "kobo-1"}])
+      end)
+
+      {[ours, theirs], sync_token, false} = sync(conn, base)
+      assert ours["NewEntitlement"]["BookEntitlement"]["Id"] == novel.id
+      assert theirs == %{"NewEntitlement" => %{"From" => "kobo"}}
+
+      # Kobo gets its own token back, and may ask to go on: Stashix's part
+      # is not sent again meanwhile.
+      stub_store(fn store ->
+        assert Plug.Conn.get_req_header(store, "x-kobo-synctoken") == ["kobo-1"]
+        kobo(store, 200, [%{"Kobo" => 2}], [{"x-kobo-synctoken", "kobo-2"}, {"x-kobo-sync", "continue"}])
+      end)
+
+      touch(novel, 60)
+      {items, sync_token, true} = sync(conn, base, sync_token)
+      assert [%{"NewEntitlement" => _}, %{"ChangedProductMetadata" => _}, %{"Kobo" => 2}] = items
+
+      stub_store(fn store ->
+        assert Plug.Conn.get_req_header(store, "x-kobo-synctoken") == ["kobo-2"]
+        kobo(store, 200, [%{"Kobo" => 3}], [{"x-kobo-synctoken", "kobo-3"}])
+      end)
+
+      assert {[%{"Kobo" => 3}], _token, false} = sync(conn, base, sync_token)
+    end
+
+    test "a book bought from Kobo is Kobo's", %{conn: conn, base: base, novel: novel} do
+      store_id = Ecto.UUID.generate()
+
+      stub_store(fn store ->
+        assert store.request_path == "/v1/library/#{store_id}/metadata"
+        kobo(store, 200, [%{"Title" => "Bought"}])
+      end)
+
+      assert [%{"Title" => "Bought"}] = conn |> get(base <> "/v1/library/#{store_id}/metadata") |> json_response(200)
+
+      conn2 = get(conn, base <> "/v1/books/#{store_id}/thumbnail/300/400/false/image.jpg")
+      assert redirected_to(conn2) == "https://cdn.kobo.com/book-images/#{store_id}/300/400/false/image.jpg"
+
+      # Stashix's own books never go to Kobo.
+      stub_store(fn _ -> flunk("sent to Kobo") end)
+      assert [%{"Title" => "Novel"}] = conn |> get(base <> "/v1/library/#{novel.id}/metadata") |> json_response(200)
+    end
+  end
 end
