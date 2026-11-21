@@ -190,7 +190,7 @@ Collection page
 
 ## Phase 4 — OPDS
 
-- [ ] "Collections" in both catalogs' root: a navigation feed of the viewer's
+- [x] "Collections" in both catalogs' root: a navigation feed of the viewer's
       collections (own + shared), each an acquisition feed of its books in
       collection order (C5 expansion), paged; works through the existing
       `OpdsController` feed maps, so 1.2 and 2.0 come together. Tests.

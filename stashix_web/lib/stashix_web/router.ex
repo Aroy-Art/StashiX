@@ -86,6 +86,8 @@ defmodule StashixWeb.Router do
     get "/libraries", OpdsController, :libraries
     get "/libraries/:id", OpdsController, :library
     get "/series", OpdsController, :series_index
+    get "/collections", OpdsController, :collections
+    get "/collections/:id", OpdsController, :collection
     get "/series/:id", OpdsController, :series
     get "/books", OpdsController, :books
     get "/new", OpdsController, :new
@@ -108,6 +110,8 @@ defmodule StashixWeb.Router do
     get "/libraries", OpdsController, :libraries
     get "/libraries/:id", OpdsController, :library
     get "/series", OpdsController, :series_index
+    get "/collections", OpdsController, :collections
+    get "/collections/:id", OpdsController, :collection
     get "/series/:id", OpdsController, :series
     get "/books", OpdsController, :books
     get "/new", OpdsController, :new

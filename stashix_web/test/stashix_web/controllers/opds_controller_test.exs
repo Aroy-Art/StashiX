@@ -173,6 +173,56 @@ defmodule StashixWeb.OpdsControllerTest do
     assert conn |> get(~p"/opds/v1.2/catalog") |> response(401)
   end
 
+  describe "collections" do
+    setup %{user: user, lib: lib, series: series} do
+      access = Stashix.Library.Access.for_user(user)
+      {:ok, standalone} = Library.create_book(%{title: "Afterword", library_id: lib.id, type: "standalone"})
+      {:ok, c} = Stashix.Collections.create(user, %{name: "Reading & order"})
+      {:ok, _} = Stashix.Collections.add(user, access, c, {:book, standalone.id})
+      {:ok, _} = Stashix.Collections.add(user, access, c, {:series, series.id})
+      %{collection: c}
+    end
+
+    test "the root leads to them, each a feed of its books in order", %{conn: conn, collection: c, issue: issue} do
+      assert conn |> get(~p"/opds/v1.2/catalog") |> response(200) =~ ~s(href="/opds/v1.2/collections")
+
+      body = conn |> get(~p"/opds/v1.2/collections") |> response(200)
+      assert body =~ "Reading &amp; order"
+      assert body =~ ~s(href="/opds/v1.2/collections/#{c.id}")
+      assert {:ok, _} = parse(body)
+
+      body = conn |> get(~p"/opds/v1.2/collections/#{c.id}") |> response(200)
+      assert {:ok, _} = parse(body)
+      [first, second] = Regex.scan(~r|<title>([^<]+)</title>\n|, body) |> Enum.map(&List.last/1) |> Enum.drop(1)
+      assert first == "Afterword"
+      assert second =~ "Engines"
+      assert body =~ "<opensearch:totalResults>2</opensearch:totalResults>"
+      assert body =~ "/opds/v1.2/books/#{issue.id}/page/{pageNumber}"
+    end
+
+    test "OPDS 2.0 has them too", %{conn: conn, collection: c} do
+      nav = conn |> get(~p"/opds/v2/collections") |> response(200) |> Jason.decode!()
+      assert [%{"href" => href, "title" => "Reading & order"}] = nav["navigation"]
+      assert href == "/opds/v2/collections/#{c.id}"
+
+      feed = conn |> get(~p"/opds/v2/collections/#{c.id}") |> response(200) |> Jason.decode!()
+      assert ["Afterword", _] = Enum.map(feed["publications"], & &1["metadata"]["title"])
+    end
+
+    test "others don't see an unshared one", %{bare: bare, user: user, collection: c, lib: lib} do
+      {:ok, other} = Accounts.create_user(%{email: "o2@example.com", username: "other2", password: "password1234"})
+      {:ok, _} = Library.set_library_permission(%{user_id: other.id, library_id: lib.id, can_read: true})
+      {:ok, _app, password} = Accounts.create_app_password(other, "App")
+      conn = put_req_header(bare, "authorization", Plug.BasicAuth.encode_basic_auth("other2", password))
+
+      refute conn |> get(~p"/opds/v1.2/collections") |> response(200) =~ "Reading"
+      assert conn |> get(~p"/opds/v1.2/collections/#{c.id}") |> response(404)
+
+      {:ok, _} = Stashix.Collections.update(user, c, %{shared: true})
+      assert conn |> get(~p"/opds/v1.2/collections") |> response(200) =~ "shared by reader"
+    end
+  end
+
   describe "OPDS 2.0" do
     test "asks for credentials with an authentication document", %{bare: conn} do
       conn = get(conn, ~p"/opds/v2/catalog")

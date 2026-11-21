@@ -32,6 +32,7 @@ defmodule StashixWeb.OpdsController do
     entries = [
       nav("continue", gettext("Continue reading"), "/continue", :acquisition, gettext("Books you have started")),
       nav("new", gettext("Recently added"), "/new", :acquisition, gettext("The newest books first")),
+      nav("collections", gettext("Collections"), "/collections", :navigation, gettext("Yours and shared ones")),
       nav("series", gettext("Series"), "/series", :navigation, gettext("Every series, A to Z")),
       nav("books", gettext("All books"), "/books", :acquisition, gettext("Every book, A to Z")),
       nav("libraries", gettext("Libraries"), "/libraries", :navigation, gettext("Browse one library"))
@@ -116,6 +117,51 @@ defmodule StashixWeb.OpdsController do
       self: "/series/#{series.id}",
       up: "/series"
     })
+  end
+
+  # Collections: the reader's own and the shared ones they can read from.
+  def collections(conn, _params) do
+    %{current_user: user, access: access} = conn.assigns
+
+    entries =
+      for %{collection: c, count: count, own?: own?} <- Stashix.Collections.list_for(user, access) do
+        line = ngettext("1 book", "%{count} books", count)
+        line = if own?, do: line, else: gettext("%{count} · shared by %{name}", count: line, name: c.user.username)
+        nav("collection:#{c.id}", c.name, "/collections/#{c.id}", :acquisition, c.description || line)
+      end
+
+    send_feed(conn, %{
+      id: "urn:stashix:collections",
+      title: gettext("Collections"),
+      self: "/collections",
+      up: "/catalog",
+      kind: :navigation,
+      entries: entries
+    })
+  end
+
+  # One collection's books in its order, series opened up, paged.
+  def collection(conn, %{"id" => id} = params) do
+    %{current_user: user, access: access} = conn.assigns
+
+    case Stashix.Collections.get(user, access, id) do
+      {:ok, c} ->
+        page = page_param(params)
+
+        {books, total} =
+          Stashix.Collections.books(access, c, "position", limit: @per_page, offset: (page - 1) * @per_page)
+
+        send_books(conn, books, %{
+          id: "urn:stashix:collection:#{c.id}",
+          title: c.name,
+          self: "/collections/#{c.id}",
+          up: "/collections",
+          page: %{page: page, per_page: @per_page, total: total}
+        })
+
+      {:error, :not_found} ->
+        conn |> put_status(:not_found) |> text("not found")
+    end
   end
 
   def books(conn, params), do: book_list(conn, params, "/books", gettext("All books"), "title_asc")
