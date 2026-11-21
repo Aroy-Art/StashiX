@@ -44,6 +44,7 @@ defmodule StashixWeb.Live.Hooks do
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> assign_library_kind()
+          |> assign_sidebar_collections()
           |> attach_hook(:theme, :handle_event, &handle_theme/3)
           |> attach_hook(:library_kind, :handle_event, &handle_library_kind/3)
           |> push_theme()
@@ -98,6 +99,7 @@ defmodule StashixWeb.Live.Hooks do
           |> attach_hook(:sidebar_scan, :handle_event, &handle_sidebar_scan/3)
           |> attach_hook(:navbar_search, :handle_event, &handle_navbar_search/3)
           |> assign_library_kind()
+          |> assign_sidebar_collections()
           |> attach_hook(:theme, :handle_event, &handle_theme/3)
           |> attach_hook(:library_kind, :handle_event, &handle_library_kind/3)
           |> push_theme()
@@ -250,6 +252,20 @@ defmodule StashixWeb.Live.Hooks do
       browse_access: browse_access,
       books_mode: books_mode
     )
+  end
+
+  @doc """
+  `:sidebar_collections`: the user's own collections for the sidebar
+  section, when they turned it on in Settings (`collections_sidebar`);
+  nil otherwise.
+  """
+  def assign_sidebar_collections(socket) do
+    user = socket.assigns.current_user
+
+    collections =
+      if Accounts.User.ui_setting(user, "collections_sidebar") == "on", do: Stashix.Collections.own(user)
+
+    assign(socket, sidebar_collections: collections)
   end
 
   # Saved to the account, then the page loads again with the new kind.

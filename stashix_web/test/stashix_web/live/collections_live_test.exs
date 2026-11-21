@@ -60,6 +60,17 @@ defmodule StashixWeb.CollectionsLiveTest do
     refute has_element?(view, "#shared-collections")
   end
 
+  test "a UI setting lists your collections in the sidebar", %{conn: conn, c: c} do
+    {:ok, view, _html} = live(conn, ~p"/settings")
+    refute has_element?(view, "#sidebar-collections")
+
+    view |> form("#ui-settings-collections-sidebar", %{"collections_sidebar" => "on"}) |> render_change()
+    assert has_element?(view, ~s|#sidebar-collections a[href="/collection/#{c.id}"]|, "Space operas")
+
+    {:ok, view, _html} = live(conn, ~p"/collection/#{c.id}")
+    assert has_element?(view, ~s|#sidebar-collections a[aria-current="page"]|, "Space operas")
+  end
+
   test "a new collection is made from the dialog", %{conn: conn, owner: owner} do
     {:ok, view, _html} = live(conn, ~p"/collections")
     view |> element("#new-collection") |> render_click()

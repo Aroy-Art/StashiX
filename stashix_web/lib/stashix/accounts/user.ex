@@ -90,11 +90,13 @@ defmodule Stashix.Accounts.User do
     "theme" => "system",
     "data_saver" => "off",
     "library_kind" => "all",
-    "kind_switcher" => "sidebar"
+    "kind_switcher" => "sidebar",
+    "collections_sidebar" => "off"
   }
   @ui_choices %{
     "library_kind" => ~w(all comics books),
     "kind_switcher" => ~w(sidebar top),
+    "collections_sidebar" => ~w(on off),
     "read_mark" => ~w(check stamp),
     "extended_book_info" => ~w(on off),
     "data_saver" => ~w(on off),

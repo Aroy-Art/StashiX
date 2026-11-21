@@ -55,8 +55,15 @@ defmodule StashixWeb.SettingsLive do
     attrs = Map.take(params, Map.keys(User.ui_choices()))
 
     case Accounts.update_ui_settings(socket.assigns.current_user, attrs) do
-      {:ok, user} -> {:noreply, socket |> assign(current_user: user) |> StashixWeb.Live.Hooks.push_theme()}
-      {:error, _changeset} -> {:noreply, put_flash(socket, :error, gettext("That is not one of the choices."))}
+      {:ok, user} ->
+        {:noreply,
+         socket
+         |> assign(current_user: user)
+         |> StashixWeb.Live.Hooks.assign_sidebar_collections()
+         |> StashixWeb.Live.Hooks.push_theme()}
+
+      {:error, _changeset} ->
+        {:noreply, put_flash(socket, :error, gettext("That is not one of the choices."))}
     end
   end
 
@@ -244,7 +251,8 @@ defmodule StashixWeb.SettingsLive do
         read_mark: User.ui_setting(assigns.current_user, "read_mark"),
         extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info"),
         data_saver: User.ui_setting(assigns.current_user, "data_saver"),
-        kind_switcher: User.ui_setting(assigns.current_user, "kind_switcher")
+        kind_switcher: User.ui_setting(assigns.current_user, "kind_switcher"),
+        collections_sidebar: User.ui_setting(assigns.current_user, "collections_sidebar")
       )
 
     ~H"""
@@ -385,6 +393,26 @@ defmodule StashixWeb.SettingsLive do
         </.indicia>
       </form>
     </.section>
+
+    <form id="ui-settings-collections-sidebar" phx-change="set_ui" class="max-w-xl mb-10">
+      <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+        <input type="hidden" name="collections_sidebar" value="off" />
+        <input
+          type="checkbox"
+          name="collections_sidebar"
+          value="on"
+          checked={@collections_sidebar == "on"}
+          class="sr-only peer"
+        />
+        <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        <span class="font-display font-black uppercase text-xl leading-none text-fg">
+          {gettext("Collections in the sidebar")}
+        </span>
+      </label>
+      <p class="mt-3 text-sm text-muted">
+        {gettext("Lists your collections by name under Libraries, one click away.")}
+      </p>
+    </form>
 
     <form id="ui-settings-data-saver" phx-change="set_ui" class="max-w-xl">
       <label class="inline-flex items-center gap-3 cursor-pointer select-none">

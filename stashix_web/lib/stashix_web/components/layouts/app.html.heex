@@ -134,6 +134,21 @@
               </div>
             <% end %>
           <% end %>
+
+          <%!-- The user's collections, when turned on in Settings --%>
+          <%= if assigns[:sidebar_collections] not in [nil, []] do %>
+            <.eyebrow class="px-3 pt-5 pb-1.5">{gettext("Collections")}</.eyebrow>
+            <div id="sidebar-collections">
+              <.nav_item
+                :for={c <- @sidebar_collections}
+                navigate={"/collection/#{c.id}"}
+                icon="lucide-gallery-vertical-end"
+                active={path == "/collection/#{c.id}"}
+              >
+                <span class="truncate">{c.name}</span>
+              </.nav_item>
+            </div>
+          <% end %>
         </nav>
       <% end %>
 

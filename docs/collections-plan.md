@@ -163,7 +163,7 @@ Collection page
       action rows, filter box over the user's collections, "via series" half
       ticks; "New collection…" opens a small dialog that makes it and adds the
       item. Cards have no menu yet (bulk add in phase 6 covers grids).
-- [ ] Sidebar section (UI setting, off by default): the user's collections
+- [x] Sidebar section (UI setting, off by default): the user's collections
       by name under Libraries.
 - [x] Reordering (C8): `Sortable` hook on the owner's collection page in
       "Collection order" sort, `move_entry` on drop; Move to top / bottom in
