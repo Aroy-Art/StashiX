@@ -176,7 +176,7 @@ Collection page
 - [x] Search finds collections by name (own + visible shared) as a section.
       *Done:* on the search page's All tab (`Collections.search/3`); the
       quick search in the top bar doesn't list them yet.
-- [ ] Tests (LiveView): create, add/remove from picker, reorder events, share
+- [x] Tests (LiveView): create, add/remove from picker, reorder events, share
       toggle visibility for a second user, read-only for non-owners.
 
 ## Phase 3 — REST API
