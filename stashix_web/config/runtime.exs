@@ -152,7 +152,10 @@ if config_env() == :prod do
       # See the documentation on https://hexdocs.pm/bandit/Bandit.html#t:options/0
       # for details about using IPv6 vs IPv4 and loopback vs public addresses.
       ip: {0, 0, 0, 0, 0, 0, 0, 0},
-      port: port
+      port: port,
+      # Streamed ZIP downloads block on the client, and a browser can pause
+      # reading (save dialog, slow disk) far longer than the 30s default.
+      thousand_island_options: [transport_options: [send_timeout: 300_000]]
     ],
     # PHX_HOST plus loopback, so opening the server on this machine works
     # without setting PHX_HOST. "//host" matches any scheme and port.

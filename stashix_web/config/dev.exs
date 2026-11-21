@@ -23,7 +23,12 @@ config :stashix, Stashix.Repo,
 config :stashix, StashixWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {0, 0, 0, 0}, port: 4000],
+  http: [
+    ip: {0, 0, 0, 0},
+    port: 4000,
+    # Same as prod (runtime.exs): streamed ZIP downloads outlast the 30s default.
+    thousand_island_options: [transport_options: [send_timeout: 300_000]]
+  ],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
