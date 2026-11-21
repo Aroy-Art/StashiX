@@ -87,6 +87,15 @@ defmodule StashixWeb.CollectionsLiveTest do
     assert has_element?(view, "#search-collections", "Space operas")
   end
 
+  test "the home page shows your collections unless turned off", %{conn: conn, owner: owner, c: c} do
+    {:ok, view, _html} = live(conn, ~p"/")
+    assert has_element?(view, ~s|#home-collections #home-collection-#{c.id}|, "Space operas")
+
+    {:ok, _} = Accounts.update_ui_settings(owner, %{"home_collections" => "off"})
+    {:ok, view, _html} = live(conn, ~p"/")
+    refute has_element?(view, "#home-collections")
+  end
+
   test "a new collection is made from the dialog", %{conn: conn, owner: owner} do
     {:ok, view, _html} = live(conn, ~p"/collections")
     view |> element("#new-collection") |> render_click()

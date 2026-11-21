@@ -220,8 +220,9 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
 
 ## Phase 6 — Polish
 
-- [ ] Home: a "Collections" shelf (own, recently changed) when the user has
-      any; continue reading shows "in Crisis on Infinite Earths" context?
+- [x] Home: a "Collections" shelf (own, recently changed) when the user has
+      any (UI setting `home_collections`, on by default, turns it off);
+      continue reading shows "in Crisis on Infinite Earths" context? (not done)
       (decide then).
 - [ ] Bulk add: select mode on book/series grids → "Add to collection".
 - [ ] Collection cover: owner can pick one (else the first entries' covers).

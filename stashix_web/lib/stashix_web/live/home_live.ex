@@ -40,7 +40,27 @@ defmodule StashixWeb.HomeLive do
        recent_library: saved_recent_library(user, libraries_data)
      )
      |> assign_recent()
-     |> assign_picks()}
+     |> assign_picks()
+     |> assign_home_collections()}
+  end
+
+  # The user's collections, most recently changed first, unless turned off
+  # in Settings (`home_collections`).
+  defp assign_home_collections(socket) do
+    %{current_user: user, access: access} = socket.assigns
+
+    collections =
+      if Stashix.Accounts.User.ui_setting(user, "home_collections") == "on" do
+        user
+        |> Stashix.Collections.list_for(access)
+        |> Enum.filter(& &1.own?)
+        |> Enum.sort_by(& &1.collection.updated_at, {:desc, DateTime})
+        |> Enum.take(12)
+      else
+        []
+      end
+
+    assign(socket, home_collections: collections)
   end
 
   @recent_limit 20
@@ -584,6 +604,22 @@ defmodule StashixWeb.HomeLive do
             </div>
           </.section>
         </div>
+
+        <.shelf :if={@home_collections != []} id="home-collections" title={gettext("Your collections")}>
+          <:actions>
+            <.view_all to={~p"/collections"} />
+          </:actions>
+          <div :for={item <- @home_collections} id={"home-collection-#{item.collection.id}"} class="flex-shrink-0 w-64">
+            <.collection_card
+              navigate={~p"/collection/#{item.collection.id}"}
+              name={item.collection.name}
+              icon="lucide-gallery-vertical-end"
+              covers={for id <- item.cover_ids, do: ~p"/api/books/#{id}/cover?s=sx"}
+              stats={[{ngettext("book", "books", item.count), item.count}]}
+              note={gettext("Empty")}
+            />
+          </div>
+        </.shelf>
 
         <%!-- One library picker for all the recent shelves --%>
         <.recent_filter

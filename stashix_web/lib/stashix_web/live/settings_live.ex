@@ -252,7 +252,8 @@ defmodule StashixWeb.SettingsLive do
         extended_book_info: User.ui_setting(assigns.current_user, "extended_book_info"),
         data_saver: User.ui_setting(assigns.current_user, "data_saver"),
         kind_switcher: User.ui_setting(assigns.current_user, "kind_switcher"),
-        collections_sidebar: User.ui_setting(assigns.current_user, "collections_sidebar")
+        collections_sidebar: User.ui_setting(assigns.current_user, "collections_sidebar"),
+        home_collections: User.ui_setting(assigns.current_user, "home_collections")
       )
 
     ~H"""
@@ -411,6 +412,26 @@ defmodule StashixWeb.SettingsLive do
       </label>
       <p class="mt-3 text-sm text-muted">
         {gettext("Lists your collections by name under Libraries, one click away.")}
+      </p>
+    </form>
+
+    <form id="ui-settings-home-collections" phx-change="set_ui" class="max-w-xl mb-10">
+      <label class="inline-flex items-center gap-3 cursor-pointer select-none">
+        <input type="hidden" name="home_collections" value="off" />
+        <input
+          type="checkbox"
+          name="home_collections"
+          value="on"
+          checked={@home_collections == "on"}
+          class="sr-only peer"
+        />
+        <span class="relative w-10 h-6 rounded-full bg-strong ring-1 ring-edge peer-checked:bg-violet-600 transition-colors after:absolute after:top-1 after:left-1 after:w-4 after:h-4 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-4"></span>
+        <span class="font-display font-black uppercase text-xl leading-none text-fg">
+          {gettext("Collections on the home page")}
+        </span>
+      </label>
+      <p class="mt-3 text-sm text-muted">
+        {gettext("A shelf of your collections, most recently changed first. On by default.")}
       </p>
     </form>
 
