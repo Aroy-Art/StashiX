@@ -14,7 +14,9 @@ config :stashix, Stashix.Repo,
   hostname: "localhost",
   database: "stashix_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: 10
+  # One connection per concurrent test case (ExUnit's max_cases default), so
+  # async tests don't queue for a checkout and time out on a busy machine.
+  pool_size: System.schedulers_online() * 2
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
@@ -51,3 +53,6 @@ config :stashix, kobo_proxy: false, kobo_req_options: [plug: {Req.Test, Stashix.
 config :stashix, page_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_pages")
 config :stashix, calibre_cache_dir: Path.join(System.tmp_dir!(), "stashix_test_calibre")
 config :stashix, calibre_poll_ms: nil
+
+# Any free port, so a test run doesn't clash with the dev server or another run
+config :stashix, metrics_port: 0
