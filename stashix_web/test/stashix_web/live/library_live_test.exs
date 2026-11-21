@@ -65,7 +65,11 @@ defmodule StashixWeb.LibraryLiveTest do
     {:ok, view, html} = live_canonical(conn, ~p"/library/#{lib.id}/books")
     refute html =~ "Queued"
 
-    items = [%{kind: :series, label: "Saga", force: true}, %{kind: :file, label: "Saga 002.cbz"}]
+    items = [
+      %{kind: :series, key: "series:1", label: "Saga", force: true},
+      %{kind: :file, key: "file:/comics/Saga 002.cbz", label: "Saga 002.cbz"}
+    ]
+
     send(view.pid, {:scan_queue, %{library_id: lib.id, items: items}})
     html = view |> element("#scan-queue-#{lib.id}") |> render()
     assert html =~ "Force rescan · Saga"
