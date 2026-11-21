@@ -42,28 +42,28 @@ Status legend: `[ ]` todo · `[x]` done · `[~]` started, see note · `[-]` drop
   still sort by title, year or date added; "Collection order" is the default.
 - [x] **C4 — Smart collections later** (settled 2026-11-21). Planned in §8,
   built after phases 1–6. The data model leaves room (`kind`, `rules`).
-- [ ] **C5 — What a viewer sees.** Proposal: a collection's books are its
+- [x] **C5 — What a viewer sees.** (settled 2026-11-21, as proposed): a collection's books are its
   entries expanded (series → their books in issue order), deduplicated (a book
   listed alone and in a listed series appears once, at its first spot), and
   filtered by the viewer's `Access` — so a shared collection never shows a book
   someone may not read, and the count is the viewer's count. A shared
   collection a viewer can read nothing of is hidden from them.
-- [ ] **C6 — Names unique per owner.** Proposal: yes (case-insensitive). Kobo
+- [x] **C6 — Names unique per owner.** (settled 2026-11-21, as proposed): yes (case-insensitive). Kobo
   shelves are matched by id, but the device UI shows names only, and two
   "To read" collections would be confusing everywhere.
-- [ ] **C7 — The library switcher.** Proposal: collections are not narrowed by
+- [x] **C7 — The library switcher.** (settled 2026-11-21, as proposed): collections are not narrowed by
   Comics / Books; they're the user's own mix. The collections list shows all;
   inside one, everything shows. (A "Comics only" filter inside is cheap later.)
-- [ ] **C8 — Reordering.** Proposal: vendor SortableJS (MIT, ~45 KB, touch and
+- [x] **C8 — Reordering.** (settled 2026-11-21, as proposed): vendor SortableJS (MIT, ~45 KB, touch and
   keyboard friendly) in `assets/vendor/` like echarts, behind a `Sortable`
   hook; plus "Move to top / bottom" in each entry's menu for long lists and
   phones. Positions are integers with gaps (1024 apart), renumbered when a gap
   runs out.
-- [ ] **C9 — Kobo shelves scope.** Proposal: a device gets the user's own
+- [x] **C9 — Kobo shelves scope.** (settled 2026-11-21, as proposed): a device gets the user's own
   collections as shelves, not other people's shared ones (a shelf on the device
   would look editable but edits couldn't stick). A setting to include shared
   ones can come later.
-- [ ] **C10 — Shelves made on the Kobo.** Proposal: a shelf created on the
+- [x] **C10 — Shelves made on the Kobo.** (settled 2026-11-21, as proposed): a shelf created on the
   device becomes a Stashix collection when it holds at least one Stashix book
   or is empty; a shelf of only Kobo store books stays at Kobo (proxied).
   Store books added to a Stashix-backed shelf are dropped from it on the
@@ -100,17 +100,22 @@ Deleting a book or series removes its entries (cascade); a soft-deleted book
 
 ## Phase 1 — Data and context
 
-- [ ] Migration + schemas (`Stashix.Library.Collection`,
+- [x] Migration + schemas (`Stashix.Library.Collection`,
       `Stashix.Library.CollectionEntry`), changesets (name 1–120 chars, unique
       per owner, description ≤ 4000).
-- [ ] `Stashix.Collections` context: `list_for(user, access)` (own + shared
+- [x] `Stashix.Collections` context: `list_for(user, access)` (own + shared
       visible, with the viewer's book count and up to 4 cover book ids for the
       card), `get!(user, access, id)` (owner or shared-and-visible),
       `create/update/delete` (owner only), `add_book/add_series`,
       `remove_entry`, `move_entry(entry, to_index)` (gap positions, renumber
       when needed), `books(access, collection, sort)` (C5 expansion, paged),
       `collections_with(user, book_or_series)` (for the picker's ticks).
-- [ ] Tests: ownership (others can't edit, can see only when shared), C5
+      *Done as:* `list_for/2`, `own/1`, `get/3`, `create/update/delete`,
+      `add/4` and `remove/3` (`{:book | :series, id}`), `remove_entry/3`,
+      `move/4`, `entries/2`, `books/4`, `expanded_ids/2` (one UNION query
+      for many collections), `containing/2` (`:direct` / `:series` ticks),
+      `holding_book/3` (book page line).
+- [x] Tests: ownership (others can't edit, can see only when shared), C5
       expansion/dedup/filtering incl. age-rating limits, live series entries,
       ordering and renumbering, cascades.
 
