@@ -607,7 +607,7 @@ defmodule StashixWeb.SettingsLive do
       <.display_heading size="panel" class="mb-1">{gettext("App passwords")}</.display_heading>
       <p class="mb-4 text-sm text-muted">
         {gettext(
-          "Reading apps (KOReader, Panels, Chunky and other OPDS readers) sign in with your user name and one of these, never your account password. Make one per app, so you can shut one out alone."
+          "Reading apps and devices (KOReader, a Kobo, Panels, Chunky and other OPDS readers) sign in with your user name and one of these, never your account password. Make one per app, so you can shut one out alone."
         )}
       </p>
       <div :if={@opds_url} class="space-y-3">
@@ -656,6 +656,25 @@ defmodule StashixWeb.SettingsLive do
           onfocus="this.select()"
           class="font-mono"
         />
+        <.field
+          :if={@opds_url}
+          label={gettext("For a Kobo")}
+          hint={
+            gettext(
+              "On the Kobo, set api_endpoint in .kobo/Kobo/Kobo eReader.conf to this, then sync. Books bought from Kobo stop syncing while it points here."
+            )
+          }
+          class="mt-3"
+        >
+          <.text_input
+            id="new-app-password-kobo"
+            name="kobo_url"
+            value={String.replace_suffix(@opds_url, "/opds/v1.2/catalog", "/kobo/" <> @new_app_password.password)}
+            readonly
+            onfocus="this.select()"
+            class="font-mono"
+          />
+        </.field>
       </div>
 
       <ul :if={@app_passwords != []} id="app-password-list" class="mb-5 border-y border-fg/10 divide-y divide-fg/10">

@@ -142,6 +142,27 @@ defmodule StashixWeb.Router do
     put "/syncs/progress", KoreaderController, :update
   end
 
+  # A Kobo eReader's store address points here (see KoboController).
+  pipeline :kobo do
+    plug StashixWeb.Plugs.KoboAuth
+    plug StashixWeb.Plugs.AssignAccess
+  end
+
+  scope "/kobo/:token", StashixWeb do
+    pipe_through :kobo
+
+    get "/v1/initialization", KoboController, :initialization
+    post "/v1/auth/device", KoboController, :auth_device
+    get "/v1/library/sync", KoboController, :sync
+    get "/v1/library/:id/metadata", KoboController, :metadata
+    get "/v1/library/:id/state", KoboController, :state
+    put "/v1/library/:id/state", KoboController, :update_state
+    get "/v1/books/:id/file/epub", KoboController, :download
+    get "/v1/books/:id/thumbnail/:width/:height/:grey/image.jpg", KoboController, :cover
+    get "/v1/books/:id/thumbnail/:width/:height/:quality/:grey/image.jpg", KoboController, :cover
+    match :*, "/*path", KoboController, :other
+  end
+
   # Komga's read-progress call, for reading apps that send it as you read.
   scope "/api/v1", StashixWeb do
     pipe_through :opds

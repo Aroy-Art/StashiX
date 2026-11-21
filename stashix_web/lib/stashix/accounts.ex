@@ -248,6 +248,23 @@ defmodule Stashix.Accounts do
   def authenticate_app_password(_login, _password), do: nil
 
   @doc """
+  The app password itself in a URL (a Kobo's store address carries it):
+  the `AppPassword` with its user, or nil. Marks it as used.
+  """
+  def app_password_from_token(token) when is_binary(token) do
+    with true <- AppPassword.app_password?(token),
+         %AppPassword{user: %User{}} = app_password <-
+           Repo.one(from p in AppPassword, where: p.token_hash == ^AppPassword.hash(token), preload: :user) do
+      touch_app_password(app_password)
+      app_password
+    else
+      _ -> nil
+    end
+  end
+
+  def app_password_from_token(_token), do: nil
+
+  @doc """
   The user for KOReader's sync headers: `login` (user name or email) and
   `key`, the MD5 (hex) of one of their app passwords. Passwords made before
   KOReader sync existed have no key and don't work here.

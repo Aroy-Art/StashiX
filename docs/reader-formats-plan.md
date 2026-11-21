@@ -365,14 +365,25 @@ OPDS's per-user tokens and feed queries).
 
 ### Kobo sync
 
-- [ ] Per-user sync token, device URL `/kobo/:token/` (Kobo store API
-  emulation, as Calibre-Web / Komga do).
-- [ ] `v1/library/sync` with sync tokens for incremental changes; proxy
-  unknown store calls upstream.
-- [ ] KEPUB delivery: convert EPUB with `kepubify` on demand, cached.
-- [ ] Reading state both ways, mapped to the D6 locator.
-- [ ] Shelves ↔ collections / reading lists.
-
+- [x] Per-user sync token, device URL `/kobo/:token/` (Kobo store API
+  emulation, as Calibre-Web / Komga do). *Done:* the token is one of the
+  user's app passwords (`StashixWeb.Plugs.KoboAuth`); Settings shows the
+  `api_endpoint` with a new password.
+- [x] `v1/library/sync` with sync tokens for incremental changes; proxy
+  unknown store calls upstream. *Done:* `KoboController.sync/2` sends new,
+  changed and removed books and reading states, 100 at a time
+  (`kobo_synced_books` per app password; the token keeps when the last sync
+  started). Every book with an EPUB the user may download goes out. *Not
+  done:* the proxy: other store calls get `{}`, so Kobo purchases don't sync
+  while the device points at Stashix.
+- [x] KEPUB delivery: convert EPUB with `kepubify` on demand, cached.
+  *Done:* `Stashix.Kobo.kepub/1`, cached by file hash under the cache dir
+  (never pruned yet); plain EPUB when kepubify is missing; fixed-layout as
+  EPUB3FL. The Docker image ships kepubify v5.0.0.
+- [x] Reading state both ways, mapped to the D6 locator. *Done:* chapter
+  href, Kobo span and chapter share kept in the locator; older device
+  states lose to newer Stashix progress.
+- [ ] Shelves ↔ collections / reading lists (Stashix has no collections yet).
 ---
 
 ## 9. Open questions

@@ -24,6 +24,14 @@ RUN apk add --no-cache libstdc++ openssl ncurses-libs p7zip poppler-utils vips s
 
 COPY --chmod=755 unrar.sh /usr/local/bin/unrar
 
+# kepubify turns EPUBs into KEPUBs for Kobo sync (Stashix.Kobo).
+ARG TARGETARCH
+ARG KEPUBIFY_VERSION=v5.0.0
+RUN case "$TARGETARCH" in arm64) arch=arm64 ;; arm) arch=arm ;; *) arch=64bit ;; esac && \
+    wget -qO /usr/local/bin/kepubify \
+      "https://github.com/pgaskin/kepubify/releases/download/${KEPUBIFY_VERSION}/kepubify-linux-${arch}" && \
+    chmod 755 /usr/local/bin/kepubify
+
 WORKDIR /app
 
 COPY --from=build /app/_build/prod/rel/stashix ./
