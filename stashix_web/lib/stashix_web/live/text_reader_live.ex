@@ -108,6 +108,7 @@ defmodule StashixWeb.TextReaderLive do
       current_page: current_page,
       # Fixed at mount: the hook only reads it to open the book there.
       start_cfi: start_cfi,
+      start_fraction: start_cfi == nil && start_fraction(progress, book_file.format),
       locator: nil,
       progression: nil,
       loaded: false,
@@ -691,6 +692,13 @@ defmodule StashixWeb.TextReaderLive do
 
   defp start_cfi(_progress, _format), do: nil
 
+  # Without a CFI of its own (progress saved by a reading app, KOReader, Kobo
+  # or Calibre's viewer), an EPUB opens at the same share of the book.
+  defp start_fraction(%{progression: p}, format) when format != :pdf and is_float(p) and p > 0,
+    do: min(p, 0.9999)
+
+  defp start_fraction(_progress, _format), do: nil
+
   # Where the reader is, as saved with the progress (see `Stashix.Library.ReadingProgress`).
   defp locator(:pdf, page, _params), do: %{"type" => "pdf", "page" => page}
 
@@ -970,6 +978,7 @@ defmodule StashixWeb.TextReaderLive do
           data-format={@format}
           data-start={@current_page}
           data-cfi={@start_cfi}
+          data-fraction={@start_fraction}
           data-total={@page_count}
           data-layout={@view_layout}
           data-page-theme={@theme}

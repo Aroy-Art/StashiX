@@ -248,6 +248,7 @@ const EpubReader = {
     this.url = d.url
     this.start = Number(d.start) || 0
     this.startCfi = d.cfi || null
+    this.startFraction = Number(d.fraction) || 0
     this.total = Number(d.total) || 0
     this.settings = {
       layout: d.layout,
@@ -370,10 +371,12 @@ const EpubReader = {
     this.apply(this.settings)
     this.outline()
 
-    // Resume at the spot the server has; books saved before it kept one, at
-    // the same share of the book. A book opened at its start opens on the
-    // cover; one resumed has it ready for paging back.
+    // Resume at the spot the server has; progress from another app (no CFI)
+    // and books saved before it kept one, at the same share of the book. A
+    // book opened at its start opens on the cover; one resumed has it ready
+    // for paging back.
     if (this.startCfi) await this.view.init({lastLocation: this.startCfi})
+    else if (this.startFraction > 0) await this.view.goToFraction(this.startFraction)
     else if (this.start > 0 && this.total > 0) await this.view.goToFraction(this.start / this.total)
     else {
       await this.makeCover()

@@ -244,6 +244,18 @@ defmodule StashixWeb.TextReaderLiveTest do
       refute has_element?(view, "#epub-reader[data-cfi]")
     end
 
+    test "progress from another app reopens at the same share of the book", %{conn: conn, user: user, epub: book} do
+      {:ok, _} =
+        Library.update_progress(Stashix.Library.Access.all(), user.id, book.id, 0,
+          progression: 0.42,
+          locator: %{"type" => "epub", "href" => "OEBPS/text/ch1.xhtml"}
+        )
+
+      {view, _html} = open(conn, book)
+      assert has_element?(view, ~s|#epub-reader[data-fraction="0.42"]|)
+      refute has_element?(view, "#epub-reader[data-cfi]")
+    end
+
     test "turning pages inside one location still saves the spot", %{conn: conn, user: user, epub: book} do
       {view, _html} = open(conn, book)
       render_hook(view, "loaded", %{"page_count" => 40})
