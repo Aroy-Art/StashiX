@@ -111,6 +111,21 @@ defmodule StashixWeb.CollectionsLiveTest do
     assert Collections.own(owner) == []
   end
 
+  test "dragging a card reorders, for the owner only", ctx do
+    %{conn: conn, other_conn: other_conn, owner: owner, c: c, e_dune: e_dune, e_saga: e_saga} = ctx
+    {:ok, view, _html} = live(conn, ~p"/collection/#{c.id}")
+    assert has_element?(view, ~s|#collection-entries[phx-hook="SortableList"][data-enabled="true"]|)
+
+    render_hook(view, "reorder", %{"id" => e_saga.id, "index" => 0})
+    assert Collections.entries(Access.for_user(owner), c) |> Enum.map(& &1.id) == [e_saga.id, e_dune.id]
+
+    {:ok, _} = Collections.update(owner, c, %{shared: true})
+    {:ok, view, _html} = live(other_conn, ~p"/collection/#{c.id}")
+    assert has_element?(view, ~s|#collection-entries[data-enabled="false"]|)
+    render_hook(view, "reorder", %{"id" => e_dune.id, "index" => 0})
+    assert Collections.entries(Access.for_user(owner), c) |> Enum.map(& &1.id) == [e_saga.id, e_dune.id]
+  end
+
   test "others see it only when shared, read-only", %{other_conn: conn, owner: owner, c: c} do
     assert {:error, {:live_redirect, %{to: "/collections"}}} = live(conn, ~p"/collection/#{c.id}")
 

@@ -165,9 +165,12 @@ Collection page
       item. Cards have no menu yet (bulk add in phase 6 covers grids).
 - [ ] Sidebar section (UI setting, off by default): the user's collections
       by name under Libraries.
-- [ ] Reordering (C8): `Sortable` hook on the owner's collection page in
+- [x] Reordering (C8): `Sortable` hook on the owner's collection page in
       "Collection order" sort, `move_entry` on drop; Move to top / bottom in
-      entry menus; remove from collection.
+      entry menus; remove from collection. *Done:* `SortableList` hook
+      (`assets/js/hooks/sortable_list.js`), SortableJS 1.15.7 vendored as
+      `assets/vendor/sortable.min.js` and fetched only when a list mounts;
+      long press starts a drag on touch screens.
 - [x] Book page: "In collections: To read, Book club" line (own + visible
       shared), linking each.
 - [ ] Search finds collections by name (own + visible shared) as a section.

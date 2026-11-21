@@ -33,9 +33,10 @@ import LocalTime from "./hooks/local_time.js"
 import PdfReader from "./hooks/pdf_reader.js"
 import EpubReader from "./hooks/epub_reader.js"
 import ImageAnnotations from "./hooks/image_annotations.js"
+import SortableList from "./hooks/sortable_list.js"
 import {exitReader} from "./reader_exit.js"
 
-let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, PdfReader, EpubReader, ImageAnnotations }
+let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, PdfReader, EpubReader, ImageAnnotations, SortableList }
 
 Hooks.Sidebar = {
   mounted() {

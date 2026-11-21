@@ -732,6 +732,19 @@
   box-shadow: 1px 1px 0 0 oklch(0.42 0.17 55);
 }
 
+/* Drag to reorder (SortableList hook): the spot the card will land in, and
+   the card while it is picked up. */
+.sortable-ghost {
+  opacity: 0.35;
+  outline: 2px dashed var(--color-ink);
+  outline-offset: 4px;
+  border-radius: var(--radius-md, 6px);
+}
+
+.sortable-chosen {
+  cursor: grabbing;
+}
+
 /* Reduced motion: every transition and animation ends at once, including the
    ones that come from utility classes. Spinners keep turning, because a frozen
    spinner reads as a hang. */

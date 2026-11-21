@@ -227,18 +227,26 @@ defmodule StashixWeb.CollectionLive do
 
       <div class="mt-8">
         <%= if @sort == "position" do %>
-          <.cover_grid :if={@entries != []} id="collection-entries">
-            <div :for={entry <- @entries} id={"entry-#{entry.id}"} data-entry-id={entry.id} class="relative group/entry">
-              <.book_card
-                :if={entry.book}
-                book={entry.book}
-                as={if entry.book.series, do: :issue, else: :book}
-                read={@progress[entry.book.id]}
-              />
-              <.series_card :if={entry.series} series={entry.series} subtitle={gettext("Whole series")} />
-              <.entry_menu :if={@owner?} entry={entry} />
-            </div>
-          </.cover_grid>
+          <%!-- The owner drags cards to reorder (SortableList hook). --%>
+          <div :if={@entries != []} id="collection-entries" phx-hook="SortableList" data-enabled={to_string(@owner?)}>
+            <.cover_grid>
+              <div
+                :for={entry <- @entries}
+                id={"entry-#{entry.id}"}
+                data-sort-id={entry.id}
+                class={["relative group/entry", @owner? && "cursor-grab active:cursor-grabbing"]}
+              >
+                <.book_card
+                  :if={entry.book}
+                  book={entry.book}
+                  as={if entry.book.series, do: :issue, else: :book}
+                  read={@progress[entry.book.id]}
+                />
+                <.series_card :if={entry.series} series={entry.series} subtitle={gettext("Whole series")} />
+                <.entry_menu :if={@owner?} entry={entry} />
+              </div>
+            </.cover_grid>
+          </div>
         <% else %>
           <.pagination id="page-top" page={@page} total_pages={@total_pages} />
           <.cover_grid id="collection-books">
