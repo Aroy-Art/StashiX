@@ -205,6 +205,12 @@ defmodule StashixWeb.Router do
 
     get "/creators/:id", CreatorController, :show
 
+    resources "/collections", CollectionController, only: [:index, :show, :create, :update, :delete]
+    get "/collections/:id/books", CollectionController, :books
+    post "/collections/:id/entries", CollectionController, :add_entry
+    delete "/collections/:id/entries/:entry_id", CollectionController, :remove_entry
+    put "/collections/:id/entries/:entry_id/position", CollectionController, :move_entry
+
     get "/search", SearchController, :search
 
     scope "/" do

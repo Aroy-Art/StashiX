@@ -181,9 +181,12 @@ Collection page
 
 ## Phase 3 — REST API
 
-- [ ] `/api/collections` (index, show with entries, create, update, delete),
+- [x] `/api/collections` (index, show with entries, create, update, delete),
       `/api/collections/:id/entries` (add book/series, remove, move), with
-      OpenApiSpex schemas and the same ownership rules. Tests.
+      OpenApiSpex schemas and the same ownership rules. Tests. *Done:*
+      `CollectionController`; also `GET /api/collections/:id/books` (sorted,
+      paged, series opened up); moving is `PUT …/entries/:entry_id/position`
+      with `{index}`.
 
 ## Phase 4 — OPDS
 

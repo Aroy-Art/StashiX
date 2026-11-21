@@ -455,4 +455,99 @@ defmodule StashixWeb.Schemas do
       }
     })
   end
+
+  defmodule Collection do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "Collection",
+      description: "A user's collection of books and whole series. Counts are what the caller may read.",
+      type: :object,
+      properties: %{
+        id: %Schema{type: :string, format: :uuid},
+        name: %Schema{type: :string},
+        description: %Schema{type: :string, nullable: true},
+        shared: %Schema{type: :boolean, description: "Others see it, read-only"},
+        own: %Schema{type: :boolean, description: "The caller owns (and may edit) it"},
+        owner: %Schema{type: :string, description: "Owner's user name"},
+        default_sort: %Schema{type: :string, enum: ["position", "title", "year", "added"]},
+        book_count: %Schema{type: :integer},
+        inserted_at: %Schema{type: :string, format: :"date-time"},
+        updated_at: %Schema{type: :string, format: :"date-time"}
+      },
+      required: [:id, :name, :shared, :own, :owner, :default_sort, :book_count]
+    })
+  end
+
+  defmodule CollectionEntry do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CollectionEntry",
+      description: "One place in a collection: a book, or a whole series (its books now and later).",
+      type: :object,
+      properties: %{
+        id: %Schema{type: :string, format: :uuid},
+        type: %Schema{type: :string, enum: ["book", "series"]},
+        position: %Schema{type: :integer},
+        book: %Schema{allOf: [StashixWeb.Schemas.BookSummary], nullable: true},
+        series: %Schema{allOf: [StashixWeb.Schemas.Series], nullable: true}
+      },
+      required: [:id, :type, :position]
+    })
+  end
+
+  defmodule CollectionDetail do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CollectionDetail",
+      type: :object,
+      properties: %{
+        collection: StashixWeb.Schemas.Collection,
+        entries: %Schema{type: :array, items: StashixWeb.Schemas.CollectionEntry}
+      },
+      required: [:collection, :entries]
+    })
+  end
+
+  defmodule CollectionRequest do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CollectionRequest",
+      type: :object,
+      properties: %{
+        name: %Schema{type: :string, maxLength: 120},
+        description: %Schema{type: :string, nullable: true, maxLength: 4000},
+        shared: %Schema{type: :boolean},
+        default_sort: %Schema{type: :string, enum: ["position", "title", "year", "added"]}
+      }
+    })
+  end
+
+  defmodule CollectionEntryRequest do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CollectionEntryRequest",
+      description: "Give `book_id` or `series_id`.",
+      type: :object,
+      properties: %{
+        book_id: %Schema{type: :string, format: :uuid},
+        series_id: %Schema{type: :string, format: :uuid}
+      }
+    })
+  end
+
+  defmodule CollectionMoveRequest do
+    require OpenApiSpex
+
+    OpenApiSpex.schema(%{
+      title: "CollectionMoveRequest",
+      type: :object,
+      properties: %{index: %Schema{type: :integer, minimum: 0, description: "New place among the entries, from 0"}},
+      required: [:index]
+    })
+  end
 end
