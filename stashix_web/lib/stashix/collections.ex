@@ -50,6 +50,14 @@ defmodule Stashix.Collections do
     |> Enum.sort_by(&{not &1.own?, String.downcase(&1.collection.name)})
   end
 
+  @doc "The collections `user` sees (see `list_for/2`) whose name contains `query`, ignoring case."
+  def search(%User{} = user, %Access{} = access, query) when is_binary(query) do
+    case query |> String.trim() |> String.downcase() do
+      "" -> []
+      q -> user |> list_for(access) |> Enum.filter(&String.contains?(String.downcase(&1.collection.name), q))
+    end
+  end
+
   @doc "`user`'s own collections, by name (for pickers)."
   def own(%User{id: user_id}) do
     from(c in Collection, where: c.user_id == ^user_id, order_by: fragment("lower(?)", c.name)) |> Repo.all()

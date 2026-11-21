@@ -43,6 +43,7 @@ defmodule StashixWeb.SearchLive do
        standalone_books_total: 0,
        series: [],
        series_total: 0,
+       collections: [],
        type_counts: %{},
        total_pages: 1,
        progress_map: %{},
@@ -385,6 +386,13 @@ defmodule StashixWeb.SearchLive do
       standalone_books_total: standalone_books_total,
       series: series,
       series_total: series_total,
+      # Collections match by name only, on the All tab; they aren't narrowed
+      # by the Comics / Books switcher (they're the user's own mix).
+      collections:
+        if(params["type"] == "all" and is_binary(params["q"]),
+          do: Stashix.Collections.search(socket.assigns.current_user, socket.assigns.access, params["q"]),
+          else: []
+        ),
       total_pages: max(1, ceil(paged_total / @page_size)),
       progress_map: Library.progress_map(user_id, Enum.map(books ++ standalone_books, & &1.id)),
       loading: false
@@ -580,7 +588,7 @@ defmodule StashixWeb.SearchLive do
   defp result_count(assigns) do
     case assigns.params["type"] do
       "series" -> assigns.series_total
-      "all" -> assigns.books_total + assigns.standalone_books_total + assigns.series_total
+      "all" -> assigns.books_total + assigns.standalone_books_total + assigns.series_total + length(assigns.collections)
       _ -> assigns.books_total
     end
   end
@@ -931,6 +939,21 @@ defmodule StashixWeb.SearchLive do
             <.text_link type="button" phx-click="clear_filters" class="px-1">{gettext("Clear all")}</.text_link>
           </div>
 
+          <section :if={@collections != []} id="search-collections">
+            <.results_heading title={gettext("Collections")} total={length(@collections)} />
+            <div class="flex flex-wrap gap-2">
+              <.link
+                :for={item <- @collections}
+                navigate={~p"/collection/#{item.collection.id}"}
+                class="inline-flex items-center gap-2 px-3 py-2 rounded-md bg-surface ring-1 ring-edge hover:ring-ink/60 text-fg transition-colors"
+              >
+                <.icon name="lucide-gallery-vertical-end" class="w-4 h-4 text-muted" />
+                <span class="font-semibold">{item.collection.name}</span>
+                <span class="text-xs text-muted tabular-nums">{ngettext("1 book", "%{count} books", item.count)}</span>
+              </.link>
+            </div>
+          </section>
+
           <section :if={@show_series}>
             <.results_heading
               title={gettext("Series")}
@@ -1002,7 +1025,7 @@ defmodule StashixWeb.SearchLive do
 
           <%!-- Empty long box --%>
           <.empty_state
-            :if={!@loading and !@show_series and !@show_standalone_books and !@show_books}
+            :if={!@loading and !@show_series and !@show_standalone_books and !@show_books and @collections == []}
             ghost="0"
             title={
               if @filter_count > 0 or @params["q"] != "",

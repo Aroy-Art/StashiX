@@ -71,6 +71,22 @@ defmodule StashixWeb.CollectionsLiveTest do
     assert has_element?(view, ~s|#sidebar-collections a[aria-current="page"]|, "Space operas")
   end
 
+  test "search finds collections by name", %{conn: conn, other_conn: other_conn, owner: owner, c: c} do
+    {:ok, view, _html} = live(conn, ~p"/search?q=opera")
+    assert has_element?(view, ~s|#search-collections a[href="/collection/#{c.id}"]|, "Space operas")
+    refute render(view) =~ "Nothing in the long box"
+
+    {:ok, view, _html} = live(conn, ~p"/search?q=dune")
+    refute has_element?(view, "#search-collections")
+
+    # Others find it once it is shared.
+    {:ok, view, _html} = live(other_conn, ~p"/search?q=opera")
+    refute has_element?(view, "#search-collections")
+    {:ok, _} = Collections.update(owner, c, %{shared: true})
+    {:ok, view, _html} = live(other_conn, ~p"/search?q=opera")
+    assert has_element?(view, "#search-collections", "Space operas")
+  end
+
   test "a new collection is made from the dialog", %{conn: conn, owner: owner} do
     {:ok, view, _html} = live(conn, ~p"/collections")
     view |> element("#new-collection") |> render_click()
