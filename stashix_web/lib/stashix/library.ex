@@ -9,6 +9,31 @@ defmodule Stashix.Library do
     quote do: not fragment("? = ANY(?)", ^unquote(field), unquote(book).locked_fields)
   end
 
+  # Text search on books: full-text on `search_vec` with every word a prefix
+  # ("seaw" finds "Seaworthiness"), or trigram word similarity on the title for
+  # partial words that stemming breaks ("seaworthin") and typos.
+  defmacrop text_match(book, q) do
+    quote do
+      fragment(
+        "(search_vec @@ to_tsquery('english', ?) OR ? <% ?)",
+        ^prefix_tsquery(unquote(q)),
+        ^unquote(q),
+        unquote(book).title
+      )
+    end
+  end
+
+  defmacrop text_rank(book, q) do
+    quote do
+      fragment(
+        "ts_rank(search_vec, to_tsquery('english', ?)) + word_similarity(?, ?)",
+        ^prefix_tsquery(unquote(q)),
+        ^unquote(q),
+        unquote(book).title
+      )
+    end
+  end
+
   alias Stashix.Repo
 
   alias Stashix.Library.{
@@ -504,8 +529,8 @@ defmodule Stashix.Library do
 
       {nil, nil} ->
         from(b in base,
-          where: fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string),
-          order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string)
+          where: text_match(b, query_string),
+          order_by: [desc: text_rank(b, query_string)]
         )
     end
     |> Repo.all()
@@ -517,10 +542,8 @@ defmodule Stashix.Library do
 
     issues =
       from(b in Access.books(access),
-        where:
-          fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-            is_nil(b.deleted_at) and b.type == "issue",
-        order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
+        where: text_match(b, query_string) and is_nil(b.deleted_at) and b.type == "issue",
+        order_by: [desc: text_rank(b, query_string)],
         preload: [:cover, :series],
         limit: ^limit
       )
@@ -528,10 +551,8 @@ defmodule Stashix.Library do
 
     books =
       from(b in Access.books(access),
-        where:
-          fragment("search_vec @@ plainto_tsquery('english', ?)", ^query_string) and
-            is_nil(b.deleted_at) and b.type == "standalone",
-        order_by: fragment("ts_rank(search_vec, plainto_tsquery('english', ?)) DESC", ^query_string),
+        where: text_match(b, query_string) and is_nil(b.deleted_at) and b.type == "standalone",
+        order_by: [desc: text_rank(b, query_string)],
         preload: [:cover, :series],
         limit: ^limit
       )
@@ -865,8 +886,7 @@ defmodule Stashix.Library do
               where(
                 query,
                 [b],
-                fragment("search_vec @@ plainto_tsquery('english', ?)", ^q) or
-                  exists(credit_match_query(name_pattern: pattern))
+                text_match(b, q) or exists(credit_match_query(name_pattern: pattern))
               )
           end
 
@@ -1009,6 +1029,14 @@ defmodule Stashix.Library do
 
   defp like_pattern(term), do: "%#{like_escape(term)}%"
 
+  # "sea worth" -> "sea:* & worth:*". Only letters and digits survive, so
+  # to_tsquery never sees its operators.
+  defp prefix_tsquery(q) do
+    ~r/[\p{L}\p{N}]+/u
+    |> Regex.scan(q)
+    |> Enum.map_join(" & ", fn [word] -> word <> ":*" end)
+  end
+
   defp like_escape(term), do: String.replace(term, ~r/[\\%_]/, "\\\\\\0")
 
   # "all": every creator is credited on the book (each in `role`, if given).
@@ -1132,7 +1160,7 @@ defmodule Stashix.Library do
     case {filters[:sort], filters[:q]} do
       {"relevance", q} when is_binary(q) and q != "" ->
         order_by(query, [b],
-          desc: fragment("ts_rank(search_vec, plainto_tsquery('english', ?))", ^q),
+          desc: text_rank(b, q),
           asc: b.title
         )
 

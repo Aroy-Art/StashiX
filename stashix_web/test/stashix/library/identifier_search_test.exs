@@ -54,6 +54,30 @@ defmodule Stashix.Library.IdentifierSearchTest do
     assert search("dune") == ["Dune"]
   end
 
+  test "matches word prefixes, partial words and typos" do
+    {:ok, lib} = Library.create_library(%{name: "Sea", root_path: "/tmp/id-search-sea", kind: :books})
+
+    {:ok, _} =
+      Library.create_book(%{
+        title: "Seaworthiness: The Forgotten Factor",
+        library_id: lib.id,
+        type: "standalone"
+      })
+
+    for q <- ["seaw", "seaworthin", "seaworthyness", "forgot fact", "SEAW"] do
+      assert "Seaworthiness: The Forgotten Factor" in search(q), q
+    end
+
+    assert search("seaw dune") == []
+    assert search("!:&|()") == []
+
+    assert Library.search_books("seaw", access: Access.all()) |> Enum.map(& &1.title) ==
+             ["Seaworthiness: The Forgotten Factor"]
+
+    assert %{books: [%{title: "Seaworthiness: The Forgotten Factor"}]} =
+             Library.search_all("seaworthin", access: Access.all())
+  end
+
   test "the API and OPDS search finds identifiers too" do
     assert Library.search_books("9780441013593", access: Access.all()) |> Enum.map(& &1.title) == ["Dune"]
     assert Library.search_books("goodreads:12067", access: Access.all()) |> Enum.map(& &1.title) == ["Good Omens"]
