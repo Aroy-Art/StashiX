@@ -409,7 +409,7 @@ defmodule Stashix.Library do
   @doc """
   Marks the books of `items` (`{:book | :series, id}`, see `picked_books/2`)
   read or unread for the user: read puts them on their last page, unread back
-  at the start. Returns how many books changed.
+  at the start. Returns the ids of the books changed.
   """
   def set_read(access, user_id, items, read?) do
     books = picked_books(access, items)
@@ -435,7 +435,7 @@ defmodule Stashix.Library do
       )
     )
 
-    length(books)
+    Enum.map(books, & &1.id)
   end
 
   @doc """

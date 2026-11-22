@@ -43,7 +43,9 @@ defmodule StashixWeb.CardMenu do
 
   def handle_event("read", %{"read" => read}, socket) do
     %{current_user: user, access: access, info: info} = socket.assigns
-    Library.set_read(access, user.id, [info.item], read == "true")
+    ids = Library.set_read(access, user.id, [info.item], read == "true")
+    # The page redraws the cards' read marks (StashixWeb.Live.Hooks).
+    send(self(), {:read_changed, Map.new(ids, &{&1, if(read == "true", do: 1.0, else: 0.0)})})
     {:noreply, assign(socket, info: nil)}
   end
 
@@ -103,6 +105,7 @@ defmodule StashixWeb.CardMenu do
         title: if(number, do: "#{book.series.name} #{number}", else: book.title),
         subtitle: if(number && book.title != book.series.name, do: book.title),
         cover: ~p"/api/books/#{book.id}/cover?s=s",
+        page: ~p"/book/#{slug_param(book)}",
         facts: [
           book.series && !number && book.series.name,
           book.year && to_string(book.year),
@@ -139,6 +142,7 @@ defmodule StashixWeb.CardMenu do
         title: series.name,
         subtitle: nil,
         cover: ~p"/api/series/#{series.id}/cover?s=s",
+        page: ~p"/series/#{slug_param(series)}",
         facts: [Formatters.series_years(series), books != [] && series_count_label(length(books), novels?)],
         more: [
           publisher(series.publishers),
@@ -192,28 +196,34 @@ defmodule StashixWeb.CardMenu do
       >
         <div class="mx-auto mt-1 mb-2 h-1 w-10 rounded-full bg-fg/20 sm:hidden" aria-hidden="true"></div>
         <%= if @view == :main do %>
-          <div class="flex gap-3 px-2 pt-1 pb-3">
+          <.link
+            navigate={@info.page}
+            data-menu-item
+            title={gettext("Open")}
+            class="group/head flex gap-3 px-2 pt-1 pb-3 rounded-sm outline-none hover:bg-fg/[0.05] focus-visible:bg-fg/[0.07]"
+          >
             <img
               src={@info.cover}
               alt=""
               class="w-12 aspect-[2/3] flex-shrink-0 rounded-sm object-cover bg-surface ring-1 ring-edge"
             />
             <div class="min-w-0 text-sm">
-              <p class="font-display font-bold text-fg leading-snug line-clamp-2">{@info.title}</p>
+              <p class="font-display font-bold text-fg leading-snug line-clamp-2 group-hover/head:text-ink">
+                {@info.title}
+                <.icon name="lucide-arrow-up-right" class="w-3.5 h-3.5 text-muted group-hover/head:text-ink" />
+              </p>
               <p :if={@info.subtitle} class="text-fg-soft truncate">{@info.subtitle}</p>
               <p :if={line(@info.facts) != ""} class="text-muted truncate">{line(@info.facts)}</p>
               <p :if={line(@info.more) != ""} class="text-muted truncate">{line(@info.more)}</p>
             </div>
-          </div>
+          </.link>
           <.menu_separator />
-          <.menu_item :if={@info.open} icon="lucide-play" navigate={@info.open}>
-            {@info.open_label}
-          </.menu_item>
-          <.menu_item :if={@info.again} icon="lucide-rotate-ccw" navigate={@info.again}>
-            {gettext("Read again")}
-          </.menu_item>
+          <%!-- First and marked: the way into picking several cards --%>
           <.menu_item
-            icon="lucide-square-check"
+            id={"#{@id}-select"}
+            icon="lucide-list-checks"
+            icon_class="!text-ink"
+            class="!text-ink bg-ink/10 hover:!bg-ink/20 focus:!bg-ink/20"
             phx-click={
               JS.dispatch("bulk:start",
                 to: "#bulk-select",
@@ -221,7 +231,14 @@ defmodule StashixWeb.CardMenu do
               )
             }
           >
-            {gettext("Select")}
+            {gettext("Select multiple")}
+          </.menu_item>
+          <.menu_separator />
+          <.menu_item :if={@info.open && !@info.again} icon="lucide-play" navigate={@info.open}>
+            {@info.open_label}
+          </.menu_item>
+          <.menu_item :if={@info.again} icon="lucide-rotate-ccw" navigate={@info.again}>
+            {gettext("Read again")}
           </.menu_item>
           <.menu_item icon="lucide-gallery-vertical-end" keep_open phx-click="collections" phx-target={@myself}>
             <span class="flex items-center justify-between gap-3">

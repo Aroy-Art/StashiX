@@ -108,11 +108,11 @@ defmodule Stashix.Library.ProgressTest do
     assert Enum.map(Library.picked_books(access, picked), & &1.id) == [ctx.novel.id, one.id, two.id]
 
     {:ok, _} = Library.update_progress(access, user.id, one.id, 4)
-    assert Library.set_read(access, user.id, picked, true) == 3
+    assert length(Library.set_read(access, user.id, picked, true)) == 3
     assert %{current_page: 19, progression: 1.0} = Library.get_progress(user.id, one.id)
     assert %{current_page: 399} = Library.get_progress(user.id, ctx.novel.id)
 
-    assert Library.set_read(access, user.id, [{:series, series.id}], false) == 2
+    assert Library.set_read(access, user.id, [{:series, series.id}], false) == [one.id, two.id]
     assert Library.progress_map(user.id, [one.id, two.id, ctx.novel.id]) == %{ctx.novel.id => 1.0}
   end
 

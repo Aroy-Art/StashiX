@@ -57,6 +57,11 @@ defmodule StashixWeb.CollectionLive do
     {:noreply, socket |> assign(sort: sort, page: page) |> load()}
   end
 
+  @doc false
+  # Books marked read elsewhere on the page: the hero's share read and
+  # Read next follow (see StashixWeb.Live.Hooks).
+  def read_changed(socket), do: load(socket)
+
   defp load(socket) do
     %{access: access, collection: c, current_user: user, sort: sort, page: page} = socket.assigns
     {all_books, total} = Collections.books(access, c)
@@ -77,7 +82,7 @@ defmodule StashixWeb.CollectionLive do
       total: total,
       total_pages: total_pages,
       series_count: Enum.count(entries, & &1.series_id),
-      progress: progress,
+      progress_map: progress,
       read: read,
       read_next: Enum.find(all_books, &((progress[&1.id] || 0.0) < 1.0)),
       can_download: Enum.any?(all_books, &Stashix.Library.Access.can_download?(access, &1.library_id)),
@@ -283,7 +288,7 @@ defmodule StashixWeb.CollectionLive do
                   :if={entry.book}
                   book={entry.book}
                   as={if entry.book.series, do: :issue, else: :book}
-                  read={@progress[entry.book.id]}
+                  read={@progress_map[entry.book.id]}
                 />
                 <.series_card :if={entry.series} series={entry.series} subtitle={gettext("Whole series")} />
                 <.entry_menu :if={@owner?} entry={entry} cover?={cover_entry?(entry, @collection, @cover_series_id)} />
@@ -297,7 +302,7 @@ defmodule StashixWeb.CollectionLive do
               :for={book <- @books}
               book={book}
               as={if book.series, do: :issue, else: :book}
-              read={@progress[book.id]}
+              read={@progress_map[book.id]}
             />
           </.cover_grid>
           <.pagination page={@page} total_pages={@total_pages} scroll_to="page-top" />

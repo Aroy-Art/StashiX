@@ -549,6 +549,11 @@ defmodule StashixWeb.SeriesLive do
     )
   end
 
+  @doc false
+  # Books marked read elsewhere on the page (see StashixWeb.Live.Hooks).
+  def read_changed(socket),
+    do: assign(socket, continue_book: find_continue_book(socket.assigns.books, socket.assigns.progress_map))
+
   defp find_continue_book(books, progress_map) do
     issue_sorted = Library.sort_reading_order(books)
 

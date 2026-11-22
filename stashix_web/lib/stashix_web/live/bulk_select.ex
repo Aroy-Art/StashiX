@@ -56,7 +56,10 @@ defmodule StashixWeb.BulkSelect do
 
   def handle_event("read", %{"read" => read}, socket) do
     %{current_user: user, access: access, items: items} = socket.assigns
-    count = Stashix.Library.set_read(access, user.id, items, read == "true")
+    ids = Stashix.Library.set_read(access, user.id, items, read == "true")
+    count = length(ids)
+    # The page redraws the cards' read marks (StashixWeb.Live.Hooks).
+    send(self(), {:read_changed, Map.new(ids, &{&1, if(read == "true", do: 1.0, else: 0.0)})})
 
     text =
       if read == "true",

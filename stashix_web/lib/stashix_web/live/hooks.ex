@@ -49,6 +49,7 @@ defmodule StashixWeb.Live.Hooks do
           |> attach_hook(:library_kind, :handle_event, &handle_library_kind/3)
           |> push_theme()
           |> attach_hook(:sidebar_scan_progress, :handle_info, &handle_sidebar_progress/2)
+          |> attach_hook(:read_changed, :handle_info, &handle_read_changed/2)
           |> attach_hook(:navbar_search_clear_on_nav, :handle_params, fn _params, uri, sock ->
             # current_path lets the sidebar mark the page we are on.
             {:cont,
@@ -327,6 +328,30 @@ defmodule StashixWeb.Live.Hooks do
   end
 
   defp handle_sidebar_scan(_event, _params, socket), do: {:cont, socket}
+
+  # Books marked read or unread from a card menu or the selection bar
+  # (`{:read_changed, %{book_id => progression}}`): the page's cards take
+  # the new read marks from its `progress_map`, which holds started books
+  # only. A page that shows more than marks (what to read next, totals)
+  # catches up in its own `read_changed/1`.
+  defp handle_read_changed({:read_changed, changes}, socket) do
+    socket =
+      case socket.assigns do
+        %{progress_map: map} when is_map(map) ->
+          map = changes |> Enum.reduce(map, fn {id, p}, acc -> Map.put(acc, id, p) end)
+          assign(socket, progress_map: map |> Enum.reject(fn {_id, p} -> p <= 0 end) |> Map.new())
+
+        _ ->
+          socket
+      end
+
+    socket =
+      if function_exported?(socket.view, :read_changed, 1), do: socket.view.read_changed(socket), else: socket
+
+    {:halt, socket}
+  end
+
+  defp handle_read_changed(_message, socket), do: {:cont, socket}
 
   defp handle_sidebar_progress(
          {:scan_progress, %{library_id: id, scanned: s, total: t, done: done, phase: phase}},

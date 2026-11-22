@@ -293,11 +293,24 @@ defmodule StashixWeb.CollectionsLiveTest do
       view |> element("#bulk-select-more-panel button", "Mark as unread") |> render_click()
       assert Library.progress_map(owner.id, [dune.id, s1.id]) == %{}
     end
+
+    test "marks from the bar show on the page's cards", %{conn: conn, dune: dune} do
+      {:ok, view, _html} = live(conn, ~p"/books")
+      bulk = element(view, "#bulk-select")
+      stamp = ~s|[data-select-id="#{dune.id}"] .read-mark-stamp|
+      render_hook(bulk, "mode", %{"on" => true})
+      render_hook(bulk, "selection", %{"items" => [%{"type" => "book", "id" => dune.id}]})
+
+      view |> element("#bulk-select-more-panel button", "Mark as read") |> render_click()
+      assert has_element?(view, stamp)
+      view |> element("#bulk-select-more-panel button", "Mark as unread") |> render_click()
+      refute has_element?(view, stamp)
+    end
   end
 
   describe "card menu" do
     test "a book's menu tells what it is and acts on it", %{conn: conn, owner: owner, s1: s1, c: c} do
-      {:ok, view, _html} = live(conn, ~p"/books")
+      {:ok, view, _html} = live(conn, ~p"/issues")
       menu = element(view, "#card-menu")
       refute has_element?(view, "#card-menu-panel")
 
@@ -309,9 +322,16 @@ defmodule StashixWeb.CollectionsLiveTest do
       assert has_element?(view, "#card-menu-panel a", "Open series")
       refute has_element?(view, "#card-menu-panel button", "Mark as unread")
 
+      assert has_element?(view, ~s|#card-menu-panel a[href^="/book/"]|, "Saga #1")
+      assert has_element?(view, "#card-menu-select", "Select multiple")
+
+      stamp = ~s|[data-select-id="#{s1.id}"] .read-mark-stamp|
+      refute has_element?(view, stamp)
       view |> element("#card-menu-panel button", "Mark as read") |> render_click()
       refute has_element?(view, "#card-menu-panel")
       assert Library.progress_map(owner.id, [s1.id]) == %{s1.id => 1.0}
+      # The card shows it straight away.
+      assert has_element?(view, stamp)
 
       render_hook(menu, "open", %{"type" => "book", "id" => s1.id})
       assert has_element?(view, "#card-menu-panel", "Read again")

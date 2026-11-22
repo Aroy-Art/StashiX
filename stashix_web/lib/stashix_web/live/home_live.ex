@@ -71,10 +71,28 @@ defmodule StashixWeb.HomeLive do
     %{browse_access: access, recent_library: library, books_mode: books_mode} = socket.assigns
 
     # Prose libraries have no issues: one shelf holds every book.
+    recent_books = Library.recent_books(access, library, @recent_limit, if(!books_mode, do: "standalone"))
+    recent_issues = if(books_mode, do: [], else: Library.recent_issues(access, library, @recent_limit))
+
     assign(socket,
       recent_series: Library.recent_series(access, library, @recent_limit),
-      recent_books: Library.recent_books(access, library, @recent_limit, if(!books_mode, do: "standalone")),
-      recent_issues: if(books_mode, do: [], else: Library.recent_issues(access, library, @recent_limit))
+      recent_books: recent_books,
+      recent_issues: recent_issues,
+      progress_map:
+        Library.progress_map(socket.assigns.current_user.id, Enum.map(recent_books ++ recent_issues, & &1.id))
+    )
+  end
+
+  @doc false
+  # Books marked read from a card menu or the selection bar: the reading
+  # queues follow (the shelves' marks come from `progress_map`, see
+  # StashixWeb.Live.Hooks).
+  def read_changed(socket) do
+    %{browse_access: access, current_user: user} = socket.assigns
+
+    assign(socket,
+      continue_reading: Library.in_progress_books(access, user.id, 20),
+      next_issue: Library.next_issue_books(access, user.id, 20)
     )
   end
 
@@ -649,6 +667,7 @@ defmodule StashixWeb.HomeLive do
           <.book_card
             :for={book <- @recent_books}
             book={book}
+            read={@progress_map[book.id]}
             as={if @books_mode, do: :novel, else: :book}
             scope="recent-books"
             class="flex-shrink-0 w-36"
@@ -667,6 +686,7 @@ defmodule StashixWeb.HomeLive do
           <.book_card
             :for={book <- @recent_issues}
             book={book}
+            read={@progress_map[book.id]}
             as={:issue}
             scope="recent-issues"
             class="flex-shrink-0 w-36"
