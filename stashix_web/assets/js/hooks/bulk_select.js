@@ -9,8 +9,9 @@
 // multiple" in a card's menu dispatches "bulk:start" here, turning the mode
 // on with that card picked; the bar's Done sends "bulk:toggle" to leave.
 // While on, <html data-bulk>
-// shows a tick box on every card that can be picked ([data-select-id],
-// [data-select-type]) and a click on one ticks it instead of opening it;
+// shows the tick box (an ink <.checkbox>) on every card that can be picked
+// ([data-select-id], [data-select-type]) and a click on one ticks it
+// instead of opening it;
 // shift-click ticks the range from the last one, Esc leaves. Picks survive
 // page patches (paging, sorting) and are reported to the component as
 // "selection"; it pushes "bulk:clear" once they are added.
@@ -138,6 +139,8 @@ const BulkSelect = {
     this.cards().forEach((c) => {
       const on = this.on && this.picked.has(key(c))
       if (c.hasAttribute("data-picked") !== on) c.toggleAttribute("data-picked", on)
+      const tick = c.querySelector(".media-card-tick input[type=checkbox]")
+      if (tick && tick.checked !== on) tick.checked = on
       if (this.on) c.setAttribute("aria-pressed", String(on))
       else c.removeAttribute("aria-pressed")
     })

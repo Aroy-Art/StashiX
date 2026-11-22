@@ -749,34 +749,22 @@ html[data-bulk] [data-select-id][data-select-type] {
   cursor: pointer;
 }
 
-html[data-bulk] [data-select-id][data-select-type]::after {
-  content: "";
-  position: absolute;
-  top: 0.5rem;
-  left: 0.5rem;
-  z-index: 5;
-  width: 1.375rem;
-  height: 1.375rem;
-  border-radius: 0.3rem;
-  border: 2px solid white;
-  background: rgb(0 0 0 / 0.4);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+/* Each card's tick box (a <.checkbox>, see media_card/1) shows only while
+   picking. */
+.media-card-tick {
+  display: none;
 }
-
-html[data-bulk] [data-select-id][data-picked]::after {
-  border-color: var(--color-ink);
-  background: var(--color-ink)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2309090b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
-    center / 80% no-repeat;
+html[data-bulk] .media-card-tick {
+  display: flex;
+}
+/* It takes the corner the read check sits in. */
+html[data-bulk] .media-card .read-mark-check {
+  display: none !important;
 }
 
 html[data-bulk] [data-select-id][data-picked] .media-card-cover {
   outline: 3px solid var(--color-ink);
   outline-offset: 2px;
-}
-
-[data-bulk-toggle][aria-pressed="true"] {
-  color: var(--color-ink);
 }
 
 /* Drag to reorder (SortableList hook): the spot the card will land in, and

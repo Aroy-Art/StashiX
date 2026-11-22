@@ -16,6 +16,7 @@ defmodule StashixWeb.CoreComponents do
   import StashixWeb.UI.Icon
   import StashixWeb.SlugParam
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
+  import StashixWeb.UI.Forms, only: [checkbox: 1]
   import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
@@ -355,6 +356,14 @@ defmodule StashixWeb.CoreComponents do
           aria-hidden="true"
         ></span>
         <div class="media-card-cover @container relative aspect-[2/3] rounded-md overflow-hidden bg-raised ring-1 ring-edge">
+          <%!-- Ticked by the BulkSelect hook; shown only while picking (ink.css) --%>
+          <.checkbox
+            :if={@select_id}
+            form=""
+            class="media-card-tick absolute top-2 left-2 z-10 rounded-sm shadow-[0_1px_3px_rgb(0_0_0/0.45)]"
+            tabindex="-1"
+            aria-hidden="true"
+          />
           <%= if @img_src do %>
             <.blurhash_image
               id={@cover_id}
