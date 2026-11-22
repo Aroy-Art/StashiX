@@ -64,6 +64,47 @@ defmodule StashixWeb.DownloadController do
     end
   end
 
+  operation :collection,
+    summary: "Download a collection as a ZIP",
+    description:
+      "One file per book (its best format, or those in `formats`), numbered in collection order. Books in libraries without download permission are left out.",
+    tags: ["Collections", "Media"],
+    parameters: [
+      id: [in: :path, type: :string, required: true],
+      formats: [
+        in: :query,
+        type: :string,
+        description: "Comma-separated formats (e.g. epub,cbz); the best one per book when omitted"
+      ]
+    ],
+    responses: [
+      ok: {"ZIP archive", "application/zip", %OpenApiSpex.Schema{type: :string, format: :binary}},
+      not_found: {"No collection or no file", "application/json", Schemas.Error}
+    ]
+
+  def collection(conn, %{"id" => id} = params) do
+    %{access: access, current_user: user} = conn.assigns
+
+    with {:ok, c} <- Stashix.Collections.get(user, access, id),
+         [_ | _] = files <- Stashix.Collections.download_files(access, c, requested_formats(params)) do
+      width = files |> length() |> Integer.to_string() |> String.length() |> max(3)
+
+      entries =
+        files
+        |> Enum.with_index(1)
+        |> Enum.map(fn {{_book, file}, i} ->
+          {"#{String.pad_leading(to_string(i), width, "0")} - #{Path.basename(file.path)}", file.path}
+        end)
+
+      case ZipStream.plan(entries) do
+        [] -> not_found(conn)
+        planned -> send_zip(conn, planned, safe_name(c.name) <> ".zip")
+      end
+    else
+      _ -> not_found(conn)
+    end
+  end
+
   defp allowed(conn, library_id) do
     if Access.can_download?(conn.assigns.access, library_id),
       do: :ok,

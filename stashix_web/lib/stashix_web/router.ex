@@ -192,6 +192,7 @@ defmodule StashixWeb.Router do
     get "/annotations/:id/preview", AnnotationController, :preview
     get "/series/:id/cover", SeriesController, :cover
     get "/series/:id/download", DownloadController, :series
+    get "/collections/:id/download", DownloadController, :collection
     get "/metadata/image", MetadataImageController, :show
   end
 

@@ -420,6 +420,31 @@ defmodule Stashix.Collections do
     {Enum.map(page_ids, &loaded[&1]), length(sorted)}
   end
 
+  @doc """
+  The files to download a collection as, in collection order: per book its
+  best format (`Stashix.Media.Formats.reading_rank/1`), or every file in
+  `formats` when given; only books in libraries the viewer may download
+  from. `[{book, book_file}]`.
+  """
+  def download_files(%Access{} = access, %Collection{} = c, formats \\ nil) do
+    {books, _total} = books(access, c)
+    books = Enum.filter(books, &Access.can_download?(access, &1.library_id))
+    files_query = from(f in Stashix.Library.BookFile, where: is_nil(f.deleted_at))
+    books = Repo.preload(books, files: files_query)
+
+    Enum.flat_map(books, fn book ->
+      files = Enum.sort_by(book.files, &Stashix.Media.Formats.reading_rank(&1.format))
+
+      picked =
+        case formats do
+          nil -> Enum.take(files, 1)
+          formats -> Enum.filter(files, &(&1.format in formats))
+        end
+
+      Enum.map(picked, &{book, &1})
+    end)
+  end
+
   @doc "Ids of the viewer's books in each collection, in collection order: `%{collection_id => [book_id]}`."
   def expanded_ids(collection_ids, %Access{} = access) do
     collection_ids |> expanded_rows(access) |> Map.new(fn {cid, rows} -> {cid, Enum.map(rows, & &1.book_id)} end)

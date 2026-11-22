@@ -229,7 +229,7 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
       *Done:* `cover_book_id`, "Use as cover" in a card's menu (a series
       gives its first book), reset in the collection menu, `cover_book_id` in
       the API; a viewer who may not see the picked book gets the first books.
-- [ ] Download a collection as ZIP (reuses `DownloadController`; download
+- [x] Download a collection as ZIP (reuses `DownloadController`; download
       permission per book).
 
 ## 8. Smart collections (after phases 1–6)

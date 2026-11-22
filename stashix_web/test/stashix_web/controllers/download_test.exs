@@ -133,6 +133,33 @@ defmodule StashixWeb.DownloadTest do
     assert has_element?(view, "#download-dialog button[disabled]", "Download")
   end
 
+  test "a collection downloads its books in order, one file each", ctx do
+    %{conn: conn, user: user, series: series, second: second} = ctx
+    access = Stashix.Library.Access.for_user(user)
+    {:ok, c} = Stashix.Collections.create(user, %{name: "Kick/collection"})
+    {:ok, _} = Stashix.Collections.add(user, access, c, {:book, second.id})
+    {:ok, _} = Stashix.Collections.add(user, access, c, {:series, series.id})
+
+    conn = get(conn, ~p"/api/collections/#{c.id}/download")
+    assert [disposition] = get_resp_header(conn, "content-disposition")
+    assert disposition =~ "Kick_collection.zip"
+
+    # #2 first (its own entry), then the rest of the series; the adult #3 is
+    # out of reach; #1's best format is the PDF.
+    assert unzip(conn) == %{"001 - Kickdown.cbz" => "cbz two", "002 - Kickdown 1.pdf" => "pdf one"}
+
+    {:ok, view, _html} = live(ctx.conn, ~p"/collection/#{c.id}")
+    assert has_element?(view, ~s|#collection-download[href="/api/collections/#{c.id}/download"]|)
+  end
+
+  test "a collection's formats can be picked", %{conn: conn, user: user, series: series} do
+    {:ok, c} = Stashix.Collections.create(user, %{name: "Comics only"})
+    {:ok, _} = Stashix.Collections.add(user, Stashix.Library.Access.for_user(user), c, {:series, series.id})
+
+    assert unzip(get(conn, ~p"/api/collections/#{c.id}/download?formats=cbz")) |> Map.keys() ==
+             ["001 - Kickdown.cbz", "002 - Kickdown.cbz"]
+  end
+
   describe "without download permission" do
     setup %{user: user, lib: lib} do
       {:ok, _} = Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_download: false})

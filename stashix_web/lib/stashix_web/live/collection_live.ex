@@ -80,6 +80,7 @@ defmodule StashixWeb.CollectionLive do
       progress: progress,
       read: read,
       read_next: Enum.find(all_books, &((progress[&1.id] || 0.0) < 1.0)),
+      can_download: Enum.any?(all_books, &Stashix.Library.Access.can_download?(access, &1.library_id)),
       cover_id: Collections.cover_book_id(access, c),
       cover_series_id:
         c.cover_book_id &&
@@ -224,6 +225,17 @@ defmodule StashixWeb.CollectionLive do
             <.icon name="lucide-play" class="w-4 h-4" />
             {gettext("Read next: %{title}", title: StashixWeb.Opds.entry_title(@read_next))}
           </.ink_button>
+          <.text_link
+            :if={@can_download}
+            id="collection-download"
+            tone="ink"
+            href={~p"/api/collections/#{@collection.id}/download"}
+            download
+            aria-label={gettext("Download as ZIP")}
+          >
+            <.icon name="lucide-download" class="w-4 h-4" />
+            <span class="hidden sm:inline">{gettext("Download")}</span>
+          </.text_link>
           <.sort_select id="collection-sort" options={sort_options()} selected={@sort} />
           <.ink_menu :if={@owner?} id="collection-menu">
             <:trigger
