@@ -509,5 +509,13 @@
         {@inner_content}
       </div>
     </main>
+    <%!-- Picking several cards to add to a collection (Select buttons) --%>
+    <.live_component
+      :if={assigns[:current_user] && assigns[:access]}
+      module={StashixWeb.BulkSelect}
+      id="bulk-select"
+      current_user={@current_user}
+      access={@access}
+    />
   </div>
 </div>

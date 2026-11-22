@@ -35,9 +35,10 @@ import PdfReader from "./hooks/pdf_reader.js"
 import EpubReader from "./hooks/epub_reader.js"
 import ImageAnnotations from "./hooks/image_annotations.js"
 import SortableList from "./hooks/sortable_list.js"
+import BulkSelect from "./hooks/bulk_select.js"
 import {exitReader} from "./reader_exit.js"
 
-let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, ClampText, PdfReader, EpubReader, ImageAnnotations, SortableList }
+let Hooks = { InkMenu, InkDialog, Shelf, LocalTime, ClampText, PdfReader, EpubReader, ImageAnnotations, SortableList, BulkSelect }
 
 Hooks.Sidebar = {
   mounted() {

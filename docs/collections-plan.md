@@ -224,7 +224,13 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
       any (UI setting `home_collections`, on by default, turns it off);
       continue reading shows "in Crisis on Infinite Earths" context? (not done)
       (decide then).
-- [ ] Bulk add: select mode on book/series grids → "Add to collection".
+- [x] Bulk add: select mode on book/series grids → "Add to collection".
+      *Done (mockups settled 2026-11-22):* a Select button in the browse,
+      library/publisher, search and series-issue toolbars; `BulkSelect`
+      (LiveComponent in the app layout + `bulk_select.js` hook): tick boxes
+      on cards (`data-select-id` from `media_card/1`), shift-click ranges,
+      Esc leaves, a bottom bar with a filterable collection menu and "New
+      collection…".
 - [x] Collection cover: owner can pick one (else the first entries' covers).
       *Done:* `cover_book_id`, "Use as cover" in a card's menu (a series
       gives its first book), reset in the collection menu, `cover_book_id` in

@@ -917,6 +917,7 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Issues --%>
       <.section title={gettext("Issues")} count={issue_count}>
         <:actions>
+          <.select_button />
           <form id="issue-sort" phx-change="sort">
             <.ink_select
               id="issue-sort-input"
@@ -932,6 +933,8 @@ defmodule StashixWeb.SeriesLive do
           <%= for book <- @books do %>
             <.media_card
               navigate={~p"/book/#{book}"}
+              select_id={book.id}
+              select_type="book"
               title={book.title}
               cover_url={~p"/api/books/#{book.id}/cover"}
               size="m"

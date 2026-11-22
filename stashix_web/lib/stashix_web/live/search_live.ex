@@ -909,7 +909,8 @@ defmodule StashixWeb.SearchLive do
                 {@filter_count}
               </span>
             </button>
-            <form id="search-sort" phx-change="sort" class="ml-auto">
+            <.select_button class="ml-auto" />
+            <form id="search-sort" phx-change="sort">
               <.ink_select
                 id="search-sort-input"
                 name="value"
@@ -981,6 +982,8 @@ defmodule StashixWeb.SearchLive do
                 :for={{b, i} <- Enum.with_index(@standalone_books)}
                 class={preview_class(i)}
                 navigate={~p"/book/#{slug_param(b)}"}
+                select_id={b.id}
+                select_type="book"
                 title={book_title(b)}
                 cover_url={b.cover && ~p"/api/books/#{b.id}/cover"}
                 size="m"
@@ -1007,6 +1010,8 @@ defmodule StashixWeb.SearchLive do
                 :for={{book, i} <- Enum.with_index(@books)}
                 class={if @params["type"] == "all", do: preview_class(i)}
                 navigate={~p"/book/#{slug_param(book)}"}
+                select_id={book.id}
+                select_type="book"
                 title={book_title(book)}
                 cover_url={book.cover && ~p"/api/books/#{book.id}/cover"}
                 size="m"

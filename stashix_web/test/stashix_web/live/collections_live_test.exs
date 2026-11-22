@@ -224,4 +224,56 @@ defmodule StashixWeb.CollectionsLiveTest do
       assert Collections.containing(owner, {:series, saga.id})[fresh.id] == :direct
     end
   end
+
+  describe "picking several cards" do
+    test "the grids offer Select and their cards can be picked", %{conn: conn, dune: dune} do
+      {:ok, view, _html} = live(conn, ~p"/books")
+      assert has_element?(view, "[data-bulk-toggle]", "Select")
+      assert has_element?(view, ~s|[data-select-type="book"][data-select-id="#{dune.id}"]|)
+
+      {:ok, view, _html} = live(conn, ~p"/series")
+      assert has_element?(view, ~s|[data-select-type="series"]|)
+    end
+
+    test "picked books and series go into a collection", ctx do
+      %{conn: conn, owner: owner, dune: dune, s1: s1} = ctx
+      {:ok, target} = Collections.create(owner, %{name: "Picked"})
+      saga = Repo.get_by!(Series, name: "Saga")
+      {:ok, view, _html} = live(conn, ~p"/books")
+      bulk = element(view, "#bulk-select")
+
+      refute has_element?(view, "#bulk-select-bar")
+      render_hook(bulk, "mode", %{"on" => true})
+      assert has_element?(view, "#bulk-select-bar", "Tap books")
+
+      items = [%{"type" => "book", "id" => dune.id}, %{"type" => "series", "id" => saga.id}]
+      render_hook(bulk, "selection", %{"items" => items})
+      assert has_element?(view, "#bulk-select-bar", "2 selected")
+
+      view |> element("#bulk-select-menu-panel button", "Picked") |> render_click()
+      assert has_element?(view, "#bulk-select-bar", "Added 2 to Picked.")
+      assert_push_event(view, "bulk:clear", %{})
+      assert Collections.containing(owner, {:book, dune.id})[target.id] == :direct
+      assert Collections.containing(owner, {:book, s1.id})[target.id] == :series
+
+      # Again: they're there already.
+      render_hook(bulk, "selection", %{"items" => items})
+      view |> element("#bulk-select-menu-panel button", "Picked") |> render_click()
+      assert has_element?(view, "#bulk-select-bar", "already in Picked")
+    end
+
+    test "a new collection takes the picks", %{conn: conn, owner: owner, dune: dune} do
+      {:ok, view, _html} = live(conn, ~p"/books")
+      bulk = element(view, "#bulk-select")
+      render_hook(bulk, "mode", %{"on" => true})
+      render_hook(bulk, "selection", %{"items" => [%{"type" => "book", "id" => dune.id}]})
+
+      view |> element("#bulk-select-menu-panel button", "New collection…") |> render_click()
+      view |> form("#bulk-select-new-form", %{collection: %{name: "Fresh"}}) |> render_submit()
+
+      [fresh] = owner |> Collections.own() |> Enum.filter(&(&1.name == "Fresh"))
+      assert Collections.containing(owner, {:book, dune.id})[fresh.id] == :direct
+      assert has_element?(view, "#bulk-select-bar", "Added 1 to Fresh.")
+    end
+  end
 end

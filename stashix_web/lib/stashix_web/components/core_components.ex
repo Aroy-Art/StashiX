@@ -16,7 +16,7 @@ defmodule StashixWeb.CoreComponents do
   import StashixWeb.UI.Icon
   import StashixWeb.SlugParam
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
-  import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
+  import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1, text_link: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
@@ -319,6 +319,8 @@ defmodule StashixWeb.CoreComponents do
     default: nil,
     doc: "set when the same item can appear twice on a page, to keep element ids unique"
 
+  attr :select_id, :string, default: nil, doc: "id the bulk selection (`StashixWeb.BulkSelect`) picks it by"
+  attr :select_type, :string, default: nil, values: [nil, "book", "series"]
   attr :class, :string, default: ""
 
   def media_card(assigns) do
@@ -337,7 +339,13 @@ defmodule StashixWeb.CoreComponents do
       |> assign(:page_count_shown, assigns.type == :book and (assigns.page_count || 0) > 0)
 
     ~H"""
-    <.link navigate={@navigate} data-read-mark={@read_mark} class={["media-card group relative block min-w-0", @class]}>
+    <.link
+      navigate={@navigate}
+      data-read-mark={@read_mark}
+      data-select-id={@select_id}
+      data-select-type={@select_id && @select_type}
+      class={["media-card group relative block min-w-0", @class]}
+    >
       <div class="relative">
         <span
           :for={{url, depth} <- @stack |> Enum.take(2) |> Enum.with_index(1) |> Enum.reverse()}
@@ -482,6 +490,8 @@ defmodule StashixWeb.CoreComponents do
           (@series.issue_count && series_count_label(@series.issue_count, @novels))
       }
       type={:series}
+      select_id={@series.id}
+      select_type="series"
       blurhash={@series.cover_blurhash}
       stack={Enum.map(Map.get(@series, :stack_book_ids) || [], &"/api/books/#{&1}/cover?s=s")}
       library_kind={Stashix.Library.cached_library_kind(Map.get(@series, :library_id))}
@@ -545,6 +555,8 @@ defmodule StashixWeb.CoreComponents do
       progress={@progress}
       page_count={if @as != :issue, do: @book.page_count}
       type={:book}
+      select_id={@book.id}
+      select_type="book"
       blurhash={@blurhash || nil}
       library_kind={Stashix.Library.cached_library_kind(Map.get(@book, :library_id))}
       scope={@scope}
@@ -724,7 +736,8 @@ defmodule StashixWeb.CoreComponents do
       <div class="flex flex-wrap items-center gap-1.5">
         <.library_filter :if={length(@libraries) > 1} libraries={@libraries} selected_id={@library_id} />
       </div>
-      <.sort_select options={@sort_options} selected={@sort} class="ml-auto" />
+      <.select_button class="ml-auto" />
+      <.sort_select options={@sort_options} selected={@sort} />
     </div>
     """
   end
@@ -771,6 +784,27 @@ defmodule StashixWeb.CoreComponents do
   def sort_options(:issues) do
     {by_title, rest} = Enum.split(sort_options(:titles), 2)
     by_title ++ [{gettext("Issue # ↑"), "issue_asc"}, {gettext("Issue # ↓"), "issue_desc"}] ++ rest
+  end
+
+  @doc """
+  The Select button of a grid's toolbar: turns on picking several cards to
+  add them to a collection at once (`StashixWeb.BulkSelect`).
+  """
+  attr :class, :any, default: nil
+
+  def select_button(assigns) do
+    ~H"""
+    <.text_link
+      type="button"
+      tone="subtle"
+      data-bulk-toggle
+      phx-click={JS.dispatch("bulk:toggle", to: "#bulk-select")}
+      class={@class}
+    >
+      <.icon name="lucide-square-check" class="w-4 h-4" />
+      <span>{gettext("Select")}</span>
+    </.text_link>
+    """
   end
 
   attr :id, :string, default: "sort-select"
