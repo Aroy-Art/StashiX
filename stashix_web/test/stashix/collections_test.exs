@@ -200,6 +200,28 @@ defmodule Stashix.CollectionsTest do
     assert ids(Collections.books(access, c)) == [ctx.s1.id, ctx.s3.id, ctx.secret.id]
   end
 
+  test "a picked cover leads, for viewers who may see it", ctx do
+    %{owner: owner, owner_access: access, other: other, other_access: other_access} = ctx
+    {:ok, c} = Collections.create(owner, %{name: "Covers", shared: true})
+    {:ok, _} = Collections.add(owner, access, c, {:book, ctx.dune.id})
+    {:ok, _} = Collections.add(owner, access, c, {:series, ctx.saga.id})
+
+    assert Collections.cover_book_id(access, c) == ctx.dune.id
+    {:ok, c} = Collections.set_cover(owner, access, c, {:series, ctx.saga.id})
+    assert c.cover_book_id == ctx.s1.id
+    assert [%{cover_ids: [s1 | _]}] = Collections.list_for(owner, access)
+    assert s1 == ctx.s1.id
+
+    # s2 is adult: the other user gets the first books instead.
+    {:ok, c} = Collections.set_cover(owner, access, c, {:book, ctx.s2.id})
+    assert Collections.cover_book_id(access, c) == ctx.s2.id
+    assert Collections.cover_book_id(other_access, c) == ctx.dune.id
+    assert {:error, :forbidden} = Collections.set_cover(other, other_access, c, nil)
+
+    {:ok, c} = Collections.set_cover(owner, access, c, nil)
+    assert c.cover_book_id == nil
+  end
+
   test "deleting a book or series removes its entries", ctx do
     %{owner: owner, owner_access: access} = ctx
     {:ok, c} = Collections.create(owner, %{name: "Gone"})

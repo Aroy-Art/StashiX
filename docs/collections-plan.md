@@ -225,7 +225,10 @@ The store API calls shelves tags: sync items `NewTag` / `ChangedTag` /
       continue reading shows "in Crisis on Infinite Earths" context? (not done)
       (decide then).
 - [ ] Bulk add: select mode on book/series grids → "Add to collection".
-- [ ] Collection cover: owner can pick one (else the first entries' covers).
+- [x] Collection cover: owner can pick one (else the first entries' covers).
+      *Done:* `cover_book_id`, "Use as cover" in a card's menu (a series
+      gives its first book), reset in the collection menu, `cover_book_id` in
+      the API; a viewer who may not see the picked book gets the first books.
 - [ ] Download a collection as ZIP (reuses `DownloadController`; download
       permission per book).
 

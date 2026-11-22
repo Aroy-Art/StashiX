@@ -162,6 +162,16 @@ defmodule StashixWeb.CollectionsLiveTest do
     assert Collections.entries(Access.for_user(owner), c) |> Enum.map(& &1.id) == [e_saga.id, e_dune.id]
   end
 
+  test "the owner picks a card as the cover, and resets it", %{conn: conn, c: c, e_saga: e_saga, s1: s1} do
+    {:ok, view, _html} = live(conn, ~p"/collection/#{c.id}")
+    view |> element("#entry-menu-#{e_saga.id} button", "Use as cover") |> render_click()
+    assert Repo.reload!(c).cover_book_id == s1.id
+    refute has_element?(view, "#entry-menu-#{e_saga.id} button", "Use as cover")
+
+    view |> element("#collection-menu button", "Use the first books") |> render_click()
+    assert Repo.reload!(c).cover_book_id == nil
+  end
+
   test "others see it only when shared, read-only", %{other_conn: conn, owner: owner, c: c} do
     assert {:error, {:live_redirect, %{to: "/collections"}}} = live(conn, ~p"/collection/#{c.id}")
 

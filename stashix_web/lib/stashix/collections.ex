@@ -44,7 +44,7 @@ defmodule Stashix.Collections do
     collections
     |> Enum.map(fn c ->
       ids = Map.get(expanded, c.id, [])
-      %{collection: c, own?: c.user_id == user_id, count: length(ids), cover_ids: Enum.take(ids, 4)}
+      %{collection: c, own?: c.user_id == user_id, count: length(ids), cover_ids: cover_ids(c, ids)}
     end)
     |> Enum.filter(&(&1.own? or &1.count > 0))
     |> Enum.sort_by(&{not &1.own?, String.downcase(&1.collection.name)})
@@ -55,6 +55,51 @@ defmodule Stashix.Collections do
     case query |> String.trim() |> String.downcase() do
       "" -> []
       q -> user |> list_for(access) |> Enum.filter(&String.contains?(String.downcase(&1.collection.name), q))
+    end
+  end
+
+  # The picked cover first, when the viewer may see that book; then the first books.
+  defp cover_ids(%Collection{cover_book_id: cover}, ids) do
+    if cover && cover in ids, do: [cover | List.delete(ids, cover)] |> Enum.take(4), else: Enum.take(ids, 4)
+  end
+
+  @doc """
+  The book whose cover stands for the collection, for a viewer: the picked
+  one if they may see it, else the first book. nil when empty.
+  """
+  def cover_book_id(%Access{} = access, %Collection{} = c) do
+    ids = [c.id] |> expanded_ids(access) |> Map.get(c.id, [])
+    ids |> then(&cover_ids(c, &1)) |> List.first()
+  end
+
+  @doc """
+  Picks the collection's cover: a book (`{:book, id}`), a series (its first
+  book the owner may read: `{:series, id}`), or nil to go back to the first
+  books.
+  """
+  def set_cover(%User{} = user, %Access{} = access, %Collection{} = c, item) do
+    with :ok <- check_owner(c, user),
+         {:ok, book_id} <- cover_for(access, item) do
+      c |> Ecto.Changeset.change(cover_book_id: book_id) |> Repo.update()
+    end
+  end
+
+  defp cover_for(_access, nil), do: {:ok, nil}
+
+  defp cover_for(access, {:book, id}),
+    do: if(readable?(access, :book, id), do: {:ok, id}, else: {:error, :not_found})
+
+  defp cover_for(access, {:series, id}) do
+    from(b in Access.books(access),
+      where: b.series_id == ^id and is_nil(b.deleted_at),
+      order_by: [asc_nulls_last: b.issue_number, asc: b.title],
+      limit: 1,
+      select: b.id
+    )
+    |> Repo.one()
+    |> case do
+      nil -> {:error, :not_found}
+      book_id -> {:ok, book_id}
     end
   end
 

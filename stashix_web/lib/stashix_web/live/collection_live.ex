@@ -13,6 +13,8 @@ defmodule StashixWeb.CollectionLive do
   """
   use StashixWeb, :live_view
 
+  require Ecto.Query
+
   alias Phoenix.LiveView.JS
   alias Stashix.{Collections, Library}
   alias Stashix.Library.Collection
@@ -78,7 +80,12 @@ defmodule StashixWeb.CollectionLive do
       progress: progress,
       read: read,
       read_next: Enum.find(all_books, &((progress[&1.id] || 0.0) < 1.0)),
-      cover: List.first(all_books)
+      cover_id: Collections.cover_book_id(access, c),
+      cover_series_id:
+        c.cover_book_id &&
+          Stashix.Repo.one(
+            Ecto.Query.from(b in Stashix.Library.Book, where: b.id == ^c.cover_book_id, select: b.series_id)
+          )
     )
   end
 
@@ -162,6 +169,27 @@ defmodule StashixWeb.CollectionLive do
     {:noreply, load(socket)}
   end
 
+  def handle_event("set_cover", %{"id" => id}, socket) do
+    %{current_user: user, access: access, collection: c, entries: entries} = socket.assigns
+
+    with %{} = entry <- Enum.find(entries, &(&1.id == id)),
+         item = if(entry.book_id, do: {:book, entry.book_id}, else: {:series, entry.series_id}),
+         {:ok, c} <- Collections.set_cover(user, access, c, item) do
+      {:noreply, reloaded(socket, c)}
+    else
+      _ -> {:noreply, socket}
+    end
+  end
+
+  def handle_event("reset_cover", _params, socket) do
+    %{current_user: user, access: access, collection: c} = socket.assigns
+
+    case Collections.set_cover(user, access, c, nil) do
+      {:ok, c} -> {:noreply, reloaded(socket, c)}
+      _ -> {:noreply, socket}
+    end
+  end
+
   # Drag and drop (the Sortable hook): the entry's new place among the rest.
   def handle_event("reorder", %{"id" => id, "index" => index}, socket) when is_integer(index) do
     Collections.move(socket.assigns.current_user, socket.assigns.collection, id, index)
@@ -182,7 +210,7 @@ defmodule StashixWeb.CollectionLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <.page wide fade cover_src={@cover && ~p"/api/books/#{@cover.id}/cover?s=s"}>
+    <.page wide fade cover_src={@cover_id && ~p"/api/books/#{@cover_id}/cover?s=s"}>
       <.page_hero title={@collection.name} eyebrow={eyebrow(@collection, @owner?)} count={@total > 0 && @total}>
         <:meta>
           <span>
@@ -207,6 +235,9 @@ defmodule StashixWeb.CollectionLive do
             <.menu_item icon="lucide-pencil" phx-click="edit">{gettext("Edit name and description")}</.menu_item>
             <.menu_item icon="lucide-share-2" phx-click="toggle_share">
               {if @collection.shared, do: gettext("Stop sharing"), else: gettext("Share with everyone")}
+            </.menu_item>
+            <.menu_item :if={@collection.cover_book_id} icon="lucide-image-off" phx-click="reset_cover">
+              {gettext("Use the first books' covers")}
             </.menu_item>
             <.menu_separator />
             <.menu_item
@@ -243,7 +274,7 @@ defmodule StashixWeb.CollectionLive do
                   read={@progress[entry.book.id]}
                 />
                 <.series_card :if={entry.series} series={entry.series} subtitle={gettext("Whole series")} />
-                <.entry_menu :if={@owner?} entry={entry} />
+                <.entry_menu :if={@owner?} entry={entry} cover?={cover_entry?(entry, @collection, @cover_series_id)} />
               </div>
             </.cover_grid>
           </div>
@@ -301,6 +332,7 @@ defmodule StashixWeb.CollectionLive do
   end
 
   attr :entry, :map, required: true
+  attr :cover?, :boolean, default: false
 
   # The owner's menu on a card: sits over the card's corner, outside its link.
   defp entry_menu(assigns) do
@@ -319,6 +351,9 @@ defmodule StashixWeb.CollectionLive do
         <.menu_item icon="lucide-arrow-down-to-line" phx-click="move_entry" phx-value-id={@entry.id} phx-value-to="bottom">
           {gettext("Move to bottom")}
         </.menu_item>
+        <.menu_item :if={!@cover?} icon="lucide-image" phx-click="set_cover" phx-value-id={@entry.id}>
+          {gettext("Use as cover")}
+        </.menu_item>
         <.menu_separator />
         <.menu_item icon="lucide-x" tone="danger" phx-click="remove_entry" phx-value-id={@entry.id}>
           {gettext("Remove from collection")}
@@ -327,6 +362,13 @@ defmodule StashixWeb.CollectionLive do
     </div>
     """
   end
+
+  # Whether the picked cover comes from this entry: its book, or (for a
+  # series entry) the cover book's series.
+  defp cover_entry?(_entry, %{cover_book_id: nil}, _cover_series_id), do: false
+  defp cover_entry?(%{book_id: id}, %{cover_book_id: id}, _) when not is_nil(id), do: true
+  defp cover_entry?(%{series_id: sid}, _collection, sid) when not is_nil(sid), do: true
+  defp cover_entry?(_entry, _collection, _cover_series_id), do: false
 
   defp eyebrow(c, true),
     do: if(c.shared, do: gettext("Collection · yours · shared"), else: gettext("Collection · yours"))

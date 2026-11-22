@@ -472,6 +472,12 @@ defmodule StashixWeb.Schemas do
         owner: %Schema{type: :string, description: "Owner's user name"},
         default_sort: %Schema{type: :string, enum: ["position", "title", "year", "added"]},
         book_count: %Schema{type: :integer},
+        cover_book_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "Picked cover book, when the caller may see it; else the first books stand for it"
+        },
         inserted_at: %Schema{type: :string, format: :"date-time"},
         updated_at: %Schema{type: :string, format: :"date-time"}
       },
@@ -521,7 +527,13 @@ defmodule StashixWeb.Schemas do
         name: %Schema{type: :string, maxLength: 120},
         description: %Schema{type: :string, nullable: true, maxLength: 4000},
         shared: %Schema{type: :boolean},
-        default_sort: %Schema{type: :string, enum: ["position", "title", "year", "added"]}
+        default_sort: %Schema{type: :string, enum: ["position", "title", "year", "added"]},
+        cover_book_id: %Schema{
+          type: :string,
+          format: :uuid,
+          nullable: true,
+          description: "Update only: a book to stand for the collection, or null for the first books"
+        }
       }
     })
   end

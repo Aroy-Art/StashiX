@@ -72,6 +72,27 @@ defmodule StashixWeb.CollectionApiTest do
     assert conn |> get(~p"/api/collections/#{id}") |> json_response(404)
   end
 
+  test "the cover is picked and reset through update", %{conn: conn, owner: owner, dune: dune, s1: s1} do
+    {:ok, c} = Collections.create(owner, %{name: "Covered"})
+    {:ok, _} = Collections.add(owner, Access.for_user(owner), c, {:book, dune.id})
+
+    assert %{"cover_book_id" => nil} = conn |> patch(~p"/api/collections/#{c.id}", %{}) |> json_response(200)
+
+    assert %{"cover_book_id" => id} =
+             conn |> patch(~p"/api/collections/#{c.id}", %{cover_book_id: dune.id}) |> json_response(200)
+
+    assert id == dune.id
+
+    # A book outside the collection can be picked but only shows when in it.
+    assert %{"cover_book_id" => nil} =
+             conn |> patch(~p"/api/collections/#{c.id}", %{cover_book_id: s1.id}) |> json_response(200)
+
+    assert conn |> patch(~p"/api/collections/#{c.id}", %{cover_book_id: "nope"}) |> json_response(422)
+
+    assert %{"cover_book_id" => nil} =
+             conn |> patch(~p"/api/collections/#{c.id}", %{cover_book_id: nil}) |> json_response(200)
+  end
+
   test "names must be there and unique", %{conn: conn} do
     assert %{"errors" => %{"name" => _}} = conn |> post(~p"/api/collections", %{name: ""}) |> json_response(422)
     conn |> post(~p"/api/collections", %{name: "Twice"}) |> json_response(201)

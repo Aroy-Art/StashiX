@@ -123,10 +123,18 @@ defmodule StashixWeb.CollectionController do
 
   def update(conn, %{"id" => id} = params) do
     with {:ok, c} <- fetch(conn, id) do
-      case Collections.update(conn.assigns.current_user, c, collection_params(params)) do
-        {:ok, c} -> json(conn, summary_json(conn, Stashix.Repo.preload(c, :user, force: true)))
-        {:error, :forbidden} -> forbidden(conn)
-        {:error, changeset} -> validation_error(conn, changeset)
+      with {:ok, c} <- Collections.update(conn.assigns.current_user, c, collection_params(params)),
+           {:ok, c} <- maybe_set_cover(conn, c, params) do
+        json(conn, summary_json(conn, Stashix.Repo.preload(c, :user, force: true)))
+      else
+        {:error, :not_found} ->
+          conn |> put_status(:unprocessable_entity) |> json(%{errors: %{cover_book_id: ["no such book"]}})
+
+        {:error, :forbidden} ->
+          forbidden(conn)
+
+        {:error, changeset} ->
+          validation_error(conn, changeset)
       end
     end
   end
@@ -252,9 +260,21 @@ defmodule StashixWeb.CollectionController do
 
   defp load_entry(access, c, entry_id), do: access |> Collections.entries(c) |> Enum.find(&(&1.id == entry_id))
 
+  defp maybe_set_cover(conn, c, %{"cover_book_id" => id}) do
+    %{current_user: user, access: access} = conn.assigns
+
+    case id && Ecto.UUID.cast(id) do
+      nil -> Collections.set_cover(user, access, c, nil)
+      {:ok, id} -> Collections.set_cover(user, access, c, {:book, id})
+      :error -> {:error, :not_found}
+    end
+  end
+
+  defp maybe_set_cover(_conn, c, _params), do: {:ok, c}
+
   defp collection_params(params), do: Map.take(params, ~w(name description shared default_sort))
 
-  defp collection_json(%{collection: c, own?: own?, count: count}) do
+  defp collection_json(%{collection: c, own?: own?, count: count, cover_ids: cover_ids}) do
     %{
       id: c.id,
       name: c.name,
@@ -264,14 +284,21 @@ defmodule StashixWeb.CollectionController do
       owner: c.user.username,
       default_sort: c.default_sort,
       book_count: count,
+      cover_book_id: if(c.cover_book_id in cover_ids, do: c.cover_book_id),
       inserted_at: c.inserted_at,
       updated_at: c.updated_at
     }
   end
 
   defp summary_json(conn, c) do
-    count = [c.id] |> Collections.expanded_ids(conn.assigns.access) |> Map.get(c.id, []) |> length()
-    collection_json(%{collection: c, own?: Collections.owner?(c, conn.assigns.current_user), count: count})
+    ids = [c.id] |> Collections.expanded_ids(conn.assigns.access) |> Map.get(c.id, [])
+
+    collection_json(%{
+      collection: c,
+      own?: Collections.owner?(c, conn.assigns.current_user),
+      count: length(ids),
+      cover_ids: ids
+    })
   end
 
   defp entry_json(entry) do

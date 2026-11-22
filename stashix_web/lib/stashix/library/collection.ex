@@ -29,6 +29,8 @@ defmodule Stashix.Library.Collection do
     field :kind, :string, default: "manual"
     field :rules, :map
     field :default_sort, :string, default: "position"
+    # Picked by the owner (`Stashix.Collections.set_cover/4`); nil: the first books.
+    field :cover_book_id, :binary_id
 
     belongs_to :user, Stashix.Accounts.User
     has_many :entries, Stashix.Library.CollectionEntry
