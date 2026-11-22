@@ -32,6 +32,10 @@ defmodule StashixWeb.Router do
     plug StashixWeb.Plugs.AssignAccess
   end
 
+  pipeline :csrf do
+    plug :protect_from_forgery
+  end
+
   pipeline :auth do
     plug Stashix.Auth.Pipeline
     plug :require_authenticated
@@ -194,6 +198,13 @@ defmodule StashixWeb.Router do
     get "/series/:id/download", DownloadController, :series
     get "/collections/:id/download", DownloadController, :collection
     get "/metadata/image", MetadataImageController, :show
+  end
+
+  # Posted by a browser form, so it needs the CSRF token.
+  scope "/api", StashixWeb do
+    pipe_through [:media, :csrf]
+
+    post "/download", DownloadController, :selection
   end
 
   scope "/api", StashixWeb do

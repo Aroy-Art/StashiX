@@ -160,6 +160,22 @@ defmodule StashixWeb.DownloadTest do
              ["001 - Kickdown.cbz", "002 - Kickdown.cbz"]
   end
 
+  test "picked books and series download as one ZIP, in the order picked", ctx do
+    %{conn: conn, series: series, second: second} = ctx
+    token = Plug.CSRFProtection.get_csrf_token()
+    conn = Plug.Test.init_test_session(conn, %{"_csrf_token" => Plug.CSRFProtection.dump_state()})
+    items = ["book:#{second.id}", "series:#{series.id}", "nonsense", "book:not-a-uuid"]
+
+    conn = post(conn, ~p"/api/download", %{"_csrf_token" => token, "items" => items})
+    assert [disposition] = get_resp_header(conn, "content-disposition")
+    assert disposition =~ "Stashix.zip"
+    assert unzip(conn) == %{"001 - Kickdown.cbz" => "cbz two", "002 - Kickdown 1.pdf" => "pdf one"}
+
+    # Without the token: refused.
+    unsafe = Plug.Conn.put_private(ctx.conn, :plug_skip_csrf_protection, false)
+    assert_error_sent 403, fn -> post(unsafe, ~p"/api/download", %{"items" => items}) end
+  end
+
   describe "without download permission" do
     setup %{user: user, lib: lib} do
       {:ok, _} = Library.set_library_permission(%{user_id: user.id, library_id: lib.id, can_download: false})

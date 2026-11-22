@@ -85,23 +85,49 @@ defmodule StashixWeb.DownloadController do
   def collection(conn, %{"id" => id} = params) do
     %{access: access, current_user: user} = conn.assigns
 
-    with {:ok, c} <- Stashix.Collections.get(user, access, id),
-         [_ | _] = files <- Stashix.Collections.download_files(access, c, requested_formats(params)) do
-      width = files |> length() |> Integer.to_string() |> String.length() |> max(3)
+    case Stashix.Collections.get(user, access, id) do
+      {:ok, c} ->
+        files = Stashix.Collections.download_files(access, c, requested_formats(params))
+        send_numbered(conn, files, safe_name(c.name) <> ".zip")
 
-      entries =
-        files
-        |> Enum.with_index(1)
-        |> Enum.map(fn {{_book, file}, i} ->
-          {"#{String.pad_leading(to_string(i), width, "0")} - #{Path.basename(file.path)}", file.path}
-        end)
+      _ ->
+        not_found(conn)
+    end
+  end
 
-      case ZipStream.plan(entries) do
-        [] -> not_found(conn)
-        planned -> send_zip(conn, planned, safe_name(c.name) <> ".zip")
-      end
-    else
-      _ -> not_found(conn)
+  @doc false
+  # Not in the API docs: the browser posts it from the selection bar
+  # (`StashixWeb.BulkSelect`), with the session and a CSRF token.
+  def selection(conn, params) do
+    items =
+      for item <- List.wrap(params["items"]),
+          is_binary(item),
+          [type, id] <- [String.split(item, ":", parts: 2)],
+          type in ["book", "series"],
+          {:ok, id} <- [Ecto.UUID.cast(id)],
+          do: {String.to_existing_atom(type), id}
+
+    access = conn.assigns.access
+    files = Library.download_files(access, Library.picked_books(access, items), requested_formats(params))
+    send_numbered(conn, files, "Stashix.zip")
+  end
+
+  # One ZIP of `[{book, file}]`, numbered in order ("001 - name").
+  defp send_numbered(conn, [], _filename), do: not_found(conn)
+
+  defp send_numbered(conn, files, filename) do
+    width = files |> length() |> Integer.to_string() |> String.length() |> max(3)
+
+    entries =
+      files
+      |> Enum.with_index(1)
+      |> Enum.map(fn {{_book, file}, i} ->
+        {"#{String.pad_leading(to_string(i), width, "0")} - #{Path.basename(file.path)}", file.path}
+      end)
+
+    case ZipStream.plan(entries) do
+      [] -> not_found(conn)
+      planned -> send_zip(conn, planned, filename)
     end
   end
 

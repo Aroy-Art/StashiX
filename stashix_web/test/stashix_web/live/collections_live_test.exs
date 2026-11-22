@@ -275,5 +275,75 @@ defmodule StashixWeb.CollectionsLiveTest do
       assert Collections.containing(owner, {:book, dune.id})[fresh.id] == :direct
       assert has_element?(view, "#bulk-select-bar", "Added 1 to Fresh.")
     end
+
+    test "picks are marked read and unread from the bar", %{conn: conn, owner: owner, dune: dune, s1: s1} do
+      saga = Repo.get_by!(Series, name: "Saga")
+      {:ok, view, _html} = live(conn, ~p"/")
+      bulk = element(view, "#bulk-select")
+      render_hook(bulk, "mode", %{"on" => true})
+
+      render_hook(bulk, "selection", %{
+        "items" => [%{"type" => "book", "id" => dune.id}, %{"type" => "series", "id" => saga.id}]
+      })
+
+      view |> element("#bulk-select-more-panel button", "Mark as read") |> render_click()
+      assert has_element?(view, "#bulk-select-bar", "Marked 2 books as read.")
+      assert Library.progress_map(owner.id, [dune.id, s1.id]) == %{dune.id => 1.0, s1.id => 1.0}
+
+      view |> element("#bulk-select-more-panel button", "Mark as unread") |> render_click()
+      assert Library.progress_map(owner.id, [dune.id, s1.id]) == %{}
+    end
+  end
+
+  describe "card menu" do
+    test "a book's menu tells what it is and acts on it", %{conn: conn, owner: owner, s1: s1, c: c} do
+      {:ok, view, _html} = live(conn, ~p"/books")
+      menu = element(view, "#card-menu")
+      refute has_element?(view, "#card-menu-panel")
+
+      render_hook(menu, "open", %{"type" => "book", "id" => s1.id})
+      assert has_element?(view, "#card-menu-panel", "Saga #1")
+      assert has_element?(view, "#card-menu-panel", "Chapter One")
+      assert has_element?(view, "#card-menu-panel", "Unread")
+      assert has_element?(view, ~s|#card-menu-panel a[href^="/read/"]|, "Read")
+      assert has_element?(view, "#card-menu-panel a", "Open series")
+      refute has_element?(view, "#card-menu-panel button", "Mark as unread")
+
+      view |> element("#card-menu-panel button", "Mark as read") |> render_click()
+      refute has_element?(view, "#card-menu-panel")
+      assert Library.progress_map(owner.id, [s1.id]) == %{s1.id => 1.0}
+
+      render_hook(menu, "open", %{"type" => "book", "id" => s1.id})
+      assert has_element?(view, "#card-menu-panel", "Read again")
+      assert has_element?(view, "#card-menu-panel button", "Mark as unread")
+
+      # Add to collection: a checklist, ticking adds the book on its own.
+      view |> element("#card-menu-panel button", "Add to collection") |> render_click()
+      assert has_element?(view, "#card-menu-#{c.id}", "via series")
+      view |> element("#card-menu-#{c.id}") |> render_click()
+      assert Collections.containing(owner, {:book, s1.id})[c.id] == :direct
+
+      render_hook(menu, "close", %{})
+      refute has_element?(view, "#card-menu-panel")
+    end
+
+    test "a series' menu continues where the reader is", %{conn: conn, owner: owner, s1: s1} do
+      saga = Repo.get_by!(Series, name: "Saga")
+      {:ok, _s2} = Library.create_book(%{title: "Two", issue_number: 2, library_id: s1.library_id, series_id: saga.id})
+      Library.set_read(Access.for_user(owner), owner.id, [{:book, s1.id}], true)
+
+      {:ok, view, _html} = live(conn, ~p"/")
+      render_hook(element(view, "#card-menu"), "open", %{"type" => "series", "id" => saga.id})
+      assert has_element?(view, "#card-menu-panel", "1 of 2 read")
+      assert has_element?(view, ~s|#card-menu-panel a[href^="/read/"]|, "Continue with #2")
+      assert has_element?(view, "#card-menu-panel button", "Mark all as read")
+    end
+
+    test "what the viewer can't see opens nothing", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/books")
+      render_hook(element(view, "#card-menu"), "open", %{"type" => "book", "id" => Ecto.UUID.generate()})
+      render_hook(element(view, "#card-menu"), "open", %{"type" => "book", "id" => "nope"})
+      refute has_element?(view, "#card-menu-panel")
+    end
   end
 end

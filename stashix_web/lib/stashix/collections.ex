@@ -428,21 +428,7 @@ defmodule Stashix.Collections do
   """
   def download_files(%Access{} = access, %Collection{} = c, formats \\ nil) do
     {books, _total} = books(access, c)
-    books = Enum.filter(books, &Access.can_download?(access, &1.library_id))
-    files_query = from(f in Stashix.Library.BookFile, where: is_nil(f.deleted_at))
-    books = Repo.preload(books, files: files_query)
-
-    Enum.flat_map(books, fn book ->
-      files = Enum.sort_by(book.files, &Stashix.Media.Formats.reading_rank(&1.format))
-
-      picked =
-        case formats do
-          nil -> Enum.take(files, 1)
-          formats -> Enum.filter(files, &(&1.format in formats))
-        end
-
-      Enum.map(picked, &{book, &1})
-    end)
+    Stashix.Library.download_files(access, books, formats)
   end
 
   @doc "Ids of the viewer's books in each collection, in collection order: `%{collection_id => [book_id]}`."

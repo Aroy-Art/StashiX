@@ -11,7 +11,9 @@
 // [data-select-type]) and a click on one ticks it instead of opening it;
 // shift-click ticks the range from the last one, Esc leaves. Picks survive
 // page patches (paging, sorting) and are reported to the component as
-// "selection"; it pushes "bulk:clear" once they are added.
+// "selection"; it pushes "bulk:clear" once they are added. "bulk:start"
+// (from the card menu) turns the mode on with one card picked;
+// "bulk:download" posts the picks to /api/download for one ZIP.
 
 const key = (el) => `${el.dataset.selectType}:${el.dataset.selectId}`
 
@@ -23,11 +25,13 @@ const BulkSelect = {
 
     this.el.addEventListener("bulk:toggle", () => this.setMode(!this.on))
     this.el.addEventListener("bulk:clear", () => this.clear())
+    this.el.addEventListener("bulk:start", (e) => this.start(e.detail))
+    this.el.addEventListener("bulk:download", () => this.download())
     this.handleEvent("bulk:clear", () => this.clear(false))
 
     // Window, capture phase: before LiveView's link handling sees the click.
     this.onClick = (e) => {
-      if (!this.on || e.button !== 0) return
+      if (!this.on || e.button !== 0 || document.documentElement.hasAttribute("data-card-menu")) return
       const card = e.target.closest("[data-select-id][data-select-type]")
       if (!card || this.el.contains(card)) return
       e.preventDefault()
@@ -35,7 +39,13 @@ const BulkSelect = {
       this.toggle(card, e.shiftKey)
     }
     this.onKey = (e) => {
-      if (this.on && e.key === "Escape" && !document.querySelector("dialog[open], :popover-open")) this.setMode(false)
+      if (
+        this.on &&
+        e.key === "Escape" &&
+        !document.querySelector("dialog[open], :popover-open") &&
+        !document.documentElement.hasAttribute("data-card-menu")
+      )
+        this.setMode(false)
     }
     window.addEventListener("click", this.onClick, true)
     window.addEventListener("keydown", this.onKey)
@@ -65,6 +75,35 @@ const BulkSelect = {
     document.querySelectorAll("[data-bulk-toggle]").forEach((b) => b.setAttribute("aria-pressed", String(on)))
     this.paint()
     this.pushEventTo(this.el, "mode", {on})
+  },
+
+  start({type, id}) {
+    if (!this.on) this.setMode(true)
+    const card = this.cards().find((c) => c.dataset.selectType === type && c.dataset.selectId === id)
+    this.picked.set(`${type}:${id}`, {selectType: type, selectId: id})
+    if (card) this.last = card
+    this.paint()
+    this.report()
+  },
+
+  download() {
+    if (this.picked.size === 0) return
+    const form = document.createElement("form")
+    form.method = "post"
+    form.action = "/api/download"
+    form.hidden = true
+    const field = (name, value) => {
+      const input = document.createElement("input")
+      input.type = "hidden"
+      input.name = name
+      input.value = value
+      form.appendChild(input)
+    }
+    field("_csrf_token", document.querySelector("meta[name='csrf-token']")?.content || "")
+    this.picked.forEach((d) => field("items[]", `${d.selectType}:${d.selectId}`))
+    document.body.appendChild(form)
+    form.submit()
+    form.remove()
   },
 
   clear(report = true) {

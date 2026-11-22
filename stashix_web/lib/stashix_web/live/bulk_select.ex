@@ -12,7 +12,11 @@ defmodule StashixWeb.BulkSelect do
   `media_card/1`) into ticks, shift-click picks a range, Esc leaves. The hook
   reports the mode (`"mode"`) and the picked items (`"selection"`); this
   component shows the bar at the bottom and adds them to the collection
-  chosen there, or to a new one.
+  chosen there, or to a new one. Its ⋯ menu marks them read or unread and
+  downloads them as one ZIP (the hook posts them to `/api/download`).
+
+  The card menu (`StashixWeb.CardMenu`) also starts the mode, with the card
+  it was opened on picked.
   """
   use StashixWeb, :live_component
 
@@ -48,6 +52,18 @@ defmodule StashixWeb.BulkSelect do
       nil -> {:noreply, socket}
       c -> {:noreply, add_all(socket, c)}
     end
+  end
+
+  def handle_event("read", %{"read" => read}, socket) do
+    %{current_user: user, access: access, items: items} = socket.assigns
+    count = Stashix.Library.set_read(access, user.id, items, read == "true")
+
+    text =
+      if read == "true",
+        do: ngettext("Marked 1 book as read.", "Marked %{count} books as read.", count),
+        else: ngettext("Marked 1 book as unread.", "Marked %{count} books as unread.", count)
+
+    {:noreply, assign(socket, notice: %{text: text, id: nil})}
   end
 
   def handle_event("new", _params, socket),
@@ -104,8 +120,10 @@ defmodule StashixWeb.BulkSelect do
       >
         <p class="text-sm tabular-nums">
           <%= cond do %>
-            <% @notice -> %>
+            <% @notice && @notice.id -> %>
               <.link navigate={~p"/collection/#{@notice.id}"} class="text-ink hover:underline">{@notice.text}</.link>
+            <% @notice -> %>
+              <span class="text-ink">{@notice.text}</span>
             <% @items == [] -> %>
               <span class="text-muted">{gettext("Tap books or series to pick them; Shift picks a range.")}</span>
             <% true -> %>
@@ -150,6 +168,27 @@ defmodule StashixWeb.BulkSelect do
             </p>
             <.menu_separator :if={@collections != []} />
             <.menu_item icon="lucide-plus" phx-click="new" phx-target={@myself}>{gettext("New collection…")}</.menu_item>
+          </.ink_menu>
+          <.ink_menu id={"#{@id}-more"} align="end" panel_class="w-56">
+            <:trigger
+              class={[
+                "inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors",
+                if(@items == [], do: "text-faint pointer-events-none", else: "text-fg-soft hover:text-fg hover:bg-fg/10")
+              ]}
+              label={gettext("More actions")}
+            >
+              <.icon name="lucide-ellipsis" class="w-4 h-4" />
+            </:trigger>
+            <.menu_item icon="lucide-circle-check-big" phx-click="read" phx-value-read="true" phx-target={@myself}>
+              {gettext("Mark as read")}
+            </.menu_item>
+            <.menu_item icon="lucide-circle-x" phx-click="read" phx-value-read="false" phx-target={@myself}>
+              {gettext("Mark as unread")}
+            </.menu_item>
+            <.menu_separator />
+            <.menu_item icon="lucide-download" phx-click={JS.dispatch("bulk:download", to: "##{@id}")}>
+              {gettext("Download as ZIP")}
+            </.menu_item>
           </.ink_menu>
           <.text_link type="button" tone="subtle" phx-click={JS.dispatch("bulk:clear", to: "##{@id}")}>
             {gettext("Clear")}

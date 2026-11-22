@@ -406,6 +406,88 @@ defmodule Stashix.Library do
   defp clamp_progression(p) when is_number(p), do: p |> max(0.0) |> min(1.0) |> Kernel.*(1.0)
   defp clamp_progression(_), do: nil
 
+  @doc """
+  Marks the books of `items` (`{:book | :series, id}`, see `picked_books/2`)
+  read or unread for the user: read puts them on their last page, unread back
+  at the start. Returns how many books changed.
+  """
+  def set_read(access, user_id, items, read?) do
+    books = picked_books(access, items)
+    now = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
+
+    books
+    |> Enum.map(fn b ->
+      %{
+        id: Ecto.UUID.generate(),
+        user_id: user_id,
+        book_id: b.id,
+        current_page: if(read?, do: max(b.page_count - 1, 0), else: 0),
+        progression: if(read?, do: 1.0, else: 0.0),
+        locator: nil,
+        updated_at: now
+      }
+    end)
+    |> Enum.chunk_every(1000)
+    |> Enum.each(
+      &Repo.insert_all(ReadingProgress, &1,
+        on_conflict: {:replace, [:current_page, :progression, :locator, :updated_at]},
+        conflict_target: [:user_id, :book_id]
+      )
+    )
+
+    length(books)
+  end
+
+  @doc """
+  The visible books of picked items, each `{:book, id}` or `{:series, id}`:
+  in the order picked, a series as its books in reading order, each book once.
+  """
+  def picked_books(access, items) do
+    book_ids = for {:book, id} <- items, do: id
+    series_ids = for {:series, id} <- items, do: id
+
+    books =
+      from(b in Access.books(access),
+        where: is_nil(b.deleted_at) and (b.id in ^book_ids or b.series_id in ^series_ids)
+      )
+      |> Repo.all()
+
+    by_id = Map.new(books, &{&1.id, &1})
+    by_series = Enum.group_by(books, & &1.series_id)
+
+    items
+    |> Enum.flat_map(fn
+      {:book, id} -> List.wrap(by_id[id])
+      {:series, id} -> sort_reading_order(by_series[id] || [])
+    end)
+    |> Enum.uniq_by(& &1.id)
+  end
+
+  @doc """
+  The files to download `books` as, in their order: per book its best format
+  (`Stashix.Media.Formats.reading_rank/1`), or every file in `formats` when
+  given; only books in libraries the viewer may download from.
+  `[{book, book_file}]`.
+  """
+  def download_files(access, books, formats \\ nil) do
+    files_query = from(f in BookFile, where: is_nil(f.deleted_at))
+
+    books
+    |> Enum.filter(&Access.can_download?(access, &1.library_id))
+    |> Repo.preload(files: files_query)
+    |> Enum.flat_map(fn book ->
+      files = Enum.sort_by(book.files, &Stashix.Media.Formats.reading_rank(&1.format))
+
+      picked =
+        case formats do
+          nil -> Enum.take(files, 1)
+          formats -> Enum.filter(files, &(&1.format in formats))
+        end
+
+      Enum.map(picked, &{book, &1})
+    end)
+  end
+
   def get_progress(user_id, book_id) do
     Repo.get_by(ReadingProgress, user_id: user_id, book_id: book_id)
   end

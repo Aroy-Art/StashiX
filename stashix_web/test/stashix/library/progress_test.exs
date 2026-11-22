@@ -86,5 +86,35 @@ defmodule Stashix.Library.ProgressTest do
              [locator: %{"type" => "pdf"}]
   end
 
+  test "picked books and series are marked read or unread at once", %{user: user, access: access} = ctx do
+    lib_id = ctx.comic.library_id
+    series = Stashix.Repo.insert!(%Stashix.Library.Series{name: "Run", library_id: lib_id})
+
+    [two, one] =
+      for n <- [2, 1] do
+        {:ok, b} =
+          Library.create_book(%{
+            title: "Run #{n}",
+            issue_number: n,
+            page_count: 20,
+            library_id: lib_id,
+            series_id: series.id
+          })
+
+        b
+      end
+
+    picked = [{:book, ctx.novel.id}, {:series, series.id}, {:book, one.id}]
+    assert Enum.map(Library.picked_books(access, picked), & &1.id) == [ctx.novel.id, one.id, two.id]
+
+    {:ok, _} = Library.update_progress(access, user.id, one.id, 4)
+    assert Library.set_read(access, user.id, picked, true) == 3
+    assert %{current_page: 19, progression: 1.0} = Library.get_progress(user.id, one.id)
+    assert %{current_page: 399} = Library.get_progress(user.id, ctx.novel.id)
+
+    assert Library.set_read(access, user.id, [{:series, series.id}], false) == 2
+    assert Library.progress_map(user.id, [one.id, two.id, ctx.novel.id]) == %{ctx.novel.id => 1.0}
+  end
+
   defp ids(books), do: books |> Enum.map(& &1.id) |> Enum.sort()
 end

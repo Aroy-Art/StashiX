@@ -442,6 +442,17 @@
   outline: none;
 }
 
+/* A long press opens the card menu (CardMenu hook), not the browser's
+   link callout or a text selection. */
+.media-card[data-select-id] {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.media-card[data-select-id] img {
+  -webkit-user-drag: none;
+}
+
 /* Which read mark shows. A finished card carries both; the user's choice sits
    on the layout as data-read-mark, and a card can force one with its own. */
 .read-mark-stamp {
