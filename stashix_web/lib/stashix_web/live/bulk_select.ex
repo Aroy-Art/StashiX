@@ -6,17 +6,14 @@ defmodule StashixWeb.BulkSelect do
   Picking several books and series on a grid to add them to a collection at
   once. Lives once in the app layout (`id="bulk-select"`).
 
-  The Select button of a toolbar (`StashixWeb.CoreComponents.select_button/1`)
-  turns the mode on; the `BulkSelect` hook (`assets/js/hooks/bulk_select.js`)
+  "Select multiple" in a card's menu (`StashixWeb.CardMenu`) turns the mode
+  on with that card picked; the `BulkSelect` hook (`assets/js/hooks/bulk_select.js`)
   then turns clicks on cards (`data-select-id`, `data-select-type`, set by
   `media_card/1`) into ticks, shift-click picks a range, Esc leaves. The hook
   reports the mode (`"mode"`) and the picked items (`"selection"`); this
   component shows the bar at the bottom and adds them to the collection
   chosen there, or to a new one. Its ⋯ menu marks them read or unread and
   downloads them as one ZIP (the hook posts them to `/api/download`).
-
-  The card menu (`StashixWeb.CardMenu`) also starts the mode, with the card
-  it was opened on picked.
   """
   use StashixWeb, :live_component
 

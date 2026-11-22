@@ -226,9 +226,8 @@ defmodule StashixWeb.CollectionsLiveTest do
   end
 
   describe "picking several cards" do
-    test "the grids offer Select and their cards can be picked", %{conn: conn, dune: dune} do
+    test "the grids' cards can be picked", %{conn: conn, dune: dune} do
       {:ok, view, _html} = live(conn, ~p"/books")
-      assert has_element?(view, "[data-bulk-toggle]", "Select")
       assert has_element?(view, ~s|[data-select-type="book"][data-select-id="#{dune.id}"]|)
 
       {:ok, view, _html} = live(conn, ~p"/series")

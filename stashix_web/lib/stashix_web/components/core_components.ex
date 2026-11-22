@@ -16,7 +16,7 @@ defmodule StashixWeb.CoreComponents do
   import StashixWeb.UI.Icon
   import StashixWeb.SlugParam
   import StashixWeb.UI.Dialog, only: [dialog: 1, dialog_footer: 1]
-  import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1, text_link: 1]
+  import StashixWeb.UI.Ink, only: [eyebrow: 1, ink_button: 1, pill: 1, sticker: 1, progress_bar: 1]
   import StashixWeb.UI.Menu, only: [ink_menu: 1, ink_select: 1, menu_item: 1, menu_separator: 1]
 
   alias Phoenix.LiveView.JS
@@ -736,8 +736,7 @@ defmodule StashixWeb.CoreComponents do
       <div class="flex flex-wrap items-center gap-1.5">
         <.library_filter :if={length(@libraries) > 1} libraries={@libraries} selected_id={@library_id} />
       </div>
-      <.select_button class="ml-auto" />
-      <.sort_select options={@sort_options} selected={@sort} />
+      <.sort_select options={@sort_options} selected={@sort} class="ml-auto" />
     </div>
     """
   end
@@ -784,27 +783,6 @@ defmodule StashixWeb.CoreComponents do
   def sort_options(:issues) do
     {by_title, rest} = Enum.split(sort_options(:titles), 2)
     by_title ++ [{gettext("Issue # ↑"), "issue_asc"}, {gettext("Issue # ↓"), "issue_desc"}] ++ rest
-  end
-
-  @doc """
-  The Select button of a grid's toolbar: turns on picking several cards to
-  add them to a collection at once (`StashixWeb.BulkSelect`).
-  """
-  attr :class, :any, default: nil
-
-  def select_button(assigns) do
-    ~H"""
-    <.text_link
-      type="button"
-      tone="subtle"
-      data-bulk-toggle
-      phx-click={JS.dispatch("bulk:toggle", to: "#bulk-select")}
-      class={@class}
-    >
-      <.icon name="lucide-square-check" class="w-4 h-4" />
-      <span>{gettext("Select")}</span>
-    </.text_link>
-    """
   end
 
   attr :id, :string, default: "sort-select"

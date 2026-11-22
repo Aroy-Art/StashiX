@@ -5,14 +5,15 @@
 
 // BulkSelect: pick several cards on a page to add them to a collection.
 //
-// Lives on StashixWeb.BulkSelect (once, in the app layout). A toolbar's
-// Select button dispatches "bulk:toggle" here. While on, <html data-bulk>
+// Lives on StashixWeb.BulkSelect (once, in the app layout). "Select
+// multiple" in a card's menu dispatches "bulk:start" here, turning the mode
+// on with that card picked; the bar's Done sends "bulk:toggle" to leave.
+// While on, <html data-bulk>
 // shows a tick box on every card that can be picked ([data-select-id],
 // [data-select-type]) and a click on one ticks it instead of opening it;
 // shift-click ticks the range from the last one, Esc leaves. Picks survive
 // page patches (paging, sorting) and are reported to the component as
-// "selection"; it pushes "bulk:clear" once they are added. "bulk:start"
-// (from the card menu) turns the mode on with one card picked;
+// "selection"; it pushes "bulk:clear" once they are added.
 // "bulk:download" posts the picks to /api/download for one ZIP.
 
 const key = (el) => `${el.dataset.selectType}:${el.dataset.selectId}`
@@ -72,7 +73,6 @@ const BulkSelect = {
     this.picked.clear()
     this.last = null
     document.documentElement.toggleAttribute("data-bulk", on)
-    document.querySelectorAll("[data-bulk-toggle]").forEach((b) => b.setAttribute("aria-pressed", String(on)))
     this.paint()
     this.pushEventTo(this.el, "mode", {on})
   },

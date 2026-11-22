@@ -922,7 +922,6 @@ defmodule StashixWeb.SeriesLive do
       <%!-- Issues --%>
       <.section title={gettext("Issues")} count={issue_count}>
         <:actions>
-          <.select_button />
           <form id="issue-sort" phx-change="sort">
             <.ink_select
               id="issue-sort-input"

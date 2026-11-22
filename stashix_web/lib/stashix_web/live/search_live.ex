@@ -909,8 +909,7 @@ defmodule StashixWeb.SearchLive do
                 {@filter_count}
               </span>
             </button>
-            <.select_button class="ml-auto" />
-            <form id="search-sort" phx-change="sort">
+            <form id="search-sort" phx-change="sort" class="ml-auto">
               <.ink_select
                 id="search-sort-input"
                 name="value"
