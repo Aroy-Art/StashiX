@@ -81,11 +81,27 @@ Commits must be signed off (`git commit -s`) under the
 
 ### Translations
 
-Stashix is translated on [Hosted Weblate](https://hosted.weblate.org/engage/stashix/).
-Pick a language there and start translating in the browser; no Git or Elixir
-needed.
+[![Translation status](https://hosted.weblate.org/widget/stashix/multi-auto.svg)](https://hosted.weblate.org/engage/stashix/)
 
-[![Translation status](https://hosted.weblate.org/widget/stashix/svg-badge.svg)](https://hosted.weblate.org/engage/stashix/)
+Stashix is translated on [Hosted Weblate](https://hosted.weblate.org/engage/stashix/),
+in the browser; no Git or Elixir needed.
+
+1. Sign in to Hosted Weblate (an account there, or GitHub/GitLab login).
+2. Open the [Stashix project](https://hosted.weblate.org/projects/stashix/), pick
+   your language, or choose **Start new translation** to add one.
+3. Translate. Keep placeholders such as `%{count}` and `%{name}` exactly as
+   they are, and fill in every plural form.
+
+Weblate commits translations to the `translations` branch, signed off in your
+name under the DCO, and they reach `main` through a pull request. A new
+language shows up in Stashix once enough of it is done. Spotted a mistake in
+the English text itself? Leave a comment on the string in Weblate or open an
+issue.
+
+Code contributors: don't edit the translated `.po` files by hand, as that
+clashes with Weblate. After adding or changing UI text, run
+`mix gettext.extract --merge` in `stashix_web/` and commit the `.pot` and
+`en` files.
 
 ## License
 
