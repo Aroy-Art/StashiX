@@ -120,6 +120,7 @@ msgstr[1] ""
 
 #: lib/stashix_web/components/core_components.ex
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/home_live.ex
 #, elixir-autogen, elixir-format
 msgid "1 page"
@@ -182,6 +183,7 @@ msgid "At least 8 characters."
 msgstr ""
 
 #: lib/stashix_web/components/ui/page.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/setup_live.ex
 #, elixir-autogen, elixir-format
 msgid "Back"
@@ -230,6 +232,8 @@ msgstr ""
 #: lib/stashix_web/live/admin/users.ex
 #: lib/stashix_web/live/admin_metadata_live.ex
 #: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_live.ex
 #: lib/stashix_web/live/collection_picker.ex
 #: lib/stashix_web/live/collections_live.ex
@@ -297,6 +301,7 @@ msgid "Confirm password"
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/home_live.ex
 #: lib/stashix_web/live/series_live.ex
 #: lib/stashix_web/live/setup_live.ex
@@ -324,6 +329,7 @@ msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex
 #: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/bulk_select.ex
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
@@ -570,6 +576,8 @@ msgid "No content"
 msgstr ""
 
 #: lib/stashix_web/components/ui/menu.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "No matches"
@@ -687,6 +695,7 @@ msgstr ""
 
 #: lib/stashix_web/components/core_components.ex
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/reader_live.ex
 #: lib/stashix_web/live/search_live.ex
 #, elixir-autogen, elixir-format
@@ -1005,6 +1014,7 @@ msgstr[1] ""
 msgid "%{library} scan progress"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_live.ex
 #: lib/stashix_web/live/series_live.ex
 #, elixir-autogen, elixir-format
@@ -1451,11 +1461,15 @@ msgid "Looking up metadata in the background…"
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #, elixir-autogen, elixir-format
 msgid "Mark as read"
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #, elixir-autogen, elixir-format
 msgid "Mark as unread"
 msgstr ""
@@ -1962,6 +1976,7 @@ msgstr ""
 #: lib/stashix_web/live/collection_live.ex
 #: lib/stashix_web/live/collections_live.ex
 #: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
 #, elixir-autogen, elixir-format
 msgid "book"
 msgid_plural "books"
@@ -2864,6 +2879,7 @@ msgstr ""
 msgid "UI"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/search_live.ex
 #: lib/stashix_web/live/stats_live.ex
 #, elixir-autogen, elixir-format
@@ -3695,6 +3711,8 @@ msgstr ""
 #: lib/stashix_web/live/admin/libraries.ex
 #: lib/stashix_web/live/admin/publishers.ex
 #: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_live.ex
 #: lib/stashix_web/live/collection_picker.ex
 #: lib/stashix_web/live/collections_live.ex
@@ -4812,6 +4830,8 @@ msgid "All formats (ZIP)"
 msgstr ""
 
 #: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_live.ex
 #: lib/stashix_web/live/series_live.ex
 #, elixir-autogen, elixir-format
 msgid "Download"
@@ -5517,6 +5537,7 @@ msgstr[1] ""
 msgid "Add to a collection"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Add “%{title}” to…"
@@ -5558,12 +5579,16 @@ msgid "Collection · yours · shared"
 msgstr ""
 
 #: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/controllers/opds_controller.ex
 #: lib/stashix_web/live/book_live.ex
 #: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/search_live.ex
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Collections"
 msgstr ""
 
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Create and add"
@@ -5610,6 +5635,8 @@ msgstr ""
 msgid "Entry actions"
 msgstr ""
 
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "Find a collection"
@@ -5655,12 +5682,16 @@ msgstr ""
 msgid "Move to top"
 msgstr ""
 
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #: lib/stashix_web/live/collections_live.ex
 #, elixir-autogen, elixir-format
 msgid "New collection"
 msgstr ""
 
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "New collection…"
@@ -5772,6 +5803,7 @@ msgstr ""
 msgid "Whole series"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "You have no collections yet."
@@ -5787,12 +5819,195 @@ msgstr ""
 msgid "by %{name}"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "via series"
 msgstr ""
 
+#: lib/stashix_web/live/card_menu.ex
 #: lib/stashix_web/live/collection_picker.ex
 #, elixir-autogen, elixir-format
 msgid "“%{title}” goes in it."
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} · shared by %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{done} of %{total} read"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 selected"
+msgid_plural "%{count} selected"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "1 was already there."
+msgid_plural "%{count} were already there."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "A shelf of your collections, most recently changed first. On by default."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add to collection"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Added 1 to %{name}"
+msgid_plural "Added %{count} to %{name}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Added 1 to %{name}."
+msgid_plural "Added %{count} to %{name}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "All of them were already in %{name}."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collections in the sidebar"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Collections on the home page"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format
+msgid "Continue with %{book}"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Download as ZIP"
+msgstr ""
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lists your collections by name under Libraries, one click away."
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark all as read"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark all as unread"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Marked 1 book as read."
+msgid_plural "Marked %{count} books as read."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Marked 1 book as unread."
+msgid_plural "Marked %{count} books as unread."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "More actions"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open series"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read again"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Select multiple"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Selection"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Start reading %{book}"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Tap books or series to pick them; Shift picks a range."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "The book or series you picked goes in it."
+msgid_plural "The %{count} you picked go in it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use as cover"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the first books' covers"
+msgstr ""
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your collections"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Yours and shared ones"
 msgstr ""
