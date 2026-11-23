@@ -111,7 +111,7 @@ defmodule Stashix.MixProject do
       {:dns_cluster, "~> 0.3.0"},
       {:bandit, "~> 1.5"},
       {:guardian, "~> 2.0"},
-      {:bcrypt_elixir, "~> 3.0"},
+      {:bcrypt_elixir, "~> 4.0"},
       {:sweet_xml, "~> 0.7"},
       {:req, "~> 0.7"},
       {:oban, "~> 2.19"},
