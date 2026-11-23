@@ -35,3 +35,9 @@ stashix-*.tar
 npm-debug.log
 /assets/node_modules/
 
+
+# Local Lokalize project files (translations go through Weblate)
+/priv/gettext/*.po
+/priv/gettext/*.lokalize
+/priv/gettext/*.lqa
+/priv/gettext/*.tbx

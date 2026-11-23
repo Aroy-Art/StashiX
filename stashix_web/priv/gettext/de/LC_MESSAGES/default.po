@@ -1,0 +1,6143 @@
+## "msgid"s in this file come from POT (.pot) files.
+###
+### Do not add, change, or remove "msgid"s manually here as
+### they're tied to the ones in the corresponding POT file
+### (with the same domain).
+###
+### Use "mix gettext.extract --merge" or "mix gettext.merge"
+### to merge POT files into PO files.
+# SPDX-FileCopyrightText: 2026 aroy <me@aroy-art.com>
+msgid ""
+msgstr ""
+"Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Last-Translator: aroy <me@aroy-art.com>\n"
+"PO-Revision-Date: 2026-11-14 13:09+0100\n"
+"Project-Id-Version: \n"
+"Language-Team: German <>\n"
+"X-Generator: Lokalize 26.08.3\n"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Attempting to reconnect"
+msgstr "Verbindung wird wiederhergestellt"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic"
+msgstr "Automatisch"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic follows your browser's language. Saved to your account, so it follows you to other devices."
+msgstr ""
+"„Automatisch“ folgt der Sprache deines Browsers. Wird in deinem Konto gespeich"
+"ert und gilt so auch auf deinen anderen Geräten."
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "Error!"
+msgstr "Fehler!"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hang in there while we get back on track"
+msgstr "Einen Moment, wir sind gleich wieder da"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format
+msgid "Language"
+msgstr "Sprache"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong!"
+msgstr "Etwas ist schiefgelaufen!"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Success!"
+msgstr "Erledigt!"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "That is not one of the choices."
+msgstr "Das ist keine der Auswahlmöglichkeiten."
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "We can't find the internet"
+msgstr "Wir finden das Internet nicht"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "close"
+msgstr "schließen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{done} / %{total} files"
+msgstr "%{done} / %{total} Dateien"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{field} %{message}."
+msgstr "%{field} %{message}."
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{library} progress"
+msgstr "Fortschritt: %{library}"
+
+#: lib/stashix_web/components/metadata_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{role} · 1 issue"
+msgid_plural "%{role} · %{count} issues"
+msgstr[0] "%{role} · 1 Ausgabe"
+msgstr[1] "%{role} · %{count} Ausgaben"
+
+#: lib/stashix_web/components/detail_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{title} cover"
+msgstr "Cover von %{title}"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/components/metadata_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "+%{count} more"
+msgstr "+%{count} weitere"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/hooks.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 issue"
+msgid_plural "%{count} issues"
+msgstr[0] "1 Ausgabe"
+msgstr[1] "%{count} Ausgaben"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 page"
+msgid_plural "%{count} pages"
+msgstr[0] "1 Seite"
+msgstr[1] "%{count} Seiten"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Absolute path to the folder containing your books."
+msgstr "Absoluter Pfad zum Ordner mit deinen Büchern."
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Account"
+msgstr "Konto"
+
+#: lib/stashix_web/components/ui/data.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Actions"
+msgstr "Aktionen"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add"
+msgstr "Hinzufügen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add your first library"
+msgstr "Füge deine erste Bibliothek hinzu"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add… (Enter)"
+msgstr "Hinzufügen… (Enter)"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin"
+msgstr "Verwaltung"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All libraries"
+msgstr "Alle Bibliotheken"
+
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "At least 8 characters."
+msgstr "Mindestens 8 Zeichen."
+
+#: lib/stashix_web/components/ui/page.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back"
+msgstr "Zurück"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back to library"
+msgstr "Zurück zur Bibliothek"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Background tasks"
+msgstr "Hintergrundaufgaben"
+
+#: lib/stashix_web/components/layouts.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book"
+msgstr "Buch"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Books"
+msgstr "Bücher"
+
+#: lib/stashix_web/components/ui/page.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Breadcrumb"
+msgstr "Navigationspfad"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/collection_picker.ex
+#: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/reader_annotations.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cancelled"
+msgstr "Abgebrochen"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Characters"
+msgstr "Figuren"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Checking archive integrity"
+msgstr "Archivintegrität wird geprüft"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cleanup"
+msgstr "Aufräumen"
+
+#: lib/stashix_web/components/detail_components.ex
+#: lib/stashix_web/components/ui/dialog.ex
+#: lib/stashix_web/live/admin_health_live.ex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Close"
+msgstr "Schließen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Complete"
+msgstr "Abgeschlossen"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Confirm"
+msgstr "Bestätigen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Confirm password"
+msgstr "Passwort bestätigen"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Continue"
+msgstr "Weiter"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create the admin account"
+msgstr "Admin-Konto anlegen"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Credits"
+msgstr "Mitwirkende"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Dark"
+msgstr "Dunkel"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Done"
+msgstr "Fertig"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email"
+msgstr "E-Mail"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email changed to %{email}."
+msgstr "E-Mail-Adresse geändert zu %{email}."
+
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email or username"
+msgstr "E-Mail oder Benutzername"
+
+#: lib/stashix_web/components/ui/menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Filter options"
+msgstr "Filteroptionen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Finish setup"
+msgstr "Einrichtung abschließen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "First issue: set up your stash"
+msgstr "Erste Ausgabe: Richte deine Sammlung ein"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "First page"
+msgstr "Erste Seite"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Force rescan"
+msgstr "Erneuten Scan erzwingen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Force scan"
+msgstr "Scan erzwingen"
+
+#: lib/stashix_web/live/hooks.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Force scan started"
+msgstr "Erzwungener Scan gestartet"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Generating covers"
+msgstr "Cover werden erstellt"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Genres"
+msgstr "Genres"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Health"
+msgstr "Zustand"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Health check complete"
+msgstr "Zustandsprüfung abgeschlossen"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Home"
+msgstr "Start"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Indexing new file"
+msgstr "Neue Datei wird indiziert"
+
+#: lib/stashix_web/controllers/session_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Invalid email or password"
+msgstr "Ungültige E-Mail oder ungültiges Passwort"
+
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Invalid email/username or password"
+msgstr "Ungültige E-Mail/ungültiger Benutzername oder Passwort"
+
+#: lib/stashix_web/components/layouts.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue"
+msgstr "Ausgabe"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issues"
+msgstr "Ausgaben"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Last page"
+msgstr "Letzte Seite"
+
+#: lib/stashix_web/components/metadata_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Less info"
+msgstr "Weniger Infos"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/controllers/opds_controller.ex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Libraries"
+msgstr "Bibliotheken"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/cleanup.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/library_live.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library"
+msgstr "Bibliothek"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library actions"
+msgstr "Bibliotheksaktionen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library name"
+msgstr "Name der Bibliothek"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library path"
+msgstr "Pfad der Bibliothek"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Light"
+msgstr "Hell"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Links"
+msgstr "Links"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Locations"
+msgstr "Orte"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lock %{field}"
+msgstr "%{field} sperren"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lock so rescans and matching can't change it"
+msgstr "Sperren, damit Scans und Abgleich es nicht ändern"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Locked: rescans and matching leave it alone. Click to unlock."
+msgstr ""
+"Gesperrt: Scans und Abgleich lassen es unverändert. Klicken zum Entsperren."
+
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Login"
+msgstr "Anmeldung"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Main"
+msgstr "Haupt"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata"
+msgstr "Metadaten"
+
+#: lib/stashix_web/components/metadata_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "More info"
+msgstr "Mehr Infos"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "My Comics"
+msgstr "Meine Comics"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next page"
+msgstr "Nächste Seite"
+
+#: lib/stashix_web/components/collection_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No content"
+msgstr "Kein Inhalt"
+
+#: lib/stashix_web/components/ui/menu.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No matches"
+msgstr "Keine Treffer"
+
+#: lib/stashix_web/components/metadata_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No metadata sources set up. Enable one under Admin · Metadata · Sources."
+msgstr ""
+"Keine Metadatenquellen eingerichtet. Aktiviere eine unter Verwaltung · Metadat"
+"en · Quellen."
+
+#: lib/stashix_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No signal — connection lost"
+msgstr "Kein Signal – Verbindung verloren"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "None"
+msgstr "Keine"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Notes"
+msgstr "Notizen"
+
+#: lib/stashix_web/live/publisher_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing from this publisher"
+msgstr "Nichts von diesem Verlag"
+
+#: lib/stashix_web/live/library_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing in this library"
+msgstr "Nichts in dieser Bibliothek"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing running"
+msgstr "Nichts läuft"
+
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open the box"
+msgstr "Öffne die Kiste"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Page %{number}"
+msgstr "Seite %{number}"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Pages"
+msgstr "Seiten"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/login_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Password"
+msgstr "Passwort"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Password changed. Other devices have been signed out."
+msgstr "Passwort geändert. Andere Geräte wurden abgemeldet."
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Password confirmation"
+msgstr "Passwortbestätigung"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previous page"
+msgstr "Vorherige Seite"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/publisher_live.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publisher"
+msgstr "Verlag"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/all_publishers_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publishers"
+msgstr "Verlage"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Queued"
+msgstr "In der Warteschlange"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read"
+msgstr "Lesen"
+
+#: lib/stashix_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reconnect"
+msgstr "Neu verbinden"
+
+#: lib/stashix_web/components/layouts/root.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Refresh page"
+msgstr "Seite neu laden"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove %{name}"
+msgstr "%{name} entfernen"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove row"
+msgstr "Zeile entfernen"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reprints"
+msgstr "Nachdrucke"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rescan"
+msgstr "Neu scannen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan"
+msgstr "Scannen"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan for new files"
+msgstr "Nach neuen Dateien suchen"
+
+#: lib/stashix_web/live/hooks.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan started"
+msgstr "Scan gestartet"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scanning files"
+msgstr "Dateien werden gescannt"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scanning for unsupported files"
+msgstr "Suche nach nicht unterstützten Dateien"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search"
+msgstr "Suche"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search titles, series, publishers..."
+msgstr "Titel, Serien, Verlage suchen..."
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "See all results for \"%{query}\""
+msgstr "Alle Ergebnisse für „%{query}“ ansehen"
+
+#: lib/stashix_web/components/auth_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Self-hosted · read anywhere"
+msgstr "Selbst gehostet · überall lesen"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/components/layouts.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/controllers/opds_controller.ex
+#: lib/stashix_web/live/admin/cleanup.ex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/admin_health_live.ex
+#: lib/stashix_web/live/all_series_live.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series"
+msgstr "Serien"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Setup"
+msgstr "Einrichtung"
+
+#: lib/stashix_web/controllers/session_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Setup failed. Check your details and try again."
+msgstr ""
+"Einrichtung fehlgeschlagen. Prüfe deine Angaben und versuche es erneut."
+
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sign in"
+msgstr "Anmelden"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sign out"
+msgstr "Abmelden"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Signed out everywhere else."
+msgstr "Überall sonst abgemeldet."
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skip and finish"
+msgstr "Überspringen und abschließen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skip for now"
+msgstr "Vorerst überspringen"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skip library setup?"
+msgstr "Bibliothekseinrichtung überspringen?"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "Sort"
+msgstr "Sortieren"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Source"
+msgstr "Quelle"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Stashix home"
+msgstr "Stashix-Startseite"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stats"
+msgstr "Statistik"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Story Arcs"
+msgstr "Handlungsbögen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "System"
+msgstr "System"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format
+msgid "System settings"
+msgstr "Systemeinstellungen"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Tags"
+msgstr "Tags"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Teams"
+msgstr "Teams"
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The current password is not right."
+msgstr "Das aktuelle Passwort ist falsch."
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Theme"
+msgstr "Design"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Theme: %{theme}"
+msgstr "Design: %{theme}"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Toggle sidebar"
+msgstr "Seitenleiste umschalten"
+
+#: lib/stashix_web/controllers/session_controller.ex
+#: lib/stashix_web/live/login_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Too many failed attempts. Try again in a few minutes."
+msgstr ""
+"Zu viele fehlgeschlagene Versuche. Versuche es in ein paar Minuten erneut."
+
+#: lib/stashix_web/controllers/settings_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Too many wrong attempts. Try again in a few minutes."
+msgstr "Zu viele falsche Versuche. Versuche es in ein paar Minuten erneut."
+
+#: lib/stashix_web/components/ui/menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Type to filter"
+msgstr "Tippen zum Filtern"
+
+#: lib/stashix_web/components/metadata_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Universes"
+msgstr "Universen"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unknown"
+msgstr "Unbekannt"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unlock %{field}"
+msgstr "%{field} entsperren"
+
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Username"
+msgstr "Benutzername"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Users"
+msgstr "Benutzer"
+
+#: lib/stashix_web/components/collection_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "View all"
+msgstr "Alle ansehen"
+
+#: lib/stashix_web/components/detail_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "View cover full screen"
+msgstr "Cover im Vollbild ansehen"
+
+#: lib/stashix_web/components/auth_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your long box, online"
+msgstr "Deine Longbox, online"
+
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your stash will start empty. You can add a library later under Admin → Libraries."
+msgstr ""
+"Deine Sammlung startet leer. Du kannst später unter Verwaltung → Bibliotheken "
+"eine Bibliothek hinzufügen."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{changed} of 1 issue differs from its file name"
+msgid_plural "%{changed} of %{count} issues differ from their file names"
+msgstr[0] "%{changed} von 1 Ausgabe weicht vom Dateinamen ab"
+msgstr[1] "%{changed} von %{count} Ausgaben weichen von ihren Dateinamen ab"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{changed} of 1 issue will change"
+msgid_plural "%{changed} of %{count} issues will change"
+msgstr[0] "%{changed} von 1 Ausgabe wird geändert"
+msgstr[1] "%{changed} von %{count} Ausgaben werden geändert"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{library} scan progress"
+msgstr "Scanfortschritt: %{library}"
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{percent}% read"
+msgstr "%{percent} % gelesen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "/ %{count} read"
+msgstr "/ %{count} gelesen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 file has no number in its name — left as is"
+msgid_plural "%{count} files have no number in their names — left as is"
+msgstr[0] "1 Datei hat keine Nummer im Namen – bleibt unverändert"
+msgstr[1] "%{count} Dateien haben keine Nummer im Namen – bleiben unverändert"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 issue already up to date"
+msgid_plural "%{count} issues already up to date"
+msgstr[0] "1 Ausgabe bereits aktuell"
+msgstr[1] "%{count} Ausgaben bereits aktuell"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 vote"
+msgid_plural "%{count} votes"
+msgstr[0] "1 Stimme"
+msgstr[1] "%{count} Stimmen"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "A → Z"
+msgstr "A → Z"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add a library"
+msgstr "Bibliothek hinzufügen"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add a library and scan it, and what you can read shows up here."
+msgstr ""
+"Füge eine Bibliothek hinzu und scanne sie – dann erscheint hier, was du lesen "
+"kannst."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add the series publishers to each issue, keeping any they already have."
+msgstr ""
+"Die Verlage der Serie zu jeder Ausgabe hinzufügen und vorhandene behalten."
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Adjacent issues"
+msgstr "Benachbarte Ausgaben"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Adult"
+msgstr "Erwachsene"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "After"
+msgstr "Nachher"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Age Rating"
+msgstr "Altersfreigabe"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Age rating"
+msgstr "Altersfreigabe"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Age rating pushed to 1 issue."
+msgid_plural "Age rating pushed to %{count} issues."
+msgstr[0] "Altersfreigabe auf 1 Ausgabe übertragen."
+msgstr[1] "Altersfreigabe auf %{count} Ausgaben übertragen."
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All %{role}"
+msgstr "Alle (%{role})"
+
+#: lib/stashix_web/live/all_books_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All Books"
+msgstr "Alle Bücher"
+
+#: lib/stashix_web/live/all_issues_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All Issues"
+msgstr "Alle Ausgaben"
+
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All Series"
+msgstr "Alle Serien"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All issues already match their file names — no changes needed."
+msgstr ""
+"Alle Ausgaben passen bereits zu ihren Dateinamen – keine Änderungen nötig."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All issues already match — no changes needed."
+msgstr "Alle Ausgaben passen bereits – keine Änderungen nötig."
+
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Also known as"
+msgstr "Auch bekannt als"
+
+#: lib/stashix_web/live/publisher_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Also known as %{names}"
+msgstr "Auch bekannt als %{names}"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Also reading"
+msgstr "Liest gerade auch"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Alt. number"
+msgstr "Alt. Nummer"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Apply an age rating to all issues in this series."
+msgstr "Eine Altersfreigabe auf alle Ausgaben dieser Serie anwenden."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Apply the series publisher(s) to all issues. Choose how to handle issues that already have publishers."
+msgstr ""
+"Den Verlag bzw. die Verlage der Serie auf alle Ausgaben anwenden. Wähle, wie m"
+"it Ausgaben verfahren wird, die bereits Verlage haben."
+
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Art"
+msgstr "Zeichnungen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Before"
+msgstr "Vorher"
+
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#: lib/stashix_web/live/all_publishers_live.ex
+#: lib/stashix_web/live/all_series_live.ex
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Browse"
+msgstr "Stöbern"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Browse series"
+msgstr "Serien durchstöbern"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collecting files…"
+msgstr "Dateien werden gesammelt…"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Colors"
+msgstr "Farben"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Community rating"
+msgstr "Community-Bewertung"
+
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Continue reading"
+msgstr "Weiterlesen"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not queue metadata lookup"
+msgstr "Metadatensuche konnte nicht eingereiht werden"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not update age rating."
+msgstr "Altersfreigabe konnte nicht aktualisiert werden."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not update issue numbers."
+msgstr "Ausgabenummern konnten nicht aktualisiert werden."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not update publishers."
+msgstr "Verlage konnten nicht aktualisiert werden."
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cover date"
+msgstr "Cover-Datum"
+
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Covers"
+msgstr "Cover"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Creator"
+msgstr "Urheber"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Date Added ↑"
+msgstr "Hinzugefügt ↑"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Date Added ↓"
+msgstr "Hinzugefügt ↓"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Details"
+msgstr "Details"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Discover"
+msgstr "Entdecken"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Discover a series"
+msgstr "Entdecke eine Serie"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Edit metadata"
+msgstr "Metadaten bearbeiten"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Edited"
+msgstr "Bearbeitet"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Everyone"
+msgstr "Alle"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Excluded from automatic matching"
+msgstr "Vom automatischen Abgleich ausgenommen"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Explicit"
+msgstr "Explizit"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "External IDs"
+msgstr "Externe IDs"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Fetch metadata"
+msgstr "Metadaten abrufen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Fill empty"
+msgstr "Leere füllen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Fill unknown"
+msgstr "Unbekannte füllen"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Filter in search"
+msgstr "In der Suche filtern"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Format"
+msgstr "Format"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "From issue %{issue}"
+msgstr "Aus Ausgabe %{issue}"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Identify series…"
+msgstr "Serie identifizieren…"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Identify…"
+msgstr "Identifizieren…"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Imprint"
+msgstr "Imprint"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "In stores"
+msgstr "Im Handel"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue # ↑"
+msgstr "Ausgabe # ↑"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue # ↓"
+msgstr "Ausgabe # ↓"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue %{number} of %{count}"
+msgstr "Ausgabe %{number} von %{count}"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue number updated on 1 issue."
+msgid_plural "Issue numbers updated on %{count} issues."
+msgstr[0] "Ausgabenummer bei 1 Ausgabe aktualisiert."
+msgstr[1] "Ausgabenummern bei %{count} Ausgaben aktualisiert."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue numbers from filenames"
+msgstr "Ausgabenummern aus Dateinamen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue numbers from filenames…"
+msgstr "Ausgabenummern aus Dateinamen…"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Language pushed to 1 issue."
+msgid_plural "Language pushed to %{count} issues."
+msgstr[0] "Sprache auf 1 Ausgabe übertragen."
+msgstr[1] "Sprache auf %{count} Ausgaben übertragen."
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Letters"
+msgstr "Lettering"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lock metadata"
+msgstr "Metadaten sperren"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Locked"
+msgstr "Gesperrt"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Looking up metadata for the series and its issues…"
+msgstr "Metadaten für die Serie und ihre Ausgaben werden gesucht…"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Looking up metadata in the background…"
+msgstr "Metadaten werden im Hintergrund gesucht…"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark as read"
+msgstr "Als gelesen markieren"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark as unread"
+msgstr "Als ungelesen markieren"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mature"
+msgstr "Ab 17"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata applied"
+msgstr "Metadaten übernommen"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata from %{source}"
+msgstr "Metadaten von %{source}"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata saved"
+msgstr "Metadaten gespeichert"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata source"
+msgstr "Metadatenquelle"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "More reading options"
+msgstr "Weitere Leseoptionen"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Most issues"
+msgstr "Meiste Ausgaben"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next"
+msgstr "Weiter"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No books by this creator"
+msgstr "Keine Bücher von dieser Person"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No books in %{library} yet. Pick another library above."
+msgstr "Noch keine Bücher in %{library}. Wähle oben eine andere Bibliothek."
+
+#: lib/stashix_web/live/all_books_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No books on this shelf"
+msgstr "Keine Bücher in diesem Regal"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No issues in %{library} yet. Pick another library above."
+msgstr "Noch keine Ausgaben in %{library}. Wähle oben eine andere Bibliothek."
+
+#: lib/stashix_web/live/all_issues_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No issues on this shelf"
+msgstr "Keine Ausgaben in diesem Regal"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No issues were updated."
+msgstr "Es wurden keine Ausgaben aktualisiert."
+
+#: lib/stashix_web/live/all_publishers_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No publishers yet"
+msgstr "Noch keine Verlage"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No series in %{library} yet. Pick another library above."
+msgstr "Noch keine Serien in %{library}. Wähle oben eine andere Bibliothek."
+
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No series on this shelf"
+msgstr "Keine Serien in diesem Regal"
+
+#: lib/stashix_web/live/publisher_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No series or books are linked to it yet."
+msgstr "Noch sind keine Serien oder Bücher damit verknüpft."
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "None of their credits are on books you can see."
+msgstr "Keine der Mitwirkungen gehört zu Büchern, die du sehen kannst."
+
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing here yet"
+msgstr "Noch nichts hier"
+
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing in this library yet. Try another one."
+msgstr "Noch nichts in dieser Bibliothek. Probiere eine andere."
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing on the shelves yet"
+msgstr "Noch nichts in den Regalen"
+
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Ongoing"
+msgstr "Laufend"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only set it on issues that have no language."
+msgstr "Nur bei Ausgaben ohne Sprache setzen."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only update issues that are currently unrated."
+msgstr "Nur Ausgaben ohne Altersfreigabe aktualisieren."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only update issues that have no publisher set."
+msgstr "Nur Ausgaben ohne Verlag aktualisieren."
+
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Other"
+msgstr "Sonstige"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Overwrite the age rating on all issues."
+msgstr "Altersfreigabe bei allen Ausgaben überschreiben."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Overwrite the language on all issues."
+msgstr "Sprache bei allen Ausgaben überschreiben."
+
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Page %{page} of %{count}"
+msgstr "Seite %{page} von %{count}"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Preview"
+msgstr "Vorschau"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "Previous"
+msgstr "Zurück"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "Price"
+msgstr "Preis"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Published issues"
+msgstr "Erschienene Ausgaben"
+
+#: lib/stashix_web/live/all_publishers_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publishers appear once metadata has been matched."
+msgstr "Verlage erscheinen, sobald Metadaten abgeglichen wurden."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publishers pushed to 1 issue."
+msgid_plural "Publishers pushed to %{count} issues."
+msgstr[0] "Verlage auf 1 Ausgabe übertragen."
+msgstr[1] "Verlage auf %{count} Ausgaben übertragen."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push age rating"
+msgstr "Altersfreigabe übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push age rating to issues"
+msgstr "Altersfreigabe auf Ausgaben übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push age rating to issues…"
+msgstr "Altersfreigabe auf Ausgaben übertragen…"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push language to issues"
+msgstr "Sprache auf Ausgaben übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push language to issues…"
+msgstr "Sprache auf Ausgaben übertragen…"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push publishers"
+msgstr "Verlage übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push publishers to issues"
+msgstr "Verlage auf Ausgaben übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push publishers to issues…"
+msgstr "Verlage auf Ausgaben übertragen…"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push to issues"
+msgstr "Auf Ausgaben übertragen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rating to apply"
+msgstr "Anzuwendende Freigabe"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read Again"
+msgstr "Erneut lesen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read from #1"
+msgstr "Ab #1 lesen"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read from beginning"
+msgstr "Von vorne lesen"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/home_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reading progress"
+msgstr "Lesefortschritt"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recent books"
+msgstr "Neue Bücher"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recent issues"
+msgstr "Neue Ausgaben"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recent series"
+msgstr "Neue Serien"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recently added from"
+msgstr "Kürzlich hinzugefügt aus"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove each issue's current publishers and set them to match the series."
+msgstr ""
+"Die aktuellen Verlage jeder Ausgabe entfernen und an die Serie angleichen."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Replace"
+msgstr "Ersetzen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rescan series"
+msgstr "Serie neu scannen"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Roles"
+msgstr "Rollen"
+
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan a library to fill it."
+msgstr "Scanne eine Bibliothek, um sie zu füllen."
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan failed"
+msgstr "Scan fehlgeschlagen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scanning…"
+msgstr "Wird gescannt…"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scanning… %{done}/%{total}"
+msgstr "Wird gescannt… %{done}/%{total}"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "See all"
+msgstr "Alle ansehen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series metadata applied"
+msgstr "Serien-Metadaten übernommen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series saved"
+msgstr "Serie gespeichert"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set each issue's number from its file name, and write it into the file so a rescan keeps it. Issues that lock their number are skipped."
+msgstr ""
+"Die Nummer jeder Ausgabe aus ihrem Dateinamen setzen und in die Datei schreibe"
+"n, damit ein erneuter Scan sie beibehält. Ausgaben mit gesperrter Nummer werde"
+"n übersprungen."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set the language of every issue in this series. Issues that lock their language are skipped."
+msgstr ""
+"Die Sprache jeder Ausgabe dieser Serie setzen. Ausgaben mit gesperrter Sprache"
+" werden übersprungen."
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Size"
+msgstr "Größe"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sort issues"
+msgstr "Ausgaben sortieren"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Start Reading"
+msgstr "Lesen beginnen"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Start reading"
+msgstr "Lesen beginnen"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Stories"
+msgstr "Geschichten"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Teen"
+msgstr "Ab 13"
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Teen+"
+msgstr "Ab 16"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The Run"
+msgstr "Der Lauf"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Translated"
+msgstr "Übersetzt"
+
+#: lib/stashix_web/live/library_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Try scanning it."
+msgstr "Versuch, sie zu scannen."
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Type"
+msgstr "Typ"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unlock metadata"
+msgstr "Metadaten entsperren"
+
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unrated"
+msgstr "Ohne Freigabe"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Up next"
+msgstr "Als Nächstes"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Update 1 issue"
+msgid_plural "Update %{count} issues"
+msgstr[0] "1 Ausgabe aktualisieren"
+msgstr[1] "%{count} Ausgaben aktualisieren"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Vol. %{volume}"
+msgstr "Bd. %{volume}"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Volume"
+msgstr "Band"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Volumes"
+msgstr "Bände"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Welcome"
+msgstr "Willkommen"
+
+#: lib/stashix_web/live/creator_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Written"
+msgstr "Text"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Year ↑"
+msgstr "Jahr ↑"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Year ↓"
+msgstr "Jahr ↓"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your stash"
+msgstr "Deine Sammlung"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Z → A"
+msgstr "Z → A"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/creator_live.ex
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "book"
+msgid_plural "books"
+msgstr[0] "Buch"
+msgstr[1] "Bücher"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "issue"
+msgid_plural "issues"
+msgstr[0] "Ausgabe"
+msgstr[1] "Ausgaben"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "no changes"
+msgstr "keine Änderungen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "none"
+msgstr "keine"
+
+#: lib/stashix_web/live/all_books_live.ex
+#: lib/stashix_web/live/all_issues_live.ex
+#: lib/stashix_web/live/all_publishers_live.ex
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "page %{page} of %{count}"
+msgstr "Seite %{page} von %{count}"
+
+#: lib/stashix_web/live/all_publishers_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "publisher"
+msgid_plural "publishers"
+msgstr[0] "Verlag"
+msgstr[1] "Verlage"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "read"
+msgstr "gelesen"
+
+#: lib/stashix_web/components/collection_components.ex
+#: lib/stashix_web/live/all_series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "series"
+msgid_plural "series"
+msgstr[0] "Serie"
+msgstr[1] "Serien"
+
+#: lib/stashix_web/live/all_books_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "standalone book"
+msgid_plural "standalone books"
+msgstr[0] "Einzelband"
+msgstr[1] "Einzelbände"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "this library"
+msgstr "diese Bibliothek"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "unread"
+msgstr "ungelesen"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} of %{total}"
+msgstr "%{count} von %{total}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{facet}: %{name}"
+msgstr "%{facet}: %{name}"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{pages} pages ÷ 2 sides × 5 g a sheet (A4, 80 gsm)"
+msgstr "%{pages} Seiten ÷ 2 (beidseitig) × 5 g pro Blatt (A4, 80 g/m²)"
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/controllers/opds_controller.ex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 book"
+msgid_plural "%{count} books"
+msgstr[0] "1 Buch"
+msgstr[1] "%{count} Bücher"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A READ stamp across the cover."
+msgstr "Ein GELESEN-Stempel quer über dem Cover."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A small green tick in the corner."
+msgstr "Ein kleiner grüner Haken in der Ecke."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "About"
+msgstr "Über"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "About you"
+msgstr "Über dich"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Active %{count} h ago"
+msgstr "Vor %{count} Std. aktiv"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Active %{count} min ago"
+msgstr "Vor %{count} Min. aktiv"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Active 1 day ago"
+msgid_plural "Active %{count} days ago"
+msgstr[0] "Vor 1 Tag aktiv"
+msgstr[1] "Vor %{count} Tagen aktiv"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Active now"
+msgstr "Jetzt aktiv"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Active yesterday"
+msgstr "Gestern aktiv"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add another creator..."
+msgstr "Weitere Person hinzufügen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add another..."
+msgstr "Weitere hinzufügen..."
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Added by month"
+msgstr "Hinzugefügt pro Monat"
+
+#: lib/stashix_web/components/layouts.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All"
+msgstr "Alle"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All of them"
+msgstr "Alle davon"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All publishers"
+msgstr "Alle Verlage"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "And they all closed the book. Nothing past here but ghosts."
+msgstr "Und alle klappten das Buch zu. Dahinter nur noch Geister."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Any"
+msgstr "Beliebig"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Any of them"
+msgstr "Einer davon"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Any role"
+msgstr "Beliebige Rolle"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Any year"
+msgstr "Beliebiges Jahr"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back to series"
+msgstr "Zurück zur Serie"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Birth date"
+msgstr "Geburtsdatum"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book info"
+msgstr "Buchinfo"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Breakdown"
+msgstr "Aufschlüsselung"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Change email"
+msgstr "E-Mail ändern"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Change password"
+msgstr "Passwort ändern"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Changing it signs you out on every other device."
+msgstr "Eine Änderung meldet dich auf allen anderen Geräten ab."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Character"
+msgstr "Figur"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear all"
+msgstr "Alle löschen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear filters"
+msgstr "Filter zurücksetzen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear search"
+msgstr "Suche leeren"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Close filters"
+msgstr "Filter schließen"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Close reader"
+msgstr "Reader schließen"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Colouring"
+msgstr "Kolorierung"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Creator: %{name}"
+msgstr "Urheber: %{name}"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Creators by credits"
+msgstr "Urheber nach Mitwirkungen"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Credits by role"
+msgstr "Mitwirkungen nach Rolle"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Current password"
+msgstr "Aktuelles Passwort"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Currently %{email}."
+msgstr "Derzeit %{email}."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Data saver"
+msgstr "Datensparmodus"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Direction"
+msgstr "Leserichtung"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Display name"
+msgstr "Anzeigename"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "END"
+msgstr "ENDE"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Editing"
+msgstr "Redaktion"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Email and password are under %{security}."
+msgstr "E-Mail und Passwort findest du unter %{security}."
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "End"
+msgstr "Ende"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "End of issue"
+msgstr "Ende der Ausgabe"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "End of issue %{number}"
+msgstr "Ende von Ausgabe %{number}"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "End of the book"
+msgstr "Ende des Buchs"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "English"
+msgstr "Englisch"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Facing pages"
+msgstr "Doppelseiten"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Facing, cover first"
+msgstr "Doppelseiten, Cover einzeln"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "File formats"
+msgstr "Dateiformate"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format
+msgid "File size by publisher"
+msgstr "Dateigröße nach Verlag"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Filters"
+msgstr "Filter"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Fit"
+msgstr "Anpassen"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fit height"
+msgstr "Höhe anpassen"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fit page"
+msgstr "Seite anpassen"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Fit width"
+msgstr "Breite anpassen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "From year"
+msgstr "Ab Jahr"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "GNU Affero General Public License"
+msgstr "GNU Affero General Public License"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Genre"
+msgstr "Genre"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "How a finished book is marked on its cover. Applies everywhere covers are shown, on this account only."
+msgstr ""
+"Wie ein gelesenes Buch auf seinem Cover markiert wird. Gilt überall, wo Cover "
+"angezeigt werden, nur für dieses Konto."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "IP:"
+msgstr "IP:"
+
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "In progress"
+msgstr "Begonnen"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Inking"
+msgstr "Tusche"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue page"
+msgstr "Ausgabenseite"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Layout"
+msgstr "Layout"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Left a device signed in? This signs the account out of every browser and app except this one."
+msgstr ""
+"Irgendwo noch angemeldet? Das meldet das Konto in allen Browsern und Apps ab, "
+"außer in diesem."
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Left to right"
+msgstr "Links nach rechts"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lettering"
+msgstr "Lettering"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "License"
+msgstr "Lizenz"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Location"
+msgstr "Ort"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Loosen the filters or try another spelling."
+msgstr "Lockere die Filter oder probiere eine andere Schreibweise."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Match books credited to all selected creators, or to any of them"
+msgstr ""
+"Bücher finden, an denen alle ausgewählten Personen mitgewirkt haben, oder mind"
+"estens eine davon"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Meanwhile, at the printer: your whole library on A4 would take %{sheets} sheets weighing %{weight}."
+msgstr ""
+"Unterdessen in der Druckerei: Deine ganze Bibliothek auf A4 bräuchte %{sheets}"
+" Blatt mit einem Gewicht von %{weight}."
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Meanwhile, in issue %{number}…"
+msgstr "Unterdessen in Ausgabe %{number}…"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Member since"
+msgstr "Mitglied seit"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata coverage"
+msgstr "Metadatenabdeckung"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Minimizes data usage by preventing automatic prefetching (e.g., upcoming reader pages and covers on hover)."
+msgstr ""
+"Spart Daten, indem automatisches Vorladen verhindert wird (z. B. kommende Read"
+"er-Seiten und Cover beim Überfahren)."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "New email"
+msgstr "Neue E-Mail"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "New password"
+msgstr "Neues Passwort"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next %{number}"
+msgstr "Nächste: %{number}"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Next issue"
+msgstr "Nächste Ausgabe"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No characters found"
+msgstr "Keine Figuren gefunden"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No creators found"
+msgstr "Keine Urheber gefunden"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No genres found"
+msgstr "Keine Genres gefunden"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No locations found"
+msgstr "Keine Orte gefunden"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No tags found"
+msgstr "Keine Tags gefunden"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No teams found"
+msgstr "Keine Teams gefunden"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "None recorded yet. Sign-ins from before this list existed show up once they sign in again."
+msgstr ""
+"Noch keine erfasst. Anmeldungen von vor dieser Liste erscheinen, sobald sie si"
+"ch erneut anmelden."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing in the long box"
+msgstr "Nichts in der Longbox"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "On"
+msgstr "An"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Over time"
+msgstr "Im Zeitverlauf"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Page"
+msgstr "Seite"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Personal"
+msgstr "Persönlich"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Production"
+msgstr "Produktion"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Profile saved."
+msgstr "Profil gespeichert."
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publication year"
+msgstr "Erscheinungsjahr"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publishers by book count"
+msgstr "Verlage nach Anzahl Bücher"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read mark"
+msgstr "Gelesen-Markierung"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read next issue %{number}"
+msgstr "Nächste Ausgabe %{number} lesen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read status"
+msgstr "Lesestatus"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reading: %{title}"
+msgstr "Lese: %{title}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Release year"
+msgstr "Erscheinungsjahr"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Released %{from}–%{to}"
+msgstr "Erschienen %{from}–%{to}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Released %{year}"
+msgstr "Erschienen %{year}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Released %{year}+"
+msgstr "Erschienen ab %{year}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Released ≤ %{year}"
+msgstr "Erschienen bis %{year}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Relevance"
+msgstr "Relevanz"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Repeat new password"
+msgstr "Neues Passwort wiederholen"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reset zoom (0)"
+msgstr "Zoom zurücksetzen (0)"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Result type"
+msgstr "Ergebnistyp"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Right to left"
+msgstr "Rechts nach links"
+
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Role"
+msgstr "Rolle"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Role: %{role}"
+msgstr "Rolle: %{role}"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Save profile"
+msgstr "Profil speichern"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search characters..."
+msgstr "Figuren suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search creators..."
+msgstr "Urheber suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search genres..."
+msgstr "Genres suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search locations..."
+msgstr "Orte suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search tags..."
+msgstr "Tags suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search teams..."
+msgstr "Teams suchen..."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search the stash"
+msgstr "Sammlung durchsuchen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Security"
+msgstr "Sicherheit"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series by issue count"
+msgstr "Serien nach Anzahl Ausgaben"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series status"
+msgstr "Serienstatus"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sessions"
+msgstr "Sitzungen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Settings sections"
+msgstr "Einstellungsbereiche"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show 1 more book"
+msgid_plural "Show %{number} more books"
+msgstr[0] "1 weiteres Buch zeigen"
+msgstr[1] "%{number} weitere Bücher zeigen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show 1 more issue"
+msgid_plural "Show %{number} more issues"
+msgstr[0] "1 weitere Ausgabe zeigen"
+msgstr[1] "%{number} weitere Ausgaben zeigen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show 1 more series"
+msgid_plural "Show %{number} more series"
+msgstr[0] "1 weitere Serie zeigen"
+msgstr[1] "%{number} weitere Serien zeigen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show 1 result"
+msgid_plural "Show %{number} results"
+msgstr[0] "1 Ergebnis zeigen"
+msgstr[1] "%{number} Ergebnisse zeigen"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show all"
+msgstr "Alle zeigen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show extended book info"
+msgstr "Erweiterte Buchinfos zeigen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show file size and format on book and series pages. Off by default."
+msgstr ""
+"Dateigröße und Format auf Buch- und Serienseiten zeigen. Standardmäßig aus."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Shown in the top bar instead of your username."
+msgstr "Wird statt deines Benutzernamens in der oberen Leiste angezeigt."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sign out %{device}"
+msgstr "%{device} abmelden"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sign out everywhere else"
+msgstr "Überall sonst abmelden"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Single page"
+msgstr "Einzelseite"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sort results"
+msgstr "Ergebnisse sortieren"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Source code"
+msgstr "Quellcode"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Stamp"
+msgstr "Stempel"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Stashix is free software: you can redistribute and modify it under the terms of the %{license}, version 3 or later. The source code for this server is at %{source}."
+msgstr ""
+"Stashix ist freie Software: Du kannst sie unter den Bedingungen der %{license}"
+", Version 3 oder neuer, weitergeben und verändern. Den Quellcode dieses Server"
+"s findest du unter %{source}."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "System follows your device's light or dark setting. Saved to your account, so it follows you to other devices."
+msgstr ""
+"„System“ folgt der Hell-/Dunkel-Einstellung deines Geräts. Wird in deinem Kont"
+"o gespeichert und gilt so auch auf deinen anderen Geräten."
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Tag"
+msgstr "Tag"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format
+msgid "Team"
+msgstr "Team"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That was the last one. Nothing past here but ghosts."
+msgstr "Das war die letzte. Dahinter nur noch Geister."
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "The End"
+msgstr "Ende"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "This one"
+msgstr "Diese hier"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Tick"
+msgstr "Haken"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "To be continued"
+msgstr "Fortsetzung folgt"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "To year"
+msgstr "Bis Jahr"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Toggle reading direction (LTR/RTL)"
+msgstr "Leserichtung umschalten (LTR/RTL)"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Top of the stash"
+msgstr "Spitze der Sammlung"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Total"
+msgstr "Gesamt"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "UI"
+msgstr "Oberfläche"
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/search_live.ex
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format
+msgid "Unread"
+msgstr "Ungelesen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "User"
+msgstr "Benutzer"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Version"
+msgstr "Version"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "View"
+msgstr "Ansicht"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "View options"
+msgstr "Ansichtsoptionen"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Webtoon (scroll)"
+msgstr "Webtoon (scrollen)"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "What you sign in with."
+msgstr "Womit du dich anmeldest."
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Where this account is signed in."
+msgstr "Wo dieses Konto angemeldet ist."
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "With credits"
+msgstr "Mit Mitwirkenden"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "With external ids"
+msgstr "Mit externen IDs"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "With genres"
+msgstr "Mit Genres"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "With summary"
+msgstr "Mit Zusammenfassung"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Writing"
+msgstr "Text"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your stash in numbers"
+msgstr "Deine Sammlung in Zahlen"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Zoom in (+)"
+msgstr "Vergrößern (+)"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Zoom out (-)"
+msgstr "Verkleinern (-)"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "across all files"
+msgstr "über alle Dateien"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "and %{name}"
+msgstr "und %{name}"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "books & issues"
+msgstr "Bücher & Ausgaben"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "keep reading"
+msgstr "weiterlesen"
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "last page"
+msgstr "letzte Seite"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "or %{name}"
+msgstr "oder %{name}"
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "result"
+msgid_plural "results"
+msgstr[0] "Ergebnis"
+msgstr[1] "Ergebnisse"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "signed in %{date}"
+msgstr "angemeldet %{date}"
+
+#: lib/stashix_web/live/stats_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "total storage"
+msgstr "Speicher gesamt"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "\"%{alias}\" is now an alias for \"%{master}\""
+msgstr "„%{alias}“ ist jetzt ein Alias für „%{master}“"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "\"%{name}\" hidden"
+msgstr "„%{name}“ ausgeblendet"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "\"%{name}\" visible"
+msgstr "„%{name}“ sichtbar"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{alias} will become an alias of %{master}. No data is deleted — this can be undone."
+msgstr ""
+"%{alias} wird ein Alias von %{master}. Es werden keine Daten gelöscht – das lä"
+"sst sich rückgängig machen."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} selected"
+msgstr "%{count} ausgewählt"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "(one per line — case insensitive)"
+msgstr "(eine pro Zeile – Groß-/Kleinschreibung egal)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "(series)"
+msgstr "(Serie)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "(summary becomes empty)"
+msgstr "(Zusammenfassung wird leer)"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 book permanently deleted"
+msgid_plural "%{count} books permanently deleted"
+msgstr[0] "1 Buch endgültig gelöscht"
+msgstr[1] "%{count} Bücher endgültig gelöscht"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 book restored"
+msgid_plural "%{count} books restored"
+msgstr[0] "1 Buch wiederhergestellt"
+msgstr[1] "%{count} Bücher wiederhergestellt"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 publisher"
+msgid_plural "%{count} publishers"
+msgstr[0] "1 Verlag"
+msgstr[1] "%{count} Verlage"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 publisher matching \"%{query}\""
+msgid_plural "%{count} publishers matching \"%{query}\""
+msgstr[0] "1 Verlag passend zu „%{query}“"
+msgstr[1] "%{count} Verlage passend zu „%{query}“"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 series permanently deleted"
+msgid_plural "%{count} series permanently deleted"
+msgstr[0] "1 Serie endgültig gelöscht"
+msgstr[1] "%{count} Serien endgültig gelöscht"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "1 series restored"
+msgid_plural "%{count} series restored"
+msgstr[0] "1 Serie wiederhergestellt"
+msgstr[1] "%{count} Serien wiederhergestellt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "2.0 (stable)"
+msgstr "2.0 (stabil)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "2.1 (draft)"
+msgstr "2.1 (Entwurf)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "2.1 is a draft that adds Translator, Tags, story arc numbers and GTIN; some readers only accept 2.0."
+msgstr ""
+"2.1 ist ein Entwurf mit Übersetzer, Tags, Handlungsbogen-Nummern und GTIN; man"
+"che Reader akzeptieren nur 2.0."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "<book name>.xml"
+msgstr "<Buchname>.xml"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A publisher cannot alias itself"
+msgstr "Ein Verlag kann kein Alias von sich selbst sein"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add ComicInfo.xml to CBZ files that have none"
+msgstr "ComicInfo.xml zu CBZ-Dateien ohne eine hinzufügen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Add Library"
+msgstr "Bibliothek hinzufügen"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format
+msgid "Add User"
+msgstr "Benutzer hinzufügen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Cleanup"
+msgstr "Verwaltung · Aufräumen"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Health"
+msgstr "Verwaltung · Zustand"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Libraries"
+msgstr "Verwaltung · Bibliotheken"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Metadata"
+msgstr "Verwaltung · Metadaten"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Metadata Jobs"
+msgstr "Verwaltung · Metadaten-Jobs"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Metadata Review"
+msgstr "Verwaltung · Metadaten-Prüfung"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Metadata Settings"
+msgstr "Verwaltung · Metadaten-Einstellungen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Publishers"
+msgstr "Verwaltung · Verlage"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Admin · Users"
+msgstr "Verwaltung · Benutzer"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format
+msgid "Alias"
+msgstr "Alias"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format
+msgid "Alias (will be hidden)"
+msgstr "Alias (wird ausgeblendet)"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format
+msgid "Alias · hidden"
+msgstr "Alias · ausgeblendet"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Aliases"
+msgstr "Aliase"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All clear."
+msgstr "Alles in Ordnung."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Auto-apply"
+msgstr "Automatisch übernehmen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Auto-match threshold (%)"
+msgstr "Schwelle für automatischen Abgleich (%)"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Backfill Blurhashes"
+msgstr "Blurhashes nachtragen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Best: %{title} · %{score}% · 1 candidate"
+msgid_plural "Best: %{title} · %{score}% · %{count} candidates"
+msgstr[0] "Bester: %{title} · %{score} % · 1 Kandidat"
+msgstr[1] "Bester: %{title} · %{score} % · %{count} Kandidaten"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Blurhash backfill started — check server logs for progress"
+msgstr "Blurhash-Nachtrag gestartet – Fortschritt in den Server-Logs"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book permanently deleted"
+msgstr "Buch endgültig gelöscht"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book restored"
+msgstr "Buch wiederhergestellt"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Books with zero pages"
+msgstr "Bücher ohne Seiten"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Books without a cover"
+msgstr "Bücher ohne Cover"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Built-in defaults (always active):"
+msgstr "Eingebaute Standards (immer aktiv):"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "CBZ files get MetronInfo.xml embedded; other formats get a %{sidecar} sidecar."
+msgstr ""
+"CBZ-Dateien bekommen MetronInfo.xml eingebettet; andere Formate eine Begleitda"
+"tei %{sidecar}."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cache issue/series details (days)"
+msgstr "Ausgaben-/Seriendetails cachen (Tage)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cache searches (hours)"
+msgstr "Suchen cachen (Stunden)"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Can read"
+msgstr "Darf lesen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cancel queued"
+msgstr "Wartende abbrechen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cannot delete the last admin"
+msgstr "Der letzte Admin kann nicht gelöscht werden"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cannot delete yourself"
+msgstr "Du kannst dich nicht selbst löschen"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Check integrity"
+msgstr "Integrität prüfen"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Checking integrity…"
+msgstr "Integrität wird geprüft…"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clean %{count} summaries"
+msgstr "%{count} Zusammenfassungen bereinigen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clean up summaries"
+msgstr "Zusammenfassungen bereinigen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cleaned %{books} book and %{series} series summaries"
+msgstr "%{books} Buch- und %{series} Serienzusammenfassungen bereinigt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear cache (%{count})"
+msgstr "Cache leeren (%{count})"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cleared %{responses} cached responses and %{images} images"
+msgstr "%{responses} gecachte Antworten und %{images} Bilder gelöscht"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "ComicInfo version"
+msgstr "ComicInfo-Version"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Confirm alias link"
+msgstr "Alias-Verknüpfung bestätigen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Connection OK"
+msgstr "Verbindung OK"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Cookies saved — leave blank to keep"
+msgstr "Cookies gespeichert – leer lassen zum Beibehalten"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Corrupt files"
+msgstr "Beschädigte Dateien"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Corrupt or unreadable archives"
+msgstr "Beschädigte oder unlesbare Archive"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not delete user"
+msgstr "Benutzer konnte nicht gelöscht werden"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not queue metadata matching"
+msgstr "Metadatenabgleich konnte nicht eingereiht werden"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Could not save: %{errors}"
+msgstr "Speichern fehlgeschlagen: %{errors}"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create"
+msgstr "Anlegen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create Library"
+msgstr "Bibliothek anlegen"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create User"
+msgstr "Benutzer anlegen"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format
+msgid "Current aliases"
+msgstr "Aktuelle Aliase"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Default built-in: one-shot, one shot, oneshot\nAdd extras here, e.g.:\nAnnuals\nSpecials"
+msgstr ""
+"Eingebaut: one-shot, one shot, oneshot\nWeitere hier hinzufügen, z. B.:\nAnnua"
+"ls\nSpecials"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Default: %{value}"
+msgstr "Standard: %{value}"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Delete"
+msgstr "Löschen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Delete Library"
+msgstr "Bibliothek löschen"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format
+msgid "Delete User"
+msgstr "Benutzer löschen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Delete cached source responses and images"
+msgstr "Gecachte Quellantworten und Bilder löschen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Delete library \"%{name}\" and ALL its books and series? Book files on disk are never deleted. This cannot be undone."
+msgstr ""
+"Bibliothek „%{name}“ und ALLE ihre Bücher und Serien löschen? Buchdateien auf "
+"der Festplatte werden nie gelöscht. Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Delete user \"%{name}\"? This cannot be undone."
+msgstr "Benutzer „%{name}“ löschen? Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted"
+msgstr "Gelöscht"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format
+msgid "Deleted Books"
+msgstr "Gelöschte Bücher"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Deleted Series"
+msgstr "Gelöschte Serien"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Each API endpoint (search, issues, issue, …) has its own quota."
+msgstr ""
+"Jeder API-Endpunkt (search, issues, issue, …) hat ein eigenes Kontingent."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Enabled"
+msgstr "Aktiviert"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Expected path"
+msgstr "Erwarteter Pfad"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Extension"
+msgstr "Endung"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed"
+msgstr "Fehlgeschlagen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to remove alias"
+msgstr "Alias konnte nicht entfernt werden"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to save"
+msgstr "Speichern fehlgeschlagen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to set alias"
+msgstr "Alias konnte nicht gesetzt werden"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to update permission"
+msgstr "Berechtigung konnte nicht aktualisiert werden"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Failed to update publisher"
+msgstr "Verlag konnte nicht aktualisiert werden"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "File path"
+msgstr "Dateipfad"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "File writes"
+msgstr "Dateischreibvorgänge"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Filter publishers…"
+msgstr "Verlage filtern…"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "For readers that don't understand MetronInfo. An existing ComicInfo.xml is always kept up to date."
+msgstr ""
+"Für Reader, die MetronInfo nicht verstehen. Eine vorhandene ComicInfo.xml wird"
+" immer aktuell gehalten."
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hidden"
+msgstr "Ausgeblendet"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hide"
+msgstr "Ausblenden"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hide unrated"
+msgstr "Ohne Freigabe ausblenden"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Higher priority"
+msgstr "Höhere Priorität"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "How far ahead of the runner-up the best match must be."
+msgstr "Wie weit der beste Treffer vor dem zweitbesten liegen muss."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Identify"
+msgstr "Identifizieren"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "In the Identify dialog you can pick exactly which fields to overwrite."
+msgstr ""
+"Im Identifizieren-Dialog kannst du genau wählen, welche Felder überschrieben w"
+"erden."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Jobs"
+msgstr "Jobs"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Last seen"
+msgstr "Zuletzt gesehen"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library \"%{name}\" and all its content deleted"
+msgstr "Bibliothek „%{name}“ samt Inhalt gelöscht"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library Access for %{name}"
+msgstr "Bibliothekszugriff für %{name}"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library Health"
+msgstr "Bibliothekszustand"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library created"
+msgstr "Bibliothek angelegt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library queued for metadata matching"
+msgstr "Bibliothek für Metadatenabgleich eingereiht"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Library settings saved"
+msgstr "Bibliothekseinstellungen gespeichert"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Link Publisher Alias"
+msgstr "Verlagsalias verknüpfen"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Link as Alias"
+msgstr "Als Alias verknüpfen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Live file watching is off"
+msgstr "Live-Dateiüberwachung ist aus"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Look up metadata for unmatched books from the enabled sources"
+msgstr ""
+"Metadaten für nicht abgeglichene Bücher aus den aktivierten Quellen suchen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lower priority"
+msgstr "Niedrigere Priorität"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Maintenance"
+msgstr "Wartung"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark one publisher as an alias of another. The alias is hidden from listings and its content is shown under the master."
+msgstr ""
+"Einen Verlag als Alias eines anderen markieren. Der Alias wird in Listen ausge"
+"blendet und sein Inhalt unter dem Hauptverlag gezeigt."
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Master"
+msgstr "Hauptverlag"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Master (kept, shown in listings)"
+msgstr "Hauptverlag (bleibt, wird gelistet)"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Match Metadata"
+msgstr "Metadaten abgleichen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Match a library"
+msgstr "Bibliothek abgleichen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Match job failed — see the Jobs tab"
+msgstr "Abgleich-Job fehlgeschlagen – siehe Tab „Jobs“"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Match unmatched"
+msgstr "Nicht abgeglichene abgleichen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Matching"
+msgstr "Abgleich"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Matching…"
+msgstr "Wird abgeglichen…"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Maximum age rating"
+msgstr "Maximale Altersfreigabe"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata matching queued — follow progress in Admin · Metadata · Jobs"
+msgstr ""
+"Metadatenabgleich eingereiht – Fortschritt unter Verwaltung · Metadaten · Jobs"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Metadata sections"
+msgstr "Metadatenbereiche"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Min. seconds between requests"
+msgstr "Min. Sekunden zwischen Anfragen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "Minimum score to apply a match without review."
+msgstr "Mindestpunktzahl, um einen Treffer ohne Prüfung zu übernehmen."
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format
+msgid "Missing files"
+msgstr "Fehlende Dateien"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format
+msgid "Missing since"
+msgstr "Fehlt seit"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/collection_picker.ex
+#: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Name"
+msgstr "Name"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "Needs configuration"
+msgstr "Muss konfiguriert werden"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format
+msgid "Never"
+msgstr "Nie"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format
+msgid "Never seen"
+msgstr "Nie gesehen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "New and changed files won't appear on their own. Run Scan on a library to pick them up."
+msgstr ""
+"Neue und geänderte Dateien erscheinen nicht von selbst. Scanne eine Bibliothek"
+", um sie zu erfassen."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "No"
+msgstr "Nein"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No aliases configured"
+msgstr "Keine Aliase eingerichtet"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No candidates found"
+msgstr "Keine Kandidaten gefunden"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No cover"
+msgstr "Kein Cover"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No deleted books."
+msgstr "Keine gelöschten Bücher."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No deleted series."
+msgstr "Keine gelöschten Serien."
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No libraries configured."
+msgstr "Keine Bibliotheken eingerichtet."
+
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No publishers found"
+msgstr "Keine Verlage gefunden"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing to clean up. No summaries contain a cover table."
+msgstr "Nichts zu bereinigen. Keine Zusammenfassung enthält eine Covertabelle."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing to review."
+msgstr "Nichts zu prüfen."
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "One or more entries in the archive have a checksum mismatch, indicating file corruption. The download or copy may be incomplete."
+msgstr ""
+"Ein oder mehrere Einträge im Archiv haben eine falsche Prüfsumme, die Datei is"
+"t also beschädigt. Download oder Kopie sind womöglich unvollständig."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only fill empty fields"
+msgstr "Nur leere Felder füllen"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Orphan series"
+msgstr "Verwaiste Serien"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Orphaned series (folder gone)"
+msgstr "Verwaiste Serien (Ordner fehlt)"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Path"
+msgstr "Pfad"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Permanently delete \"%{name}\" and all its books? Book files on disk are never deleted. This cannot be undone."
+msgstr ""
+"„%{name}“ und alle zugehörigen Bücher endgültig löschen? Buchdateien auf der F"
+"estplatte werden nie gelöscht. Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Permanently delete \"%{name}\"? Book files on disk are never deleted. This cannot be undone."
+msgstr ""
+"„%{name}“ endgültig löschen? Buchdateien auf der Festplatte werden nie gelösch"
+"t. Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Permanently delete 1 book? Book files on disk are never deleted. This cannot be undone."
+msgid_plural "Permanently delete %{count} books? Book files on disk are never deleted. This cannot be undone."
+msgstr[0] ""
+"1 Buch endgültig löschen? Buchdateien auf der Festplatte werden nie gelöscht. "
+"Das kann nicht rückgängig gemacht werden."
+msgstr[1] ""
+"%{count} Bücher endgültig löschen? Buchdateien auf der Festplatte werden nie g"
+"elöscht. Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Permanently delete 1 series and ALL its books? Book files on disk are never deleted. This cannot be undone."
+msgid_plural "Permanently delete %{count} series and ALL their books? Book files on disk are never deleted. This cannot be undone."
+msgstr[0] ""
+"1 Serie und ALLE ihre Bücher endgültig löschen? Buchdateien auf der Festplatte"
+" werden nie gelöscht. Das kann nicht rückgängig gemacht werden."
+msgstr[1] ""
+"%{count} Serien und ALLE ihre Bücher endgültig löschen? Buchdateien auf der Fe"
+"stplatte werden nie gelöscht. Das kann nicht rückgängig gemacht werden."
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Permissions"
+msgstr "Berechtigungen"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Perms"
+msgstr "Rechte"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Preview cleanup"
+msgstr "Bereinigung ansehen"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publisher tools"
+msgstr "Verlagswerkzeuge"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Purge"
+msgstr "Endgültig löschen"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Purge Book"
+msgstr "Buch endgültig löschen"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Purge Books"
+msgstr "Bücher endgültig löschen"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Purge Selected"
+msgstr "Auswahl endgültig löschen"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Purge Series"
+msgstr "Serie endgültig löschen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rate limit (requests / minute)"
+msgstr "Ratenlimit (Anfragen / Minute)"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Re-match all"
+msgstr "Alle neu abgleichen"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove"
+msgstr "Entfernen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove the \"List of covers and their creators\" table that older Comic Vine imports left at the end of summaries."
+msgstr ""
+"Die Tabelle „List of covers and their creators“ entfernen, die ältere Comic-Vi"
+"ne-Importe am Ende von Zusammenfassungen hinterlassen haben."
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Removed alias \"%{name}\""
+msgstr "Alias „%{name}“ entfernt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Replace fields the source provides"
+msgstr "Von der Quelle gelieferte Felder ersetzen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Requests closer together than this risk a temporary block."
+msgstr ""
+"Dichter aufeinanderfolgende Anfragen riskieren eine vorübergehende Sperre."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Requests per hour, per endpoint"
+msgstr "Anfragen pro Stunde und Endpunkt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Required lead (%)"
+msgstr "Nötiger Vorsprung (%)"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Restore"
+msgstr "Wiederherstellen"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Restore Selected"
+msgstr "Auswahl wiederherstellen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Retried — still no confident match"
+msgstr "Erneut versucht – noch immer kein sicherer Treffer"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Retry"
+msgstr "Erneut versuchen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Retry failed"
+msgstr "Fehlgeschlagene wiederholen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Retrying"
+msgstr "Wird wiederholt"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Review"
+msgstr "Prüfen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Root Path"
+msgstr "Stammpfad"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Running"
+msgstr "Läuft"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Save"
+msgstr "Speichern"
+
+#: lib/stashix_web/live/admin/users.ex
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "Saved"
+msgstr "Gespeichert"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan unsupported files"
+msgstr "Nicht unterstützte Dateien suchen"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scanned"
+msgstr "Gescannt"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search publishers…"
+msgstr "Verlage suchen…"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series and its books restored"
+msgstr "Serie und ihre Bücher wiederhergestellt"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series permanently deleted"
+msgstr "Serie endgültig gelöscht"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show"
+msgstr "Einblenden"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Showing %{count} examples."
+msgstr "%{count} Beispiele werden angezeigt."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skip"
+msgstr "Überspringen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Source responses are cached to save API requests. 0 disables caching."
+msgstr ""
+"Antworten der Quellen werden gecacht, um API-Anfragen zu sparen. 0 deaktiviert"
+" den Cache."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sources"
+msgstr "Quellen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sources are searched in priority order when matching automatically. Changes save automatically; credentials and cookies are stored encrypted. A source can be enabled once its connection test succeeds."
+msgstr ""
+"Beim automatischen Abgleich werden die Quellen nach Priorität durchsucht. Ände"
+"rungen werden automatisch gespeichert; Zugangsdaten und Cookies werden verschl"
+"üsselt abgelegt. Eine Quelle lässt sich aktivieren, sobald ihr Verbindungstest"
+" klappt."
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Standalone folder names"
+msgstr "Ordnernamen für Einzelbände"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Standalone folders: %{folders}"
+msgstr "Einzelband-Ordner: %{folders}"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Status"
+msgstr "Status"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Test connection"
+msgstr "Verbindung testen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Test the connection first"
+msgstr "Teste zuerst die Verbindung"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format
+msgid "Test the connection successfully before enabling this source"
+msgstr "Teste die Verbindung erfolgreich, bevor du diese Quelle aktivierst"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Test the connection to enable"
+msgstr "Verbindung testen zum Aktivieren"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Testing…"
+msgstr "Wird getestet…"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The ZIP's internal file table (End of Central Directory) is missing. The file was likely cut off during download or copy — re-downloading it usually fixes this."
+msgstr ""
+"Die interne Dateitabelle des ZIP (End of Central Directory) fehlt. Die Datei w"
+"urde wahrscheinlich beim Download oder Kopieren abgeschnitten – erneutes Herun"
+"terladen behebt das meist."
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The archive opened successfully but contains no image files. It may be empty or use an unsupported internal layout."
+msgstr ""
+"Das Archiv ließ sich öffnen, enthält aber keine Bilddateien. Es ist womöglich "
+"leer oder intern nicht unterstützt aufgebaut."
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The file does not start with a valid ZIP, RAR, or 7-Zip signature. It may be mislabeled or have been truncated."
+msgstr ""
+"Die Datei beginnt nicht mit einer gültigen ZIP-, RAR- oder 7-Zip-Signatur. Sie"
+" ist womöglich falsch benannt oder abgeschnitten."
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The file was registered in the library but no longer exists at the expected path. Run a re-scan to remove or reassign it."
+msgstr ""
+"Die Datei ist in der Bibliothek registriert, existiert aber nicht mehr am erwa"
+"rteten Pfad. Scanne neu, um sie zu entfernen oder neu zuzuordnen."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "This will rewrite the summary of %{books} books and %{series} series. Only the cover table at the end is removed; the rest of each summary is kept."
+msgstr ""
+"Dadurch werden die Zusammenfassungen von %{books} Büchern und %{series} Serien"
+" neu geschrieben. Nur die Covertabelle am Ende wird entfernt; der Rest bleibt "
+"erhalten."
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#: lib/stashix_web/live/admin_health_live.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Title"
+msgstr "Titel"
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unrated books are shown under an age limit unless this is checked"
+msgstr ""
+"Bücher ohne Freigabe werden trotz Altersgrenze gezeigt, außer dies ist angehak"
+"t"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unsupported"
+msgstr "Nicht unterstützt"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Unsupported file types"
+msgstr "Nicht unterstützte Dateitypen"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Untitled"
+msgstr "Ohne Titel"
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "User created"
+msgstr "Benutzer angelegt"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Visibility"
+msgstr "Sichtbarkeit"
+
+#: lib/stashix_web/live/admin/publishers.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Visible"
+msgstr "Sichtbar"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Waiting"
+msgstr "Wartet"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "When applying a match automatically"
+msgstr "Beim automatischen Übernehmen eines Treffers"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Write metadata to files"
+msgstr "Metadaten in Dateien schreiben"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Writing metadata to files is off, so book files are not touched."
+msgstr ""
+"Das Schreiben von Metadaten in Dateien ist aus, Buchdateien bleiben also unber"
+"ührt."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Writing metadata to files is on, so %{count} file writes will be queued."
+msgstr ""
+"Das Schreiben von Metadaten in Dateien ist an, daher werden %{count} Schreibvo"
+"rgänge eingereiht."
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Yes"
+msgstr "Ja"
+
+#: lib/stashix_web/live/admin_health_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Zero pages"
+msgstr "Keine Seiten"
+
+#: lib/stashix_web/live/admin_metadata_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "•••••••• saved — leave blank to keep"
+msgstr "•••••••• gespeichert – leer lassen zum Beibehalten"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} requests per %{seconds}s"
+msgstr "%{count} Anfragen pro %{seconds} s"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} requests per hour for this endpoint"
+msgstr "%{count} Anfragen pro Stunde für diesen Endpunkt"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{count} requests per minute"
+msgstr "%{count} Anfragen pro Minute"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{source} allows %{rate}. Searches can take several requests; cached results skip the wait."
+msgstr ""
+"%{source} erlaubt %{rate}. Suchen können mehrere Anfragen brauchen; gecachte E"
+"rgebnisse überspringen die Wartezeit."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{task} failed: %{reason}"
+msgstr "%{task} fehlgeschlagen: %{reason}"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "A page tore"
+msgstr "Eine Seite ist gerissen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add ID"
+msgstr "ID hinzufügen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add arc"
+msgstr "Handlungsbogen hinzufügen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add credit"
+msgstr "Mitwirkung hinzufügen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add link"
+msgstr "Link hinzufügen"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add name"
+msgstr "Namen hinzufügen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add price"
+msgstr "Preis hinzufügen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add universe"
+msgstr "Universum hinzufügen"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Age rating of all issues"
+msgstr "Altersfreigabe aller Ausgaben"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Alternate count"
+msgstr "Alternative Anzahl"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Alternate series"
+msgstr "Alternative Serie"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Alternative #"
+msgstr "Alternative #"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Amount"
+msgstr "Betrag"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "An imprint needs a publisher"
+msgstr "Ein Imprint braucht einen Verlag"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Apply"
+msgstr "Übernehmen"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Apply (%{count})"
+msgstr "Übernehmen (%{count})"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Applying metadata…"
+msgstr "Metadaten werden übernommen…"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Applying…"
+msgstr "Wird übernommen…"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Arc"
+msgstr "Handlungsbogen"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back in a moment"
+msgstr "Gleich wieder da"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Back to the stash"
+msgstr "Zurück zur Sammlung"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Belongs to the first publisher."
+msgstr "Gehört zum ersten Verlag."
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Black and white"
+msgstr "Schwarzweiß"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Changing this overwrites the age rating of the 1 issue in this series."
+msgid_plural "Changing this overwrites the age rating of all %{count} issues in this series."
+msgstr[0] ""
+"Eine Änderung überschreibt die Altersfreigabe der einen Ausgabe dieser Serie."
+msgstr[1] ""
+"Eine Änderung überschreibt die Altersfreigabe aller %{count} Ausgaben dieser S"
+"erie."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Checked fields are written. Empty fields are selected by default; tick a filled field to overwrite it."
+msgstr ""
+"Angehakte Felder werden geschrieben. Leere Felder sind vorausgewählt; hake ein"
+" gefülltes Feld an, um es zu überschreiben."
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection title"
+msgstr "Sammelbandtitel"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "ComicInfo extras"
+msgstr "ComicInfo-Extras"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Community rating (0–5)"
+msgstr "Community-Bewertung (0–5)"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Current"
+msgstr "Aktuell"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Dates & IDs"
+msgstr "Daten & IDs"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Designation"
+msgstr "Bezeichnung"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Edit series metadata"
+msgstr "Serien-Metadaten bearbeiten"
+
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "End year"
+msgstr "Endjahr"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Error"
+msgstr "Fehler"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Field"
+msgstr "Feld"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "General"
+msgstr "Allgemein"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Hiatus"
+msgstr "Pausiert"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "ID"
+msgstr "ID"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "ISBN"
+msgstr "ISBN"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Identify issue"
+msgstr "Ausgabe identifizieren"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Identify series"
+msgstr "Serie identifizieren"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Ignore cached responses"
+msgstr "Gecachte Antworten ignorieren"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issue #"
+msgstr "Ausgabe #"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issues are queued for matching afterwards."
+msgstr "Die Ausgaben werden danach zum Abgleich eingereiht."
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Issues have different ratings. Unchecking the box above overwrites the age rating of all %{count} issues."
+msgstr ""
+"Die Ausgaben haben unterschiedliche Freigaben. Wenn du das Kästchen oben abwäh"
+"lst, wird die Altersfreigabe aller %{count} Ausgaben überschrieben."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Linked"
+msgstr "Verknüpft"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Linked IDs:"
+msgstr "Verknüpfte IDs:"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Loading details…"
+msgstr "Details werden geladen…"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lock a field to keep rescans and metadata matching from changing it. Saving also writes the metadata to the book's files."
+msgstr ""
+"Sperre ein Feld, damit Scans und Metadatenabgleich es nicht ändern. Beim Speic"
+"hern werden die Metadaten auch in die Buchdateien geschrieben."
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Lock a field to keep rescans and metadata matching from changing it. The name, years and ongoing flag otherwise follow the folder name on every scan."
+msgstr ""
+"Sperre ein Feld, damit Scans und Metadatenabgleich es nicht ändern. Name, Jahr"
+"e und „Laufend“ folgen sonst bei jedem Scan dem Ordnernamen."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Look up this entry directly"
+msgstr "Diesen Eintrag direkt nachschlagen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Main character or team"
+msgstr "Hauptfigur oder -team"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Manga"
+msgstr "Manga"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Manga volume"
+msgstr "Manga-Band"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Misfiled, or never printed."
+msgstr "Falsch einsortiert oder nie gedruckt."
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mixed — keep per-issue ratings"
+msgstr "Gemischt – Freigaben pro Ausgabe behalten"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Names & publishing"
+msgstr "Namen & Veröffentlichung"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "New"
+msgstr "Neu"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No issues"
+msgstr "Keine Ausgaben"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No metadata source is enabled and configured. %{link}."
+msgstr "Keine Metadatenquelle ist aktiviert und eingerichtet. %{link}."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "No results yet."
+msgstr "Noch keine Ergebnisse."
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Not in your box"
+msgstr "Nicht in deiner Kiste"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Not the right match? Search above to pick a different one."
+msgstr "Nicht der richtige Treffer? Such oben nach einem anderen."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Number"
+msgstr "Nummer"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Ongoing (from the folder name)"
+msgstr "Laufend (aus dem Ordnernamen)"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Ongoing series"
+msgstr "Laufende Serie"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Only update issues rated Unknown (%{count})"
+msgstr "Nur Ausgaben mit Freigabe „Unbekannt“ aktualisieren (%{count})"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open on source site"
+msgstr "Auf der Quellseite öffnen"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Overwrite existing issue titles"
+msgstr "Vorhandene Ausgabentitel überschreiben"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "People"
+msgstr "Personen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Prices"
+msgstr "Preise"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Primary"
+msgstr "Primär"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Publishing & links"
+msgstr "Veröffentlichung & Links"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Push to all issues…"
+msgstr "Auf alle Ausgaben übertragen…"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rating"
+msgstr "Bewertung"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Rating count"
+msgstr "Anzahl Bewertungen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Save changes"
+msgstr "Änderungen speichern"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Saving…"
+msgstr "Wird gespeichert…"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Scan information"
+msgstr "Scan-Informationen"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Search a metadata source and pick the matching entry."
+msgstr "Durchsuche eine Metadatenquelle und wähle den passenden Eintrag."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Searching %{source}…"
+msgstr "%{source} wird durchsucht…"
+
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searching…"
+msgstr "Suche läuft…"
+
+#: lib/stashix_web/live/admin/cleanup.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Select all"
+msgstr "Alle auswählen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Series group"
+msgstr "Seriengruppe"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Set one up in Admin · Metadata"
+msgstr "Richte eine unter Verwaltung · Metadaten ein"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Sign in first"
+msgstr "Erst anmelden"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Skip cache"
+msgstr "Cache überspringen"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format
+msgid "Something went wrong."
+msgstr "Etwas ist schiefgelaufen."
+
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Sort name"
+msgstr "Sortiername"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Source IDs"
+msgstr "Quell-IDs"
+
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Start year"
+msgstr "Startjahr"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Store date"
+msgstr "Handelsdatum"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Stories (first is the title in MetronInfo)"
+msgstr "Geschichten (die erste ist der Titel in MetronInfo)"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Story"
+msgstr "Geschichte"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Story arcs"
+msgstr "Handlungsbögen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Summary"
+msgstr "Zusammenfassung"
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "That one is on us. Give it a moment and try again."
+msgstr "Das geht auf uns. Warte kurz und versuch es noch mal."
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The long box is locked."
+msgstr "Die Longbox ist verschlossen."
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "The shop is restocking the shelves."
+msgstr "Der Laden füllt gerade die Regale auf."
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Then match all issues"
+msgstr "Danach alle Ausgaben abgleichen"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "This issue is already linked to %{source} %{id} (from its file tags or an earlier match), so that entry was loaded directly — no search needed."
+msgstr ""
+"Diese Ausgabe ist bereits mit %{source} %{id} verknüpft (aus ihren Datei-Tags "
+"oder einem früheren Abgleich), daher wurde dieser Eintrag direkt geladen – kei"
+"ne Suche nötig."
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "This one belongs to someone else's collection."
+msgstr "Das gehört zur Sammlung von jemand anderem."
+
+#: lib/stashix_web/controllers/error_html.ex
+#, elixir-autogen, elixir-format
+msgid "This page isn't there"
+msgstr "Diese Seite fehlt"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "This series is already linked to %{source} %{id} (from its file tags or an earlier match), so that entry was loaded directly — no search needed."
+msgstr ""
+"Diese Serie ist bereits mit %{source} %{id} verknüpft (aus ihren Datei-Tags od"
+"er einem früheren Abgleich), daher wurde dieser Eintrag direkt geladen – keine"
+" Suche nötig."
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "UPC"
+msgstr "UPC"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Waiting for %{source}'s rate limit, next request in %{seconds}s…"
+msgstr ""
+"Warte auf das Ratenlimit von %{source}, nächste Anfrage in %{seconds} s…"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format
+msgid "Year"
+msgstr "Jahr"
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Years & counts"
+msgstr "Jahre & Anzahlen"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Yes, right to left"
+msgstr "Ja, rechts nach links"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "from series name"
+msgstr "aus dem Seriennamen"
+
+#: lib/stashix_web/live/identify_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "one request every %{seconds}s"
+msgstr "eine Anfrage alle %{seconds} s"
+
+#: lib/stashix_web/format.ex
+#, elixir-autogen, elixir-format
+msgid "%{number}K"
+msgstr "%{number} Tsd."
+
+#: lib/stashix_web/format.ex
+#, elixir-autogen, elixir-format
+msgid "%{number}M"
+msgstr "%{number} Mio."
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "About %{size}"
+msgstr "Etwa %{size}"
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "All formats (ZIP)"
+msgstr "Alle Formate (ZIP)"
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Download"
+msgstr "Herunterladen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Download series"
+msgstr "Serie herunterladen"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Download…"
+msgstr "Herunterladen…"
+
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Issues in this series come in more than one format. Pick the ones to download; an issue with several of them includes each."
+msgstr "Die Ausgaben dieser Serie liegen in mehreren Formaten vor. Wähle die Formate zum Herunterladen; eine Ausgabe, die mehrere davon hat, ist in jedem davon enthalten."
+
+#: lib/stashix_web/live/admin/users.ex
+#, elixir-autogen, elixir-format
+msgid "Can download"
+msgstr "Darf herunterladen"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 match"
+msgid_plural "%{count} matches"
+msgstr[0] "Keine Treffer"
+msgstr[1] "Keine Treffer"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Automatic picks from the file: scanned pages open as a comic, text as a book."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book's own"
+msgstr "Bücher"
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Comic reader (pages)"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Contents"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Font"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Larger text (+)"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Line spacing"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Loose"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Margins"
+msgstr "Haupt"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Narrow"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Night"
+msgstr "Hell"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Normal"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Normal text size (0)"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "One page"
+msgstr "Nächste Seite"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Paper"
+msgstr ""
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reader"
+msgstr "Lesen"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Reading the contents…"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sans serif"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Scroll"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Search this book"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Searching… page %{page} of %{count}"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sepia"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Serif"
+msgstr "Serien"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Smaller text (-)"
+msgstr ""
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "Text reader"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "The first %{count} matches"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "This book could not be opened."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "This book has no table of contents."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Tight"
+msgstr "Hell"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Two pages"
+msgstr "Keine Seiten"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Wide"
+msgstr "Ausblenden"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear queue"
+msgstr "Wartende abbrechen"
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Remove from queue"
+msgstr "Zeile entfernen"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 book failed"
+msgid_plural "%{count} books failed"
+msgstr[0] "1 Buch"
+msgstr[1] "%{count} Bücher"
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "1 entry"
+msgid_plural "%{count} entries"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "1 file missing"
+msgid_plural "%{count} files missing"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "A menu next to the search box, always in reach."
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "All books"
+msgstr "Alle Bücher"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "App passwords"
+msgstr "Passwort"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "At the top of the sidebar, under the logo."
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Blue"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Book %{number}"
+msgstr "%{number} Mio."
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Bookmark"
+msgstr "Buch"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Bookmark this page"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Books you have started"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Browse one library"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Calibre library"
+msgstr ""
+
+#: lib/stashix_web/components/core_components.ex
+#: lib/stashix_web/components/layouts.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Comics"
+msgstr "Meine Comics"
+
+#: lib/stashix_web/components/layouts.ex
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Comics & manga"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Comics / Books switcher"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Contents, search and notes"
+msgstr ""
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not create library: %{reason}"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Default voice"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Delete this note?"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Drag a box on the page to mark it"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Edit note"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Every book, A to Z"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Every series, A to Z"
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Export"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Formats Stashix can't read: %{formats}"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Full resync"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Give the app password a name (up to 80 characters)."
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Green"
+msgstr "Genres"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "Kind"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Last sync failed: %{error}"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark a region"
+msgstr "Als gelesen markieren"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "New app password for"
+msgstr "Neues Passwort"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Next sentence"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "No highlights, notes or bookmarks yet."
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Not synced yet"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Note"
+msgstr "Notizen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "OPDS catalog address"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open external link?"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Open link"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Page %{page}"
+msgstr "Seite %{page} von %{count}"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Password for %{name}. Copy it now: it is not shown again."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Pause"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Pink"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Previous sentence"
+msgstr "Zurück"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Read aloud"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Recently added"
+msgstr "Kürzlich hinzugefügt aus"
+
+#: lib/stashix_web/live/reader_live.ex
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove bookmark"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Revoke"
+msgstr "Entfernen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Revoke %{name}? That app will be signed out."
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Rewrite every book from Calibre, changed or not"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Search: %{query}"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Sets how books open when their kind isn't clear, and which libraries the Comics/Books switcher shows."
+msgstr ""
+
+#: lib/stashix_web/components/layouts.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show libraries"
+msgstr "Bibliotheken"
+
+#: lib/stashix_web/components/layouts.ex
+#, elixir-autogen, elixir-format
+msgid "Show libraries: %{kind}"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sidebar"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Speed"
+msgstr ""
+
+#: lib/stashix_web/live/reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stop marking (Esc)"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stop reading aloud"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Sync now"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Synced"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Syncing…"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "The newest books first"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "This book is DRM-protected and can't be opened here."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "This browser has no voices to read aloud with."
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#: lib/stashix_web/live/setup_live.ex
+#, elixir-autogen, elixir-format
+msgid "This folder has a Calibre metadata.db. Stashix will follow it: books, metadata and covers come from Calibre and update when it changes. Keep editing in Calibre."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "This link leads out of the book to:"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Top bar"
+msgstr "Bis Jahr"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "User name: %{name}"
+msgstr "Benutzername"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Voice"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Where the switch between comics and books libraries sits. It only shows when you can read libraries of both kinds."
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Write a note"
+msgstr ""
+
+#: lib/stashix_web/live/reader_annotations.ex
+#, elixir-autogen, elixir-format
+msgid "Yellow"
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format
+msgid "Your highlights"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "e.g. KOReader on Kobo"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "last used %{date}"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "made %{date}"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "never used"
+msgstr ""
+
+#: lib/stashix_web/components/metadata_edit_components.ex
+#, elixir-autogen, elixir-format
+msgid "Edited in Calibre: every sync brings Calibre's value back."
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/series_live.ex
+#, elixir-autogen, elixir-format
+msgid "Sync with Calibre"
+msgstr ""
+
+#: lib/stashix_web/live/book_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "This book comes from a Calibre library. Fields marked Calibre are edited in Calibre and come back on every sync; the rest are kept in Stashix only."
+msgstr ""
+
+#: lib/stashix_web/live/series_edit_component.ex
+#, elixir-autogen, elixir-format
+msgid "This series comes from a Calibre library. Its name is edited in Calibre and comes back on every sync; the rest is kept in Stashix only."
+msgstr ""
+
+#: lib/stashix_web/live/book_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Added"
+msgstr "Hinzufügen"
+
+#: lib/stashix_web/components/core_components.ex
+#, elixir-autogen, elixir-format
+msgid "Author A → Z"
+msgstr ""
+
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Title, creator or ISBN"
+msgstr "Titel oder Urheber"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "%{loaded} of %{total}"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "Downloading the book…"
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format
+msgid "FictionBook files can't be read a part at a time, so the whole book is downloaded first. A large book can take a while."
+msgstr ""
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Opening the book…"
+msgstr "Öffne die Kiste"
+
+#: lib/stashix_web/live/text_reader_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Starting…"
+msgstr "Wird gespeichert…"
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Column"
+msgstr ""
+
+#: lib/stashix_web/live/admin_live.ex
+#, elixir-autogen, elixir-format
+msgid "Could not save the library settings"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Nobody"
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "This Calibre library has no yes/no or number columns yet."
+msgstr ""
+
+#: lib/stashix_web/live/admin/libraries.ex
+#, elixir-autogen, elixir-format
+msgid "Read status from Calibre for one user: how far Calibre's own viewer got, and optionally a column — yes/no marks books read, a number sets how far (in percent). Calibre only ever moves the user's progress forward."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 series"
+msgid_plural "%{count} series"
+msgstr[0] "Serie"
+msgstr[1] "Serien"
+
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add to a collection"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Add “%{title}” to…"
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Books and whole series, gathered your way."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection actions"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection deleted."
+msgstr "Sammelbandtitel"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection order"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Collection · shared by %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collection · yours"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Collection · yours · shared"
+msgstr ""
+
+#: lib/stashix_web/components/layouts/app.html.heex
+#: lib/stashix_web/controllers/opds_controller.ex
+#: lib/stashix_web/live/book_live.ex
+#: lib/stashix_web/live/collections_live.ex
+#: lib/stashix_web/live/search_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collections"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Create and add"
+msgstr "Anlegen"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Date added"
+msgstr "Hinzugefügt ↓"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete collection"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Delete the collection “%{name}”? The books stay."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Description"
+msgstr "Leserichtung"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit collection"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Edit name and description"
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty — add books or series from their pages"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Entry actions"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "Find a collection"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "For a Kobo"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "For apps built on Readium, such as Thorium."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "In KOReader: Progress sync, Custom sync server. Log in with the same user name and an app password."
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "KOReader sync server"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Made before KOReader sync: make a new one for KOReader."
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Make one here, or use the Collection button on any book or series page to start one with it."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to bottom"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Move to top"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "New collection"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "New collection…"
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "No collections yet"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "No longer shared."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing here you can read."
+msgstr "Noch nichts hier"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Nothing in this collection yet"
+msgstr "Nichts in dieser Bibliothek"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "OPDS 2.0 catalog address"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "On the Kobo, set api_endpoint in .kobo/Kobo/Kobo eReader.conf to this, then sync. Your Kobo account keeps working: store calls are passed on to Kobo."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Opens sorted by"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Optional."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read next: %{title}"
+msgstr "Lese: %{title}"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Reading apps and devices (KOReader, a Kobo, Panels, Chunky and other OPDS readers) sign in with your user name and one of these, never your account password. Make one per app, so you can shut one out alone."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Remove from collection"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Share with everyone"
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Shared"
+msgstr "Gespeichert"
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shared with you"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Shared: everyone sees the books in it they may read."
+msgstr ""
+
+#: lib/stashix_web/components/detail_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show less"
+msgstr "Bibliotheken"
+
+#: lib/stashix_web/components/detail_components.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Show more"
+msgstr "1 weiteres Buch zeigen"
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Stop sharing"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "That collection isn't there."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the Collection button on a book or series page to add it here."
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Whole series"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "You have no collections yet."
+msgstr ""
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Yours"
+msgstr "Deine Sammlung"
+
+#: lib/stashix_web/live/collections_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "by %{name}"
+msgstr "oder %{name}"
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "via series"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#: lib/stashix_web/live/collection_picker.ex
+#, elixir-autogen, elixir-format
+msgid "“%{title}” goes in it."
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "%{count} · shared by %{name}"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "%{done} of %{total} read"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "1 selected"
+msgid_plural "%{count} selected"
+msgstr[0] "Gelöscht"
+msgstr[1] "Gelöscht"
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "1 was already there."
+msgid_plural "%{count} were already there."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "A shelf of your collections, most recently changed first. On by default."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Add to collection"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Added 1 to %{name}"
+msgid_plural "Added %{count} to %{name}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Added 1 to %{name}."
+msgid_plural "Added %{count} to %{name}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "All of them were already in %{name}."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Clear"
+msgstr "Alle löschen"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Collections in the sidebar"
+msgstr "Sammelband"
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Collections on the home page"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format
+msgid "Continue with %{book}"
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Download as ZIP"
+msgstr "Herunterladen"
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format
+msgid "Empty"
+msgstr ""
+
+#: lib/stashix_web/live/settings_live.ex
+#, elixir-autogen, elixir-format
+msgid "Lists your collections by name under Libraries, one click away."
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark all as read"
+msgstr "Als gelesen markieren"
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Mark all as unread"
+msgstr "Als ungelesen markieren"
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Marked 1 book as read."
+msgid_plural "Marked %{count} books as read."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Marked 1 book as unread."
+msgid_plural "Marked %{count} books as unread."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "More actions"
+msgstr "Mehr Infos"
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Open series"
+msgstr "Verwaiste Serien"
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Read again"
+msgstr "Erneut lesen"
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Select multiple"
+msgstr "Alle auswählen"
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Selection"
+msgstr ""
+
+#: lib/stashix_web/live/card_menu.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Start reading %{book}"
+msgstr "Lesen beginnen"
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "Tap books or series to pick them; Shift picks a range."
+msgstr ""
+
+#: lib/stashix_web/live/bulk_select.ex
+#, elixir-autogen, elixir-format
+msgid "The book or series you picked goes in it."
+msgid_plural "The %{count} you picked go in it."
+msgstr[0] ""
+msgstr[1] ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use as cover"
+msgstr ""
+
+#: lib/stashix_web/live/collection_live.ex
+#, elixir-autogen, elixir-format
+msgid "Use the first books' covers"
+msgstr ""
+
+#: lib/stashix_web/live/home_live.ex
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Your collections"
+msgstr ""
+
+#: lib/stashix_web/controllers/opds_controller.ex
+#, elixir-autogen, elixir-format
+msgid "Yours and shared ones"
+msgstr ""

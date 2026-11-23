@@ -79,6 +79,14 @@ Bug reports, feature ideas, docs fixes and code are all welcome. Start with
 Commits must be signed off (`git commit -s`) under the
 [Developer Certificate of Origin](https://developercertificate.org/).
 
+### Translations
+
+Stashix is translated on [Hosted Weblate](https://hosted.weblate.org/engage/stashix/).
+Pick a language there and start translating in the browser; no Git or Elixir
+needed.
+
+[![Translation status](https://hosted.weblate.org/widget/stashix/svg-badge.svg)](https://hosted.weblate.org/engage/stashix/)
+
 ## License
 
 Stashix is licensed under the [GNU Affero General Public License v3.0 or later](LICENSE).
