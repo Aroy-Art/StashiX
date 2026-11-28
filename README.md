@@ -92,11 +92,10 @@ in the browser; no Git or Elixir needed.
 3. Translate. Keep placeholders such as `%{count}` and `%{name}` exactly as
    they are, and fill in every plural form.
 
-Weblate commits translations to the `translations` branch, signed off in your
-name under the DCO, and they reach `main` through a pull request. A new
-language shows up in Stashix once enough of it is done. Spotted a mistake in
-the English text itself? Leave a comment on the string in Weblate or open an
-issue.
+Weblate commits translations, with your name on them, to the `translations`
+branch, and they're merged into `main` from there. A new language shows up in
+Stashix once enough of it is done. Spotted a mistake in the English text
+itself? Leave a comment on the string in Weblate or open an issue.
 
 Code contributors: don't edit the translated `.po` files by hand, as that
 clashes with Weblate. After adding or changing UI text, run
